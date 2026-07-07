@@ -607,7 +607,7 @@ srrrg에서는 다음 역할을 한다.
 ## 10. Spring Boot 패키지 구조 초안
 
 ```text
-com.srrrg
+link.srrrg
  ├── SrrrgApplication.java
  ├── link
  │   ├── LinkController.java

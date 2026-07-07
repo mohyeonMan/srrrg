@@ -1,4 +1,4 @@
-package io.jhpark.srrrg;
+package link.srrrg;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
