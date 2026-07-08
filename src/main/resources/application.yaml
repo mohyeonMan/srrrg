@@ -19,6 +19,9 @@ spring:
         jdbc:
           time_zone: UTC
 
+srrrg:
+  base-url: ${SRRRG_BASE_URL:https://srrrg.link}
+
 management:
   endpoint:
     health:

@@ -63,7 +63,7 @@
 기능이 하나뿐이므로 계층을 과도하게 나누지 않고 `link` 패키지 안에 관련 코드를 모은다.
 
 ```text
-src/main/javalink/srrrg
+src/main/java/link/srrrg
 ├── SrrrgApplication.java
 ├── link
 │   ├── Link.java
