@@ -15,6 +15,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import link.srrrg.link.SecretKeyManager.GeneratedSecretKey;
+import link.srrrg.link.access.ClientRequestInfo;
+import link.srrrg.link.access.LinkAccessEventRecorder;
 import link.srrrg.link.dto.CreateLinkRequest;
 import link.srrrg.link.dto.CreateLinkResponse;
 
@@ -24,6 +26,8 @@ class LinkServiceTest {
 	private final LinkCodeGenerator linkCodeGenerator = mock(LinkCodeGenerator.class);
 	private final SecretKeyManager secretKeyManager = mock(SecretKeyManager.class);
 	private final UrlValidator urlValidator = mock(UrlValidator.class);
+	private final LinkAccessEventRecorder accessEventRecorder = mock(LinkAccessEventRecorder.class);
+	private final ClientRequestInfo requestInfo = new ClientRequestInfo("203.0.113.10", null, "test-agent");
 
 	private LinkService linkService;
 
@@ -34,6 +38,7 @@ class LinkServiceTest {
 				linkCodeGenerator,
 				secretKeyManager,
 				urlValidator,
+				accessEventRecorder,
 				"https://srrrg.link/"
 		);
 	}
@@ -94,9 +99,10 @@ class LinkServiceTest {
 		when(linkRepository.incrementClickCountByCode("aB3x9Q")).thenReturn(1);
 		when(link.getOriginalUrl()).thenReturn("https://example.com/path");
 
-		String originalUrl = linkService.resolveRedirect("aB3x9Q");
+		String originalUrl = linkService.resolveRedirect("aB3x9Q", requestInfo);
 
 		assertThat(originalUrl).isEqualTo("https://example.com/path");
+		verify(accessEventRecorder).record(link, requestInfo);
 		verify(linkRepository).incrementClickCountByCode("aB3x9Q");
 	}
 
@@ -104,9 +110,10 @@ class LinkServiceTest {
 	void throwsNotFoundWhenCodeDoesNotExist() {
 		when(linkRepository.findByCode("abcdef")).thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> linkService.resolveRedirect("abcdef"))
+		assertThatThrownBy(() -> linkService.resolveRedirect("abcdef", requestInfo))
 				.isInstanceOf(LinkNotFoundException.class);
 		verify(linkRepository, never()).incrementClickCountByCode(any(String.class));
+		verify(accessEventRecorder, never()).record(any(Link.class), any(ClientRequestInfo.class));
 	}
 
 	@Test
@@ -115,9 +122,10 @@ class LinkServiceTest {
 		when(linkRepository.findByCode("deleted")).thenReturn(Optional.of(link));
 		when(link.isDeleted()).thenReturn(true);
 
-		assertThatThrownBy(() -> linkService.resolveRedirect("deleted"))
+		assertThatThrownBy(() -> linkService.resolveRedirect("deleted", requestInfo))
 				.isInstanceOf(LinkGoneException.class);
 		verify(linkRepository, never()).incrementClickCountByCode(any(String.class));
+		verify(accessEventRecorder, never()).record(any(Link.class), any(ClientRequestInfo.class));
 	}
 
 	@Test
@@ -127,8 +135,9 @@ class LinkServiceTest {
 		when(link.isDeleted()).thenReturn(false);
 		when(link.isExpiredAt(any(Instant.class))).thenReturn(true);
 
-		assertThatThrownBy(() -> linkService.resolveRedirect("expired"))
+		assertThatThrownBy(() -> linkService.resolveRedirect("expired", requestInfo))
 				.isInstanceOf(LinkGoneException.class);
 		verify(linkRepository, never()).incrementClickCountByCode(any(String.class));
+		verify(accessEventRecorder, never()).record(any(Link.class), any(ClientRequestInfo.class));
 	}
 }

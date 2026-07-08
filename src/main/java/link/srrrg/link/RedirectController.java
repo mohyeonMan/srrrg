@@ -13,15 +13,20 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import link.srrrg.link.access.ClientRequestInfo;
+import link.srrrg.link.access.ClientRequestInfoResolver;
 
 @RestController
 @Tag(name = "Redirect", description = "단축 링크 리다이렉트 API")
 public class RedirectController {
 
 	private final LinkService linkService;
+	private final ClientRequestInfoResolver requestInfoResolver;
 
-	public RedirectController(LinkService linkService) {
+	public RedirectController(LinkService linkService, ClientRequestInfoResolver requestInfoResolver) {
 		this.linkService = linkService;
+		this.requestInfoResolver = requestInfoResolver;
 	}
 
 	@GetMapping("/{code:[0-9A-Za-z]{6}}")
@@ -33,9 +38,11 @@ public class RedirectController {
 	})
 	public ResponseEntity<Void> redirect(
 			@Parameter(description = "6자리 Base62 단축 코드", example = "aB3x9Q")
-			@PathVariable String code
+			@PathVariable String code,
+			HttpServletRequest request
 	) {
-		String originalUrl = linkService.resolveRedirect(code);
+		ClientRequestInfo requestInfo = requestInfoResolver.resolve(request);
+		String originalUrl = linkService.resolveRedirect(code, requestInfo);
 		return ResponseEntity.status(HttpStatus.FOUND)
 				.location(URI.create(originalUrl))
 				.build();

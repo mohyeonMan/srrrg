@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import link.srrrg.link.SecretKeyManager.GeneratedSecretKey;
+import link.srrrg.link.access.ClientRequestInfo;
+import link.srrrg.link.access.LinkAccessEventRecorder;
 import link.srrrg.link.dto.CreateLinkRequest;
 import link.srrrg.link.dto.CreateLinkResponse;
 
@@ -22,6 +24,7 @@ public class LinkService {
 	private final LinkCodeGenerator linkCodeGenerator;
 	private final SecretKeyManager secretKeyManager;
 	private final UrlValidator urlValidator;
+	private final LinkAccessEventRecorder accessEventRecorder;
 	private final String baseUrl;
 
 	public LinkService(
@@ -29,12 +32,14 @@ public class LinkService {
 			LinkCodeGenerator linkCodeGenerator,
 			SecretKeyManager secretKeyManager,
 			UrlValidator urlValidator,
+			LinkAccessEventRecorder accessEventRecorder,
 			@Value("${srrrg.base-url}") String baseUrl
 	) {
 		this.linkRepository = linkRepository;
 		this.linkCodeGenerator = linkCodeGenerator;
 		this.secretKeyManager = secretKeyManager;
 		this.urlValidator = urlValidator;
+		this.accessEventRecorder = accessEventRecorder;
 		this.baseUrl = removeTrailingSlash(baseUrl);
 	}
 
@@ -56,7 +61,7 @@ public class LinkService {
 	}
 
 	@Transactional
-	public String resolveRedirect(String code) {
+	public String resolveRedirect(String code, ClientRequestInfo requestInfo) {
 		Link link = linkRepository.findByCode(code).orElseThrow(() -> {
 			log.warn("Redirect link not found: code={}", code);
 			return new LinkNotFoundException();
@@ -69,6 +74,7 @@ public class LinkService {
 			throw new LinkGoneException();
 		}
 
+		accessEventRecorder.record(link, requestInfo);
 		int updatedRows = linkRepository.incrementClickCountByCode(code);
 		if (updatedRows != 1) {
 			log.warn("Redirect click count update failed: code={}, updatedRows={}", code, updatedRows);

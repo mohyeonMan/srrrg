@@ -30,6 +30,7 @@ services:
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-srrrg}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-srrrg-local-password}
       SRRRG_BASE_URL: ${SRRRG_BASE_URL:-http://localhost:8080}
+      SRRRG_TRUST_FORWARDED_HEADERS: ${SRRRG_TRUST_FORWARDED_HEADERS:-false}
     ports:
       - "${APP_PORT:-8080}:8080"
     volumes:

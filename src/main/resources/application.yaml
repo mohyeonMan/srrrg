@@ -21,6 +21,7 @@ spring:
 
 srrrg:
   base-url: ${SRRRG_BASE_URL:https://srrrg.link}
+  trust-forwarded-headers: ${SRRRG_TRUST_FORWARDED_HEADERS:false}
 
 management:
   endpoint:
