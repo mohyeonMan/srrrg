@@ -439,8 +439,8 @@
 				srrrg는 긴 URL을 짧게 만들고, 신뢰되지 않은 링크는 이동 전 원본 주소를 확인하도록 돕는 단축 URL 서비스입니다.
 			</p>
 			<div class="hero-actions">
-				<a class="primary-link" href="/swagger-ui.html">API 문서 보기</a>
-				<a class="secondary-link" href="/v3/api-docs">OpenAPI JSON</a>
+				<a class="primary-link" th:href="@{/swagger-ui.html}">API 문서 보기</a>
+				<a class="secondary-link" th:href="@{/v3/api-docs}">OpenAPI JSON</a>
 			</div>
 		</div>
 
@@ -517,7 +517,8 @@
 		<button id="modal-close-button" class="modal-close-button" type="button">닫기</button>
 	</div>
 </div>
-<script>
+<script th:inline="javascript">
+	const createLinkUrl = /*[[@{/api/links}]]*/ '/api/links';
 	const form = document.getElementById('shortener-form');
 	const originalUrlInput = document.getElementById('original-url');
 	const expiresAtInput = document.getElementById('expires-at');
@@ -552,7 +553,7 @@
 		hideResult();
 
 		try {
-			const response = await fetch('/api/links', {
+			const response = await fetch(createLinkUrl, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
