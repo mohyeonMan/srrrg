@@ -2,29 +2,31 @@ package link.srrrg.link;
 
 import java.time.Instant;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import link.srrrg.link.SecretKeyManager.GeneratedSecretKey;
 import link.srrrg.link.access.ClientRequestInfo;
-import link.srrrg.link.access.LinkAccessEventRecorder;
+import link.srrrg.link.access.LinkClickEventRecorder;
+import link.srrrg.link.access.LinkRedirectEventRecorder;
 import link.srrrg.link.dto.CreateLinkRequest;
 import link.srrrg.link.dto.CreateLinkResponse;
+import link.srrrg.link.dto.RedirectLink;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
+@Slf4j
 public class LinkService {
 
-	private static final Logger log = LoggerFactory.getLogger(LinkService.class);
 	private static final int MAX_CODE_GENERATION_ATTEMPTS = 5;
 
 	private final LinkRepository linkRepository;
 	private final LinkCodeGenerator linkCodeGenerator;
 	private final SecretKeyManager secretKeyManager;
 	private final UrlValidator urlValidator;
-	private final LinkAccessEventRecorder accessEventRecorder;
+	private final LinkClickEventRecorder clickEventRecorder;
+	private final LinkRedirectEventRecorder redirectEventRecorder;
 	private final String baseUrl;
 
 	public LinkService(
@@ -32,14 +34,16 @@ public class LinkService {
 			LinkCodeGenerator linkCodeGenerator,
 			SecretKeyManager secretKeyManager,
 			UrlValidator urlValidator,
-			LinkAccessEventRecorder accessEventRecorder,
+			LinkClickEventRecorder clickEventRecorder,
+			LinkRedirectEventRecorder redirectEventRecorder,
 			@Value("${srrrg.base-url}") String baseUrl
 	) {
 		this.linkRepository = linkRepository;
 		this.linkCodeGenerator = linkCodeGenerator;
 		this.secretKeyManager = secretKeyManager;
 		this.urlValidator = urlValidator;
-		this.accessEventRecorder = accessEventRecorder;
+		this.clickEventRecorder = clickEventRecorder;
+		this.redirectEventRecorder = redirectEventRecorder;
 		this.baseUrl = removeTrailingSlash(baseUrl);
 	}
 
@@ -61,7 +65,28 @@ public class LinkService {
 	}
 
 	@Transactional
-	public String resolveRedirect(String code, ClientRequestInfo requestInfo) {
+	public RedirectLink resolveRedirect(String code, ClientRequestInfo requestInfo) {
+		Link link = findAvailableLink(code);
+
+		clickEventRecorder.record(link, requestInfo);
+		incrementClickCount(code);
+		if (link.isTrusted()) {
+			recordRedirect(link, code, requestInfo);
+		}
+
+		log.info("Redirect entry handled: code={}, trusted={}", code, link.isTrusted());
+		return new RedirectLink(link.getCode(), link.getOriginalUrl(), link.isTrusted());
+	}
+
+	@Transactional
+	public RedirectLink confirmRedirect(String code, ClientRequestInfo requestInfo) {
+		Link link = findAvailableLink(code);
+		recordRedirect(link, code, requestInfo);
+		log.info("Confirm redirect handled: code={}", code);
+		return new RedirectLink(link.getCode(), link.getOriginalUrl(), link.isTrusted());
+	}
+
+	private Link findAvailableLink(String code) {
 		Link link = linkRepository.findByCode(code).orElseThrow(() -> {
 			log.warn("Redirect link not found: code={}", code);
 			return new LinkNotFoundException();
@@ -73,15 +98,24 @@ public class LinkService {
 			log.info("Redirect link unavailable: code={}, deleted={}, expired={}", code, deleted, expired);
 			throw new LinkGoneException();
 		}
+		return link;
+	}
 
-		accessEventRecorder.record(link, requestInfo);
+	private void incrementClickCount(String code) {
 		int updatedRows = linkRepository.incrementClickCountByCode(code);
 		if (updatedRows != 1) {
 			log.warn("Redirect click count update failed: code={}, updatedRows={}", code, updatedRows);
 			throw new LinkNotFoundException();
 		}
-		log.info("Redirect succeeded: code={}", code);
-		return link.getOriginalUrl();
+	}
+
+	private void recordRedirect(Link link, String code, ClientRequestInfo requestInfo) {
+		redirectEventRecorder.record(link, requestInfo);
+		int updatedRows = linkRepository.incrementRedirectCountByCode(code);
+		if (updatedRows != 1) {
+			log.warn("Redirect count update failed: code={}, updatedRows={}", code, updatedRows);
+			throw new LinkNotFoundException();
+		}
 	}
 
 	private String generateUniqueCode() {

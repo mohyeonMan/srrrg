@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title th:text="'srrrg - ' + ${status}">srrrg - error</title>
+	<style>
+		* {
+			box-sizing: border-box;
+		}
+		body {
+			margin: 0;
+			min-height: 100vh;
+			font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+			background:
+					radial-gradient(circle at top left, rgba(220, 38, 38, 0.10), transparent 32rem),
+					linear-gradient(180deg, #fffafa 0%, #f8fafc 50%, #eef2ff 100%);
+			color: #0f172a;
+			display: flex;
+			flex-direction: column;
+		}
+		main {
+			width: calc(100% - 32px);
+			max-width: 640px;
+			margin: 48px auto;
+			padding: 36px;
+			background: rgba(255, 255, 255, 0.92);
+			border: 1px solid rgba(226, 232, 240, 0.9);
+			border-radius: 24px;
+			box-shadow: 0 24px 70px rgba(15, 23, 42, 0.10);
+		}
+		h1 {
+			margin: 8px 0 12px;
+			font-size: 30px;
+			letter-spacing: -0.04em;
+		}
+		p {
+			margin: 0;
+			color: #475569;
+			line-height: 1.65;
+		}
+		.srrrg-header {
+			display: flex;
+			align-items: baseline;
+			gap: 12px;
+			padding: 24px 36px;
+			border-bottom: 1px solid rgba(226, 232, 240, 0.75);
+			background: rgba(255, 255, 255, 0.72);
+			backdrop-filter: blur(14px);
+		}
+		.srrrg-logo {
+			color: #2563eb;
+			font-size: 30px;
+			font-weight: 900;
+			letter-spacing: -0.08em;
+			text-decoration: none;
+			text-shadow: 0 10px 24px rgba(37, 99, 235, 0.18);
+		}
+		.srrrg-tagline {
+			color: #64748b;
+			font-size: 15px;
+			font-weight: 500;
+		}
+		.srrrg-footer {
+			margin-top: auto;
+			padding: 24px 32px;
+			color: #718096;
+			font-size: 13px;
+			text-align: center;
+		}
+		.srrrg-footer-separator {
+			margin: 0 6px;
+		}
+		.status {
+			display: inline-block;
+			padding: 6px 10px;
+			color: #dc2626;
+			background: #fef2f2;
+			border: 1px solid #fecaca;
+			border-radius: 999px;
+			font-size: 13px;
+			font-weight: 700;
+		}
+		.label {
+			margin: 24px 0 8px;
+			color: #64748b;
+			font-size: 13px;
+			font-weight: 700;
+		}
+		.url {
+			overflow-wrap: anywhere;
+			padding: 14px 15px;
+			background: #f8fafc;
+			border: 1px solid #e2e8f0;
+			border-radius: 12px;
+			color: #334155;
+			line-height: 1.5;
+		}
+	</style>
+</head>
+<body>
+<div th:replace="~{fragments/srrrg-layout :: header}"></div>
+<main>
+	<div class="status" th:text="${status}">404</div>
+	<h1 th:text="${title}">링크를 찾을 수 없습니다</h1>
+	<p th:text="${message}">존재하지 않는 단축 링크입니다.</p>
+
+	<div class="label">요청한 단축 URL</div>
+	<div class="url" th:text="${shortUrl}">https://srrrg.link/abc123</div>
+</main>
+<div th:replace="~{fragments/srrrg-layout :: footer}"></div>
+</body>
+</html>

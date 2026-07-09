@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>srrrg - 링크 확인</title>
+	<style>
+		* {
+			box-sizing: border-box;
+		}
+		body {
+			margin: 0;
+			min-height: 100vh;
+			font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+			background:
+					radial-gradient(circle at top left, rgba(37, 99, 235, 0.14), transparent 34rem),
+					linear-gradient(180deg, #f8fbff 0%, #f8fafc 48%, #eef2ff 100%);
+			color: #0f172a;
+			display: flex;
+			flex-direction: column;
+		}
+		main {
+			width: calc(100% - 32px);
+			max-width: 640px;
+			margin: 48px auto;
+			padding: 36px;
+			background: rgba(255, 255, 255, 0.92);
+			border: 1px solid rgba(226, 232, 240, 0.9);
+			border-radius: 24px;
+			box-shadow: 0 24px 70px rgba(15, 23, 42, 0.10);
+		}
+		h1 {
+			margin: 0 0 12px;
+			font-size: 30px;
+			letter-spacing: -0.04em;
+		}
+		p {
+			margin: 0;
+			color: #475569;
+			line-height: 1.65;
+		}
+		.srrrg-header {
+			display: flex;
+			align-items: baseline;
+			gap: 12px;
+			padding: 24px 36px;
+			border-bottom: 1px solid rgba(226, 232, 240, 0.75);
+			background: rgba(255, 255, 255, 0.72);
+			backdrop-filter: blur(14px);
+		}
+		.srrrg-logo {
+			color: #2563eb;
+			font-size: 30px;
+			font-weight: 900;
+			letter-spacing: -0.08em;
+			text-decoration: none;
+			text-shadow: 0 10px 24px rgba(37, 99, 235, 0.18);
+		}
+		.srrrg-tagline {
+			color: #64748b;
+			font-size: 15px;
+			font-weight: 500;
+		}
+		.srrrg-footer {
+			margin-top: auto;
+			padding: 24px 32px;
+			color: #718096;
+			font-size: 13px;
+			text-align: center;
+		}
+		.srrrg-footer-separator {
+			margin: 0 6px;
+		}
+		.label {
+			margin: 24px 0 8px;
+			color: #64748b;
+			font-size: 13px;
+			font-weight: 700;
+			letter-spacing: -0.01em;
+		}
+		.url {
+			overflow-wrap: anywhere;
+			padding: 14px 15px;
+			background: #f8fafc;
+			border: 1px solid #e2e8f0;
+			border-radius: 12px;
+			color: #334155;
+			line-height: 1.5;
+		}
+		.url-row {
+			display: flex;
+			gap: 8px;
+			align-items: stretch;
+		}
+		.url-row .url {
+			flex: 1;
+		}
+		.toggle-button {
+			margin: 0;
+			padding: 0 14px;
+			background: #eff6ff;
+			color: #1d4ed8;
+			border: 0;
+			border-radius: 12px;
+			cursor: pointer;
+			font-weight: 700;
+			font: inherit;
+			white-space: nowrap;
+		}
+		.toggle-button:hover {
+			background: #dbeafe;
+		}
+		.submit-button {
+			display: inline-block;
+			margin-top: 30px;
+			padding: 14px 20px;
+			background: linear-gradient(135deg, #2563eb, #4f46e5);
+			color: #ffffff;
+			border: 0;
+			border-radius: 14px;
+			font-weight: 800;
+			cursor: pointer;
+			font: inherit;
+			box-shadow: 0 14px 30px rgba(37, 99, 235, 0.24);
+		}
+		.submit-button:hover {
+			transform: translateY(-1px);
+			box-shadow: 0 18px 36px rgba(37, 99, 235, 0.30);
+		}
+		.hidden {
+			display: none;
+		}
+		@media (max-width: 520px) {
+			.url-row {
+				flex-direction: column;
+			}
+			.toggle-button {
+				padding: 10px 12px;
+			}
+		}
+	</style>
+</head>
+<body>
+<div th:replace="~{fragments/srrrg-layout :: header}"></div>
+<main>
+	<h1>신뢰할 수 있는 링크인가요?</h1>
+	<p>이 단축 링크는 자동 이동 대상이 아닙니다. 원본 주소를 확인한 뒤 이동하세요.</p>
+
+	<div class="label">단축 URL</div>
+	<div class="url" th:text="${shortUrl}">https://srrrg.link/abc123</div>
+
+	<div class="label">원본 URL</div>
+	<div class="url-row">
+		<div id="original-url-summary" class="url" th:text="${originalUrlSummary}">https://example.com/...</div>
+		<div id="original-url-full" class="url hidden" th:text="${originalUrl}">https://example.com/path?query=value</div>
+		<button class="toggle-button" type="button" onclick="toggleOriginalUrl()">전체보기</button>
+	</div>
+
+	<form th:action="@{/{code}/redirect(code=${code})}" method="post">
+		<button class="submit-button" type="submit">네, 이동할게요.</button>
+	</form>
+</main>
+<div th:replace="~{fragments/srrrg-layout :: footer}"></div>
+<script>
+	function toggleOriginalUrl() {
+		const summary = document.getElementById('original-url-summary');
+		const full = document.getElementById('original-url-full');
+		const button = document.querySelector('.toggle-button');
+		const fullVisible = !full.classList.contains('hidden');
+
+		summary.classList.toggle('hidden', !fullVisible);
+		full.classList.toggle('hidden', fullVisible);
+		button.textContent = fullVisible ? '전체보기' : '접기';
+	}
+</script>
+</body>
+</html>

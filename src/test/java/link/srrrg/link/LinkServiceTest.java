@@ -16,9 +16,11 @@ import org.junit.jupiter.api.Test;
 
 import link.srrrg.link.SecretKeyManager.GeneratedSecretKey;
 import link.srrrg.link.access.ClientRequestInfo;
-import link.srrrg.link.access.LinkAccessEventRecorder;
+import link.srrrg.link.access.LinkClickEventRecorder;
+import link.srrrg.link.access.LinkRedirectEventRecorder;
 import link.srrrg.link.dto.CreateLinkRequest;
 import link.srrrg.link.dto.CreateLinkResponse;
+import link.srrrg.link.dto.RedirectLink;
 
 class LinkServiceTest {
 
@@ -26,7 +28,8 @@ class LinkServiceTest {
 	private final LinkCodeGenerator linkCodeGenerator = mock(LinkCodeGenerator.class);
 	private final SecretKeyManager secretKeyManager = mock(SecretKeyManager.class);
 	private final UrlValidator urlValidator = mock(UrlValidator.class);
-	private final LinkAccessEventRecorder accessEventRecorder = mock(LinkAccessEventRecorder.class);
+	private final LinkClickEventRecorder clickEventRecorder = mock(LinkClickEventRecorder.class);
+	private final LinkRedirectEventRecorder redirectEventRecorder = mock(LinkRedirectEventRecorder.class);
 	private final ClientRequestInfo requestInfo = new ClientRequestInfo("203.0.113.10", null, "test-agent");
 
 	private LinkService linkService;
@@ -38,7 +41,8 @@ class LinkServiceTest {
 				linkCodeGenerator,
 				secretKeyManager,
 				urlValidator,
-				accessEventRecorder,
+				clickEventRecorder,
+				redirectEventRecorder,
 				"https://srrrg.link/"
 		);
 	}
@@ -91,19 +95,66 @@ class LinkServiceTest {
 	}
 
 	@Test
-	void resolvesActiveLinkAndIncrementsClickCount() {
+	void resolvesTrustedLinkAndIncrementsClickAndRedirectCounts() {
 		Link link = mock(Link.class);
 		when(linkRepository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
 		when(link.isDeleted()).thenReturn(false);
 		when(link.isExpiredAt(any(Instant.class))).thenReturn(false);
 		when(linkRepository.incrementClickCountByCode("aB3x9Q")).thenReturn(1);
+		when(linkRepository.incrementRedirectCountByCode("aB3x9Q")).thenReturn(1);
+		when(link.getCode()).thenReturn("aB3x9Q");
 		when(link.getOriginalUrl()).thenReturn("https://example.com/path");
+		when(link.isTrusted()).thenReturn(true);
 
-		String originalUrl = linkService.resolveRedirect("aB3x9Q", requestInfo);
+		RedirectLink redirectLink = linkService.resolveRedirect("aB3x9Q", requestInfo);
 
-		assertThat(originalUrl).isEqualTo("https://example.com/path");
-		verify(accessEventRecorder).record(link, requestInfo);
+		assertThat(redirectLink.code()).isEqualTo("aB3x9Q");
+		assertThat(redirectLink.originalUrl()).isEqualTo("https://example.com/path");
+		assertThat(redirectLink.trusted()).isTrue();
+		verify(clickEventRecorder).record(link, requestInfo);
+		verify(redirectEventRecorder).record(link, requestInfo);
 		verify(linkRepository).incrementClickCountByCode("aB3x9Q");
+		verify(linkRepository).incrementRedirectCountByCode("aB3x9Q");
+	}
+
+	@Test
+	void resolvesUntrustedLinkWithoutRedirectCount() {
+		Link link = mock(Link.class);
+		when(linkRepository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
+		when(link.isDeleted()).thenReturn(false);
+		when(link.isExpiredAt(any(Instant.class))).thenReturn(false);
+		when(linkRepository.incrementClickCountByCode("aB3x9Q")).thenReturn(1);
+		when(link.getCode()).thenReturn("aB3x9Q");
+		when(link.getOriginalUrl()).thenReturn("https://example.com/path");
+		when(link.isTrusted()).thenReturn(false);
+
+		RedirectLink redirectLink = linkService.resolveRedirect("aB3x9Q", requestInfo);
+
+		assertThat(redirectLink.trusted()).isFalse();
+		verify(clickEventRecorder).record(link, requestInfo);
+		verify(redirectEventRecorder, never()).record(any(Link.class), any(ClientRequestInfo.class));
+		verify(linkRepository).incrementClickCountByCode("aB3x9Q");
+		verify(linkRepository, never()).incrementRedirectCountByCode(any(String.class));
+	}
+
+	@Test
+	void confirmedRedirectIncrementsOnlyRedirectCount() {
+		Link link = mock(Link.class);
+		when(linkRepository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
+		when(link.isDeleted()).thenReturn(false);
+		when(link.isExpiredAt(any(Instant.class))).thenReturn(false);
+		when(linkRepository.incrementRedirectCountByCode("aB3x9Q")).thenReturn(1);
+		when(link.getCode()).thenReturn("aB3x9Q");
+		when(link.getOriginalUrl()).thenReturn("https://example.com/path");
+		when(link.isTrusted()).thenReturn(false);
+
+		RedirectLink redirectLink = linkService.confirmRedirect("aB3x9Q", requestInfo);
+
+		assertThat(redirectLink.originalUrl()).isEqualTo("https://example.com/path");
+		verify(clickEventRecorder, never()).record(any(Link.class), any(ClientRequestInfo.class));
+		verify(redirectEventRecorder).record(link, requestInfo);
+		verify(linkRepository, never()).incrementClickCountByCode(any(String.class));
+		verify(linkRepository).incrementRedirectCountByCode("aB3x9Q");
 	}
 
 	@Test
@@ -113,7 +164,9 @@ class LinkServiceTest {
 		assertThatThrownBy(() -> linkService.resolveRedirect("abcdef", requestInfo))
 				.isInstanceOf(LinkNotFoundException.class);
 		verify(linkRepository, never()).incrementClickCountByCode(any(String.class));
-		verify(accessEventRecorder, never()).record(any(Link.class), any(ClientRequestInfo.class));
+		verify(linkRepository, never()).incrementRedirectCountByCode(any(String.class));
+		verify(clickEventRecorder, never()).record(any(Link.class), any(ClientRequestInfo.class));
+		verify(redirectEventRecorder, never()).record(any(Link.class), any(ClientRequestInfo.class));
 	}
 
 	@Test
@@ -125,7 +178,9 @@ class LinkServiceTest {
 		assertThatThrownBy(() -> linkService.resolveRedirect("deleted", requestInfo))
 				.isInstanceOf(LinkGoneException.class);
 		verify(linkRepository, never()).incrementClickCountByCode(any(String.class));
-		verify(accessEventRecorder, never()).record(any(Link.class), any(ClientRequestInfo.class));
+		verify(linkRepository, never()).incrementRedirectCountByCode(any(String.class));
+		verify(clickEventRecorder, never()).record(any(Link.class), any(ClientRequestInfo.class));
+		verify(redirectEventRecorder, never()).record(any(Link.class), any(ClientRequestInfo.class));
 	}
 
 	@Test
@@ -138,6 +193,8 @@ class LinkServiceTest {
 		assertThatThrownBy(() -> linkService.resolveRedirect("expired", requestInfo))
 				.isInstanceOf(LinkGoneException.class);
 		verify(linkRepository, never()).incrementClickCountByCode(any(String.class));
-		verify(accessEventRecorder, never()).record(any(Link.class), any(ClientRequestInfo.class));
+		verify(linkRepository, never()).incrementRedirectCountByCode(any(String.class));
+		verify(clickEventRecorder, never()).record(any(Link.class), any(ClientRequestInfo.class));
+		verify(redirectEventRecorder, never()).record(any(Link.class), any(ClientRequestInfo.class));
 	}
 }

@@ -6,13 +6,11 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import link.srrrg.link.LinkGoneException;
-import link.srrrg.link.LinkNotFoundException;
-
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
 	private static final String INVALID_REQUEST = "INVALID_REQUEST";
+	private static final String INTERNAL_SERVER_ERROR = "INTERNAL_SERVER_ERROR";
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException exception) {
@@ -29,16 +27,10 @@ public class GlobalExceptionHandler {
 		return badRequest(exception.getMessage());
 	}
 
-	@ExceptionHandler(LinkNotFoundException.class)
-	public ResponseEntity<ApiErrorResponse> handleLinkNotFound(LinkNotFoundException exception) {
-		return ResponseEntity.status(HttpStatus.NOT_FOUND)
-				.body(new ApiErrorResponse("LINK_NOT_FOUND", exception.getMessage()));
-	}
-
-	@ExceptionHandler(LinkGoneException.class)
-	public ResponseEntity<ApiErrorResponse> handleLinkGone(LinkGoneException exception) {
-		return ResponseEntity.status(HttpStatus.GONE)
-				.body(new ApiErrorResponse("LINK_GONE", exception.getMessage()));
+	@ExceptionHandler(Exception.class)
+	public ResponseEntity<ApiErrorResponse> handleUnexpected(Exception exception) {
+		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+				.body(new ApiErrorResponse(INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다."));
 	}
 
 	private ResponseEntity<ApiErrorResponse> badRequest(String message) {

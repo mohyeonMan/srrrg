@@ -13,10 +13,15 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import link.srrrg.link.Link;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "link_access_events")
-public class LinkAccessEvent {
+@Table(name = "link_redirect_events")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class LinkRedirectEvent {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,8 +31,8 @@ public class LinkAccessEvent {
 	@JoinColumn(name = "link_id", nullable = false)
 	private Link link;
 
-	@Column(name = "accessed_at", nullable = false)
-	private Instant accessedAt;
+	@Column(name = "redirected_at", nullable = false)
+	private Instant redirectedAt;
 
 	@Column(name = "ip_address", length = 45)
 	private String ipAddress;
@@ -56,14 +61,7 @@ public class LinkAccessEvent {
 	@Column(name = "is_bot", nullable = false)
 	private boolean bot;
 
-	protected LinkAccessEvent() {
-	}
-
-	private LinkAccessEvent(
-			Link link,
-			ClientRequestInfo requestInfo,
-			UserAgentInfo userAgentInfo
-	) {
+	private LinkRedirectEvent(Link link, ClientRequestInfo requestInfo, UserAgentInfo userAgentInfo) {
 		this.link = link;
 		this.ipAddress = requestInfo.ipAddress();
 		this.referer = requestInfo.referer();
@@ -76,16 +74,12 @@ public class LinkAccessEvent {
 		this.bot = userAgentInfo.bot();
 	}
 
-	public static LinkAccessEvent create(
-			Link link,
-			ClientRequestInfo requestInfo,
-			UserAgentInfo userAgentInfo
-	) {
-		return new LinkAccessEvent(link, requestInfo, userAgentInfo);
+	public static LinkRedirectEvent create(Link link, ClientRequestInfo requestInfo, UserAgentInfo userAgentInfo) {
+		return new LinkRedirectEvent(link, requestInfo, userAgentInfo);
 	}
 
 	@PrePersist
 	void onCreate() {
-		accessedAt = Instant.now();
+		redirectedAt = Instant.now();
 	}
 }

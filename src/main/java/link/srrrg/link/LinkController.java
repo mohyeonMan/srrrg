@@ -14,17 +14,15 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import link.srrrg.link.dto.CreateLinkRequest;
 import link.srrrg.link.dto.CreateLinkResponse;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/links")
 @Tag(name = "Links", description = "단축 링크 관리 API")
+@RequiredArgsConstructor
 public class LinkController {
 
 	private final LinkService linkService;
-
-	public LinkController(LinkService linkService) {
-		this.linkService = linkService;
-	}
 
 	@PostMapping
 	@Operation(summary = "단축 링크 생성", description = "원본 URL을 등록하고 단축 URL과 관리용 secret key를 발급합니다.")

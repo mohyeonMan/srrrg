@@ -4,8 +4,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import link.srrrg.common.util.SecureRandomStringGenerator;
+import lombok.RequiredArgsConstructor;
 
 @Component
+@RequiredArgsConstructor
 public class SecretKeyManager {
 
 	private static final String SECRET_KEY_PREFIX = "srrrg_sk_";
@@ -15,10 +17,6 @@ public class SecretKeyManager {
 
 	private final SecureRandomStringGenerator randomStringGenerator;
 	private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-
-	public SecretKeyManager(SecureRandomStringGenerator randomStringGenerator) {
-		this.randomStringGenerator = randomStringGenerator;
-	}
 
 	public GeneratedSecretKey generate() {
 		String value = SECRET_KEY_PREFIX

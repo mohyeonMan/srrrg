@@ -10,9 +10,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "links")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Link {
 
 	@Id
@@ -34,8 +39,14 @@ public class Link {
 	@Column(name = "click_count", nullable = false)
 	private long clickCount;
 
+	@Column(name = "redirect_count", nullable = false)
+	private long redirectCount;
+
 	@Column(name = "is_deleted", nullable = false)
 	private boolean deleted;
+
+	@Column(nullable = false)
+	private boolean trusted;
 
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
@@ -43,16 +54,15 @@ public class Link {
 	@Column(name = "updated_at", nullable = false)
 	private Instant updatedAt;
 
-	protected Link() {
-	}
-
 	private Link(String code, String originalUrl, String secretKeyHash, Instant expiresAt) {
 		this.code = code;
 		this.originalUrl = originalUrl;
 		this.secretKeyHash = secretKeyHash;
 		this.expiresAt = expiresAt;
 		this.clickCount = 0;
+		this.redirectCount = 0;
 		this.deleted = false;
+		this.trusted = false;
 	}
 
 	public static Link create(String code, String originalUrl, String secretKeyHash, Instant expiresAt) {
@@ -69,22 +79,6 @@ public class Link {
 	@PreUpdate
 	void onUpdate() {
 		updatedAt = Instant.now();
-	}
-
-	public String getCode() {
-		return code;
-	}
-
-	public String getOriginalUrl() {
-		return originalUrl;
-	}
-
-	public Instant getExpiresAt() {
-		return expiresAt;
-	}
-
-	public boolean isDeleted() {
-		return deleted;
 	}
 
 	public boolean isExpiredAt(Instant instant) {

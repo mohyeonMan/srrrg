@@ -9,11 +9,11 @@ import org.junit.jupiter.api.Test;
 
 import link.srrrg.link.Link;
 
-class LinkAccessEventRecorderTest {
+class LinkClickEventRecorderTest {
 
 	@Test
-	void enrichesAndStoresAccessEvent() {
-		LinkAccessEventRepository repository = mock(LinkAccessEventRepository.class);
+	void enrichesAndStoresClickEvent() {
+		LinkClickEventRepository repository = mock(LinkClickEventRepository.class);
 		UserAgentParser userAgentParser = mock(UserAgentParser.class);
 		Link link = mock(Link.class);
 		ClientRequestInfo requestInfo = new ClientRequestInfo(
@@ -23,13 +23,10 @@ class LinkAccessEventRecorderTest {
 		);
 		when(userAgentParser.parse("test-agent"))
 				.thenReturn(new UserAgentInfo("Other", null, "Other", null, "DESKTOP", false));
-		LinkAccessEventRecorder recorder = new LinkAccessEventRecorder(
-				repository,
-				userAgentParser
-		);
+		LinkClickEventRecorder recorder = new LinkClickEventRecorder(repository, userAgentParser);
 
 		recorder.record(link, requestInfo);
 
-		verify(repository).save(any(LinkAccessEvent.class));
+		verify(repository).save(any(LinkClickEvent.class));
 	}
 }

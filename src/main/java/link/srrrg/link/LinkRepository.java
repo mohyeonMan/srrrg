@@ -16,4 +16,8 @@ public interface LinkRepository extends JpaRepository<Link, Long> {
 	@Modifying
 	@Query("update Link l set l.clickCount = l.clickCount + 1 where l.code = :code")
 	int incrementClickCountByCode(@Param("code") String code);
+
+	@Modifying
+	@Query("update Link l set l.redirectCount = l.redirectCount + 1 where l.code = :code")
+	int incrementRedirectCountByCode(@Param("code") String code);
 }
