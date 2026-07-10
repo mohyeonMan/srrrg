@@ -23,30 +23,34 @@
 		.srrrg-header {
 			display: flex;
 			align-items: baseline;
+			flex-wrap: wrap;
 			gap: 12px;
-			padding: 24px 36px;
+			padding: clamp(18px, 4vw, 24px) clamp(20px, 6vw, 36px);
 			border-bottom: 1px solid rgba(226, 232, 240, 0.75);
 			background: rgba(255, 255, 255, 0.72);
 			backdrop-filter: blur(14px);
 		}
 		.srrrg-logo {
 			color: #2563eb;
-			font-size: 30px;
+			font-size: clamp(26px, 7vw, 30px);
 			font-weight: 900;
-			letter-spacing: -0.08em;
+			line-height: 1;
+			letter-spacing: 0;
 			text-decoration: none;
 			text-shadow: 0 10px 24px rgba(37, 99, 235, 0.18);
 		}
 		.srrrg-tagline {
 			color: #64748b;
-			font-size: 15px;
+			font-size: clamp(13px, 3.5vw, 15px);
 			font-weight: 500;
+			line-height: 1.35;
 		}
 		.srrrg-footer {
 			margin-top: auto;
-			padding: 24px 32px;
+			padding: clamp(20px, 5vw, 24px) clamp(18px, 6vw, 32px);
 			color: #718096;
-			font-size: 13px;
+			font-size: clamp(12px, 3.2vw, 13px);
+			line-height: 1.6;
 			text-align: center;
 		}
 		.srrrg-footer-separator {
@@ -89,7 +93,7 @@
 			margin: 22px 0 16px;
 			font-size: clamp(36px, 5vw, 56px);
 			line-height: 1.04;
-			letter-spacing: -0.065em;
+			letter-spacing: 0;
 		}
 		.hero-description {
 			max-width: 560px;
@@ -129,7 +133,7 @@
 		.card-title {
 			margin: 0;
 			font-size: 22px;
-			letter-spacing: -0.04em;
+			letter-spacing: 0;
 		}
 		.card-description {
 			margin: 10px 0 22px;
@@ -264,7 +268,7 @@
 		.result-title {
 			margin: 0 0 16px;
 			font-size: 22px;
-			letter-spacing: -0.04em;
+			letter-spacing: 0;
 		}
 		.result-header .result-label {
 			margin: 0;
@@ -330,7 +334,7 @@
 		.feature-card h2 {
 			margin: 0 0 8px;
 			font-size: 17px;
-			letter-spacing: -0.03em;
+			letter-spacing: 0;
 		}
 		.feature-card p {
 			margin: 0;
@@ -352,7 +356,7 @@
 			}
 			h1 {
 				font-size: clamp(34px, 10vw, 48px);
-				letter-spacing: -0.055em;
+				letter-spacing: 0;
 			}
 			.srrrg-header {
 				flex-direction: column;
@@ -409,8 +413,10 @@
 				border-radius: 18px;
 			}
 			.srrrg-footer {
-				padding: 20px 18px;
 				line-height: 1.6;
+			}
+			.srrrg-footer-separator {
+				margin: 0 4px;
 			}
 		}
 		@media (max-width: 380px) {
@@ -424,6 +430,12 @@
 			}
 			.srrrg-tagline {
 				font-size: 13px;
+			}
+			.srrrg-footer span:last-child {
+				display: block;
+			}
+			.srrrg-footer-separator {
+				display: none;
 			}
 		}
 	</style>
@@ -462,6 +474,7 @@
 					<div class="expires-row">
 						<select id="quick-expires-at" class="quick-expire-select" aria-label="만료 선택">
 							<option value="none">만료 없음</option>
+							<option value="custom">직접 입력</option>
 							<option value="1:hours">1시간</option>
 							<option value="1:days">하루</option>
 							<option value="1:months">한달</option>
@@ -534,17 +547,38 @@
 	const copyShortUrlButton = document.getElementById('copy-short-url');
 	const copySecretKeyButton = document.getElementById('copy-secret-key');
 	const modalCloseButton = document.getElementById('modal-close-button');
+	let selectedExpiresAtOption = quickExpiresAtSelect.value;
 
 	quickExpiresAtSelect.addEventListener('change', () => {
+		const previousOption = selectedExpiresAtOption;
+		selectedExpiresAtOption = quickExpiresAtSelect.value;
+
 		if (quickExpiresAtSelect.value === 'none') {
 			expiresAtInput.value = '';
 			expiresAtInput.disabled = true;
 			return;
 		}
 		expiresAtInput.disabled = false;
+		if (quickExpiresAtSelect.value === 'custom') {
+			if (previousOption === 'none' && !expiresAtInput.value) {
+				expiresAtInput.value = toDatetimeLocal(new Date());
+			}
+			expiresAtInput.focus();
+			return;
+		}
 		const [amount, unit] = quickExpiresAtSelect.value.split(':');
 		expiresAtInput.value = toDatetimeLocal(addTime(new Date(), Number(amount), unit));
 	});
+
+	expiresAtInput.addEventListener('input', selectCustomExpiresAt);
+	expiresAtInput.addEventListener('change', selectCustomExpiresAt);
+
+	function selectCustomExpiresAt() {
+		if (!expiresAtInput.disabled) {
+			quickExpiresAtSelect.value = 'custom';
+			selectedExpiresAtOption = 'custom';
+		}
+	}
 
 	form.addEventListener('submit', async (event) => {
 		event.preventDefault();
@@ -575,6 +609,7 @@
 			form.reset();
 			expiresAtInput.disabled = true;
 			quickExpiresAtSelect.value = 'none';
+			selectedExpiresAtOption = 'none';
 		} catch (error) {
 			showError('서버에 연결할 수 없습니다. 잠시 후 다시 시도하세요.');
 		} finally {
