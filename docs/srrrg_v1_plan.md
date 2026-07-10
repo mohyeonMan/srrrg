@@ -100,7 +100,8 @@ GET /{code}
 secret key를 이용해 단축 URL 정보를 조회한다.
 
 ```http
-GET /api/links/{code}?secretKey=...
+GET /api/links/{code}
+X-Srrrg-Secret-Key: srrrg_sk_xxxxxxxxx
 ```
 
 조회 가능 정보:
@@ -111,6 +112,7 @@ GET /api/links/{code}?secretKey=...
 - shortUrl
 - expiresAt
 - clickCount
+- redirectCount
 - createdAt
 - updatedAt
 ```
@@ -123,6 +125,7 @@ secret key를 이용해 원본 URL 또는 만료일을 수정한다.
 
 ```http
 PATCH /api/links/{code}
+X-Srrrg-Secret-Key: srrrg_sk_xxxxxxxxx
 ```
 
 수정 가능 항목:
@@ -140,6 +143,7 @@ secret key를 이용해 링크를 삭제한다.
 
 ```http
 DELETE /api/links/{code}
+X-Srrrg-Secret-Key: srrrg_sk_xxxxxxxxx
 ```
 
 물리 삭제 대신 soft delete 방식으로 처리한다.
@@ -327,6 +331,7 @@ CREATE TABLE links (
     expires_at TIMESTAMPTZ NULL,
 
     click_count BIGINT NOT NULL DEFAULT 0,
+    redirect_count BIGINT NOT NULL DEFAULT 0,
 
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
 
@@ -347,6 +352,7 @@ CREATE TABLE links (
 | secret_key_hash | 관리용 secret key의 해시값 |
 | expires_at | 링크 만료일 |
 | click_count | 클릭 수 |
+| redirect_count | 원본 URL로 실제 이동한 수 |
 | is_deleted | 삭제 여부 |
 | created_at | 생성일 |
 | updated_at | 수정일 |
@@ -428,7 +434,8 @@ Location: https://example.com/very/long/url
 ## 7.3 링크 조회
 
 ```http
-GET /api/links/{code}?secretKey=srrrg_sk_xxxxxxxxx
+GET /api/links/{code}
+X-Srrrg-Secret-Key: srrrg_sk_xxxxxxxxx
 ```
 
 Response:
@@ -440,6 +447,7 @@ Response:
   "originalUrl": "https://example.com/very/long/url",
   "expiresAt": "2026-12-31T23:59:59+09:00",
   "clickCount": 13,
+  "redirectCount": 10,
   "createdAt": "2026-07-07T12:00:00+09:00",
   "updatedAt": "2026-07-07T12:00:00+09:00"
 }
@@ -452,13 +460,13 @@ Response:
 ```http
 PATCH /api/links/{code}
 Content-Type: application/json
+X-Srrrg-Secret-Key: srrrg_sk_xxxxxxxxx
 ```
 
 Request:
 
 ```json
 {
-  "secretKey": "srrrg_sk_xxxxxxxxx",
   "originalUrl": "https://new-example.com",
   "expiresAt": "2027-01-31T23:59:59+09:00"
 }
@@ -472,7 +480,8 @@ Response:
   "shortUrl": "https://srrrg.link/aB3x9Q",
   "originalUrl": "https://new-example.com",
   "expiresAt": "2027-01-31T23:59:59+09:00",
-  "clickCount": 13
+  "clickCount": 13,
+  "redirectCount": 10
 }
 ```
 
@@ -482,15 +491,7 @@ Response:
 
 ```http
 DELETE /api/links/{code}
-Content-Type: application/json
-```
-
-Request:
-
-```json
-{
-  "secretKey": "srrrg_sk_xxxxxxxxx"
-}
+X-Srrrg-Secret-Key: srrrg_sk_xxxxxxxxx
 ```
 
 Response:

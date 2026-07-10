@@ -25,7 +25,24 @@ public class SecretKeyManager {
 	}
 
 	public boolean matches(String value, String hash) {
+		if (!hasValidFormat(value)) {
+			return false;
+		}
 		return passwordEncoder.matches(value, hash);
+	}
+
+	private boolean hasValidFormat(String value) {
+		if (value == null || !value.startsWith(SECRET_KEY_PREFIX)
+				|| value.length() != SECRET_KEY_PREFIX.length() + SECRET_LENGTH) {
+			return false;
+		}
+
+		for (int index = SECRET_KEY_PREFIX.length(); index < value.length(); index++) {
+			if (URL_SAFE_CHARACTERS.indexOf(value.charAt(index)) < 0) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	public record GeneratedSecretKey(String value, String hash) {

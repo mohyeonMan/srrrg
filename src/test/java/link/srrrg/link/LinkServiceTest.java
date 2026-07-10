@@ -20,7 +20,10 @@ import link.srrrg.link.access.LinkClickEventRecorder;
 import link.srrrg.link.access.LinkRedirectEventRecorder;
 import link.srrrg.link.dto.CreateLinkRequest;
 import link.srrrg.link.dto.CreateLinkResponse;
+import link.srrrg.link.dto.DeleteLinkResponse;
+import link.srrrg.link.dto.LinkManagementResponse;
 import link.srrrg.link.dto.RedirectLink;
+import link.srrrg.link.dto.UpdateLinkRequest;
 
 class LinkServiceTest {
 
@@ -92,6 +95,119 @@ class LinkServiceTest {
 				.isInstanceOf(IllegalArgumentException.class)
 				.hasMessage("만료 시각은 현재보다 미래여야 합니다.");
 		verify(linkRepository, never()).save(any(Link.class));
+	}
+
+	@Test
+	void returnsManagedLinkWhenSecretMatches() {
+		Instant expiresAt = Instant.now().plusSeconds(3600);
+		Link link = managedLink(expiresAt);
+		when(linkRepository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
+		when(secretKeyManager.matches("srrrg_sk_valid", "bcrypt-hash")).thenReturn(true);
+
+		LinkManagementResponse response = linkService.getManagedLink("aB3x9Q", "srrrg_sk_valid");
+
+		assertThat(response.code()).isEqualTo("aB3x9Q");
+		assertThat(response.shortUrl()).isEqualTo("https://srrrg.link/aB3x9Q");
+		assertThat(response.originalUrl()).isEqualTo("https://example.com/path");
+		assertThat(response.expiresAt()).isEqualTo(expiresAt);
+		assertThat(response.statistics().clickCount()).isEqualTo(12);
+		assertThat(response.statistics().redirectCount()).isEqualTo(8);
+	}
+
+	@Test
+	void hidesExistingLinkWhenSecretDoesNotMatch() {
+		Link link = managedLink(null);
+		when(linkRepository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
+		when(secretKeyManager.matches("wrong-secret", "bcrypt-hash")).thenReturn(false);
+
+		assertThatThrownBy(() -> linkService.getManagedLink("aB3x9Q", "wrong-secret"))
+				.isInstanceOf(LinkNotFoundException.class);
+		verify(link, never()).updateOriginalUrl(any(String.class));
+		verify(link, never()).updateExpiresAt(any(Instant.class));
+		verify(link, never()).delete();
+	}
+
+	@Test
+	void allowsManagingExpiredLink() {
+		Link link = managedLink(Instant.now().minusSeconds(60));
+		when(linkRepository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
+		when(secretKeyManager.matches("srrrg_sk_valid", "bcrypt-hash")).thenReturn(true);
+
+		LinkManagementResponse response = linkService.getManagedLink("aB3x9Q", "srrrg_sk_valid");
+
+		assertThat(response.code()).isEqualTo("aB3x9Q");
+	}
+
+	@Test
+	void updatesOnlyProvidedFields() {
+		Instant expiresAt = Instant.now().plusSeconds(7200);
+		Link link = managedLink(null);
+		when(linkRepository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
+		when(secretKeyManager.matches("srrrg_sk_valid", "bcrypt-hash")).thenReturn(true);
+		UpdateLinkRequest request = new UpdateLinkRequest();
+		request.setOriginalUrl("https://new-example.com");
+		request.setExpiresAt(expiresAt);
+
+		linkService.updateManagedLink("aB3x9Q", "srrrg_sk_valid", request);
+
+		verify(urlValidator).validate("https://new-example.com");
+		verify(link).updateOriginalUrl("https://new-example.com");
+		verify(link).updateExpiresAt(expiresAt);
+	}
+
+	@Test
+	void clearsExpirationWhenExplicitNullIsProvided() {
+		Link link = managedLink(Instant.now().plusSeconds(3600));
+		when(linkRepository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
+		when(secretKeyManager.matches("srrrg_sk_valid", "bcrypt-hash")).thenReturn(true);
+		UpdateLinkRequest request = new UpdateLinkRequest();
+		request.setExpiresAt(null);
+
+		linkService.updateManagedLink("aB3x9Q", "srrrg_sk_valid", request);
+
+		verify(link).updateExpiresAt(null);
+		verify(link, never()).updateOriginalUrl(any(String.class));
+	}
+
+	@Test
+	void rejectsEmptyUpdateRequest() {
+		Link link = managedLink(null);
+		when(linkRepository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
+		when(secretKeyManager.matches("srrrg_sk_valid", "bcrypt-hash")).thenReturn(true);
+
+		assertThatThrownBy(() -> linkService.updateManagedLink(
+				"aB3x9Q",
+				"srrrg_sk_valid",
+				new UpdateLinkRequest()
+		))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessage("변경할 값을 하나 이상 입력해야 합니다.");
+		verify(link, never()).updateOriginalUrl(any(String.class));
+		verify(link, never()).updateExpiresAt(any(Instant.class));
+	}
+
+	@Test
+	void softDeletesManagedLink() {
+		Link link = managedLink(null);
+		when(linkRepository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
+		when(secretKeyManager.matches("srrrg_sk_valid", "bcrypt-hash")).thenReturn(true);
+
+		DeleteLinkResponse response = linkService.deleteManagedLink("aB3x9Q", "srrrg_sk_valid");
+
+		assertThat(response.deleted()).isTrue();
+		verify(link).delete();
+	}
+
+	@Test
+	void rejectsAlreadyDeletedManagedLinkAfterAuthentication() {
+		Link link = managedLink(null);
+		when(link.isDeleted()).thenReturn(true);
+		when(linkRepository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
+		when(secretKeyManager.matches("srrrg_sk_valid", "bcrypt-hash")).thenReturn(true);
+
+		assertThatThrownBy(() -> linkService.deleteManagedLink("aB3x9Q", "srrrg_sk_valid"))
+				.isInstanceOf(LinkGoneException.class);
+		verify(link, never()).delete();
 	}
 
 	@Test
@@ -196,5 +312,18 @@ class LinkServiceTest {
 		verify(linkRepository, never()).incrementRedirectCountByCode(any(String.class));
 		verify(clickEventRecorder, never()).record(any(Link.class), any(ClientRequestInfo.class));
 		verify(redirectEventRecorder, never()).record(any(Link.class), any(ClientRequestInfo.class));
+	}
+
+	private Link managedLink(Instant expiresAt) {
+		Link link = mock(Link.class);
+		when(link.getCode()).thenReturn("aB3x9Q");
+		when(link.getOriginalUrl()).thenReturn("https://example.com/path");
+		when(link.getSecretKeyHash()).thenReturn("bcrypt-hash");
+		when(link.getExpiresAt()).thenReturn(expiresAt);
+		when(link.getClickCount()).thenReturn(12L);
+		when(link.getRedirectCount()).thenReturn(8L);
+		when(link.getCreatedAt()).thenReturn(Instant.parse("2026-07-10T10:00:00Z"));
+		when(link.getUpdatedAt()).thenReturn(Instant.parse("2026-07-10T11:00:00Z"));
+		return link;
 	}
 }

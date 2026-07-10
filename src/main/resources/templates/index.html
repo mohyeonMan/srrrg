@@ -68,6 +68,7 @@
 		}
 		.hero-copy,
 		.shortener-card,
+		.management-card,
 		.feature-card {
 			background: rgba(255, 255, 255, 0.92);
 			border: 1px solid rgba(226, 232, 240, 0.9);
@@ -222,6 +223,119 @@
 			font-size: 13px;
 			line-height: 1.5;
 		}
+		.management-card {
+			margin-top: 18px;
+			padding: 28px;
+		}
+		.management-form,
+		.management-edit-form {
+			display: grid;
+			gap: 14px;
+		}
+		.management-fields {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 12px;
+		}
+		.management-field {
+			display: grid;
+			gap: 8px;
+		}
+		.management-label {
+			color: #64748b;
+			font-size: 13px;
+			font-weight: 800;
+		}
+		.management-button,
+		.management-delete-button {
+			padding: 13px 16px;
+			border-radius: 14px;
+			font: inherit;
+			font-weight: 800;
+			cursor: pointer;
+		}
+		.management-button {
+			color: #ffffff;
+			background: linear-gradient(135deg, #2563eb, #4f46e5);
+			border: 0;
+		}
+		.management-delete-button {
+			color: #b91c1c;
+			background: #fff1f2;
+			border: 1px solid #fecdd3;
+		}
+		.management-button:disabled,
+		.management-delete-button:disabled {
+			cursor: wait;
+			opacity: 0.65;
+		}
+		.management-message {
+			min-height: 22px;
+			margin: 14px 0 0;
+			color: #475569;
+			font-size: 14px;
+		}
+		.management-message.error {
+			color: #b91c1c;
+		}
+		.management-result {
+			display: grid;
+			gap: 18px;
+			margin-top: 20px;
+			padding-top: 20px;
+			border-top: 1px solid #e2e8f0;
+		}
+		.management-result[hidden] {
+			display: none;
+		}
+		.management-link {
+			color: #2563eb;
+			font-weight: 800;
+			overflow-wrap: anywhere;
+		}
+		.management-stats {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 12px;
+		}
+		.management-stat {
+			padding: 16px;
+			background: #f8fafc;
+			border: 1px solid #e2e8f0;
+			border-radius: 16px;
+		}
+		.management-stat-label {
+			margin: 0 0 6px;
+			color: #64748b;
+			font-size: 13px;
+			font-weight: 700;
+		}
+		.management-stat-value {
+			margin: 0;
+			font-size: 26px;
+			font-weight: 900;
+		}
+		.management-metadata {
+			display: grid;
+			grid-template-columns: max-content minmax(0, 1fr);
+			gap: 8px 14px;
+			margin: 0;
+			font-size: 14px;
+		}
+		.management-metadata dt {
+			color: #64748b;
+			font-weight: 800;
+		}
+		.management-metadata dd {
+			margin: 0;
+			color: #334155;
+			overflow-wrap: anywhere;
+		}
+		.management-actions {
+			display: grid;
+			grid-template-columns: 1fr auto;
+			gap: 10px;
+		}
 		.result-modal {
 			display: none;
 			position: fixed;
@@ -348,7 +462,8 @@
 				margin: 32px auto;
 			}
 			.hero,
-			.features {
+			.features,
+			.management-fields {
 				grid-template-columns: 1fr;
 			}
 			.hero-copy {
@@ -378,11 +493,13 @@
 			}
 			.hero-copy,
 			.shortener-card,
+			.management-card,
 			.feature-card {
 				border-radius: 20px;
 			}
 			.hero-copy,
-			.shortener-card {
+			.shortener-card,
+			.management-card {
 				padding: 24px;
 			}
 			.hero-description {
@@ -396,8 +513,14 @@
 			}
 			.primary-link,
 			.secondary-link,
-			.shortener-button {
+			.shortener-button,
+			.management-button,
+			.management-delete-button {
 				width: 100%;
+			}
+			.management-actions,
+			.management-stats {
+				grid-template-columns: 1fr;
 			}
 			.quick-expire-select {
 				min-height: 38px;
@@ -422,6 +545,7 @@
 		@media (max-width: 380px) {
 			.hero-copy,
 			.shortener-card,
+			.management-card,
 			.feature-card {
 				padding: 20px;
 			}
@@ -496,6 +620,83 @@
 		</aside>
 	</section>
 
+	<section class="management-card" aria-labelledby="management-title">
+		<h2 id="management-title" class="card-title">내 단축 링크 관리</h2>
+		<p class="card-description">단축 URL 또는 코드와 발급받은 secret key를 입력하세요.</p>
+		<form id="management-lookup-form" class="management-form">
+			<div class="management-fields">
+				<label class="management-field">
+					<span class="management-label">단축 URL 또는 코드</span>
+					<input
+							id="management-code"
+							class="shortener-input"
+							type="text"
+							placeholder="https://srrrg.link/aB3x9Q 또는 aB3x9Q"
+							autocomplete="off"
+							required
+					>
+				</label>
+				<label class="management-field">
+					<span class="management-label">Secret key</span>
+					<input
+							id="management-secret-key"
+							class="shortener-input"
+							type="password"
+							placeholder="srrrg_sk_xxxxxxxxx"
+							autocomplete="off"
+							spellcheck="false"
+							required
+					>
+				</label>
+			</div>
+			<button id="management-lookup-button" class="management-button" type="submit">조회하기</button>
+		</form>
+		<p id="management-message" class="management-message" role="status" aria-live="polite"></p>
+
+		<div id="management-result" class="management-result" hidden>
+			<div>
+				<p class="management-label">단축 URL</p>
+				<a id="management-short-url" class="management-link" href="#" target="_blank" rel="noopener noreferrer"></a>
+			</div>
+
+			<div class="management-stats" aria-label="링크 누적 통계">
+				<div class="management-stat">
+					<p class="management-stat-label">진입 수</p>
+					<p id="management-click-count" class="management-stat-value">0</p>
+				</div>
+				<div class="management-stat">
+					<p class="management-stat-label">실제 이동 수</p>
+					<p id="management-redirect-count" class="management-stat-value">0</p>
+				</div>
+			</div>
+
+			<dl class="management-metadata">
+				<dt>만료</dt>
+				<dd id="management-expiration-status"></dd>
+				<dt>생성</dt>
+				<dd id="management-created-at"></dd>
+				<dt>최근 수정</dt>
+				<dd id="management-updated-at"></dd>
+			</dl>
+
+			<form id="management-edit-form" class="management-edit-form">
+				<label class="management-field">
+					<span class="management-label">원본 URL</span>
+					<input id="management-original-url" class="shortener-input" type="url" maxlength="2048" required>
+				</label>
+				<label class="management-field">
+					<span class="management-label">만료 시각 · 비우면 무기한</span>
+					<input id="management-expires-at" class="shortener-input" type="datetime-local">
+				</label>
+				<div class="management-actions">
+					<button id="management-save-button" class="management-button" type="submit">변경 저장</button>
+					<button id="management-delete-button" class="management-delete-button" type="button">링크 삭제</button>
+				</div>
+			</form>
+		</div>
+		<p class="shortener-help">secret key는 저장되지 않으며 분실하면 링크를 관리할 수 없습니다.</p>
+	</section>
+
 	<section class="features" aria-label="srrrg 주요 기능">
 		<article class="feature-card">
 			<h2>짧은 Base62 코드</h2>
@@ -547,7 +748,28 @@
 	const copyShortUrlButton = document.getElementById('copy-short-url');
 	const copySecretKeyButton = document.getElementById('copy-secret-key');
 	const modalCloseButton = document.getElementById('modal-close-button');
+	const managementLookupForm = document.getElementById('management-lookup-form');
+	const managementCodeInput = document.getElementById('management-code');
+	const managementSecretKeyInput = document.getElementById('management-secret-key');
+	const managementLookupButton = document.getElementById('management-lookup-button');
+	const managementMessage = document.getElementById('management-message');
+	const managementResult = document.getElementById('management-result');
+	const managementShortUrl = document.getElementById('management-short-url');
+	const managementClickCount = document.getElementById('management-click-count');
+	const managementRedirectCount = document.getElementById('management-redirect-count');
+	const managementExpirationStatus = document.getElementById('management-expiration-status');
+	const managementCreatedAt = document.getElementById('management-created-at');
+	const managementUpdatedAt = document.getElementById('management-updated-at');
+	const managementEditForm = document.getElementById('management-edit-form');
+	const managementOriginalUrlInput = document.getElementById('management-original-url');
+	const managementExpiresAtInput = document.getElementById('management-expires-at');
+	const managementSaveButton = document.getElementById('management-save-button');
+	const managementDeleteButton = document.getElementById('management-delete-button');
 	let selectedExpiresAtOption = quickExpiresAtSelect.value;
+	let managedCode = null;
+	let managedSecretKey = null;
+	let managedOriginalUrl = null;
+	let managedExpiresAtValue = null;
 
 	quickExpiresAtSelect.addEventListener('change', () => {
 		const previousOption = selectedExpiresAtOption;
@@ -614,6 +836,132 @@
 			showError('서버에 연결할 수 없습니다. 잠시 후 다시 시도하세요.');
 		} finally {
 			setLoading(false);
+		}
+	});
+
+	managementLookupForm.addEventListener('submit', async (event) => {
+		event.preventDefault();
+
+		const code = extractLinkCode(managementCodeInput.value);
+		const secretKeyValue = managementSecretKeyInput.value.trim();
+		if (!code) {
+			showManagementMessage('6자리 단축 코드 또는 올바른 단축 URL을 입력하세요.', true);
+			managementResult.hidden = true;
+			return;
+		}
+
+		setManagementLoading(managementLookupButton, true, '조회 중...');
+		managementResult.hidden = true;
+		showManagementMessage('');
+
+		try {
+			const response = await fetch(`${createLinkUrl}/${encodeURIComponent(code)}`, {
+				headers: {
+					'Accept': 'application/json',
+					'X-Srrrg-Secret-Key': secretKeyValue
+				}
+			});
+			const body = await readApiBody(response);
+			if (!response.ok) {
+				showManagementMessage(body.message || '링크를 조회하지 못했습니다.', true);
+				return;
+			}
+
+			managedCode = code;
+			managedSecretKey = secretKeyValue;
+			renderManagedLink(body);
+			showManagementMessage('링크 정보를 불러왔습니다.');
+		} catch (error) {
+			showManagementMessage('서버에 연결할 수 없습니다. 잠시 후 다시 시도하세요.', true);
+		} finally {
+			setManagementLoading(managementLookupButton, false, '조회하기');
+		}
+	});
+
+	managementEditForm.addEventListener('submit', async (event) => {
+		event.preventDefault();
+		if (!managedCode || !managedSecretKey) {
+			return;
+		}
+		const requestBody = {};
+		const originalUrl = managementOriginalUrlInput.value.trim();
+		if (originalUrl !== managedOriginalUrl) {
+			requestBody.originalUrl = originalUrl;
+		}
+		if (managementExpiresAtInput.value !== managedExpiresAtValue) {
+			requestBody.expiresAt = toInstantOrNull(managementExpiresAtInput.value);
+		}
+		if (Object.keys(requestBody).length === 0) {
+			showManagementMessage('변경된 값이 없습니다.', true);
+			return;
+		}
+
+		setManagementLoading(managementSaveButton, true, '저장 중...');
+		managementDeleteButton.disabled = true;
+		showManagementMessage('');
+
+		try {
+			const response = await fetch(`${createLinkUrl}/${encodeURIComponent(managedCode)}`, {
+				method: 'PATCH',
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json',
+					'X-Srrrg-Secret-Key': managedSecretKey
+				},
+				body: JSON.stringify(requestBody)
+			});
+			const body = await readApiBody(response);
+			if (!response.ok) {
+				showManagementMessage(body.message || '링크를 수정하지 못했습니다.', true);
+				return;
+			}
+
+			renderManagedLink(body);
+			showManagementMessage('변경사항을 저장했습니다.');
+		} catch (error) {
+			showManagementMessage('서버에 연결할 수 없습니다. 잠시 후 다시 시도하세요.', true);
+		} finally {
+			setManagementLoading(managementSaveButton, false, '변경 저장');
+			managementDeleteButton.disabled = false;
+		}
+	});
+
+	managementDeleteButton.addEventListener('click', async () => {
+		if (!managedCode || !managedSecretKey
+				|| !window.confirm('이 링크를 삭제할까요? 삭제 후에는 다시 사용할 수 없습니다.')) {
+			return;
+		}
+
+		setManagementLoading(managementDeleteButton, true, '삭제 중...');
+		managementSaveButton.disabled = true;
+		showManagementMessage('');
+
+		try {
+			const response = await fetch(`${createLinkUrl}/${encodeURIComponent(managedCode)}`, {
+				method: 'DELETE',
+				headers: {
+					'Accept': 'application/json',
+					'X-Srrrg-Secret-Key': managedSecretKey
+				}
+			});
+			const body = await readApiBody(response);
+			if (!response.ok) {
+				showManagementMessage(body.message || '링크를 삭제하지 못했습니다.', true);
+				return;
+			}
+
+			managementResult.hidden = true;
+			managementSecretKeyInput.value = '';
+			managedCode = null;
+			managedSecretKey = null;
+			managedOriginalUrl = null;
+			managedExpiresAtValue = null;
+			showManagementMessage('링크를 삭제했습니다.');
+		} catch (error) {
+			showManagementMessage('서버에 연결할 수 없습니다. 잠시 후 다시 시도하세요.', true);
+		} finally {
+			setManagementLoading(managementDeleteButton, false, '링크 삭제');
+			managementSaveButton.disabled = false;
 		}
 	});
 
@@ -707,6 +1055,76 @@
 	function resetCopyButtons() {
 		copyShortUrlButton.textContent = '복사';
 		copySecretKeyButton.textContent = '복사';
+	}
+
+	function extractLinkCode(value) {
+		const trimmedValue = value.trim();
+		if (/^[0-9A-Za-z]{6}$/.test(trimmedValue)) {
+			return trimmedValue;
+		}
+
+		try {
+			const url = new URL(trimmedValue);
+			const segments = url.pathname.split('/').filter(Boolean);
+			const code = segments.at(-1) || '';
+			return /^[0-9A-Za-z]{6}$/.test(code) ? code : null;
+		} catch (error) {
+			return null;
+		}
+	}
+
+	function renderManagedLink(link) {
+		managementShortUrl.textContent = link.shortUrl;
+		managementShortUrl.href = link.shortUrl;
+		managementClickCount.textContent = String(link.statistics.clickCount);
+		managementRedirectCount.textContent = String(link.statistics.redirectCount);
+		managementExpirationStatus.textContent = formatExpiration(link.expiresAt);
+		managementCreatedAt.textContent = formatDateTime(link.createdAt);
+		managementUpdatedAt.textContent = formatDateTime(link.updatedAt);
+		managementOriginalUrlInput.value = link.originalUrl;
+		managementExpiresAtInput.value = link.expiresAt
+				? toDatetimeLocal(new Date(link.expiresAt))
+				: '';
+		managedOriginalUrl = managementOriginalUrlInput.value;
+		managedExpiresAtValue = managementExpiresAtInput.value;
+		managementResult.hidden = false;
+	}
+
+	function formatExpiration(value) {
+		if (!value) {
+			return '만료 없음';
+		}
+		const expiration = new Date(value);
+		const prefix = expiration.getTime() <= Date.now() ? '만료됨 · ' : '';
+		return prefix + formatDateTime(value);
+	}
+
+	function formatDateTime(value) {
+		if (!value) {
+			return '-';
+		}
+		return new Intl.DateTimeFormat('ko-KR', {
+			dateStyle: 'medium',
+			timeStyle: 'short'
+		}).format(new Date(value));
+	}
+
+	function showManagementMessage(message, error = false) {
+		managementMessage.textContent = message;
+		managementMessage.classList.toggle('error', error);
+	}
+
+	function setManagementLoading(button, loading, text) {
+		button.disabled = loading;
+		button.textContent = text;
+	}
+
+	async function readApiBody(response) {
+		try {
+			return await response.json();
+		} catch (error) {
+			return {};
+		}
 	}
 
 	function addTime(date, amount, unit) {

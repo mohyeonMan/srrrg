@@ -1,48 +1,46 @@
-# 링크 생성 API 구현 계획
+# 링크 생성 API 현행 명세
 
-## 1. 목표
+## 1. 문서 목적
 
-`POST /api/links` 요청으로 원본 URL을 등록하고 다음 값을 반환한다.
+이 문서는 현재 저장소에 구현된 `POST /api/links`의 API 계약, 정책, 코드 구성과 검증 범위를 설명한다.
 
-- 6자리 단축 코드
-- `srrrg.link` 기준 단축 URL
+링크 생성 API는 원본 URL과 선택적인 만료 시각을 받아 다음 값을 생성한다.
+
+- 6자리 Base62 단축 코드
+- 외부 공개 주소 기준 단축 URL
 - 관리용 secret key 원문
-- 선택적으로 입력한 만료 시각
+- 요청에서 지정한 만료 시각
 
-이번 구현은 링크 한 건을 정상적으로 생성하고 PostgreSQL에 저장하는 것까지만 완료한다.
+secret key 원문은 생성 응답에서 한 번만 전달하고 DB에는 BCrypt 해시만 저장한다. 이후 조회·수정·삭제는 `docs/implement/02_manage_link_api.md`의 `code + secret key` 인증 방식을 따른다.
 
-## 2. 이번 범위
+## 2. 현재 구현 상태
 
-### 포함
+다음 항목이 구현되어 있다.
 
 - `Link` JPA 엔티티와 `LinkRepository`
-- 암호학적으로 안전한 범용 임의 문자열 생성기
-- Base62 문자 기반 6자리 무작위 코드 생성
-- 관리용 secret key 생성과 BCrypt 해시 저장
-- 원본 URL과 만료 시각 검증
-- 링크 생성 서비스와 API
-- 입력 오류에 대한 공통 400 응답
-- 핵심 정책의 단위 테스트
-- Compose 환경에서 실제 API와 DB 저장 확인
+- 암호학적으로 안전한 임의 문자열 생성기
+- Base62 문자 기반 6자리 code 생성
+- `srrrg_sk_` 접두사를 사용하는 secret key 생성
+- secret key BCrypt 해시 저장 및 비교
+- URL과 만료 시각 검증
+- code 중복 사전 확인과 최대 5회 재생성
+- `POST /api/links`
+- 공통 400 오류 응답
+- OpenAPI 문서
+- 메인 화면의 링크 생성 폼과 결과 모달
+- 생성 정책 단위 테스트
+- PostgreSQL 및 애플리케이션 Compose 실행 구성
 
-### 제외
-
-- `GET /{code}` 리다이렉트
-- 링크 조회·수정·삭제
-- 클릭 수 증가
-- Redis 또는 코드 캐시
-- 별도 도메인 계층과 서비스 인터페이스
-- 날짜, 문자열, 컬렉션 등을 한데 모은 목적 불명의 유틸리티 모음
-- DNS 조회를 이용한 완전한 SSRF 방어
-- Testcontainers와 테스트 전용 DB 환경
+생성 이후의 리다이렉트, 클릭·이동 이벤트 기록, 신뢰 링크 처리는 이미 별도 코드로 구현되어 있다. 이 문서는 그 기능을 상세히 설명하지 않고 생성 API와 맞닿는 부분만 다룬다.
 
 ## 3. API 계약
 
-### 요청
+### 3.1 요청
 
 ```http
 POST /api/links
 Content-Type: application/json
+Accept: application/json
 ```
 
 ```json
@@ -52,11 +50,16 @@ Content-Type: application/json
 }
 ```
 
-- `originalUrl`은 필수이다.
-- `expiresAt`은 선택이며 미입력 또는 `null`이면 무기한이다.
-- 애플리케이션 내부 시간 타입은 `Instant`를 사용한다.
+필드 정책:
 
-### 성공 응답
+| 필드 | 필수 | 정책 |
+|---|---|---|
+| `originalUrl` | 필수 | HTTP/HTTPS 절대 URL, 최대 2,048자 |
+| `expiresAt` | 선택 | ISO 8601 시각, 현재보다 미래여야 함 |
+
+`expiresAt`을 생략하거나 `null`로 전달하면 무기한 링크를 생성한다. 애플리케이션 내부 시간 타입은 `Instant`를 사용하며 PostgreSQL에는 `TIMESTAMPTZ`로 저장한다.
+
+### 3.2 성공 응답
 
 HTTP 상태는 `201 Created`를 사용한다.
 
@@ -69,242 +72,297 @@ HTTP 상태는 `201 Created`를 사용한다.
 }
 ```
 
-### 입력 오류 응답
+- `code`는 항상 6자리 Base62 문자열이다.
+- `shortUrl`은 `SRRRG_BASE_URL`과 code를 결합한다.
+- `secretKey`는 응답을 만든 뒤 서버에서 다시 조회할 수 없다.
+- `expiresAt`이 없는 경우 응답에서도 `null`이다.
 
-HTTP 상태는 `400 Bad Request`를 사용한다.
+### 3.3 입력 오류 응답
+
+Bean Validation 실패와 URL·만료 시각 정책 위반은 `400 Bad Request`로 변환한다.
 
 ```json
 {
   "code": "INVALID_REQUEST",
-  "message": "유효한 HTTP 또는 HTTPS URL을 입력해야 합니다."
+  "message": "HTTP 또는 HTTPS URL만 사용할 수 있습니다."
 }
 ```
 
-필드별 상세 오류 목록은 v1 생성 API에 필요하지 않으므로 만들지 않는다.
+필드별 오류 배열은 제공하지 않고 첫 번째 검증 메시지만 반환한다.
 
-## 4. 파일 구성
+예상하지 못한 오류는 다음 공통 응답을 사용한다.
+
+```json
+{
+  "code": "INTERNAL_SERVER_ERROR",
+  "message": "서버 오류가 발생했습니다."
+}
+```
+
+## 4. 생성 정책
+
+### 4.1 단축 코드
+
+```text
+문자 집합: 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
+길이: 6
+```
+
+`SecureRandom`으로 문자를 선택한다. `LinkService`가 `existsByCode`로 중복을 확인하고 중복이면 새 code를 생성하며 최대 5회 시도한다.
+
+DB의 unique 제약이 동시 요청에서 발생하는 최종 충돌을 방어한다. 현재 구현은 사전 확인 이후 `save` 시점에 발생한 unique 충돌을 재시도하지 않는다. 실제로 충돌이 관측되면 저장 단위 재시도를 추가한다.
+
+### 4.2 Secret key
+
+```text
+접두사: srrrg_sk_
+임의 문자열 길이: 43
+문자 집합: 영문 대소문자, 숫자, -, _
+```
+
+`SecretKeyManager`는 원문과 BCrypt 해시를 함께 생성한다.
+
+```text
+API 응답: secret key 원문
+Link 엔티티: BCrypt 해시
+DB: BCrypt 해시
+```
+
+원문은 엔티티, DB, 애플리케이션 로그에 저장하지 않는다. 링크 관리 시에는 code로 링크를 찾은 뒤 `SecretKeyManager.matches`로 입력값과 저장된 해시를 비교한다.
+
+### 4.3 URL
+
+검증 순서는 다음과 같다.
+
+1. 값이 null 또는 공백인지 확인
+2. 길이가 2,048자 이하인지 확인
+3. Java `URI`로 파싱
+4. scheme이 `http` 또는 `https`인지 확인
+5. host가 있는 절대 URL인지 확인
+6. localhost, loopback, 명시적인 사설 IPv4 주소 차단
+7. IPv6 loopback 차단
+
+명시적으로 차단하는 주소 범위:
+
+```text
+localhost 및 *.localhost
+0.0.0.0/8
+10.0.0.0/8
+127.0.0.0/8
+172.16.0.0/12
+192.168.0.0/16
+::1
+```
+
+DNS 조회, 접속 가능 여부 확인, URL 정규화는 하지 않는다. 따라서 도메인의 DNS 재해석까지 막는 완전한 SSRF 방어가 아니다. 현재 서버는 원본 URL로 직접 요청하지 않으며, 이 검증은 내부 주소를 향하는 리다이렉터 생성을 줄이는 정책이다.
+
+### 4.4 만료 시각
+
+- 미입력 또는 `null`: 무기한
+- `expiresAt > Instant.now()`: 허용
+- 현재와 같거나 과거: 400
+
+만료 여부는 리다이렉트 시점에도 다시 확인한다.
+
+## 5. 요청 처리 흐름
+
+`LinkService.create`는 다음 순서로 처리한다.
+
+```text
+1. originalUrl 정책 검증
+2. expiresAt 미래 시각 검증
+3. 중복되지 않은 6자리 code 생성
+4. secret key 원문과 BCrypt 해시 생성
+5. Link 엔티티 생성
+6. LinkRepository.save
+7. base URL과 code로 shortUrl 생성
+8. secret key 원문을 포함한 CreateLinkResponse 반환
+```
+
+생성된 링크의 초기값은 다음과 같다.
+
+```text
+clickCount = 0
+redirectCount = 0
+deleted = false
+trusted = false
+createdAt = 저장 직전 현재 시각
+updatedAt = 저장 직전 현재 시각
+```
+
+## 6. 코드 구성
 
 ```text
 src/main/java/link/srrrg
-├── link
-│   ├── Link.java
-│   ├── LinkRepository.java
-│   ├── LinkService.java
-│   ├── LinkController.java
-│   ├── LinkCodeGenerator.java
-│   ├── SecretKeyManager.java
-│   ├── UrlValidator.java
-│   └── dto
-│       ├── CreateLinkRequest.java
-│       └── CreateLinkResponse.java
-└── common
-    ├── ApiErrorResponse.java
-    ├── GlobalExceptionHandler.java
-    └── util
-        └── SecureRandomStringGenerator.java
+├── common
+│   ├── ApiErrorResponse.java
+│   ├── GlobalExceptionHandler.java
+│   └── util
+│       └── SecureRandomStringGenerator.java
+└── link
+    ├── Link.java
+    ├── LinkRepository.java
+    ├── LinkService.java
+    ├── LinkController.java
+    ├── LinkCodeGenerator.java
+    ├── SecretKeyManager.java
+    ├── UrlValidator.java
+    └── dto
+        ├── CreateLinkRequest.java
+        └── CreateLinkResponse.java
 ```
-
-구현체가 하나뿐인 `LinkService` 인터페이스는 만들지 않는다. DTO도 생성 API에 필요한 두 개만 만든다. 범용 유틸리티는 현재 실제 사용처가 있는 안전한 임의 문자열 생성 기능만 포함한다.
-
-## 5. 클래스별 책임
 
 ### `Link`
 
-`links` 테이블과 직접 매핑한다.
+- `links` 테이블과 매핑하는 JPA 엔티티
+- JPA용 protected 기본 생성자는 Lombok `@NoArgsConstructor`로 생성
+- 외부 setter 없이 `Link.create` 정적 팩터리 사용
+- `@PrePersist`, `@PreUpdate`로 감사 시각 갱신
+- `Instant`를 PostgreSQL `TIMESTAMPTZ`에 매핑
 
-| Java 필드 | DB 컬럼 | 초기값 |
+현재 `links` 매핑 필드:
+
+| Java 필드 | DB 컬럼 | 생성 초기값 |
 |---|---|---|
 | `id` | `id` | DB 생성 |
-| `code` | `code` | 생성된 6자리 코드 |
+| `code` | `code` | 생성된 6자리 code |
 | `originalUrl` | `original_url` | 요청 URL |
 | `secretKeyHash` | `secret_key_hash` | BCrypt 해시 |
 | `expiresAt` | `expires_at` | 요청값 또는 `null` |
 | `clickCount` | `click_count` | `0` |
+| `redirectCount` | `redirect_count` | `0` |
 | `deleted` | `is_deleted` | `false` |
-| `createdAt` | `created_at` | 저장 직전 현재 시각 |
-| `updatedAt` | `updated_at` | 저장 직전 현재 시각 |
-
-구현 원칙:
-
-- 기본 생성자는 JPA 용도로 `protected` 접근만 허용한다.
-- 외부에서 필드를 임의 변경하는 setter는 만들지 않는다.
-- 생성용 정적 팩터리 또는 필요한 값만 받는 생성자 하나를 둔다.
-- Lombok은 추가하지 않는다.
-- `Instant`는 PostgreSQL `TIMESTAMPTZ`에 매핑한다.
+| `trusted` | `trusted` | `false` |
+| `createdAt` | `created_at` | 저장 시각 |
+| `updatedAt` | `updated_at` | 저장 시각 |
 
 ### `LinkRepository`
 
-`JpaRepository<Link, Long>`를 상속한다.
-
-생성 단계에서 필요한 추가 메서드는 다음 하나뿐이다.
-
-```java
-boolean existsByCode(String code);
-```
+`JpaRepository<Link, Long>`를 상속한다. 생성 과정에서는 `existsByCode`와 `save`를 사용한다. `findByCode`와 클릭·이동 수 증가 query는 리다이렉트 및 이후 관리 기능에서 사용한다.
 
 ### `SecureRandomStringGenerator`
 
-`common.util` 패키지에 두고 지정된 문자 집합과 길이로 임의 문자열을 생성한다.
+지정된 문자 집합과 길이로 안전한 임의 문자열을 만든다.
 
 ```java
 String generate(String characters, int length)
 ```
 
-- 내부 난수 생성에는 `SecureRandom` 하나를 재사용한다.
-- 문자 집합이 비었거나 길이가 1보다 작으면 `IllegalArgumentException`을 던진다.
-- 링크 코드, 임시 토큰처럼 문자 집합과 길이를 지정하는 기능에만 사용한다.
-- Base62, 접두사, DB 중복 여부 같은 링크 도메인 규칙은 알지 못한다.
-- static 메서드 모음으로 만들지 않고 생성 가능한 작은 객체로 둔다.
+- 내부 `SecureRandom` 인스턴스를 재사용
+- null 또는 빈 문자 집합 거부
+- 1보다 작은 길이 거부
+- Base62, 접두사, DB 중복 여부 같은 링크 정책은 알지 못함
 
 ### `LinkCodeGenerator`
 
-다음 62개 문자와 길이 6을 `SecureRandomStringGenerator`에 전달한다.
-
-```text
-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
-```
-
-역할은 Base62 문자 집합과 6자리라는 링크 코드 정책을 정하는 것이다. 실제 임의 문자 선택은 범용 생성기에 위임한다. DB 중복 확인과 재시도는 `LinkService`가 담당한다.
+Base62 문자 집합과 길이 6이라는 정책을 소유하고 실제 문자 선택은 `SecureRandomStringGenerator`에 위임한다.
 
 ### `SecretKeyManager`
 
-- `SecureRandomStringGenerator`에 URL-safe 문자 집합과 길이 43을 전달한다.
-- 원문 앞에 `srrrg_sk_`를 붙인다.
-- `BCryptPasswordEncoder`로 DB 저장용 해시를 만든다.
-
-생성 결과는 원문과 해시를 함께 담은 내부 record로 반환한다. 원문은 API 응답을 만드는 동안만 사용하고 엔티티에는 해시만 전달한다.
+- URL-safe 문자 집합으로 43자리 임의 문자열 생성
+- `srrrg_sk_` 접두사 추가
+- `BCryptPasswordEncoder`로 저장용 해시 생성
+- `GeneratedSecretKey` record에 원문과 해시를 담아 반환
+- `matches`로 관리 요청의 key 검증 지원
 
 ### `UrlValidator`
 
-다음 조건을 순서대로 확인한다.
-
-1. 길이가 2,048자 이하인지 확인한다.
-2. Java `URI`로 파싱 가능한지 확인한다.
-3. 스킴이 `http` 또는 `https`인지 확인한다.
-4. host가 존재하는 절대 URL인지 확인한다.
-5. `localhost`, 루프백, 명시적인 사설 IPv4 주소를 차단한다.
-6. IPv6 loopback인 `::1`을 차단한다.
-
-DNS 조회는 하지 않는다. URL을 실제로 호출하거나 접속 가능 여부를 검사하지도 않는다. URL 문자열을 임의로 정규화하지 않고 검증을 통과한 원문을 저장한다.
+URL 길이, URI 형식, scheme, host와 명시적 내부 주소 차단 정책을 담당한다. URL을 실제로 호출하지 않고 검증을 통과한 원문을 그대로 저장한다.
 
 ### `LinkService`
 
-링크 생성 흐름을 담당한다.
-
-1. URL 정책을 검증한다.
-2. 만료 시각이 있다면 현재 시각보다 미래인지 확인한다.
-3. secret key 원문과 해시를 한 번 생성한다.
-4. 단축 코드를 생성한다.
-5. `existsByCode`로 중복 여부를 확인한다.
-6. 중복이면 새 코드를 만들며 최대 5회 시도한다.
-7. `Link` 엔티티를 저장한다.
-8. 저장된 code와 secret key 원문으로 응답을 만든다.
-
-DB unique 제약은 동시 요청에서 발생할 수 있는 최종 충돌을 막는다. 첫 구현에서는 매우 희박한 동시 충돌을 위한 복잡한 트랜잭션 재시도 구조를 만들지 않는다. unique 충돌이 실제로 관측되면 저장 재시도를 별도 작업으로 추가한다.
+URL·만료 검증, code 생성과 중복 확인, secret key 생성, 엔티티 저장 및 응답 생성을 담당한다. 구현체가 하나뿐이므로 별도 서비스 인터페이스는 두지 않는다.
 
 ### `LinkController`
 
-- 경로는 `/api/links`를 사용한다.
-- `@Valid`로 요청 형식을 검증한다.
-- 서비스 호출 결과를 `201 Created`로 반환한다.
-- 검증, 코드 생성, 엔티티 생성 로직을 포함하지 않는다.
+- 기본 경로 `/api/links`
+- `@Valid`로 요청 형식 검증
+- 성공 결과를 `201 Created`로 반환
+- Springdoc annotation으로 Swagger/OpenAPI 계약 제공
+- 생성 규칙과 엔티티 변경 로직을 포함하지 않음
 
-### 오류 처리
+## 7. 데이터베이스 및 설정
 
-`GlobalExceptionHandler`는 이번 범위에서 다음 두 입력 오류만 400으로 변환한다.
+운영 스키마는 Flyway가 관리하고 JPA는 `ddl-auto=validate`로 매핑을 검증한다. 이미 적용된 migration은 수정하지 않는다.
 
-- Bean Validation 실패
-- URL 또는 만료 시각 정책 실패
+현재 생성 API와 직접 관련된 `links` 컬럼은 V1에서 생성되고, 이후 `trusted`, `redirect_count`가 각각 V4와 V5에서 추가됐다.
 
-예상하지 못한 DB 오류를 400으로 감추지 않는다. 별도 오류 코드 enum이나 예외 클래스 계층은 만들지 않는다.
-
-## 6. 설정 변경
-
-외부 단축 URL 생성을 위해 `application.yaml`에 한 항목을 추가한다.
+외부 단축 URL의 기준 주소는 다음 설정을 사용한다.
 
 ```yaml
 srrrg:
   base-url: ${SRRRG_BASE_URL:https://srrrg.link}
 ```
 
-Compose의 `app` 서비스는 이미 개발값을 전달한다.
+`LinkService`는 마지막 `/` 하나를 제거한 뒤 `/{code}`를 붙인다.
+
+Compose의 기본 개발값:
 
 ```text
 SRRRG_BASE_URL=http://localhost:8080
 ```
 
-설정 값은 현재 하나뿐이므로 별도 `@ConfigurationProperties` 클래스 대신 `@Value`로 주입한다. 설정이 늘어날 때 묶는 것을 검토한다.
+따라서 로컬 생성 응답은 다음과 같은 주소를 반환한다.
 
-## 7. 구현 순서
+```text
+http://localhost:8080/aB3x9Q
+```
 
-### 1단계: 영속성 매핑
+## 8. 메인 화면 연동
 
-- `Link` 엔티티 작성
-- `LinkRepository` 작성
-- 기존 `V1__create_links_table.sql`과 필드명·길이·nullable 조건 비교
+`index.html`의 생성 폼은 다음 값을 전송한다.
 
-완료 기준: 애플리케이션이 `ddl-auto=validate` 상태로 정상 기동한다.
+```json
+{
+  "originalUrl": "사용자가 입력한 URL",
+  "expiresAt": "선택한 시각을 UTC Instant 문자열로 변환하거나 null"
+}
+```
 
-### 2단계: 값 생성과 정책 검증
+성공하면 결과 모달에 short URL과 secret key를 표시하고 각각 복사할 수 있게 한다. 모달을 닫거나 새 요청을 시작하면 표시된 secret key 문자열을 화면에서 비운다.
 
-- `SecureRandomStringGenerator` 작성
-- `LinkCodeGenerator` 작성
-- `SecretKeyManager` 작성
-- `UrlValidator` 작성
-- 만료 시각 검증 기준 확정
+secret key는 다시 조회하거나 복구할 수 없으므로 생성 직후 안전하게 보관해야 한다는 안내를 유지한다.
 
-완료 기준: DB 없이 핵심 정책 단위 테스트가 통과한다.
-
-### 3단계: 생성 유스케이스
-
-- 요청·응답 DTO 작성
-- `LinkService` 생성 흐름 작성
-- `LinkController`와 오류 응답 작성
-- `SRRRG_BASE_URL` 설정 연결
-
-완료 기준: 정상 요청이 201 응답과 함께 DB에 한 행을 저장한다.
-
-### 4단계: 실제 환경 확인
-
-- Compose로 `postgres`, `app` 실행
-- 정상 및 실패 요청을 호출
-- DBeaver 또는 `psql`로 저장값 확인
-
-완료 기준: secret key 원문이 DB와 로그에 남지 않고 `secret_key_hash`만 저장된다.
-
-## 8. 테스트 계획
-
-자동 테스트는 DB가 필요 없는 정책부터 작성한다.
+## 9. 현재 자동 테스트
 
 ### `SecureRandomStringGeneratorTest`
 
-- 요청한 길이만큼 생성하는지 확인
-- 결과가 전달한 문자 집합으로만 구성되는지 확인
-- 빈 문자 집합과 0 이하 길이를 거부하는지 확인
+- 요청 길이와 문자 집합 준수
+- 빈 문자 집합 거부
+- 0 이하 길이 거부
 
 ### `LinkCodeGeneratorTest`
 
-- 항상 길이가 6인지 확인
-- 모든 문자가 Base62 문자셋에 포함되는지 확인
-- 여러 번 생성했을 때 단일 고정값만 반환하지 않는지 확인
+- 길이 6과 Base62 문자 확인
+- 반복 생성 결과가 항상 같은 고정값이 아닌지 확인
 
-무작위 결과의 완전한 유일성이나 분포는 테스트하지 않는다.
+무작위 값의 완전한 유일성이나 통계적 분포는 테스트하지 않는다.
 
 ### `SecretKeyManagerTest`
 
-- 원문이 `srrrg_sk_`로 시작하는지 확인
-- 해시에 원문이 그대로 포함되지 않는지 확인
-- 생성된 원문과 해시가 BCrypt 검증을 통과하는지 확인
+- `srrrg_sk_` 접두사
+- 해시에 원문이 포함되지 않음
+- 생성된 원문과 해시가 BCrypt 검증을 통과
 
 ### `UrlValidatorTest`
 
-- 정상 HTTP/HTTPS URL 허용
-- 상대 URL과 host 없는 URL 차단
-- 허용하지 않은 스킴 차단
-- 2,048자 초과 URL 차단
-- localhost, loopback, 사설 IPv4 차단
+- 공개 HTTP/HTTPS URL 허용
+- 잘못된 URI, 상대 URL, host 없는 URL, 미지원 scheme 거부
+- localhost, loopback, 사설 IPv4 거부
+- 2,048자 초과 URL 거부
 
-### 수동 API 확인
+### `LinkServiceTest`
+
+- 링크 저장과 secret key 원문 응답
+- base URL의 마지막 `/` 제거
+- 중복 code 재생성
+- 과거 만료 시각 거부 및 저장 방지
+
+`LinkControllerTest`가 기존 생성 API의 201 상태와 핵심 응답 필드를 회귀 검증한다. 실제 PostgreSQL 자동 통합 테스트는 없으며 서비스 테스트는 repository를 mock으로 대체한다.
+
+## 10. 수동 확인
+
+Compose 실행 후 다음 요청으로 확인할 수 있다.
 
 ```bash
 curl -i -X POST http://localhost:8080/api/links \
@@ -314,23 +372,38 @@ curl -i -X POST http://localhost:8080/api/links \
 
 확인 항목:
 
-- HTTP 201인지 확인
-- code가 6자리인지 확인
-- shortUrl이 `http://localhost:8080/{code}`인지 확인
-- secretKey가 응답에 한 번 포함되는지 확인
-- `links` 행의 `secret_key_hash`가 BCrypt 문자열인지 확인
-- `click_count=0`, `is_deleted=false`인지 확인
+- HTTP 201
+- code가 6자리 Base62 형식
+- short URL이 `http://localhost:8080/{code}` 형식
+- secret key가 `srrrg_sk_`로 시작
+- DB에는 secret key 원문이 아닌 BCrypt 해시만 존재
+- `click_count=0`, `redirect_count=0`
+- `is_deleted=false`, `trusted=false`
+- 단축 URL 접근 시 현재 리다이렉트 정책에 따라 처리
 
-## 9. 완료 조건
+## 11. 알려진 보완 항목
 
-- 유효한 요청으로 링크를 생성할 수 있다.
-- 잘못된 URL과 과거 만료일은 400을 반환한다.
-- 단축 코드는 6자리 Base62 문자로 생성된다.
-- DB unique 제약과 애플리케이션 중복 확인이 함께 적용된다.
-- secret key 원문은 응답에만 존재하고 DB에는 BCrypt 해시만 저장된다.
-- Compose 환경에서 생성 API와 실제 PostgreSQL 저장을 확인한다.
-- `gradlew test`가 통과한다.
+다음은 현재 생성 API가 동작하기 위한 필수 조건은 아니지만 이후 보완할 수 있다.
 
-## 10. 이후 작업
+- `save` 시점 unique 충돌의 제한된 재시도
+- 잘못된 JSON 형식을 명시적인 400 JSON 응답으로 통일
+- 생성 API의 입력 오류별 MockMvc 테스트 보강
+- 실제 PostgreSQL 기반 통합 테스트
+- IP 기반 생성 rate limit
+- 도메인 차단 목록과 DNS 기반 주소 검증
+- secret key 재발급 및 폐기
 
-이 문서의 완료 조건을 만족한 뒤 별도 계획으로 `GET /{code}` 리다이렉트를 구현한다. 생성 API 구현 중 리다이렉트, 관리 API, 클릭 집계를 미리 추가하지 않는다.
+관리 API를 구현할 때 생성 API의 secret key 형식과 저장 방식은 변경하지 않는다.
+
+## 12. 완료 기준
+
+현재 구현은 다음 조건을 만족한다.
+
+- 유효한 요청으로 링크를 생성하고 201을 반환한다.
+- 잘못된 URL과 과거 만료 시각을 거부한다.
+- 단축 코드는 6자리 Base62 문자열이다.
+- code 중복을 최대 5회까지 사전 확인한다.
+- secret key 원문은 생성 응답에만 포함하고 DB에는 BCrypt 해시를 저장한다.
+- 환경별 base URL로 short URL을 생성한다.
+- 메인 화면에서 생성 API를 호출하고 결과를 복사할 수 있다.
+- 생성 정책 단위 테스트가 존재한다.

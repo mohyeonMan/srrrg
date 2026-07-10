@@ -20,4 +20,13 @@ class SecretKeyManagerTest {
 		assertThat(generated.hash()).doesNotContain(generated.value());
 		assertThat(manager.matches(generated.value(), generated.hash())).isTrue();
 	}
+
+	@Test
+	void rejectsMalformedSecretBeforeMatching() {
+		GeneratedSecretKey generated = manager.generate();
+
+		assertThat(manager.matches(null, generated.hash())).isFalse();
+		assertThat(manager.matches("srrrg_sk_short", generated.hash())).isFalse();
+		assertThat(manager.matches(generated.value() + "!", generated.hash())).isFalse();
+	}
 }

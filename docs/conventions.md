@@ -87,6 +87,32 @@ chore/postgres-config
 - 컨트롤러는 HTTP 요청과 응답을 처리하고 업무 규칙은 서비스에 둔다.
 - 실제 필요가 생기기 전에는 불필요한 인터페이스나 추상 계층을 만들지 않는다.
 
+### Lombok과 접근자
+
+- 반복되는 getter, setter, 생성자 코드는 Lombok으로 줄인다.
+- 일반 클래스의 필드 접근자는 JavaBean 형식인 `getXxx`, `isXxx`, `setXxx`를 사용한다.
+- JPA 엔티티는 클래스 단위 `@Getter`를 사용하되 클래스 단위 `@Setter`는 사용하지 않는다.
+- 엔티티 상태 변경은 `delete`, `updateOriginalUrl`처럼 변경 의도가 드러나는 메서드로 제한한다.
+- 요청 DTO가 단순 값 전달만 담당하면 record를 우선 사용한다.
+- JSON 필드의 생략과 명시적인 `null`을 구분해야 하는 요청 DTO는 일반 클래스로 작성하고 Lombok `@Getter`를 사용한다.
+- 필드 전달 여부 추적처럼 setter에 추가 동작이 필요할 때만 해당 setter를 직접 작성하고 `@JsonSetter`를 사용한다.
+- 응답 DTO는 불변 record를 우선 사용한다.
+
+```java
+@Getter
+public class UpdateLinkRequest {
+
+	private String originalUrl;
+	private boolean originalUrlPresent;
+
+	@JsonSetter("originalUrl")
+	public void setOriginalUrl(String originalUrl) {
+		this.originalUrl = originalUrl;
+		this.originalUrlPresent = true;
+	}
+}
+```
+
 ## 4. API
 
 - API 리소스 경로는 복수형을 사용한다. 예: `/api/links`

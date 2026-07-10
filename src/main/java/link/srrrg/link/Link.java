@@ -84,4 +84,19 @@ public class Link {
 	public boolean isExpiredAt(Instant instant) {
 		return expiresAt != null && !expiresAt.isAfter(instant);
 	}
+
+	public void updateOriginalUrl(String originalUrl) {
+		this.originalUrl = originalUrl;
+		this.updatedAt = Instant.now();
+	}
+
+	public void updateExpiresAt(Instant expiresAt) {
+		this.expiresAt = expiresAt;
+		this.updatedAt = Instant.now();
+	}
+
+	public void delete() {
+		this.deleted = true;
+		this.updatedAt = Instant.now();
+	}
 }

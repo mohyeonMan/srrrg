@@ -12,7 +12,11 @@ import link.srrrg.link.access.LinkClickEventRecorder;
 import link.srrrg.link.access.LinkRedirectEventRecorder;
 import link.srrrg.link.dto.CreateLinkRequest;
 import link.srrrg.link.dto.CreateLinkResponse;
+import link.srrrg.link.dto.DeleteLinkResponse;
+import link.srrrg.link.dto.LinkManagementResponse;
+import link.srrrg.link.dto.LinkStatisticsSummary;
 import link.srrrg.link.dto.RedirectLink;
+import link.srrrg.link.dto.UpdateLinkRequest;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -64,6 +68,44 @@ public class LinkService {
 		);
 	}
 
+	@Transactional(readOnly = true)
+	public LinkManagementResponse getManagedLink(String code, String secretKey) {
+		return toManagementResponse(findManagedLink(code, secretKey));
+	}
+
+	@Transactional
+	public LinkManagementResponse updateManagedLink(
+			String code,
+			String secretKey,
+			UpdateLinkRequest request
+	) {
+		Link link = findManagedLink(code, secretKey);
+		validateUpdateRequest(request);
+
+		if (request.isOriginalUrlPresent()) {
+			urlValidator.validate(request.getOriginalUrl());
+		}
+		if (request.isExpiresAtPresent()) {
+			validateExpiration(request.getExpiresAt());
+		}
+
+		if (request.isOriginalUrlPresent()) {
+			link.updateOriginalUrl(request.getOriginalUrl());
+		}
+		if (request.isExpiresAtPresent()) {
+			link.updateExpiresAt(request.getExpiresAt());
+		}
+
+		return toManagementResponse(link);
+	}
+
+	@Transactional
+	public DeleteLinkResponse deleteManagedLink(String code, String secretKey) {
+		Link link = findManagedLink(code, secretKey);
+		link.delete();
+		return new DeleteLinkResponse(true);
+	}
+
 	@Transactional
 	public RedirectLink resolveRedirect(String code, ClientRequestInfo requestInfo) {
 		Link link = findAvailableLink(code);
@@ -99,6 +141,37 @@ public class LinkService {
 			throw new LinkGoneException();
 		}
 		return link;
+	}
+
+	private Link findManagedLink(String code, String secretKey) {
+		Link link = linkRepository.findByCode(code)
+				.orElseThrow(LinkNotFoundException::new);
+
+		if (!secretKeyManager.matches(secretKey, link.getSecretKeyHash())) {
+			throw new LinkNotFoundException();
+		}
+		if (link.isDeleted()) {
+			throw new LinkGoneException();
+		}
+		return link;
+	}
+
+	private LinkManagementResponse toManagementResponse(Link link) {
+		return new LinkManagementResponse(
+				link.getCode(),
+				baseUrl + "/" + link.getCode(),
+				link.getOriginalUrl(),
+				link.getExpiresAt(),
+				new LinkStatisticsSummary(link.getClickCount(), link.getRedirectCount()),
+				link.getCreatedAt(),
+				link.getUpdatedAt()
+		);
+	}
+
+	private void validateUpdateRequest(UpdateLinkRequest request) {
+		if (request == null || !request.hasChanges()) {
+			throw new IllegalArgumentException("변경할 값을 하나 이상 입력해야 합니다.");
+		}
 	}
 
 	private void incrementClickCount(String code) {
