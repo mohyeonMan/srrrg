@@ -22,7 +22,9 @@
 		main {
 			width: min(640px, calc(100% - 32px));
 			max-width: 640px;
+			height: clamp(330px, 48svh, 440px);
 			margin: clamp(24px, 6vw, 48px) auto;
+			overflow-y: auto;
 			padding: clamp(24px, 5vw, 36px);
 			background: rgba(255, 255, 255, 0.92);
 			border: 1px solid rgba(226, 232, 240, 0.9);
@@ -106,6 +108,7 @@
 		@media (max-width: 520px) {
 			main {
 				width: calc(100% - 20px);
+				height: clamp(330px, calc(100svh - 120px), 500px);
 			}
 			.srrrg-header {
 				flex-direction: column;
@@ -120,6 +123,9 @@
 			}
 		}
 		@media (max-width: 360px) {
+			main {
+				height: clamp(320px, calc(100svh - 108px), 480px);
+			}
 			.srrrg-footer span:last-child {
 				display: block;
 			}

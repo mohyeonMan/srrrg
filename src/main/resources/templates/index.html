@@ -68,7 +68,6 @@
 		}
 		.hero-copy,
 		.shortener-card,
-		.management-card,
 		.feature-card {
 			background: rgba(255, 255, 255, 0.92);
 			border: 1px solid rgba(226, 232, 240, 0.9);
@@ -129,7 +128,46 @@
 			background: #eff6ff;
 		}
 		.shortener-card {
+			display: grid;
+			grid-template-rows: auto minmax(0, 1fr);
+			height: clamp(390px, 52svh, 500px);
+			overflow: hidden;
 			padding: 28px;
+		}
+		.link-tabs {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 6px;
+			margin-bottom: 24px;
+			padding: 5px;
+			background: #f1f5f9;
+			border: 1px solid #dbe4ef;
+			border-radius: 16px;
+		}
+		.link-tab {
+			min-height: 42px;
+			padding: 10px 12px;
+			color: #64748b;
+			background: transparent;
+			border: 0;
+			border-radius: 12px;
+			font: inherit;
+			font-weight: 800;
+			cursor: pointer;
+		}
+		.link-tab[aria-selected="true"] {
+			color: #1d4ed8;
+			background: #ffffff;
+			box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+		}
+		.link-panel {
+			min-height: 0;
+			overflow-y: auto;
+			padding-right: 4px;
+			scrollbar-gutter: stable;
+		}
+		.link-panel[hidden] {
+			display: none;
 		}
 		.card-title {
 			margin: 0;
@@ -222,10 +260,6 @@
 			color: #94a3b8;
 			font-size: 13px;
 			line-height: 1.5;
-		}
-		.management-card {
-			margin-top: 18px;
-			padding: 28px;
 		}
 		.management-form,
 		.management-edit-form {
@@ -336,6 +370,93 @@
 			grid-template-columns: 1fr auto;
 			gap: 10px;
 		}
+		.management-modal {
+			display: none;
+			position: fixed;
+			inset: 0;
+			z-index: 60;
+			align-items: center;
+			justify-content: center;
+			padding: 24px;
+			background: rgba(15, 23, 42, 0.48);
+			backdrop-filter: blur(8px);
+		}
+		.management-modal.visible {
+			display: flex;
+		}
+		.management-modal-panel {
+			width: min(720px, 100%);
+			max-height: calc(100svh - 48px);
+			overflow-y: auto;
+			padding: 20px;
+			background: #ffffff;
+			border: 1px solid rgba(226, 232, 240, 0.9);
+			border-radius: 22px;
+			box-shadow: 0 30px 90px rgba(15, 23, 42, 0.28);
+		}
+		.management-modal-header {
+			display: flex;
+			align-items: flex-start;
+			justify-content: space-between;
+			gap: 16px;
+			margin-bottom: 16px;
+		}
+		.management-modal-title {
+			margin: 0;
+			font-size: 22px;
+			letter-spacing: 0;
+		}
+		.management-modal-close {
+			flex: 0 0 auto;
+			width: 36px;
+			height: 36px;
+			color: #475569;
+			background: #f1f5f9;
+			border: 1px solid #dbe4ef;
+			border-radius: 12px;
+			font: inherit;
+			font-size: 20px;
+			line-height: 1;
+			cursor: pointer;
+		}
+		.management-modal-tabs {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 6px;
+			margin-bottom: 18px;
+			padding: 5px;
+			background: #f1f5f9;
+			border: 1px solid #dbe4ef;
+			border-radius: 16px;
+		}
+		.management-modal-tab {
+			min-height: 40px;
+			padding: 9px 12px;
+			color: #64748b;
+			background: transparent;
+			border: 0;
+			border-radius: 12px;
+			font: inherit;
+			font-weight: 800;
+			cursor: pointer;
+		}
+		.management-modal-tab[aria-selected="true"] {
+			color: #1d4ed8;
+			background: #ffffff;
+			box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+		}
+		.management-modal-tabpanel[hidden] {
+			display: none;
+		}
+		.management-stats-empty {
+			margin: 16px 0 0;
+			padding: 16px;
+			color: #64748b;
+			background: #f8fafc;
+			border: 1px solid #e2e8f0;
+			border-radius: 16px;
+			line-height: 1.6;
+		}
 		.result-modal {
 			display: none;
 			position: fixed;
@@ -352,6 +473,8 @@
 		}
 		.result-panel {
 			width: min(520px, 100%);
+			max-height: calc(100svh - 48px);
+			overflow-y: auto;
 			padding: 16px;
 			background: #ffffff;
 			border: 1px solid rgba(226, 232, 240, 0.9);
@@ -482,6 +605,9 @@
 			.srrrg-logo {
 				font-size: 28px;
 			}
+			.shortener-card {
+				height: clamp(390px, 50svh, 480px);
+			}
 		}
 		@media (max-width: 520px) {
 			main {
@@ -493,14 +619,18 @@
 			}
 			.hero-copy,
 			.shortener-card,
-			.management-card,
 			.feature-card {
 				border-radius: 20px;
 			}
 			.hero-copy,
-			.shortener-card,
-			.management-card {
+			.shortener-card {
 				padding: 24px;
+			}
+			.shortener-card {
+				height: clamp(380px, calc(100svh - 160px), 500px);
+			}
+			.link-tabs {
+				margin-bottom: 20px;
 			}
 			.hero-description {
 				font-size: 16px;
@@ -532,7 +662,18 @@
 			.result-modal {
 				padding: 14px;
 			}
+			.management-modal {
+				padding: 14px;
+			}
+			.management-modal-panel {
+				max-height: calc(100svh - 28px);
+				border-radius: 18px;
+			}
+			.management-modal-header {
+				align-items: center;
+			}
 			.result-panel {
+				max-height: calc(100svh - 28px);
 				border-radius: 18px;
 			}
 			.srrrg-footer {
@@ -545,9 +686,11 @@
 		@media (max-width: 380px) {
 			.hero-copy,
 			.shortener-card,
-			.management-card,
 			.feature-card {
 				padding: 20px;
+			}
+			.shortener-card {
+				height: clamp(360px, calc(100svh - 148px), 480px);
 			}
 			.srrrg-header {
 				padding: 16px 20px;
@@ -581,120 +724,98 @@
 		</div>
 
 		<aside class="shortener-card">
-			<h2 class="card-title">단축 링크 만들기</h2>
-			<p class="card-description">긴 URL을 입력하면 바로 단축 URL과 관리용 secret key를 발급합니다.</p>
-			<form id="shortener-form" class="shortener-form">
-				<input
-						id="original-url"
-						class="shortener-input"
-						name="originalUrl"
-						type="url"
-						placeholder="https://example.com/very/long/path?with=query"
-						maxlength="2048"
-						required
-				>
-				<div class="expires-field">
-					<label class="expires-label" for="expires-at">만료 시각</label>
-					<div class="expires-row">
-						<select id="quick-expires-at" class="quick-expire-select" aria-label="만료 선택">
-							<option value="none">만료 없음</option>
-							<option value="custom">직접 입력</option>
-							<option value="1:hours">1시간</option>
-							<option value="1:days">하루</option>
-							<option value="1:months">한달</option>
-							<option value="1:years">1년</option>
-						</select>
-						<input
-								id="expires-at"
-								class="shortener-input"
-								name="expiresAt"
-								type="datetime-local"
-								disabled
-						>
+			<div class="link-tabs" role="tablist" aria-label="단축 링크 메뉴">
+				<button
+						id="link-create-tab"
+						class="link-tab"
+						type="button"
+						role="tab"
+						aria-selected="true"
+						aria-controls="link-create-panel"
+				>링크 생성</button>
+				<button
+						id="link-manage-tab"
+						class="link-tab"
+						type="button"
+						role="tab"
+						aria-selected="false"
+						aria-controls="link-manage-panel"
+				>링크 관리</button>
+			</div>
+
+			<div id="link-create-panel" class="link-panel" role="tabpanel" aria-labelledby="link-create-tab">
+				<h2 class="card-title">단축 링크 만들기</h2>
+				<p class="card-description">긴 URL을 입력하면 바로 단축 URL과 관리용 secret key를 발급합니다.</p>
+				<form id="shortener-form" class="shortener-form">
+					<input
+							id="original-url"
+							class="shortener-input"
+							name="originalUrl"
+							type="url"
+							placeholder="https://example.com/very/long/path?with=query"
+							maxlength="2048"
+							required
+					>
+					<div class="expires-field">
+						<label class="expires-label" for="expires-at">만료 시각</label>
+						<div class="expires-row">
+							<select id="quick-expires-at" class="quick-expire-select" aria-label="만료 선택">
+								<option value="none">만료 없음</option>
+								<option value="custom">직접 입력</option>
+								<option value="1:hours">1시간</option>
+								<option value="1:days">하루</option>
+								<option value="1:months">한달</option>
+								<option value="1:years">1년</option>
+							</select>
+							<input
+									id="expires-at"
+									class="shortener-input"
+									name="expiresAt"
+									type="datetime-local"
+									disabled
+							>
+						</div>
 					</div>
-				</div>
-				<button id="shortener-button" class="shortener-button" type="submit">단축 URL 만들기</button>
-			</form>
-			<p class="shortener-help">secret key는 관리 기능에 사용할 예정이니 생성 직후 안전하게 보관하세요.</p>
+					<button id="shortener-button" class="shortener-button" type="submit">단축 URL 만들기</button>
+				</form>
+				<p class="shortener-help">secret key는 관리 기능에 사용할 예정이니 생성 직후 안전하게 보관하세요.</p>
+			</div>
 
+			<div id="link-manage-panel" class="link-panel" role="tabpanel" aria-labelledby="link-manage-tab" hidden>
+				<h2 id="management-title" class="card-title">내 단축 링크 관리</h2>
+				<p class="card-description">단축 URL 또는 코드와 발급받은 secret key를 입력하세요.</p>
+				<form id="management-lookup-form" class="management-form">
+					<div class="management-fields">
+						<label class="management-field">
+							<span class="management-label">단축 URL 또는 코드</span>
+							<input
+									id="management-code"
+									class="shortener-input"
+									type="text"
+									placeholder="https://srrrg.link/aB3x9Q 또는 aB3x9Q"
+									autocomplete="off"
+									required
+							>
+						</label>
+						<label class="management-field">
+							<span class="management-label">Secret key</span>
+							<input
+									id="management-secret-key"
+									class="shortener-input"
+									type="password"
+									placeholder="srrrg_sk_xxxxxxxxx"
+									autocomplete="off"
+									spellcheck="false"
+									required
+							>
+						</label>
+					</div>
+					<button id="management-lookup-button" class="management-button" type="submit">조회하기</button>
+				</form>
+				<p id="management-message" class="management-message" role="status" aria-live="polite"></p>
+				<p class="shortener-help">secret key는 저장되지 않으며 분실하면 링크를 관리할 수 없습니다.</p>
+			</div>
 		</aside>
-	</section>
-
-	<section class="management-card" aria-labelledby="management-title">
-		<h2 id="management-title" class="card-title">내 단축 링크 관리</h2>
-		<p class="card-description">단축 URL 또는 코드와 발급받은 secret key를 입력하세요.</p>
-		<form id="management-lookup-form" class="management-form">
-			<div class="management-fields">
-				<label class="management-field">
-					<span class="management-label">단축 URL 또는 코드</span>
-					<input
-							id="management-code"
-							class="shortener-input"
-							type="text"
-							placeholder="https://srrrg.link/aB3x9Q 또는 aB3x9Q"
-							autocomplete="off"
-							required
-					>
-				</label>
-				<label class="management-field">
-					<span class="management-label">Secret key</span>
-					<input
-							id="management-secret-key"
-							class="shortener-input"
-							type="password"
-							placeholder="srrrg_sk_xxxxxxxxx"
-							autocomplete="off"
-							spellcheck="false"
-							required
-					>
-				</label>
-			</div>
-			<button id="management-lookup-button" class="management-button" type="submit">조회하기</button>
-		</form>
-		<p id="management-message" class="management-message" role="status" aria-live="polite"></p>
-
-		<div id="management-result" class="management-result" hidden>
-			<div>
-				<p class="management-label">단축 URL</p>
-				<a id="management-short-url" class="management-link" href="#" target="_blank" rel="noopener noreferrer"></a>
-			</div>
-
-			<div class="management-stats" aria-label="링크 누적 통계">
-				<div class="management-stat">
-					<p class="management-stat-label">진입 수</p>
-					<p id="management-click-count" class="management-stat-value">0</p>
-				</div>
-				<div class="management-stat">
-					<p class="management-stat-label">실제 이동 수</p>
-					<p id="management-redirect-count" class="management-stat-value">0</p>
-				</div>
-			</div>
-
-			<dl class="management-metadata">
-				<dt>만료</dt>
-				<dd id="management-expiration-status"></dd>
-				<dt>생성</dt>
-				<dd id="management-created-at"></dd>
-				<dt>최근 수정</dt>
-				<dd id="management-updated-at"></dd>
-			</dl>
-
-			<form id="management-edit-form" class="management-edit-form">
-				<label class="management-field">
-					<span class="management-label">원본 URL</span>
-					<input id="management-original-url" class="shortener-input" type="url" maxlength="2048" required>
-				</label>
-				<label class="management-field">
-					<span class="management-label">만료 시각 · 비우면 무기한</span>
-					<input id="management-expires-at" class="shortener-input" type="datetime-local">
-				</label>
-				<div class="management-actions">
-					<button id="management-save-button" class="management-button" type="submit">변경 저장</button>
-					<button id="management-delete-button" class="management-delete-button" type="button">링크 삭제</button>
-				</div>
-			</form>
-		</div>
-		<p class="shortener-help">secret key는 저장되지 않으며 분실하면 링크를 관리할 수 없습니다.</p>
 	</section>
 
 	<section class="features" aria-label="srrrg 주요 기능">
@@ -731,6 +852,80 @@
 		<button id="modal-close-button" class="modal-close-button" type="button">닫기</button>
 	</div>
 </div>
+<div id="management-modal" class="management-modal" role="dialog" aria-modal="true" aria-labelledby="management-modal-title">
+	<div class="management-modal-panel">
+		<div class="management-modal-header">
+			<h2 id="management-modal-title" class="management-modal-title">내 단축 링크 관리</h2>
+			<button id="management-modal-close-button" class="management-modal-close" type="button" aria-label="닫기">×</button>
+		</div>
+		<div class="management-modal-tabs" role="tablist" aria-label="관리 화면">
+			<button
+					id="management-edit-tab"
+					class="management-modal-tab"
+					type="button"
+					role="tab"
+					aria-selected="true"
+					aria-controls="management-edit-panel"
+			>조회/수정</button>
+			<button
+					id="management-stats-tab"
+					class="management-modal-tab"
+					type="button"
+					role="tab"
+					aria-selected="false"
+					aria-controls="management-stats-panel"
+			>상세통계</button>
+		</div>
+		<p id="management-modal-message" class="management-message" role="status" aria-live="polite"></p>
+
+		<div id="management-edit-panel" class="management-modal-tabpanel" role="tabpanel" aria-labelledby="management-edit-tab">
+			<div id="management-result" class="management-result" hidden>
+				<div>
+					<p class="management-label">단축 URL</p>
+					<a id="management-short-url" class="management-link" href="#" target="_blank" rel="noopener noreferrer"></a>
+				</div>
+
+				<dl class="management-metadata">
+					<dt>만료</dt>
+					<dd id="management-expiration-status"></dd>
+					<dt>생성</dt>
+					<dd id="management-created-at"></dd>
+					<dt>최근 수정</dt>
+					<dd id="management-updated-at"></dd>
+				</dl>
+
+				<form id="management-edit-form" class="management-edit-form">
+					<label class="management-field">
+						<span class="management-label">원본 URL</span>
+						<input id="management-original-url" class="shortener-input" type="url" maxlength="2048" required>
+					</label>
+					<label class="management-field">
+						<span class="management-label">만료 시각 · 비우면 무기한</span>
+						<input id="management-expires-at" class="shortener-input" type="datetime-local">
+					</label>
+					<div class="management-actions">
+						<button id="management-save-button" class="management-button" type="submit">변경 저장</button>
+						<button id="management-delete-button" class="management-delete-button" type="button">링크 삭제</button>
+					</div>
+				</form>
+			</div>
+		</div>
+
+		<div id="management-stats-panel" class="management-modal-tabpanel" role="tabpanel" aria-labelledby="management-stats-tab" hidden>
+			<div class="management-stats" aria-label="링크 누적 통계">
+				<div class="management-stat">
+					<p class="management-stat-label">진입 수</p>
+					<p id="management-click-count" class="management-stat-value">0</p>
+				</div>
+				<div class="management-stat">
+					<p class="management-stat-label">실제 이동 수</p>
+					<p id="management-redirect-count" class="management-stat-value">0</p>
+				</div>
+			</div>
+			<p class="management-stats-empty">상세 통계 API가 준비되면 기간별 진입, 실제 이동, 유입 정보가 이 영역에 표시됩니다.</p>
+		</div>
+	</div>
+</div>
 <script th:inline="javascript">
 	const createLinkUrl = /*[[@{/api/links}]]*/ '/api/links';
 	const form = document.getElementById('shortener-form');
@@ -748,6 +943,13 @@
 	const copyShortUrlButton = document.getElementById('copy-short-url');
 	const copySecretKeyButton = document.getElementById('copy-secret-key');
 	const modalCloseButton = document.getElementById('modal-close-button');
+	const linkTabs = document.querySelectorAll('.link-tab');
+	const linkPanels = document.querySelectorAll('.link-panel');
+	const managementModal = document.getElementById('management-modal');
+	const managementModalCloseButton = document.getElementById('management-modal-close-button');
+	const managementModalTabs = document.querySelectorAll('.management-modal-tab');
+	const managementModalPanels = document.querySelectorAll('.management-modal-tabpanel');
+	const managementModalMessage = document.getElementById('management-modal-message');
 	const managementLookupForm = document.getElementById('management-lookup-form');
 	const managementCodeInput = document.getElementById('management-code');
 	const managementSecretKeyInput = document.getElementById('management-secret-key');
@@ -770,6 +972,18 @@
 	let managedSecretKey = null;
 	let managedOriginalUrl = null;
 	let managedExpiresAtValue = null;
+
+	linkTabs.forEach((tab) => {
+		tab.addEventListener('click', () => {
+			activateLinkTab(tab);
+		});
+	});
+
+	managementModalTabs.forEach((tab) => {
+		tab.addEventListener('click', () => {
+			activateManagementModalTab(tab);
+		});
+	});
 
 	quickExpiresAtSelect.addEventListener('change', () => {
 		const previousOption = selectedExpiresAtOption;
@@ -853,6 +1067,7 @@
 		setManagementLoading(managementLookupButton, true, '조회 중...');
 		managementResult.hidden = true;
 		showManagementMessage('');
+		showManagementModalMessage('');
 
 		try {
 			const response = await fetch(`${createLinkUrl}/${encodeURIComponent(code)}`, {
@@ -870,7 +1085,9 @@
 			managedCode = code;
 			managedSecretKey = secretKeyValue;
 			renderManagedLink(body);
-			showManagementMessage('링크 정보를 불러왔습니다.');
+			showManagementMessage('');
+			showManagementModalMessage('링크 정보를 불러왔습니다.');
+			openManagementModal();
 		} catch (error) {
 			showManagementMessage('서버에 연결할 수 없습니다. 잠시 후 다시 시도하세요.', true);
 		} finally {
@@ -892,13 +1109,13 @@
 			requestBody.expiresAt = toInstantOrNull(managementExpiresAtInput.value);
 		}
 		if (Object.keys(requestBody).length === 0) {
-			showManagementMessage('변경된 값이 없습니다.', true);
+			showManagementModalMessage('변경된 값이 없습니다.', true);
 			return;
 		}
 
 		setManagementLoading(managementSaveButton, true, '저장 중...');
 		managementDeleteButton.disabled = true;
-		showManagementMessage('');
+		showManagementModalMessage('');
 
 		try {
 			const response = await fetch(`${createLinkUrl}/${encodeURIComponent(managedCode)}`, {
@@ -912,14 +1129,14 @@
 			});
 			const body = await readApiBody(response);
 			if (!response.ok) {
-				showManagementMessage(body.message || '링크를 수정하지 못했습니다.', true);
+				showManagementModalMessage(body.message || '링크를 수정하지 못했습니다.', true);
 				return;
 			}
 
 			renderManagedLink(body);
-			showManagementMessage('변경사항을 저장했습니다.');
+			showManagementModalMessage('변경사항을 저장했습니다.');
 		} catch (error) {
-			showManagementMessage('서버에 연결할 수 없습니다. 잠시 후 다시 시도하세요.', true);
+			showManagementModalMessage('서버에 연결할 수 없습니다. 잠시 후 다시 시도하세요.', true);
 		} finally {
 			setManagementLoading(managementSaveButton, false, '변경 저장');
 			managementDeleteButton.disabled = false;
@@ -934,7 +1151,7 @@
 
 		setManagementLoading(managementDeleteButton, true, '삭제 중...');
 		managementSaveButton.disabled = true;
-		showManagementMessage('');
+		showManagementModalMessage('');
 
 		try {
 			const response = await fetch(`${createLinkUrl}/${encodeURIComponent(managedCode)}`, {
@@ -946,12 +1163,13 @@
 			});
 			const body = await readApiBody(response);
 			if (!response.ok) {
-				showManagementMessage(body.message || '링크를 삭제하지 못했습니다.', true);
+				showManagementModalMessage(body.message || '링크를 삭제하지 못했습니다.', true);
 				return;
 			}
 
 			managementResult.hidden = true;
 			managementSecretKeyInput.value = '';
+			closeManagementModal();
 			managedCode = null;
 			managedSecretKey = null;
 			managedOriginalUrl = null;
@@ -975,21 +1193,48 @@
 
 	modalCloseButton.addEventListener('click', closeResultModal);
 
+	managementModalCloseButton.addEventListener('click', closeManagementModal);
+
 	resultModal.addEventListener('click', (event) => {
 		if (event.target === resultModal) {
 			closeResultModal();
 		}
 	});
 
+	managementModal.addEventListener('click', (event) => {
+		if (event.target === managementModal) {
+			closeManagementModal();
+		}
+	});
+
 	document.addEventListener('keydown', (event) => {
 		if (event.key === 'Escape') {
 			closeResultModal();
+			closeManagementModal();
 		}
 	});
 
 	function setLoading(loading) {
 		submitButton.disabled = loading;
 		submitButton.textContent = loading ? '생성 중...' : '단축 URL 만들기';
+	}
+
+	function activateLinkTab(selectedTab) {
+		linkTabs.forEach((tab) => {
+			tab.setAttribute('aria-selected', String(tab === selectedTab));
+		});
+		linkPanels.forEach((panel) => {
+			panel.hidden = panel.id !== selectedTab.getAttribute('aria-controls');
+		});
+	}
+
+	function activateManagementModalTab(selectedTab) {
+		managementModalTabs.forEach((tab) => {
+			tab.setAttribute('aria-selected', String(tab === selectedTab));
+		});
+		managementModalPanels.forEach((panel) => {
+			panel.hidden = panel.id !== selectedTab.getAttribute('aria-controls');
+		});
 	}
 
 	function hideResult() {
@@ -1030,6 +1275,16 @@
 
 	function closeResultModal() {
 		resultModal.classList.remove('visible');
+	}
+
+	function openManagementModal() {
+		managementModal.classList.add('visible');
+		activateManagementModalTab(document.getElementById('management-edit-tab'));
+		managementModalCloseButton.focus();
+	}
+
+	function closeManagementModal() {
+		managementModal.classList.remove('visible');
 	}
 
 	async function copyToClipboard(value, button) {
@@ -1112,6 +1367,11 @@
 	function showManagementMessage(message, error = false) {
 		managementMessage.textContent = message;
 		managementMessage.classList.toggle('error', error);
+	}
+
+	function showManagementModalMessage(message, error = false) {
+		managementModalMessage.textContent = message;
+		managementModalMessage.classList.toggle('error', error);
 	}
 
 	function setManagementLoading(button, loading, text) {
