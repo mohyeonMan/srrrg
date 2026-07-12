@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="product-intro" th:fragment="productIntro" aria-labelledby="home-title">
+	<span class="section-eyebrow">srrrg.link</span>
+	<h1 id="home-title" class="display-title">긴 링크를 짧고 안전하게</h1>
+	<p class="intro-description">
+		URL을 입력하면 단축 링크와 관리용 secret key를 바로 발급합니다.
+		신뢰되지 않은 링크는 이동 전 원본 주소를 먼저 보여줍니다.
+	</p>
+	<dl class="trust-summary" aria-label="서비스 신뢰 요약">
+		<div>
+			<dt>확인</dt>
+			<dd>낯선 링크는 자동 이동 전에 원본 도메인을 먼저 보여줍니다.</dd>
+		</div>
+		<div>
+			<dt>관리</dt>
+			<dd>secret key로 원본 URL, 만료 시각, 누적 통계를 확인합니다.</dd>
+		</div>
+		<div>
+			<dt>만료</dt>
+			<dd>필요할 때만 빠른 만료를 걸고, 기본값은 만료 없음입니다.</dd>
+		</div>
+	</dl>
+</section>
+</body>
+</html>

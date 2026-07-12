@@ -4,216 +4,48 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>srrrg - 링크 확인</title>
-	<style>
-		* {
-			box-sizing: border-box;
-		}
-		body {
-			margin: 0;
-			min-height: 100vh;
-			font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-			background:
-					radial-gradient(circle at top left, rgba(37, 99, 235, 0.14), transparent 34rem),
-					linear-gradient(180deg, #f8fbff 0%, #f8fafc 48%, #eef2ff 100%);
-			color: #0f172a;
-			display: flex;
-			flex-direction: column;
-		}
-		main {
-			width: min(640px, calc(100% - 32px));
-			max-width: 640px;
-			height: clamp(430px, 62svh, 560px);
-			margin: clamp(24px, 6vw, 48px) auto;
-			overflow-y: auto;
-			padding: clamp(24px, 5vw, 36px);
-			background: rgba(255, 255, 255, 0.92);
-			border: 1px solid rgba(226, 232, 240, 0.9);
-			border-radius: clamp(18px, 4vw, 24px);
-			box-shadow: 0 24px 70px rgba(15, 23, 42, 0.10);
-		}
-		h1 {
-			margin: 0 0 12px;
-			font-size: clamp(24px, 6vw, 30px);
-			line-height: 1.18;
-			letter-spacing: 0;
-		}
-		p {
-			margin: 0;
-			color: #475569;
-			font-size: clamp(15px, 3.5vw, 16px);
-			line-height: 1.65;
-		}
-		.srrrg-header {
-			display: flex;
-			align-items: baseline;
-			flex-wrap: wrap;
-			gap: 12px;
-			padding: clamp(18px, 4vw, 24px) clamp(20px, 6vw, 36px);
-			border-bottom: 1px solid rgba(226, 232, 240, 0.75);
-			background: rgba(255, 255, 255, 0.72);
-			backdrop-filter: blur(14px);
-		}
-		.srrrg-logo {
-			color: #2563eb;
-			font-size: clamp(26px, 7vw, 30px);
-			font-weight: 900;
-			line-height: 1;
-			letter-spacing: 0;
-			text-decoration: none;
-			text-shadow: 0 10px 24px rgba(37, 99, 235, 0.18);
-		}
-		.srrrg-tagline {
-			color: #64748b;
-			font-size: clamp(13px, 3.5vw, 15px);
-			font-weight: 500;
-			line-height: 1.35;
-		}
-		.srrrg-footer {
-			margin-top: auto;
-			padding: clamp(20px, 5vw, 24px) clamp(18px, 6vw, 32px);
-			color: #718096;
-			font-size: clamp(12px, 3.2vw, 13px);
-			line-height: 1.6;
-			text-align: center;
-		}
-		.srrrg-footer-separator {
-			margin: 0 6px;
-		}
-		.label {
-			margin: 24px 0 8px;
-			color: #64748b;
-			font-size: clamp(12px, 3vw, 13px);
-			font-weight: 700;
-			letter-spacing: 0;
-		}
-		.url {
-			overflow-wrap: anywhere;
-			padding: clamp(12px, 3vw, 14px) clamp(13px, 3vw, 15px);
-			background: #f8fafc;
-			border: 1px solid #e2e8f0;
-			border-radius: 12px;
-			color: #334155;
-			font-size: clamp(14px, 3.5vw, 16px);
-			line-height: 1.5;
-		}
-		.url-row {
-			display: flex;
-			gap: 8px;
-			align-items: stretch;
-		}
-		.url-row .url {
-			flex: 1;
-			min-width: 0;
-		}
-		.toggle-button {
-			margin: 0;
-			min-height: 46px;
-			padding: 0 14px;
-			background: #eff6ff;
-			color: #1d4ed8;
-			border: 0;
-			border-radius: 12px;
-			cursor: pointer;
-			font-weight: 700;
-			font: inherit;
-			white-space: nowrap;
-		}
-		.toggle-button:hover {
-			background: #dbeafe;
-		}
-		.submit-button {
-			display: inline-block;
-			margin-top: 30px;
-			min-height: 48px;
-			padding: 14px 20px;
-			background: linear-gradient(135deg, #2563eb, #4f46e5);
-			color: #ffffff;
-			border: 0;
-			border-radius: 14px;
-			font-weight: 800;
-			cursor: pointer;
-			font: inherit;
-			box-shadow: 0 14px 30px rgba(37, 99, 235, 0.24);
-		}
-		.submit-button:hover {
-			transform: translateY(-1px);
-			box-shadow: 0 18px 36px rgba(37, 99, 235, 0.30);
-		}
-		.hidden {
-			display: none;
-		}
-		@media (max-width: 520px) {
-			main {
-				width: calc(100% - 20px);
-				height: clamp(430px, calc(100svh - 120px), 620px);
-			}
-			.srrrg-header {
-				flex-direction: column;
-				align-items: flex-start;
-				gap: 5px;
-			}
-			.url-row {
-				flex-direction: column;
-			}
-			.toggle-button {
-				width: 100%;
-				padding: 10px 12px;
-			}
-			.submit-button {
-				width: 100%;
-			}
-			.srrrg-footer span {
-				display: inline;
-			}
-			.srrrg-footer-separator {
-				margin: 0 4px;
-			}
-		}
-		@media (max-width: 360px) {
-			main {
-				height: clamp(410px, calc(100svh - 108px), 600px);
-			}
-			.srrrg-footer span:last-child {
-				display: block;
-			}
-			.srrrg-footer-separator {
-				display: none;
-			}
-		}
-	</style>
+	<link rel="stylesheet" th:href="@{/css/srrrg.css}">
+	<script defer th:src="@{/js/redirect-confirm.js}"></script>
 </head>
 <body>
 <div th:replace="~{fragments/srrrg-layout :: header}"></div>
-<main>
-	<h1>신뢰할 수 있는 링크인가요?</h1>
-	<p>이 단축 링크는 자동 이동 대상이 아닙니다. 원본 주소를 확인한 뒤 이동하세요.</p>
 
-	<div class="label">단축 URL</div>
-	<div class="url" th:text="${shortUrl}">https://srrrg.link/abc123</div>
+<main class="decision-shell">
+	<section class="decision-panel" aria-labelledby="confirm-title">
+		<div class="decision-heading">
+			<span class="section-eyebrow">이동 전 확인</span>
+			<h1 id="confirm-title" class="page-title">신뢰할 수 있는 링크인가요?</h1>
+			<p class="page-description">이 단축 링크는 자동 이동 대상이 아닙니다. 원본 주소를 확인한 뒤 이동하세요.</p>
+		</div>
 
-	<div class="label">원본 URL</div>
-	<div class="url-row">
-		<div id="original-url-summary" class="url" th:text="${originalUrlSummary}">https://example.com/...</div>
-		<div id="original-url-full" class="url hidden" th:text="${originalUrl}">https://example.com/path?query=value</div>
-		<button class="toggle-button" type="button" onclick="toggleOriginalUrl()">전체보기</button>
-	</div>
+		<section class="data-section" aria-labelledby="original-domain-label">
+			<h2 id="original-domain-label" class="data-label">원본 도메인</h2>
+			<p class="domain-value" th:text="${originalUrlHost}">example.com</p>
+		</section>
 
-	<form th:action="@{/{code}/redirect(code=${code})}" method="post">
-		<button class="submit-button" type="submit">네, 이동할게요.</button>
-	</form>
+		<section class="data-section" aria-labelledby="original-url-label">
+			<h2 id="original-url-label" class="data-label">원본 URL</h2>
+			<div class="url-reveal">
+				<p id="original-url-summary" class="url-box" th:text="${originalUrlSummary}">https://example.com/...</p>
+				<p id="original-url-full" class="url-box" th:text="${originalUrl}" hidden>https://example.com/path?query=value</p>
+				<button id="original-url-toggle" class="secondary-button" type="button" aria-controls="original-url-full" aria-expanded="false">전체 URL 보기</button>
+			</div>
+		</section>
+
+		<section class="data-section" aria-labelledby="short-url-label">
+			<h2 id="short-url-label" class="data-label">단축 URL</h2>
+			<p class="url-box" th:text="${shortUrl}">https://srrrg.link/abc123</p>
+		</section>
+
+		<div class="action-row">
+			<form th:action="@{/{code}/redirect(code=${code})}" method="post">
+				<button class="primary-button" type="submit">원본 URL로 이동</button>
+			</form>
+			<button id="go-back-button" class="secondary-button" type="button" th:attr="data-fallback-url=@{/}">돌아가기</button>
+		</div>
+	</section>
 </main>
-<div th:replace="~{fragments/srrrg-layout :: footer}"></div>
-<script>
-	function toggleOriginalUrl() {
-		const summary = document.getElementById('original-url-summary');
-		const full = document.getElementById('original-url-full');
-		const button = document.querySelector('.toggle-button');
-		const fullVisible = !full.classList.contains('hidden');
 
-		summary.classList.toggle('hidden', !fullVisible);
-		full.classList.toggle('hidden', fullVisible);
-		button.textContent = fullVisible ? '전체보기' : '접기';
-	}
-</script>
+<div th:replace="~{fragments/srrrg-layout :: footer}"></div>
 </body>
 </html>

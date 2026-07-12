@@ -48,6 +48,7 @@ public class RedirectController {
 			model.addAttribute("code", redirectLink.code());
 			model.addAttribute("shortUrl", request.getRequestURL().toString());
 			model.addAttribute("originalUrl", redirectLink.originalUrl());
+			model.addAttribute("originalUrlHost", URI.create(redirectLink.originalUrl()).getHost());
 			model.addAttribute("originalUrlSummary", summarizeUrl(redirectLink.originalUrl()));
 			return "redirect-confirm";
 		}

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title th:text="'srrrg - ' + ${status}">srrrg - error</title>
+	<link rel="stylesheet" th:href="@{/css/srrrg.css}">
+</head>
+<body class="error-page">
+<div th:replace="~{fragments/srrrg-layout :: header}"></div>
+<main class="decision-shell">
+	<section class="decision-panel">
+		<span class="status-code" th:text="${status}">404</span>
+		<h1 class="page-title" th:text="${title}">링크를 찾을 수 없습니다</h1>
+		<p class="page-description" th:text="${message}">존재하지 않는 단축 링크입니다.</p>
+
+		<div class="data-section">
+			<div class="data-label">요청한 단축 URL</div>
+			<div class="data-box url-raw" th:text="${shortUrl}">https://srrrg.link/abc123</div>
+		</div>
+
+		<div class="action-row">
+			<a class="secondary-button" th:href="@{/}">새 단축 링크 만들기</a>
+		</div>
+	</section>
+</main>
+<div th:replace="~{fragments/srrrg-layout :: footer}"></div>
+</body>
+</html>

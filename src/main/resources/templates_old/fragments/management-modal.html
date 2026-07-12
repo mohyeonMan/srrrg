@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div id="management-modal" class="management-modal" role="dialog" aria-modal="true" aria-labelledby="management-modal-title" th:fragment="managementModal">
+	<div class="management-modal-panel">
+		<div class="management-modal-header">
+			<h2 id="management-modal-title" class="management-modal-title">내 단축 링크 관리</h2>
+			<button id="management-modal-close-button" class="management-modal-close" type="button" aria-label="닫기">×</button>
+		</div>
+		<div class="management-modal-tabs" role="tablist" aria-label="관리 화면">
+			<button
+					id="management-edit-tab"
+					class="management-modal-tab"
+					type="button"
+					role="tab"
+					aria-selected="true"
+					aria-controls="management-edit-panel"
+			>조회/수정</button>
+			<button
+					id="management-stats-tab"
+					class="management-modal-tab"
+					type="button"
+					role="tab"
+					aria-selected="false"
+					aria-controls="management-stats-panel"
+			>상세통계</button>
+		</div>
+		<p id="management-modal-message" class="management-message" role="status" aria-live="polite"></p>
+
+		<div id="management-edit-panel" class="management-modal-tabpanel" role="tabpanel" aria-labelledby="management-edit-tab">
+			<div id="management-result" class="management-result" hidden>
+				<div>
+					<p class="management-label">단축 URL</p>
+					<a id="management-short-url" class="management-link" href="#" target="_blank" rel="noopener noreferrer"></a>
+				</div>
+
+				<dl class="management-metadata">
+					<dt>만료</dt>
+					<dd id="management-expiration-status"></dd>
+					<dt>생성</dt>
+					<dd id="management-created-at"></dd>
+					<dt>최근 수정</dt>
+					<dd id="management-updated-at"></dd>
+				</dl>
+
+				<form id="management-edit-form" class="management-edit-form">
+					<label class="field">
+						<span class="field-label">원본 URL</span>
+						<input id="management-original-url" class="field-input" type="url" maxlength="2048" required>
+					</label>
+					<label class="field">
+						<span class="field-label">만료 시각 · 비우면 무기한</span>
+						<input id="management-expires-at" class="field-input" type="datetime-local">
+					</label>
+					<div class="management-actions">
+						<button id="management-save-button" class="management-button" type="submit">변경 저장</button>
+						<button id="management-delete-button" class="management-delete-button" type="button">링크 삭제</button>
+					</div>
+				</form>
+			</div>
+		</div>
+
+		<div id="management-stats-panel" class="management-modal-tabpanel" role="tabpanel" aria-labelledby="management-stats-tab" hidden>
+			<div class="management-stats" aria-label="링크 누적 통계">
+				<div class="management-stat">
+					<p class="management-stat-label">진입 수</p>
+					<p id="management-click-count" class="management-stat-value">0</p>
+				</div>
+				<div class="management-stat">
+					<p class="management-stat-label">실제 이동 수</p>
+					<p id="management-redirect-count" class="management-stat-value">0</p>
+				</div>
+			</div>
+			<p class="management-stats-empty">상세 통계 API가 준비되면 기간별 진입, 실제 이동, 유입 정보가 이 영역에 표시됩니다.</p>
+		</div>
+	</div>
+</div>
+</body>
+</html>

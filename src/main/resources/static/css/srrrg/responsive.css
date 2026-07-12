@@ -1,0 +1,141 @@
+@media (max-width: 980px) {
+	.expire-options {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
+	.management-form {
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	}
+
+	.management-form .primary-button {
+		grid-column: 1 / -1;
+	}
+}
+
+@media (max-width: 860px) {
+	.page-shell {
+		width: min(100% - 24px, 720px);
+		margin-top: var(--space-7);
+	}
+
+	.home-hero,
+	.manage-section {
+		grid-template-columns: 1fr;
+	}
+
+	.product-intro {
+		padding-top: 0;
+	}
+
+	.trust-features {
+		grid-template-columns: 1fr;
+	}
+
+	.srrrg-header {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: var(--space-2);
+		padding: 18px 24px;
+	}
+
+	.srrrg-brand {
+		flex-direction: column;
+		gap: var(--space-1);
+	}
+}
+
+@media (max-width: 640px) {
+	.trust-summary div,
+	.management-meta,
+	.management-stats,
+	.management-actions {
+		grid-template-columns: 1fr;
+	}
+
+	.management-form {
+		grid-template-columns: 1fr;
+	}
+}
+
+@media (max-width: 520px) {
+	.page-shell,
+	.decision-shell {
+		width: calc(100% - 20px);
+		margin: 20px auto;
+	}
+
+	.create-tool,
+	.manage-section,
+	.trust-card,
+	.decision-panel,
+	.management-modal-panel {
+		padding: var(--space-5);
+		border-radius: var(--radius-xl);
+	}
+
+	.expire-options {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.copy-row,
+	.action-row {
+		display: grid;
+		grid-template-columns: 1fr;
+	}
+
+	.primary-button,
+	.secondary-button,
+	.danger-button,
+	.copy-button {
+		width: 100%;
+	}
+
+	.page-title {
+		font-size: 26px;
+	}
+
+	.panel-title,
+	.management-modal-title {
+		font-size: 22px;
+	}
+
+	.result-title {
+		font-size: 20px;
+	}
+
+	.management-modal {
+		padding: 14px;
+	}
+
+	.management-modal-panel {
+		width: calc(100vw - 28px);
+		height: calc(100svh - 28px);
+		max-height: calc(100svh - 28px);
+	}
+
+	.srrrg-footer-separator {
+		margin: 0 4px;
+	}
+}
+
+@media (max-width: 380px) {
+	.srrrg-header {
+		padding: 16px 20px;
+	}
+
+	.srrrg-logo {
+		font-size: 28px;
+	}
+
+	.srrrg-tagline {
+		font-size: 13px;
+	}
+
+	.srrrg-footer span:last-child {
+		display: block;
+	}
+
+	.srrrg-footer-separator {
+		display: none;
+	}
+}

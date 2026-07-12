@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<section class="home-section manage-section" th:fragment="manageEntry" aria-labelledby="management-title">
+	<div class="manage-copy">
+		<h2 id="management-title">내 단축 링크 관리</h2>
+		<p>단축 URL 또는 코드와 secret key를 입력하면 원본 URL, 만료 시각, 누적 통계를 확인할 수 있습니다.</p>
+	</div>
+
+	<form id="management-lookup-form" class="management-form" novalidate>
+		<label class="field" for="management-code">
+			<span class="field-label">단축 URL 또는 코드</span>
+			<input
+					id="management-code"
+					class="field-input"
+					type="text"
+					placeholder="https://srrrg.link/aB3x9Q 또는 aB3x9Q"
+					autocomplete="off"
+					aria-describedby="management-message"
+					required
+			>
+		</label>
+		<label class="field" for="management-secret-key">
+			<span class="field-label">Secret key</span>
+			<input
+					id="management-secret-key"
+					class="field-input"
+					type="password"
+					placeholder="srrrg_sk_xxxxxxxxx"
+					autocomplete="off"
+					spellcheck="false"
+					aria-describedby="management-message"
+					required
+			>
+		</label>
+		<button id="management-lookup-button" class="primary-button" type="submit">조회하기</button>
+		<p id="management-message" class="management-message" role="status" aria-live="polite"></p>
+	</form>
+</section>
+</body>
+</html>

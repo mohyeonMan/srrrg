@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>srrrg - 링크 확인</title>
+	<link rel="stylesheet" th:href="@{/css/srrrg.css}">
+</head>
+<body>
+<div th:replace="~{fragments/srrrg-layout :: header}"></div>
+<main class="decision-shell">
+	<section class="decision-panel">
+		<span class="eyebrow">이동 전 확인</span>
+		<h1 class="page-title">신뢰할 수 있는 링크인가요?</h1>
+		<p class="page-description">
+			<span>이 링크는 바로 이동하지 않습니다.</span>
+			<span>목적지를 확인한 뒤 계속 진행하세요.</span>
+		</p>
+
+		<div class="data-section">
+			<div class="data-label">원본 도메인</div>
+			<p class="domain-value" th:text="${originalUrlHost}">example.com</p>
+		</div>
+
+		<div class="data-section">
+			<div class="data-label">원본 URL</div>
+			<div class="url-row">
+				<div id="original-url-summary" class="data-box url-raw" th:text="${originalUrlSummary}">https://example.com/...</div>
+				<div id="original-url-full" class="data-box url-raw hidden" th:text="${originalUrl}">https://example.com/path?query=value</div>
+				<button class="secondary-button" type="button" onclick="toggleOriginalUrl()">전체 URL 보기</button>
+			</div>
+		</div>
+
+		<div class="data-section">
+			<div class="data-label">단축 URL</div>
+			<div class="data-box url-raw" th:text="${shortUrl}">https://srrrg.link/abc123</div>
+		</div>
+
+		<div class="action-row">
+			<form th:action="@{/{code}/redirect(code=${code})}" method="post">
+				<button class="primary-button" type="submit">원본 URL로 이동</button>
+			</form>
+			<a class="secondary-button" th:href="@{/}">돌아가기</a>
+		</div>
+	</section>
+</main>
+<div th:replace="~{fragments/srrrg-layout :: footer}"></div>
+<script>
+	function toggleOriginalUrl() {
+		const summary = document.getElementById('original-url-summary');
+		const full = document.getElementById('original-url-full');
+		const button = document.querySelector('.secondary-button[type="button"]');
+		const fullVisible = !full.classList.contains('hidden');
+
+		summary.classList.toggle('hidden', !fullVisible);
+		full.classList.toggle('hidden', fullVisible);
+		button.textContent = fullVisible ? '전체 URL 보기' : '접기';
+	}
+</script>
+</body>
+</html>

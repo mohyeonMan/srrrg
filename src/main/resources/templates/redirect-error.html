@@ -4,147 +4,30 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title th:text="'srrrg - ' + ${status}">srrrg - error</title>
-	<style>
-		* {
-			box-sizing: border-box;
-		}
-		body {
-			margin: 0;
-			min-height: 100vh;
-			font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-			background:
-					radial-gradient(circle at top left, rgba(220, 38, 38, 0.10), transparent 32rem),
-					linear-gradient(180deg, #fffafa 0%, #f8fafc 50%, #eef2ff 100%);
-			color: #0f172a;
-			display: flex;
-			flex-direction: column;
-		}
-		main {
-			width: min(640px, calc(100% - 32px));
-			max-width: 640px;
-			height: clamp(330px, 48svh, 440px);
-			margin: clamp(24px, 6vw, 48px) auto;
-			overflow-y: auto;
-			padding: clamp(24px, 5vw, 36px);
-			background: rgba(255, 255, 255, 0.92);
-			border: 1px solid rgba(226, 232, 240, 0.9);
-			border-radius: clamp(18px, 4vw, 24px);
-			box-shadow: 0 24px 70px rgba(15, 23, 42, 0.10);
-		}
-		h1 {
-			margin: 8px 0 12px;
-			font-size: clamp(24px, 6vw, 30px);
-			line-height: 1.18;
-			letter-spacing: 0;
-		}
-		p {
-			margin: 0;
-			color: #475569;
-			font-size: clamp(15px, 3.5vw, 16px);
-			line-height: 1.65;
-		}
-		.srrrg-header {
-			display: flex;
-			align-items: baseline;
-			flex-wrap: wrap;
-			gap: 12px;
-			padding: clamp(18px, 4vw, 24px) clamp(20px, 6vw, 36px);
-			border-bottom: 1px solid rgba(226, 232, 240, 0.75);
-			background: rgba(255, 255, 255, 0.72);
-			backdrop-filter: blur(14px);
-		}
-		.srrrg-logo {
-			color: #2563eb;
-			font-size: clamp(26px, 7vw, 30px);
-			font-weight: 900;
-			line-height: 1;
-			letter-spacing: 0;
-			text-decoration: none;
-			text-shadow: 0 10px 24px rgba(37, 99, 235, 0.18);
-		}
-		.srrrg-tagline {
-			color: #64748b;
-			font-size: clamp(13px, 3.5vw, 15px);
-			font-weight: 500;
-			line-height: 1.35;
-		}
-		.srrrg-footer {
-			margin-top: auto;
-			padding: clamp(20px, 5vw, 24px) clamp(18px, 6vw, 32px);
-			color: #718096;
-			font-size: clamp(12px, 3.2vw, 13px);
-			line-height: 1.6;
-			text-align: center;
-		}
-		.srrrg-footer-separator {
-			margin: 0 6px;
-		}
-		.status {
-			display: inline-block;
-			padding: 6px 10px;
-			color: #dc2626;
-			background: #fef2f2;
-			border: 1px solid #fecaca;
-			border-radius: 999px;
-			font-size: clamp(12px, 3vw, 13px);
-			font-weight: 700;
-		}
-		.label {
-			margin: 24px 0 8px;
-			color: #64748b;
-			font-size: clamp(12px, 3vw, 13px);
-			font-weight: 700;
-		}
-		.url {
-			overflow-wrap: anywhere;
-			padding: clamp(12px, 3vw, 14px) clamp(13px, 3vw, 15px);
-			background: #f8fafc;
-			border: 1px solid #e2e8f0;
-			border-radius: 12px;
-			color: #334155;
-			font-size: clamp(14px, 3.5vw, 16px);
-			line-height: 1.5;
-		}
-		@media (max-width: 520px) {
-			main {
-				width: calc(100% - 20px);
-				height: clamp(330px, calc(100svh - 120px), 500px);
-			}
-			.srrrg-header {
-				flex-direction: column;
-				align-items: flex-start;
-				gap: 5px;
-			}
-			.srrrg-footer span {
-				display: inline;
-			}
-			.srrrg-footer-separator {
-				margin: 0 4px;
-			}
-		}
-		@media (max-width: 360px) {
-			main {
-				height: clamp(320px, calc(100svh - 108px), 480px);
-			}
-			.srrrg-footer span:last-child {
-				display: block;
-			}
-			.srrrg-footer-separator {
-				display: none;
-			}
-		}
-	</style>
+	<link rel="stylesheet" th:href="@{/css/srrrg.css}">
 </head>
-<body>
+<body class="error-page">
 <div th:replace="~{fragments/srrrg-layout :: header}"></div>
-<main>
-	<div class="status" th:text="${status}">404</div>
-	<h1 th:text="${title}">링크를 찾을 수 없습니다</h1>
-	<p th:text="${message}">존재하지 않는 단축 링크입니다.</p>
 
-	<div class="label">요청한 단축 URL</div>
-	<div class="url" th:text="${shortUrl}">https://srrrg.link/abc123</div>
+<main class="decision-shell">
+	<section class="decision-panel" aria-labelledby="error-title">
+		<div class="decision-heading">
+			<span class="status-code" th:text="${status}">404</span>
+			<h1 id="error-title" class="page-title" th:text="${title}">링크를 찾을 수 없습니다</h1>
+			<p class="page-description" th:text="${message}">주소가 잘못되었거나 존재하지 않는 단축 링크입니다.</p>
+		</div>
+
+		<section class="data-section" aria-labelledby="error-short-url-label">
+			<h2 id="error-short-url-label" class="data-label">요청한 단축 URL</h2>
+			<p class="url-box" th:text="${shortUrl}">https://srrrg.link/abc123</p>
+		</section>
+
+		<div class="action-row">
+			<a class="primary-button" th:href="@{/}">새 단축 링크 만들기</a>
+		</div>
+	</section>
 </main>
+
 <div th:replace="~{fragments/srrrg-layout :: footer}"></div>
 </body>
 </html>
