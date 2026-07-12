@@ -46,11 +46,11 @@
 				</div>
 			</dl>
 
-			<form id="management-edit-form" class="management-edit-form" novalidate>
+			<form id="management-edit-form" class="management-edit-form" autocomplete="off" novalidate>
 				<div class="field">
 					<label class="field-label" for="management-original-url">원본 URL</label>
 					<div class="management-field-row">
-						<input id="management-original-url" class="field-input" type="url" maxlength="2048" aria-describedby="management-modal-message" required>
+						<input id="management-original-url" class="field-input" type="url" maxlength="2048" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" aria-describedby="management-modal-message" required>
 						<button id="management-original-url-reset-button" class="secondary-button field-reset-button" type="button" disabled>초기화</button>
 					</div>
 				</div>
@@ -66,7 +66,7 @@
 					</fieldset>
 					<div id="management-expires-field" class="field expire-value-field">
 						<div class="management-field-row">
-							<input id="management-expires-at" class="field-input" type="text" value="-" aria-label="만료 시각" aria-describedby="management-modal-message" disabled>
+							<input id="management-expires-at" class="field-input" type="text" value="-" autocomplete="off" aria-label="만료 시각" aria-describedby="management-modal-message" disabled>
 							<button id="management-expires-at-reset-button" class="secondary-button field-reset-button" type="button" disabled>초기화</button>
 						</div>
 					</div>

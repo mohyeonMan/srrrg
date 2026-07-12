@@ -223,7 +223,7 @@
 
 .management-form {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+	grid-template-columns: minmax(240px, 1.35fr) minmax(180px, 0.85fr) auto;
 	gap: var(--space-3);
 	align-items: end;
 }

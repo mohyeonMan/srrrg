@@ -7,28 +7,37 @@
 		<p>단축 URL 또는 코드와 secret key를 입력하면 원본 URL, 만료 시각, 누적 통계를 확인할 수 있습니다.</p>
 	</div>
 
-	<form id="management-lookup-form" class="management-form" novalidate>
-		<label class="field" for="management-code">
+	<form id="management-lookup-form" class="management-form" autocomplete="off" data-form-type="other" novalidate>
+		<label class="field" for="lookup-link-ref">
 			<span class="field-label">단축 URL 또는 코드</span>
 			<input
-					id="management-code"
+					id="lookup-link-ref"
 					class="field-input"
 					type="text"
-					placeholder="https://srrrg.link/aB3x9Q 또는 aB3x9Q"
-					autocomplete="off"
+					placeholder="단축 URL 또는 코드"
+					autocomplete="one-time-code"
+					autocapitalize="none"
+					autocorrect="off"
+					spellcheck="false"
+					data-1p-ignore
+					data-lpignore="true"
 					aria-describedby="management-message"
 					required
 			>
 		</label>
-		<label class="field" for="management-secret-key">
-			<span class="field-label">Secret key</span>
+		<label class="field" for="lookup-access-token">
+			<span class="field-label">관리 키</span>
 			<input
-					id="management-secret-key"
+					id="lookup-access-token"
 					class="field-input"
-					type="password"
+					type="text"
 					placeholder="srrrg_sk_xxxxxxxxx"
-					autocomplete="off"
+					autocomplete="one-time-code"
+					autocapitalize="none"
+					autocorrect="off"
 					spellcheck="false"
+					data-1p-ignore
+					data-lpignore="true"
 					aria-describedby="management-message"
 					required
 			>

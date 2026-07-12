@@ -36,8 +36,8 @@
 	const copySecretKeyButton = byId('copy-secret-key');
 
 	const managementLookupForm = byId('management-lookup-form');
-	const managementCodeInput = byId('management-code');
-	const managementSecretKeyInput = byId('management-secret-key');
+	const managementCodeInput = byId('lookup-link-ref');
+	const managementSecretKeyInput = byId('lookup-access-token');
 	const managementLookupButton = byId('management-lookup-button');
 	const managementMessage = byId('management-message');
 	const managementModal = byId('management-modal');
