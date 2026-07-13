@@ -1,15 +1,22 @@
 package link.srrrg.link;
 
-import java.time.Instant;
 import java.time.Duration;
+import java.time.Instant;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionOperations;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import link.srrrg.link.SecretKeyManager.GeneratedSecretKey;
+import link.srrrg.link.RedirectTicketManager.RejectReason;
+import link.srrrg.link.RedirectTicketManager.RedirectGrant;
+import link.srrrg.link.RedirectTicketManager.Validation;
 import link.srrrg.link.access.ClientRequestInfo;
-import link.srrrg.link.access.RedirectCheckRecorder;
+import link.srrrg.link.access.LinkClickEventRecorder;
+import link.srrrg.link.access.LinkRedirectEventRecorder;
 import link.srrrg.link.dto.CreateLinkRequest;
 import link.srrrg.link.dto.CreateLinkResponse;
 import link.srrrg.link.dto.DeleteLinkResponse;
@@ -33,21 +40,40 @@ public class LinkService {
 	private final SecretKeyManager secretKeyManager;
 	private final UrlValidator urlValidator;
 	private final UrlRiskChecker urlRiskChecker;
-	private final RedirectCheckRecorder redirectCheckRecorder;
+	private final RedirectTicketManager redirectTicketManager;
+	private final LinkClickEventRecorder clickEventRecorder;
+	private final LinkRedirectEventRecorder redirectEventRecorder;
+	private final TransactionOperations transactions;
 	private final String baseUrl;
 	private final Duration verificationTtl;
 
 	public LinkService(LinkRepository linkRepository, LinkCodeGenerator linkCodeGenerator,
 			SecretKeyManager secretKeyManager, UrlValidator urlValidator,
-			UrlRiskChecker urlRiskChecker, RedirectCheckRecorder redirectCheckRecorder,
+			UrlRiskChecker urlRiskChecker, RedirectTicketManager redirectTicketManager,
+			LinkClickEventRecorder clickEventRecorder,
+			LinkRedirectEventRecorder redirectEventRecorder, PlatformTransactionManager transactionManager,
 			@Value("${srrrg.base-url}") String baseUrl,
 			@Value("${srrrg.redirect.verification-ttl:1h}") Duration verificationTtl) {
+		this(linkRepository, linkCodeGenerator, secretKeyManager, urlValidator, urlRiskChecker,
+				redirectTicketManager, clickEventRecorder, redirectEventRecorder,
+				new TransactionTemplate(transactionManager), baseUrl, verificationTtl);
+	}
+
+	LinkService(LinkRepository linkRepository, LinkCodeGenerator linkCodeGenerator,
+			SecretKeyManager secretKeyManager, UrlValidator urlValidator,
+			UrlRiskChecker urlRiskChecker, RedirectTicketManager redirectTicketManager,
+			LinkClickEventRecorder clickEventRecorder,
+			LinkRedirectEventRecorder redirectEventRecorder, TransactionOperations transactions,
+			String baseUrl, Duration verificationTtl) {
 		this.linkRepository = linkRepository;
 		this.linkCodeGenerator = linkCodeGenerator;
 		this.secretKeyManager = secretKeyManager;
 		this.urlValidator = urlValidator;
 		this.urlRiskChecker = urlRiskChecker;
-		this.redirectCheckRecorder = redirectCheckRecorder;
+		this.redirectTicketManager = redirectTicketManager;
+		this.clickEventRecorder = clickEventRecorder;
+		this.redirectEventRecorder = redirectEventRecorder;
+		this.transactions = transactions;
 		this.baseUrl = removeTrailingSlash(baseUrl);
 		this.verificationTtl = verificationTtl;
 	}
@@ -113,14 +139,11 @@ public class LinkService {
 		log.debug("Secure Redirect page requested: code={}", code);
 		Link link = findAvailableLink(code);
 		urlValidator.validate(link.getOriginalUrl());
-		LinkStatus cachedStatus = null;
-		// 최근 검사 결과가 유효하면 검사 API 호출 없이 페이지에서 해당 결과를 재사용함.
-		if (hasFreshVerification(link)) {
-			cachedStatus = redirectCheckRecorder.reuseCachedCheck(link.getCode(), link.getOriginalUrl(),
-					link.getStatus(), link.getVerifiedAt(), requestInfo).orElse(null);
-		}
-		log.debug("Secure Redirect page resolved: code={}, cachedVerification={}", code, cachedStatus != null);
-		return new RedirectLink(link.getCode(), link.getOriginalUrl(), cachedStatus);
+		CachedRedirect cachedRedirect = resolveCachedRedirect(link);
+		log.debug("Secure Redirect page resolved: code={}, cachedVerification={}",
+				code, cachedRedirect.status() != null);
+		return new RedirectLink(link.getCode(), link.getOriginalUrl(),
+				cachedRedirect.status(), cachedRedirect.redirectUrl());
 	}
 
 	public RedirectCheckResponse checkRedirect(String code, ClientRequestInfo requestInfo) {
@@ -131,37 +154,157 @@ public class LinkService {
 		urlValidator.validate(checkedUrl);
 		UrlRiskCheckResult result = urlRiskChecker.check(checkedUrl);
 
-		// 외부 API 호출 중 URL이 변경됐는지 다시 확인함.
-		Link currentLink = findAvailableLink(code);
-		if (!checkedUrl.equals(currentLink.getOriginalUrl())) {
-			log.warn("Redirect risk check invalidated: reason=URL_CHANGED, code={}, elapsedMs={}",
-					code, elapsedMillis(startedAt));
-			return new RedirectCheckResponse(UrlRiskCheckResult.CHECK_FAILED, null);
-		}
-		urlValidator.validate(currentLink.getOriginalUrl());
-		// 검사 결과 저장과 성공 시 통계 기록을 하나의 트랜잭션으로 처리함.
-		boolean checkRecorded = redirectCheckRecorder.recordCheck(currentLink, checkedUrl, result, requestInfo);
-		if (!checkRecorded) {
+		RedirectCheckOutcome outcome = recordRedirectCheckResult(code, checkedUrl, result);
+		if (!outcome.recorded()) {
 			log.warn("Redirect risk check invalidated while recording: reason=URL_CHANGED, code={}, elapsedMs={}",
 					code, elapsedMillis(startedAt));
 			return new RedirectCheckResponse(UrlRiskCheckResult.CHECK_FAILED, null);
 		}
 
 		if (result == UrlRiskCheckResult.NO_THREAT_FOUND) {
-			log.info("Redirect risk check completed: code={}, result={}, accessRecorded=true, elapsedMs={}",
+			log.info("Redirect risk check completed: code={}, result={}, redirectReady=true, elapsedMs={}",
 					code, result, elapsedMillis(startedAt));
-			return new RedirectCheckResponse(result, checkedUrl);
+			return new RedirectCheckResponse(result, outcome.redirectUrl());
 		}
 		if (result == UrlRiskCheckResult.CHECK_FAILED) {
-			// 검사 실패 시 현재 저장 URL을 반환해 사용자가 수동 이동을 선택할 수 있게 함.
+			// 검사 실패 시에도 외부 URL을 직접 주지 않고 srrrg의 302 endpoint만 전달함.
 			log.warn("Redirect risk check completed: code={}, result={}, manualRedirectAvailable=true, elapsedMs={}",
 					code, result, elapsedMillis(startedAt));
-			return new RedirectCheckResponse(result, checkedUrl);
+			return new RedirectCheckResponse(result, outcome.redirectUrl());
 		}
 		// 위협 탐지 결과에는 목적지 URL을 포함하지 않음.
 		log.warn("Redirect risk check completed: code={}, result={}, redirectBlocked=true, elapsedMs={}",
 				code, result, elapsedMillis(startedAt));
 		return new RedirectCheckResponse(result, null);
+	}
+
+	public String redirectToOriginal(String code, String ticket, ClientRequestInfo requestInfo) {
+		return transactions.execute(status -> {
+			Link link = findAvailableLink(code);
+			urlValidator.validate(link.getOriginalUrl());
+			Validation validation = redirectTicketManager.validate(
+					link.getCode(), link.getOriginalUrl(), link.getSecretKeyHash(), ticket);
+			validateRedirectTicket(link, validation);
+			recordSuccessfulRedirect(link, requestInfo);
+			log.info("Redirect issued: code={}, grant={}", code, validation.grant());
+			return link.getOriginalUrl();
+		});
+	}
+
+	private CachedRedirect resolveCachedRedirect(Link pageLink) {
+		if (!hasFreshVerification(pageLink)) {
+			return CachedRedirect.none();
+		}
+
+		return transactions.execute(status -> {
+			// 페이지 렌더링 직후 링크가 수정될 수 있으므로 캐시 재사용 직전에 한 번 더 확인함.
+			Link currentLink = linkRepository.findByCode(pageLink.getCode()).orElse(null);
+			if (!matchesSameVerification(currentLink, pageLink)) {
+				log.debug("Cached redirect verification not reused: reason=STALE_DATA, code={}",
+						pageLink.getCode());
+				return CachedRedirect.none();
+			}
+
+			log.info("Cached redirect verification reused: code={}, status={}, verifiedAt={}",
+					currentLink.getCode(), currentLink.getStatus(), currentLink.getVerifiedAt());
+			String redirectUrl = currentLink.getStatus() == LinkStatus.NO_THREAT_FOUND
+					? redirectUrlFor(currentLink, RedirectGrant.SAFE)
+					: null;
+			return new CachedRedirect(currentLink.getStatus(), redirectUrl);
+		});
+	}
+
+	private RedirectCheckOutcome recordRedirectCheckResult(String code, String checkedUrl, UrlRiskCheckResult result) {
+		RedirectCheckOutcome outcome = transactions.execute(status -> {
+			// Safe Browsing 호출 중 관리자가 URL을 바꾸면 예전 URL의 결과를 저장하거나 반환하지 않음.
+			Link currentLink = findAvailableLink(code);
+			if (!checkedUrl.equals(currentLink.getOriginalUrl())) {
+				return RedirectCheckOutcome.stale();
+			}
+			urlValidator.validate(currentLink.getOriginalUrl());
+
+			// 검사 실패는 일시 장애일 수 있으므로 캐시하지 않음. 성공/위협 탐지만 TTL 캐시 대상임.
+			LinkStatus cacheableStatus = cacheableStatus(result);
+			if (cacheableStatus != null && !updateVerification(code, checkedUrl, cacheableStatus)) {
+				return RedirectCheckOutcome.stale();
+			}
+
+			if (result == UrlRiskCheckResult.NO_THREAT_FOUND) {
+				return RedirectCheckOutcome.ready(redirectUrlFor(currentLink, RedirectGrant.SAFE));
+			}
+			if (result == UrlRiskCheckResult.CHECK_FAILED) {
+				return RedirectCheckOutcome.ready(redirectUrlFor(currentLink, RedirectGrant.MANUAL));
+			}
+			return RedirectCheckOutcome.recordedWithoutRedirect();
+		});
+		return outcome == null ? RedirectCheckOutcome.stale() : outcome;
+	}
+
+	private boolean updateVerification(String code, String checkedUrl, LinkStatus status) {
+		int updatedRows = linkRepository.updateVerificationByCodeAndOriginalUrl(
+				code, checkedUrl, status, Instant.now());
+		if (updatedRows != 1) {
+			log.warn("Redirect verification result not recorded: reason=URL_CHANGED, code={}", code);
+			return false;
+		}
+		return true;
+	}
+
+	private LinkStatus cacheableStatus(UrlRiskCheckResult result) {
+		if (result == UrlRiskCheckResult.NO_THREAT_FOUND) {
+			return LinkStatus.NO_THREAT_FOUND;
+		}
+		if (result == UrlRiskCheckResult.THREAT_DETECTED) {
+			return LinkStatus.THREAT_DETECTED;
+		}
+		return null;
+	}
+
+	private boolean matchesSameVerification(Link currentLink, Link pageLink) {
+		return currentLink != null
+				&& !currentLink.isDeleted()
+				&& !currentLink.isExpiredAt(Instant.now())
+				&& currentLink.getOriginalUrl().equals(pageLink.getOriginalUrl())
+				&& currentLink.getStatus() == pageLink.getStatus()
+				&& pageLink.getVerifiedAt().equals(currentLink.getVerifiedAt());
+	}
+
+	private String redirectUrlFor(Link link, RedirectGrant grant) {
+		return "/api/redirect/" + link.getCode()
+				+ "?ticket=" + redirectTicketManager.issue(
+						link.getCode(), link.getOriginalUrl(), link.getSecretKeyHash(), grant);
+	}
+
+	private void validateRedirectTicket(Link link, Validation validation) {
+		if (!validation.accepted()) {
+			log.warn("Redirect ticket rejected: reason={}, code={}", validation.rejectReason(), link.getCode());
+			if (validation.rejectReason() == RejectReason.EXPIRED
+					|| validation.rejectReason() == RejectReason.URL_CHANGED) {
+				throw new LinkGoneException();
+			}
+			throw new LinkNotFoundException();
+		}
+		if (validation.grant() == RedirectGrant.SAFE && !hasFreshNoThreatVerification(link)) {
+			log.warn("Redirect ticket rejected: reason=SAFE_CACHE_MISSING, code={}", link.getCode());
+			throw new LinkGoneException();
+		}
+		if (validation.grant() == RedirectGrant.MANUAL && hasFreshThreatVerification(link)) {
+			log.warn("Redirect ticket rejected: reason=FRESH_THREAT_CACHE, code={}", link.getCode());
+			throw new LinkGoneException();
+		}
+	}
+
+	private void recordSuccessfulRedirect(Link link, ClientRequestInfo requestInfo) {
+		clickEventRecorder.record(link, requestInfo);
+		redirectEventRecorder.record(link, requestInfo);
+
+		int clickUpdates = linkRepository.incrementClickCountByCode(link.getCode());
+		int redirectUpdates = linkRepository.incrementRedirectCountByCode(link.getCode());
+		if (clickUpdates != 1 || redirectUpdates != 1) {
+			log.warn("Redirect statistics update failed: code={}, clickUpdates={}, redirectUpdates={}",
+					link.getCode(), clickUpdates, redirectUpdates);
+			throw new LinkNotFoundException();
+		}
 	}
 
 	private void requireNoKnownThreat(String url) {
@@ -237,10 +380,22 @@ public class LinkService {
 	}
 
 	private boolean hasFreshVerification(Link link) {
-		// NOT_VERIFIED 또는 TTL이 지난 결과는 캐시로 사용하지 않음.
-		return link.getStatus() != null
-				&& link.getStatus() != LinkStatus.NOT_VERIFIED
-				&& link.getVerifiedAt() != null
+		// 검사 실패는 캐시하지 않는다. 일시 장애를 오래 재사용하면 검사 우회처럼 동작할 수 있음.
+		return (hasFreshNoThreatVerification(link) || hasFreshThreatVerification(link));
+	}
+
+	private boolean hasFreshNoThreatVerification(Link link) {
+		return link.getStatus() == LinkStatus.NO_THREAT_FOUND
+				&& hasFreshVerifiedAt(link);
+	}
+
+	private boolean hasFreshThreatVerification(Link link) {
+		return link.getStatus() == LinkStatus.THREAT_DETECTED
+				&& hasFreshVerifiedAt(link);
+	}
+
+	private boolean hasFreshVerifiedAt(Link link) {
+		return link.getVerifiedAt() != null
 				&& link.getVerifiedAt().isAfter(Instant.now().minus(verificationTtl));
 	}
 
@@ -252,5 +407,25 @@ public class LinkService {
 
 	private String removeTrailingSlash(String value) {
 		return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
+	}
+
+	private record CachedRedirect(LinkStatus status, String redirectUrl) {
+		private static CachedRedirect none() {
+			return new CachedRedirect(null, null);
+		}
+	}
+
+	private record RedirectCheckOutcome(boolean recorded, String redirectUrl) {
+		private static RedirectCheckOutcome stale() {
+			return new RedirectCheckOutcome(false, null);
+		}
+
+		private static RedirectCheckOutcome ready(String redirectUrl) {
+			return new RedirectCheckOutcome(true, redirectUrl);
+		}
+
+		private static RedirectCheckOutcome recordedWithoutRedirect() {
+			return new RedirectCheckOutcome(true, null);
+		}
 	}
 }

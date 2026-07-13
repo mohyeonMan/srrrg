@@ -38,10 +38,8 @@ public class RedirectController {
 		model.addAttribute("originalUrl", link.originalUrl());
 		model.addAttribute("originalUrlHost", URI.create(link.originalUrl()).getHost());
 		model.addAttribute("cachedStatus", link.cachedStatus());
-		// 캐시된 위협 결과에는 목적지 URL을 전달하지 않음.
-		model.addAttribute("cachedRedirectUrl",
-				link.cachedStatus() == LinkStatus.NO_THREAT_FOUND || link.cachedStatus() == LinkStatus.CHECK_FAILED
-						? link.originalUrl() : null);
+		// 값이 있더라도 외부 URL이 아니라 srrrg가 302를 발급하는 내부 URL임.
+		model.addAttribute("cachedRedirectUrl", link.cachedRedirectUrl());
 		return "redirect-confirm";
 	}
 }

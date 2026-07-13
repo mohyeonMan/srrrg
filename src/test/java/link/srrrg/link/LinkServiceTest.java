@@ -3,21 +3,27 @@ package link.srrrg.link;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import java.time.Instant;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionOperations;
 
 import link.srrrg.link.SecretKeyManager.GeneratedSecretKey;
 import link.srrrg.link.access.ClientRequestInfo;
-import link.srrrg.link.access.RedirectCheckRecorder;
+import link.srrrg.link.access.LinkClickEventRecorder;
+import link.srrrg.link.access.LinkRedirectEventRecorder;
 import link.srrrg.link.dto.CreateLinkRequest;
 import link.srrrg.link.dto.RedirectCheckResponse;
 import link.srrrg.link.dto.UpdateLinkRequest;
@@ -31,14 +37,23 @@ class LinkServiceTest {
 	private final SecretKeyManager secretKeyManager = mock(SecretKeyManager.class);
 	private final UrlValidator validator = mock(UrlValidator.class);
 	private final UrlRiskChecker riskChecker = mock(UrlRiskChecker.class);
-	private final RedirectCheckRecorder checkRecorder = mock(RedirectCheckRecorder.class);
+	private final RedirectTicketManager redirectTicketManager = new RedirectTicketManager();
+	private final LinkClickEventRecorder clickRecorder = mock(LinkClickEventRecorder.class);
+	private final LinkRedirectEventRecorder redirectRecorder = mock(LinkRedirectEventRecorder.class);
+	private final TransactionOperations transactions = new TransactionOperations() {
+		@Override
+		public <T> T execute(TransactionCallback<T> action) {
+			return action.doInTransaction(null);
+		}
+	};
 	private final ClientRequestInfo requestInfo = new ClientRequestInfo("203.0.113.10", null, "agent");
 	private LinkService service;
 
 	@BeforeEach
 	void setUp() {
 		service = new LinkService(repository, codeGenerator, secretKeyManager, validator,
-				riskChecker, checkRecorder, "https://srrrg.link/", Duration.ofHours(1));
+				riskChecker, redirectTicketManager, clickRecorder, redirectRecorder, transactions,
+				"https://srrrg.link/", Duration.ofHours(1));
 	}
 
 	@Test
@@ -83,7 +98,7 @@ class LinkServiceTest {
 		service.updateManagedLink("aB3x9Q", "secret", request);
 
 		verify(link).updateOriginalUrl("https://new.example/path");
-		verify(link).updateVerification(org.mockito.ArgumentMatchers.eq(LinkStatus.NO_THREAT_FOUND), any(Instant.class));
+		verify(link).updateVerification(eq(LinkStatus.NO_THREAT_FOUND), any(Instant.class));
 	}
 
 	@Test
@@ -116,44 +131,95 @@ class LinkServiceTest {
 	}
 
 	@Test
-	void pageResolutionDoesNotRecordAVisit() {
-		Link link = availableLink("https://example.com/path");
+	void pageResolutionDoesNotRecordAVisitWhenThereIsNoCache() {
+		availableLink("https://example.com/path");
+
 		var result = service.resolveRedirectPage("aB3x9Q", requestInfo);
+
 		assertThat(result.originalUrl()).isEqualTo("https://example.com/path");
-		verify(checkRecorder, never()).recordCheck(any(), any(), any(), any());
+		assertThat(result.cachedStatus()).isNull();
+		verifyNoInteractions(clickRecorder, redirectRecorder);
 	}
 
 	@Test
-	void successfulCheckReturnsIdenticalUrlAndRecordsExactlyOnce() {
+	void successfulCheckReturnsServerRedirectUrlWithoutRecordingYet() {
 		Link link = availableLink("https://example.com:8443/path?q=1");
 		when(riskChecker.check(link.getOriginalUrl())).thenReturn(UrlRiskCheckResult.NO_THREAT_FOUND);
+		when(repository.updateVerificationByCodeAndOriginalUrl(
+				eq("aB3x9Q"), eq("https://example.com:8443/path?q=1"),
+				eq(LinkStatus.NO_THREAT_FOUND), any(Instant.class))).thenReturn(1);
 
 		RedirectCheckResponse response = service.checkRedirect("aB3x9Q", requestInfo);
 
 		assertThat(response.status()).isEqualTo(UrlRiskCheckResult.NO_THREAT_FOUND);
-		assertThat(response.redirectUrl()).isEqualTo("https://example.com:8443/path?q=1");
-		verify(checkRecorder).recordCheck(link, "https://example.com:8443/path?q=1",
-				UrlRiskCheckResult.NO_THREAT_FOUND, requestInfo);
+		assertThat(response.redirectUrl()).startsWith("/api/redirect/aB3x9Q?ticket=");
+		verifyNoInteractions(clickRecorder, redirectRecorder);
 	}
 
 	@Test
-	void threatResponseHasNoRedirectUrlAndDoesNotRecordVisit() {
+	void serverRedirectRecordsRedirectAndReturnsOriginalUrl() {
+		Link link = availableLink("https://example.com:8443/path?q=1");
+		when(riskChecker.check(link.getOriginalUrl())).thenReturn(UrlRiskCheckResult.NO_THREAT_FOUND);
+		when(repository.updateVerificationByCodeAndOriginalUrl(
+				eq("aB3x9Q"), eq("https://example.com:8443/path?q=1"),
+				eq(LinkStatus.NO_THREAT_FOUND), any(Instant.class))).thenReturn(1);
+		when(link.getStatus()).thenReturn(LinkStatus.NO_THREAT_FOUND);
+		when(link.getVerifiedAt()).thenReturn(Instant.now());
+		when(repository.incrementClickCountByCode("aB3x9Q")).thenReturn(1);
+		when(repository.incrementRedirectCountByCode("aB3x9Q")).thenReturn(1);
+
+		RedirectCheckResponse response = service.checkRedirect("aB3x9Q", requestInfo);
+		String redirectUrl = service.redirectToOriginal("aB3x9Q", ticketOf(response.redirectUrl()), requestInfo);
+
+		assertThat(redirectUrl).isEqualTo("https://example.com:8443/path?q=1");
+		verify(clickRecorder).record(link, requestInfo);
+		verify(redirectRecorder).record(link, requestInfo);
+	}
+
+	@Test
+	void threatResponseIsCachedWithoutExposingRedirectUrlOrRecordingAVisit() {
 		availableLink("https://bad.example");
 		when(riskChecker.check(any())).thenReturn(UrlRiskCheckResult.THREAT_DETECTED);
+		when(repository.updateVerificationByCodeAndOriginalUrl(
+				eq("aB3x9Q"), eq("https://bad.example"),
+				eq(LinkStatus.THREAT_DETECTED), any(Instant.class))).thenReturn(1);
+
 		RedirectCheckResponse response = service.checkRedirect("aB3x9Q", requestInfo);
+
+		assertThat(response.status()).isEqualTo(UrlRiskCheckResult.THREAT_DETECTED);
 		assertThat(response.redirectUrl()).isNull();
-		verify(checkRecorder).recordCheck(any(), org.mockito.ArgumentMatchers.eq("https://bad.example"),
-				org.mockito.ArgumentMatchers.eq(UrlRiskCheckResult.THREAT_DETECTED), any());
+		verifyNoInteractions(clickRecorder, redirectRecorder);
+		verify(repository, never()).incrementClickCountByCode(anyString());
+		verify(repository, never()).incrementRedirectCountByCode(anyString());
 	}
 
 	@Test
-	void failedCheckReturnsRevalidatedUrlWithoutRecordingVisit() {
+	void failedCheckReturnsRevalidatedUrlWithoutCachingOrRecordingAVisit() {
 		availableLink("https://example.com/path");
 		when(riskChecker.check(any())).thenReturn(UrlRiskCheckResult.CHECK_FAILED);
+
 		RedirectCheckResponse response = service.checkRedirect("aB3x9Q", requestInfo);
-		assertThat(response.redirectUrl()).isEqualTo("https://example.com/path");
-		verify(checkRecorder).recordCheck(any(), org.mockito.ArgumentMatchers.eq("https://example.com/path"),
-				org.mockito.ArgumentMatchers.eq(UrlRiskCheckResult.CHECK_FAILED), any());
+
+		assertThat(response.status()).isEqualTo(UrlRiskCheckResult.CHECK_FAILED);
+		assertThat(response.redirectUrl()).startsWith("/api/redirect/aB3x9Q?ticket=");
+		verify(repository, never()).updateVerificationByCodeAndOriginalUrl(
+				anyString(), anyString(), any(LinkStatus.class), any(Instant.class));
+		verifyNoInteractions(clickRecorder, redirectRecorder);
+	}
+
+	@Test
+	void manualServerRedirectAfterFailedCheckRecordsRedirect() {
+		Link link = availableLink("https://example.com/path");
+		when(riskChecker.check(any())).thenReturn(UrlRiskCheckResult.CHECK_FAILED);
+		when(repository.incrementClickCountByCode("aB3x9Q")).thenReturn(1);
+		when(repository.incrementRedirectCountByCode("aB3x9Q")).thenReturn(1);
+
+		RedirectCheckResponse response = service.checkRedirect("aB3x9Q", requestInfo);
+		String redirectUrl = service.redirectToOriginal("aB3x9Q", ticketOf(response.redirectUrl()), requestInfo);
+
+		assertThat(redirectUrl).isEqualTo("https://example.com/path");
+		verify(clickRecorder).record(link, requestInfo);
+		verify(redirectRecorder).record(link, requestInfo);
 	}
 
 	@Test
@@ -162,28 +228,59 @@ class LinkServiceTest {
 		Link newLink = link("https://new.example");
 		when(repository.findByCode("aB3x9Q")).thenReturn(Optional.of(oldLink), Optional.of(newLink));
 		when(riskChecker.check(any())).thenReturn(UrlRiskCheckResult.NO_THREAT_FOUND);
+
 		RedirectCheckResponse response = service.checkRedirect("aB3x9Q", requestInfo);
+
 		assertThat(response.status()).isEqualTo(UrlRiskCheckResult.CHECK_FAILED);
 		assertThat(response.redirectUrl()).isNull();
-		verify(checkRecorder, never()).recordCheck(any(), any(), any(), any());
+		verify(repository, never()).updateVerificationByCodeAndOriginalUrl(
+				anyString(), anyString(), any(LinkStatus.class), any(Instant.class));
+		verifyNoInteractions(clickRecorder, redirectRecorder);
 	}
 
 	@Test
-	void reusesVerificationWithinOneHourWithoutCallingRiskChecker() {
+	void reusesNoThreatVerificationWithinOneHourWithoutCallingRiskChecker() {
 		Link link = availableLink("https://example.com/path");
 		Instant verifiedAt = Instant.now().minusSeconds(1800);
 		when(link.getStatus()).thenReturn(LinkStatus.NO_THREAT_FOUND);
 		when(link.getVerifiedAt()).thenReturn(verifiedAt);
-		when(checkRecorder.reuseCachedCheck("aB3x9Q", "https://example.com/path",
-				LinkStatus.NO_THREAT_FOUND, verifiedAt, requestInfo))
-				.thenReturn(Optional.of(LinkStatus.NO_THREAT_FOUND));
 
 		var response = service.resolveRedirectPage("aB3x9Q", requestInfo);
 
 		assertThat(response.cachedStatus()).isEqualTo(LinkStatus.NO_THREAT_FOUND);
+		assertThat(response.cachedRedirectUrl()).startsWith("/api/redirect/aB3x9Q?ticket=");
 		verify(riskChecker, never()).check(any());
-		verify(checkRecorder).reuseCachedCheck("aB3x9Q", "https://example.com/path",
-				LinkStatus.NO_THREAT_FOUND, verifiedAt, requestInfo);
+		verifyNoInteractions(clickRecorder, redirectRecorder);
+	}
+
+	@Test
+	void cachedNoThreatServerRedirectRecordsRedirect() {
+		Link link = availableLink("https://example.com/path");
+		when(link.getStatus()).thenReturn(LinkStatus.NO_THREAT_FOUND);
+		when(link.getVerifiedAt()).thenReturn(Instant.now().minusSeconds(1800));
+		when(repository.incrementClickCountByCode("aB3x9Q")).thenReturn(1);
+		when(repository.incrementRedirectCountByCode("aB3x9Q")).thenReturn(1);
+
+		var response = service.resolveRedirectPage("aB3x9Q", requestInfo);
+		String redirectUrl = service.redirectToOriginal("aB3x9Q", ticketOf(response.cachedRedirectUrl()), requestInfo);
+
+		assertThat(redirectUrl).isEqualTo("https://example.com/path");
+		verify(clickRecorder).record(link, requestInfo);
+		verify(redirectRecorder).record(link, requestInfo);
+	}
+
+	@Test
+	void reusesThreatVerificationWithinOneHourWithoutRecordingAVisit() {
+		Link link = availableLink("https://bad.example");
+		when(link.getStatus()).thenReturn(LinkStatus.THREAT_DETECTED);
+		when(link.getVerifiedAt()).thenReturn(Instant.now().minusSeconds(1800));
+
+		var response = service.resolveRedirectPage("aB3x9Q", requestInfo);
+
+		assertThat(response.cachedStatus()).isEqualTo(LinkStatus.THREAT_DETECTED);
+		assertThat(response.cachedRedirectUrl()).isNull();
+		verify(riskChecker, never()).check(any());
+		verifyNoInteractions(clickRecorder, redirectRecorder);
 	}
 
 	@Test
@@ -195,7 +292,19 @@ class LinkServiceTest {
 		var response = service.resolveRedirectPage("aB3x9Q", requestInfo);
 
 		assertThat(response.cachedStatus()).isNull();
-		verify(checkRecorder, never()).reuseCachedCheck(any(), any(), any(), any(), any());
+		verifyNoInteractions(clickRecorder, redirectRecorder);
+	}
+
+	@Test
+	void doesNotReuseFailedVerificationEvenWhenItIsFresh() {
+		Link link = availableLink("https://example.com/path");
+		when(link.getStatus()).thenReturn(LinkStatus.CHECK_FAILED);
+		when(link.getVerifiedAt()).thenReturn(Instant.now().minusSeconds(60));
+
+		var response = service.resolveRedirectPage("aB3x9Q", requestInfo);
+
+		assertThat(response.cachedStatus()).isNull();
+		verifyNoInteractions(clickRecorder, redirectRecorder);
 	}
 
 	private Link managedLink(String url) {
@@ -209,7 +318,6 @@ class LinkServiceTest {
 	private Link availableLink(String url) {
 		Link link = link(url);
 		when(repository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
-		when(checkRecorder.recordCheck(any(), any(), any(), any())).thenReturn(true);
 		return link;
 	}
 
@@ -217,9 +325,15 @@ class LinkServiceTest {
 		Link link = mock(Link.class);
 		when(link.getCode()).thenReturn("aB3x9Q");
 		when(link.getOriginalUrl()).thenReturn(url);
+		when(link.getSecretKeyHash()).thenReturn("link-secret-hash");
 		when(link.isDeleted()).thenReturn(false);
 		when(link.isExpiredAt(any(Instant.class))).thenReturn(false);
 		return link;
+	}
+
+	private String ticketOf(String redirectUrl) {
+		assertThat(redirectUrl).startsWith("/api/redirect/aB3x9Q?ticket=");
+		return redirectUrl.substring(redirectUrl.indexOf("ticket=") + "ticket=".length());
 	}
 
 	private UpdateLinkRequest updateUrl(String url) {

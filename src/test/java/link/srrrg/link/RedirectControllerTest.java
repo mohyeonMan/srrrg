@@ -26,7 +26,7 @@ class RedirectControllerTest {
 		ClientRequestInfo requestInfo = new ClientRequestInfo("203.0.113.10", null, "agent");
 		when(resolver.resolve(request)).thenReturn(requestInfo);
 		when(service.resolveRedirectPage("aB3x9Q", requestInfo))
-				.thenReturn(new RedirectLink("aB3x9Q", "https://example.com/path?q=1", null));
+				.thenReturn(new RedirectLink("aB3x9Q", "https://example.com/path?q=1", null, null));
 		when(request.getRequestURL()).thenReturn(new StringBuffer("https://srrrg.link/aB3x9Q"));
 
 		String view = new RedirectController(service, resolver).redirect("aB3x9Q", request, response, model);
@@ -49,12 +49,13 @@ class RedirectControllerTest {
 		ClientRequestInfo requestInfo = new ClientRequestInfo("203.0.113.10", null, "agent");
 		when(resolver.resolve(request)).thenReturn(requestInfo);
 		when(service.resolveRedirectPage("aB3x9Q", requestInfo)).thenReturn(
-				new RedirectLink("aB3x9Q", "https://example.com/path", LinkStatus.NO_THREAT_FOUND));
+				new RedirectLink("aB3x9Q", "https://example.com/path", LinkStatus.NO_THREAT_FOUND,
+						"/api/redirect/aB3x9Q?ticket=ticket"));
 		when(request.getRequestURL()).thenReturn(new StringBuffer("https://srrrg.link/aB3x9Q"));
 
 		new RedirectController(service, resolver).redirect("aB3x9Q", request, response, model);
 
 		verify(model).addAttribute("cachedStatus", LinkStatus.NO_THREAT_FOUND);
-		verify(model).addAttribute("cachedRedirectUrl", "https://example.com/path");
+		verify(model).addAttribute("cachedRedirectUrl", "/api/redirect/aB3x9Q?ticket=ticket");
 	}
 }

@@ -23,8 +23,7 @@ srrrg:
   base-url: ${SRRRG_BASE_URL:https://srrrg.link}
   trust-forwarded-headers: ${SRRRG_TRUST_FORWARDED_HEADERS:false}
   safe-browsing:
-    api-key: ${GOOGLE_SAFE_BROWSING_API_KEY:AIzaSyC_KJCzOLDiNowtKUm8hMg75QxJ82kXIBc}
-    # api-key: ${GOOGLE_SAFE_BROWSING_API_KEY:}
+    api-key: ${GOOGLE_SAFE_BROWSING_API_KEY:}
     endpoint: ${GOOGLE_SAFE_BROWSING_ENDPOINT:https://safebrowsing.googleapis.com/v4/threatMatches:find}
     connect-timeout: ${GOOGLE_SAFE_BROWSING_CONNECT_TIMEOUT:2s}
     read-timeout: ${GOOGLE_SAFE_BROWSING_READ_TIMEOUT:3s}

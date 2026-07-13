@@ -31,12 +31,13 @@
 	continueButton.addEventListener('click', () => {
 		if (!redirectUrl || continueButton.disabled) return;
 		continueButton.disabled = true;
+		// redirectUrl은 외부 URL이 아니라 서버가 302를 발급하는 내부 endpoint임.
 		window.location.replace(redirectUrl);
 	});
 
 	const cachedStatus = root.dataset.cachedStatus;
 	// 최근 검사 결과가 있으면 검사 API를 호출하지 않고 저장 결과를 재사용함.
-	if (cachedStatus === 'NO_THREAT_FOUND' || cachedStatus === 'THREAT_DETECTED' || cachedStatus === 'CHECK_FAILED') {
+	if (cachedStatus === 'NO_THREAT_FOUND' || cachedStatus === 'THREAT_DETECTED') {
 		terminal = true;
 		description.textContent = '최근 1시간 이내 검사 결과를 확인했습니다.';
 		window.setTimeout(() => showCachedResult(cachedStatus, root.dataset.cachedRedirectUrl || null), 600);
@@ -88,7 +89,7 @@
 		setStep(redirectStep, 'is-complete', '✓', '이동 준비', '완료');
 		title.textContent = '알려진 위협이 발견되지 않았습니다.';
 		description.textContent = '목적지로 이동합니다.';
-		// 완료 상태를 짧게 보여준 뒤 뒤로 가기 기록을 남기지 않고 이동함.
+		// 완료 상태를 짧게 보여준 뒤 서버 redirect endpoint로 이동함.
 		window.setTimeout(() => window.location.replace(url), 250);
 	}
 
@@ -118,7 +119,7 @@
 		setStep(redirectStep, 'is-pending', '○', '이동 보류', '대기');
 		title.textContent = '현재 링크의 안전 여부를 확인하지 못했습니다.';
 		description.textContent = '검사 서비스의 일시적인 오류일 수 있습니다. 목적지 주소를 직접 확인한 뒤 이동해 주세요.';
-		// 서버가 재검증한 URL을 전달한 경우에만 수동 이동을 허용함.
+		// 서버가 짧게 유효한 redirect endpoint를 발급한 경우에만 수동 이동을 허용함.
 		continueButton.hidden = !redirectUrl;
 		retryButton.hidden = Boolean(redirectUrl);
 		actions.hidden = false;
