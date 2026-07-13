@@ -22,6 +22,15 @@ spring:
 srrrg:
   base-url: ${SRRRG_BASE_URL:https://srrrg.link}
   trust-forwarded-headers: ${SRRRG_TRUST_FORWARDED_HEADERS:false}
+  safe-browsing:
+    api-key: ${GOOGLE_SAFE_BROWSING_API_KEY:AIzaSyC_KJCzOLDiNowtKUm8hMg75QxJ82kXIBc}
+    # api-key: ${GOOGLE_SAFE_BROWSING_API_KEY:}
+    endpoint: ${GOOGLE_SAFE_BROWSING_ENDPOINT:https://safebrowsing.googleapis.com/v4/threatMatches:find}
+    connect-timeout: ${GOOGLE_SAFE_BROWSING_CONNECT_TIMEOUT:2s}
+    read-timeout: ${GOOGLE_SAFE_BROWSING_READ_TIMEOUT:3s}
+  redirect:
+    # 최근 검사 결과를 재사용하는 최대 시간임.
+    verification-ttl: ${SRRRG_REDIRECT_VERIFICATION_TTL:1h}
 
 management:
   endpoint:

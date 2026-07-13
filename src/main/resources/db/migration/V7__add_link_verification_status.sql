@@ -1,0 +1,4 @@
+-- 기존 링크는 검사 이력이 없으므로 NOT_VERIFIED 상태로 시작함.
+ALTER TABLE links
+ADD COLUMN status VARCHAR(32) NOT NULL DEFAULT 'NOT_VERIFIED',
+ADD COLUMN verified_at TIMESTAMPTZ;

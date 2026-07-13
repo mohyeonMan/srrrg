@@ -2,72 +2,59 @@ package link.srrrg.link;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import link.srrrg.link.dto.RedirectLink;
 import link.srrrg.link.access.ClientRequestInfo;
 import link.srrrg.link.access.ClientRequestInfoResolver;
-import link.srrrg.link.dto.RedirectLink;
 
 class RedirectControllerTest {
 
 	@Test
-	void returnsFoundWithOriginalUrlLocation() {
-		LinkService linkService = mock(LinkService.class);
-		ClientRequestInfoResolver requestInfoResolver = mock(ClientRequestInfoResolver.class);
+	void validCodeReturnsSecureRedirectPageInsteadOf302() {
+		LinkService service = mock(LinkService.class);
 		HttpServletRequest request = mock(HttpServletRequest.class);
+		HttpServletResponse response = mock(HttpServletResponse.class);
 		Model model = mock(Model.class);
-		ClientRequestInfo requestInfo = new ClientRequestInfo("203.0.113.10", null, "test-agent");
-		when(requestInfoResolver.resolve(request)).thenReturn(requestInfo);
-		when(linkService.resolveRedirect("aB3x9Q", requestInfo))
-				.thenReturn(new RedirectLink("aB3x9Q", "https://example.com/path", true));
-		RedirectController controller = new RedirectController(linkService, requestInfoResolver);
-
-		Object result = controller.redirect("aB3x9Q", request, model);
-
-		assertThat(result).isInstanceOf(ResponseEntity.class);
-		ResponseEntity<?> response = (ResponseEntity<?>) result;
-		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FOUND);
-		assertThat(response.getHeaders().getLocation()).hasToString("https://example.com/path");
-	}
-
-	@Test
-	void returnsConfirmPageWhenLinkIsNotTrusted() {
-		LinkService linkService = mock(LinkService.class);
-		ClientRequestInfoResolver requestInfoResolver = mock(ClientRequestInfoResolver.class);
-		HttpServletRequest request = mock(HttpServletRequest.class);
-		Model model = mock(Model.class);
-		ClientRequestInfo requestInfo = new ClientRequestInfo("203.0.113.10", null, "test-agent");
-		when(requestInfoResolver.resolve(request)).thenReturn(requestInfo);
+		ClientRequestInfoResolver resolver = mock(ClientRequestInfoResolver.class);
+		ClientRequestInfo requestInfo = new ClientRequestInfo("203.0.113.10", null, "agent");
+		when(resolver.resolve(request)).thenReturn(requestInfo);
+		when(service.resolveRedirectPage("aB3x9Q", requestInfo))
+				.thenReturn(new RedirectLink("aB3x9Q", "https://example.com/path?q=1", null));
 		when(request.getRequestURL()).thenReturn(new StringBuffer("https://srrrg.link/aB3x9Q"));
-		when(linkService.resolveRedirect("aB3x9Q", requestInfo))
-				.thenReturn(new RedirectLink("aB3x9Q", "https://example.com/path", false));
-		RedirectController controller = new RedirectController(linkService, requestInfoResolver);
 
-		Object result = controller.redirect("aB3x9Q", request, model);
+		String view = new RedirectController(service, resolver).redirect("aB3x9Q", request, response, model);
 
-		assertThat(result).isEqualTo("redirect-confirm");
+		assertThat(view).isEqualTo("redirect-confirm");
+		verify(response).setHeader("Cache-Control", "no-store");
+		verify(response).setHeader("Content-Security-Policy",
+				"default-src 'self'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none';");
+		verify(model).addAttribute("originalUrlHost", "example.com");
+		verify(model).addAttribute("checkUrl", "/api/redirect-check/aB3x9Q");
 	}
 
 	@Test
-	void confirmsRedirectWithPost() {
-		LinkService linkService = mock(LinkService.class);
-		ClientRequestInfoResolver requestInfoResolver = mock(ClientRequestInfoResolver.class);
+	void exposesFreshCachedResultToThePage() {
+		LinkService service = mock(LinkService.class);
+		ClientRequestInfoResolver resolver = mock(ClientRequestInfoResolver.class);
 		HttpServletRequest request = mock(HttpServletRequest.class);
-		ClientRequestInfo requestInfo = new ClientRequestInfo("203.0.113.10", null, "test-agent");
-		when(requestInfoResolver.resolve(request)).thenReturn(requestInfo);
-		when(linkService.confirmRedirect("aB3x9Q", requestInfo))
-				.thenReturn(new RedirectLink("aB3x9Q", "https://example.com/path", false));
-		RedirectController controller = new RedirectController(linkService, requestInfoResolver);
+		HttpServletResponse response = mock(HttpServletResponse.class);
+		Model model = mock(Model.class);
+		ClientRequestInfo requestInfo = new ClientRequestInfo("203.0.113.10", null, "agent");
+		when(resolver.resolve(request)).thenReturn(requestInfo);
+		when(service.resolveRedirectPage("aB3x9Q", requestInfo)).thenReturn(
+				new RedirectLink("aB3x9Q", "https://example.com/path", LinkStatus.NO_THREAT_FOUND));
+		when(request.getRequestURL()).thenReturn(new StringBuffer("https://srrrg.link/aB3x9Q"));
 
-		ResponseEntity<Void> response = controller.confirmRedirect("aB3x9Q", request);
+		new RedirectController(service, resolver).redirect("aB3x9Q", request, response, model);
 
-		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FOUND);
-		assertThat(response.getHeaders().getLocation()).hasToString("https://example.com/path");
+		verify(model).addAttribute("cachedStatus", LinkStatus.NO_THREAT_FOUND);
+		verify(model).addAttribute("cachedRedirectUrl", "https://example.com/path");
 	}
 }

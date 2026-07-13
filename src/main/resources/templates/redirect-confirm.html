@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>srrrg - 링크 확인</title>
+	<title>srrrg - Secure Redirect</title>
 	<link rel="stylesheet" th:href="@{/css/srrrg.css}">
 	<script defer th:src="@{/js/redirect-confirm.js}"></script>
 </head>
@@ -11,37 +11,31 @@
 <div th:replace="~{fragments/srrrg-layout :: header}"></div>
 
 <main class="decision-shell">
-	<section class="decision-panel" aria-labelledby="confirm-title">
+	<section id="redirect-check" class="decision-panel secure-redirect" aria-labelledby="check-title"
+			th:attr="data-check-url=${checkUrl},data-home-url=@{/},data-cached-status=${cachedStatus},data-cached-redirect-url=${cachedRedirectUrl}">
 		<div class="decision-heading">
-			<span class="section-eyebrow">이동 전 확인</span>
-			<h1 id="confirm-title" class="page-title">신뢰할 수 있는 링크인가요?</h1>
-			<p class="page-description">이 단축 링크는 자동 이동 대상이 아닙니다. 원본 주소를 확인한 뒤 이동하세요.</p>
+			<span class="section-eyebrow">Secure Redirect</span>
+			<h1 id="check-title" class="page-title">링크를 안전하게 확인하고 있습니다.</h1>
+			<p id="check-description" class="page-description" aria-live="polite">Google Safe Browsing을 통해 알려진 위협을 실시간으로 확인합니다.</p>
 		</div>
 
-		<section class="data-section" aria-labelledby="original-domain-label">
-			<h2 id="original-domain-label" class="data-label">원본 도메인</h2>
+		<section class="data-section" aria-labelledby="destination-label">
+			<h2 id="destination-label" class="data-label">이동할 사이트</h2>
 			<p class="domain-value" th:text="${originalUrlHost}">example.com</p>
+			<p class="url-box destination-url" th:text="${originalUrl}">https://example.com/path</p>
 		</section>
 
-		<section class="data-section" aria-labelledby="original-url-label">
-			<h2 id="original-url-label" class="data-label">원본 URL</h2>
-			<div class="url-reveal">
-				<p id="original-url-summary" class="url-box" th:text="${originalUrlSummary}">https://example.com/...</p>
-				<p id="original-url-full" class="url-box" th:text="${originalUrl}" hidden>https://example.com/path?query=value</p>
-				<button id="original-url-toggle" class="secondary-button" type="button" aria-controls="original-url-full" aria-expanded="false">전체 URL 보기</button>
-			</div>
-		</section>
+		<ol class="security-checklist" aria-label="링크 검사 진행 상태">
+			<li id="destination-step" class="check-step is-complete"><span class="step-marker" aria-hidden="true">✓</span><span>목적지 확인</span><strong>완료</strong></li>
+			<li id="threat-step" class="check-step is-active"><span class="step-marker" aria-hidden="true">●</span><span>피싱·악성 사이트 검사</span><strong>진행 중</strong></li>
+			<li id="redirect-step" class="check-step is-pending"><span class="step-marker" aria-hidden="true">○</span><span>이동 준비</span><strong>대기</strong></li>
+		</ol>
 
-		<section class="data-section" aria-labelledby="short-url-label">
-			<h2 id="short-url-label" class="data-label">단축 URL</h2>
-			<p class="url-box" th:text="${shortUrl}">https://srrrg.link/abc123</p>
-		</section>
-
-		<div class="action-row">
-			<form th:action="@{/{code}/redirect(code=${code})}" method="post">
-				<button class="primary-button" type="submit">원본 URL로 이동</button>
-			</form>
-			<button id="go-back-button" class="secondary-button" type="button" th:attr="data-fallback-url=@{/}">돌아가기</button>
+		<div id="result-actions" class="action-row" hidden>
+			<button id="continue-button" class="primary-button" type="button" hidden>그래도 이동</button>
+			<button id="retry-button" class="primary-button" type="button" hidden>다시 검사</button>
+			<button id="go-back-button" class="secondary-button" type="button">뒤로 가기</button>
+			<a id="home-link" class="secondary-button" th:href="@{/}">srrrg 메인으로 이동</a>
 		</div>
 	</section>
 </main>

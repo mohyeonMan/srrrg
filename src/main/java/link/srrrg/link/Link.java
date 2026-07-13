@@ -4,6 +4,8 @@ import java.time.Instant;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -45,8 +47,14 @@ public class Link {
 	@Column(name = "is_deleted", nullable = false)
 	private boolean deleted;
 
-	@Column(nullable = false)
-	private boolean trusted;
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 32)
+	// 원본 URL에 대한 최근 Safe Browsing 검사 결과임.
+	private LinkStatus status;
+
+	@Column(name = "verified_at")
+	// 최근 검사 결과가 확정된 시각임. 검사 캐시 만료 판단에 사용함.
+	private Instant verifiedAt;
 
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
@@ -62,7 +70,8 @@ public class Link {
 		this.clickCount = 0;
 		this.redirectCount = 0;
 		this.deleted = false;
-		this.trusted = false;
+		this.status = LinkStatus.NOT_VERIFIED;
+		this.verifiedAt = null;
 	}
 
 	public static Link create(String code, String originalUrl, String secretKeyHash, Instant expiresAt) {
@@ -88,6 +97,12 @@ public class Link {
 	public void updateOriginalUrl(String originalUrl) {
 		this.originalUrl = originalUrl;
 		this.updatedAt = Instant.now();
+	}
+
+	public void updateVerification(LinkStatus status, Instant verifiedAt) {
+		// 상태와 검사 시각은 항상 같은 검사 결과로 함께 갱신함.
+		this.status = status;
+		this.verifiedAt = verifiedAt;
 	}
 
 	public void updateExpiresAt(Instant expiresAt) {

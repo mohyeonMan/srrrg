@@ -10,14 +10,20 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import link.srrrg.link.LinkGoneException;
 import link.srrrg.link.LinkNotFoundException;
+import link.srrrg.link.UnsafeUrlException;
+import link.srrrg.link.UrlRiskCheckFailedException;
+import lombok.extern.slf4j.Slf4j;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
 	private static final String INVALID_REQUEST = "INVALID_REQUEST";
 	private static final String LINK_NOT_FOUND = "LINK_NOT_FOUND";
 	private static final String LINK_GONE = "LINK_GONE";
 	private static final String INTERNAL_SERVER_ERROR = "INTERNAL_SERVER_ERROR";
+	private static final String URL_THREAT_DETECTED = "URL_THREAT_DETECTED";
+	private static final String URL_CHECK_FAILED = "URL_CHECK_FAILED";
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException exception) {
@@ -26,6 +32,7 @@ public class GlobalExceptionHandler {
 				.map(error -> error.getDefaultMessage())
 				.orElse("요청 값이 올바르지 않습니다.");
 
+		log.debug("Request validation failed: errorCount={}", exception.getBindingResult().getErrorCount());
 		return badRequest(message);
 	}
 
@@ -46,18 +53,37 @@ public class GlobalExceptionHandler {
 
 	@ExceptionHandler(LinkNotFoundException.class)
 	public ResponseEntity<ApiErrorResponse> handleLinkNotFound(LinkNotFoundException exception) {
+		log.debug("API request failed: code={}", LINK_NOT_FOUND);
 		return ResponseEntity.status(HttpStatus.NOT_FOUND)
 				.body(new ApiErrorResponse(LINK_NOT_FOUND, exception.getMessage()));
 	}
 
 	@ExceptionHandler(LinkGoneException.class)
 	public ResponseEntity<ApiErrorResponse> handleLinkGone(LinkGoneException exception) {
+		log.debug("API request failed: code={}", LINK_GONE);
 		return ResponseEntity.status(HttpStatus.GONE)
 				.body(new ApiErrorResponse(LINK_GONE, exception.getMessage()));
 	}
 
+	@ExceptionHandler(UnsafeUrlException.class)
+	public ResponseEntity<ApiErrorResponse> handleUnsafeUrl(UnsafeUrlException exception) {
+		// 알려진 위협 URL은 클라이언트가 수정할 수 있는 요청 오류로 응답함.
+		log.warn("API request rejected: code={}", URL_THREAT_DETECTED);
+		return ResponseEntity.badRequest()
+				.body(new ApiErrorResponse(URL_THREAT_DETECTED, exception.getMessage()));
+	}
+
+	@ExceptionHandler(UrlRiskCheckFailedException.class)
+	public ResponseEntity<ApiErrorResponse> handleUrlRiskCheckFailed(UrlRiskCheckFailedException exception) {
+		// 외부 검사 불가 상태는 재시도 가능한 서비스 오류로 응답함.
+		log.warn("API request unavailable: code={}", URL_CHECK_FAILED);
+		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+				.body(new ApiErrorResponse(URL_CHECK_FAILED, exception.getMessage()));
+	}
+
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ApiErrorResponse> handleUnexpected(Exception exception) {
+		log.error("Unexpected API error: type={}", exception.getClass().getSimpleName(), exception);
 		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 				.body(new ApiErrorResponse(INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다."));
 	}

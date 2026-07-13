@@ -57,6 +57,8 @@ public class RedirectExceptionHandler {
 			Model model
 	) {
 		response.setStatus(status.value());
+		// 존재하지 않거나 만료된 링크의 오류 페이지도 캐시하지 않음.
+		response.setHeader("Cache-Control", "no-store");
 		model.addAttribute("status", status.value());
 		model.addAttribute("title", title);
 		model.addAttribute("message", message);

@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
+import java.time.Duration;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -16,314 +17,214 @@ import org.junit.jupiter.api.Test;
 
 import link.srrrg.link.SecretKeyManager.GeneratedSecretKey;
 import link.srrrg.link.access.ClientRequestInfo;
-import link.srrrg.link.access.LinkClickEventRecorder;
-import link.srrrg.link.access.LinkRedirectEventRecorder;
+import link.srrrg.link.access.RedirectCheckRecorder;
 import link.srrrg.link.dto.CreateLinkRequest;
-import link.srrrg.link.dto.CreateLinkResponse;
-import link.srrrg.link.dto.DeleteLinkResponse;
-import link.srrrg.link.dto.LinkManagementResponse;
-import link.srrrg.link.dto.RedirectLink;
+import link.srrrg.link.dto.RedirectCheckResponse;
 import link.srrrg.link.dto.UpdateLinkRequest;
+import link.srrrg.link.risk.UrlRiskCheckResult;
+import link.srrrg.link.risk.UrlRiskChecker;
 
 class LinkServiceTest {
 
-	private final LinkRepository linkRepository = mock(LinkRepository.class);
-	private final LinkCodeGenerator linkCodeGenerator = mock(LinkCodeGenerator.class);
+	private final LinkRepository repository = mock(LinkRepository.class);
+	private final LinkCodeGenerator codeGenerator = mock(LinkCodeGenerator.class);
 	private final SecretKeyManager secretKeyManager = mock(SecretKeyManager.class);
-	private final UrlValidator urlValidator = mock(UrlValidator.class);
-	private final LinkClickEventRecorder clickEventRecorder = mock(LinkClickEventRecorder.class);
-	private final LinkRedirectEventRecorder redirectEventRecorder = mock(LinkRedirectEventRecorder.class);
-	private final ClientRequestInfo requestInfo = new ClientRequestInfo("203.0.113.10", null, "test-agent");
-
-	private LinkService linkService;
+	private final UrlValidator validator = mock(UrlValidator.class);
+	private final UrlRiskChecker riskChecker = mock(UrlRiskChecker.class);
+	private final RedirectCheckRecorder checkRecorder = mock(RedirectCheckRecorder.class);
+	private final ClientRequestInfo requestInfo = new ClientRequestInfo("203.0.113.10", null, "agent");
+	private LinkService service;
 
 	@BeforeEach
 	void setUp() {
-		linkService = new LinkService(
-				linkRepository,
-				linkCodeGenerator,
-				secretKeyManager,
-				urlValidator,
-				clickEventRecorder,
-				redirectEventRecorder,
-				"https://srrrg.link/"
-		);
+		service = new LinkService(repository, codeGenerator, secretKeyManager, validator,
+				riskChecker, checkRecorder, "https://srrrg.link/", Duration.ofHours(1));
 	}
 
 	@Test
-	void createsLinkAndReturnsPlainSecretOnce() {
-		Instant expiresAt = Instant.now().plusSeconds(3600);
-		when(linkCodeGenerator.generate()).thenReturn("aB3x9Q");
-		when(linkRepository.existsByCode("aB3x9Q")).thenReturn(false);
-		when(secretKeyManager.generate()).thenReturn(new GeneratedSecretKey("srrrg_sk_plain", "bcrypt-hash"));
-		when(linkRepository.save(any(Link.class))).thenAnswer(invocation -> invocation.getArgument(0));
+	void createsUrlWhenNoThreatIsFound() {
+		when(riskChecker.check("https://example.com/path?q=1")).thenReturn(UrlRiskCheckResult.NO_THREAT_FOUND);
+		when(codeGenerator.generate()).thenReturn("aB3x9Q");
+		when(repository.existsByCode("aB3x9Q")).thenReturn(false);
+		when(secretKeyManager.generate()).thenReturn(new GeneratedSecretKey("plain", "hash"));
+		when(repository.save(any(Link.class))).thenAnswer(call -> call.getArgument(0));
 
-		CreateLinkResponse response = linkService.create(
-				new CreateLinkRequest("https://example.com", expiresAt)
-		);
+		var response = service.create(new CreateLinkRequest("https://example.com/path?q=1", null));
 
 		assertThat(response.code()).isEqualTo("aB3x9Q");
-		assertThat(response.shortUrl()).isEqualTo("https://srrrg.link/aB3x9Q");
-		assertThat(response.secretKey()).isEqualTo("srrrg_sk_plain");
-		assertThat(response.expiresAt()).isEqualTo(expiresAt);
-		verify(urlValidator).validate("https://example.com");
+		verify(validator).validate("https://example.com/path?q=1");
+		verify(repository).save(org.mockito.ArgumentMatchers.argThat(link ->
+				link.getStatus() == LinkStatus.NO_THREAT_FOUND && link.getVerifiedAt() != null));
 	}
 
 	@Test
-	void retriesWhenGeneratedCodeAlreadyExists() {
-		when(linkCodeGenerator.generate()).thenReturn("aaaaaa", "bbbbbb");
-		when(linkRepository.existsByCode("aaaaaa")).thenReturn(true);
-		when(linkRepository.existsByCode("bbbbbb")).thenReturn(false);
-		when(secretKeyManager.generate()).thenReturn(new GeneratedSecretKey("secret", "hash"));
-		when(linkRepository.save(any(Link.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-		CreateLinkResponse response = linkService.create(
-				new CreateLinkRequest("https://example.com", null)
-		);
-
-		assertThat(response.code()).isEqualTo("bbbbbb");
+	void rejectsCreationWhenThreatIsDetected() {
+		when(riskChecker.check(any())).thenReturn(UrlRiskCheckResult.THREAT_DETECTED);
+		assertThatThrownBy(() -> service.create(new CreateLinkRequest("https://bad.example", null)))
+				.isInstanceOf(UnsafeUrlException.class);
+		verify(repository, never()).save(any());
 	}
 
 	@Test
-	void rejectsPastExpirationBeforeSaving() {
-		CreateLinkRequest request = new CreateLinkRequest(
-				"https://example.com",
-				Instant.now().minusSeconds(1)
-		);
-
-		assertThatThrownBy(() -> linkService.create(request))
-				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessage("만료 시각은 현재보다 미래여야 합니다.");
-		verify(linkRepository, never()).save(any(Link.class));
+	void rejectsCreationWhenCheckFails() {
+		when(riskChecker.check(any())).thenReturn(UrlRiskCheckResult.CHECK_FAILED);
+		assertThatThrownBy(() -> service.create(new CreateLinkRequest("https://example.com", null)))
+				.isInstanceOf(UrlRiskCheckFailedException.class);
+		verify(repository, never()).save(any());
 	}
 
 	@Test
-	void returnsManagedLinkWhenSecretMatches() {
-		Instant expiresAt = Instant.now().plusSeconds(3600);
-		Link link = managedLink(expiresAt);
-		when(linkRepository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
-		when(secretKeyManager.matches("srrrg_sk_valid", "bcrypt-hash")).thenReturn(true);
+	void updatesChangedUrlOnlyAfterNoThreatResult() {
+		Link link = managedLink("https://old.example");
+		when(riskChecker.check("https://new.example/path")).thenReturn(UrlRiskCheckResult.NO_THREAT_FOUND);
+		when(repository.save(link)).thenReturn(link);
+		UpdateLinkRequest request = updateUrl("https://new.example/path");
 
-		LinkManagementResponse response = linkService.getManagedLink("aB3x9Q", "srrrg_sk_valid");
+		service.updateManagedLink("aB3x9Q", "secret", request);
 
-		assertThat(response.code()).isEqualTo("aB3x9Q");
-		assertThat(response.shortUrl()).isEqualTo("https://srrrg.link/aB3x9Q");
-		assertThat(response.originalUrl()).isEqualTo("https://example.com/path");
-		assertThat(response.expiresAt()).isEqualTo(expiresAt);
-		assertThat(response.statistics().clickCount()).isEqualTo(12);
-		assertThat(response.statistics().redirectCount()).isEqualTo(8);
+		verify(link).updateOriginalUrl("https://new.example/path");
+		verify(link).updateVerification(org.mockito.ArgumentMatchers.eq(LinkStatus.NO_THREAT_FOUND), any(Instant.class));
 	}
 
 	@Test
-	void hidesExistingLinkWhenSecretDoesNotMatch() {
-		Link link = managedLink(null);
-		when(linkRepository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
-		when(secretKeyManager.matches("wrong-secret", "bcrypt-hash")).thenReturn(false);
-
-		assertThatThrownBy(() -> linkService.getManagedLink("aB3x9Q", "wrong-secret"))
-				.isInstanceOf(LinkNotFoundException.class);
-		verify(link, never()).updateOriginalUrl(any(String.class));
-		verify(link, never()).updateExpiresAt(any(Instant.class));
-		verify(link, never()).delete();
+	void keepsExistingUrlWhenChangedUrlHasThreat() {
+		Link link = managedLink("https://old.example");
+		when(riskChecker.check(any())).thenReturn(UrlRiskCheckResult.THREAT_DETECTED);
+		assertThatThrownBy(() -> service.updateManagedLink("aB3x9Q", "secret", updateUrl("https://bad.example")))
+				.isInstanceOf(UnsafeUrlException.class);
+		verify(link, never()).updateOriginalUrl(any());
+		verify(repository, never()).save(any());
 	}
 
 	@Test
-	void allowsManagingExpiredLink() {
-		Link link = managedLink(Instant.now().minusSeconds(60));
-		when(linkRepository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
-		when(secretKeyManager.matches("srrrg_sk_valid", "bcrypt-hash")).thenReturn(true);
-
-		LinkManagementResponse response = linkService.getManagedLink("aB3x9Q", "srrrg_sk_valid");
-
-		assertThat(response.code()).isEqualTo("aB3x9Q");
+	void keepsExistingUrlWhenChangedUrlCheckFails() {
+		Link link = managedLink("https://old.example");
+		when(riskChecker.check(any())).thenReturn(UrlRiskCheckResult.CHECK_FAILED);
+		assertThatThrownBy(() -> service.updateManagedLink("aB3x9Q", "secret", updateUrl("https://new.example")))
+				.isInstanceOf(UrlRiskCheckFailedException.class);
+		verify(link, never()).updateOriginalUrl(any());
+		verify(repository, never()).save(any());
 	}
 
 	@Test
-	void updatesOnlyProvidedFields() {
-		Instant expiresAt = Instant.now().plusSeconds(7200);
-		Link link = managedLink(null);
-		when(linkRepository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
-		when(secretKeyManager.matches("srrrg_sk_valid", "bcrypt-hash")).thenReturn(true);
-		UpdateLinkRequest request = new UpdateLinkRequest();
-		request.setOriginalUrl("https://new-example.com");
-		request.setExpiresAt(expiresAt);
-
-		linkService.updateManagedLink("aB3x9Q", "srrrg_sk_valid", request);
-
-		verify(urlValidator).validate("https://new-example.com");
-		verify(link).updateOriginalUrl("https://new-example.com");
-		verify(link).updateExpiresAt(expiresAt);
+	void skipsRiskCheckWhenUrlIsUnchanged() {
+		Link link = managedLink("https://same.example");
+		when(repository.save(link)).thenReturn(link);
+		service.updateManagedLink("aB3x9Q", "secret", updateUrl("https://same.example"));
+		verify(riskChecker, never()).check(any());
+		verify(link, never()).updateOriginalUrl(any());
 	}
 
 	@Test
-	void clearsExpirationWhenExplicitNullIsProvided() {
-		Link link = managedLink(Instant.now().plusSeconds(3600));
-		when(linkRepository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
-		when(secretKeyManager.matches("srrrg_sk_valid", "bcrypt-hash")).thenReturn(true);
-		UpdateLinkRequest request = new UpdateLinkRequest();
-		request.setExpiresAt(null);
-
-		linkService.updateManagedLink("aB3x9Q", "srrrg_sk_valid", request);
-
-		verify(link).updateExpiresAt(null);
-		verify(link, never()).updateOriginalUrl(any(String.class));
+	void pageResolutionDoesNotRecordAVisit() {
+		Link link = availableLink("https://example.com/path");
+		var result = service.resolveRedirectPage("aB3x9Q", requestInfo);
+		assertThat(result.originalUrl()).isEqualTo("https://example.com/path");
+		verify(checkRecorder, never()).recordCheck(any(), any(), any(), any());
 	}
 
 	@Test
-	void rejectsEmptyUpdateRequest() {
-		Link link = managedLink(null);
-		when(linkRepository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
-		when(secretKeyManager.matches("srrrg_sk_valid", "bcrypt-hash")).thenReturn(true);
+	void successfulCheckReturnsIdenticalUrlAndRecordsExactlyOnce() {
+		Link link = availableLink("https://example.com:8443/path?q=1");
+		when(riskChecker.check(link.getOriginalUrl())).thenReturn(UrlRiskCheckResult.NO_THREAT_FOUND);
 
-		assertThatThrownBy(() -> linkService.updateManagedLink(
-				"aB3x9Q",
-				"srrrg_sk_valid",
-				new UpdateLinkRequest()
-		))
-				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessage("변경할 값을 하나 이상 입력해야 합니다.");
-		verify(link, never()).updateOriginalUrl(any(String.class));
-		verify(link, never()).updateExpiresAt(any(Instant.class));
+		RedirectCheckResponse response = service.checkRedirect("aB3x9Q", requestInfo);
+
+		assertThat(response.status()).isEqualTo(UrlRiskCheckResult.NO_THREAT_FOUND);
+		assertThat(response.redirectUrl()).isEqualTo("https://example.com:8443/path?q=1");
+		verify(checkRecorder).recordCheck(link, "https://example.com:8443/path?q=1",
+				UrlRiskCheckResult.NO_THREAT_FOUND, requestInfo);
 	}
 
 	@Test
-	void softDeletesManagedLink() {
-		Link link = managedLink(null);
-		when(linkRepository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
-		when(secretKeyManager.matches("srrrg_sk_valid", "bcrypt-hash")).thenReturn(true);
-
-		DeleteLinkResponse response = linkService.deleteManagedLink("aB3x9Q", "srrrg_sk_valid");
-
-		assertThat(response.deleted()).isTrue();
-		verify(link).delete();
+	void threatResponseHasNoRedirectUrlAndDoesNotRecordVisit() {
+		availableLink("https://bad.example");
+		when(riskChecker.check(any())).thenReturn(UrlRiskCheckResult.THREAT_DETECTED);
+		RedirectCheckResponse response = service.checkRedirect("aB3x9Q", requestInfo);
+		assertThat(response.redirectUrl()).isNull();
+		verify(checkRecorder).recordCheck(any(), org.mockito.ArgumentMatchers.eq("https://bad.example"),
+				org.mockito.ArgumentMatchers.eq(UrlRiskCheckResult.THREAT_DETECTED), any());
 	}
 
 	@Test
-	void rejectsAlreadyDeletedManagedLinkAfterAuthentication() {
-		Link link = managedLink(null);
-		when(link.isDeleted()).thenReturn(true);
-		when(linkRepository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
-		when(secretKeyManager.matches("srrrg_sk_valid", "bcrypt-hash")).thenReturn(true);
-
-		assertThatThrownBy(() -> linkService.deleteManagedLink("aB3x9Q", "srrrg_sk_valid"))
-				.isInstanceOf(LinkGoneException.class);
-		verify(link, never()).delete();
+	void failedCheckReturnsRevalidatedUrlWithoutRecordingVisit() {
+		availableLink("https://example.com/path");
+		when(riskChecker.check(any())).thenReturn(UrlRiskCheckResult.CHECK_FAILED);
+		RedirectCheckResponse response = service.checkRedirect("aB3x9Q", requestInfo);
+		assertThat(response.redirectUrl()).isEqualTo("https://example.com/path");
+		verify(checkRecorder).recordCheck(any(), org.mockito.ArgumentMatchers.eq("https://example.com/path"),
+				org.mockito.ArgumentMatchers.eq(UrlRiskCheckResult.CHECK_FAILED), any());
 	}
 
 	@Test
-	void resolvesTrustedLinkAndIncrementsClickAndRedirectCounts() {
-		Link link = mock(Link.class);
-		when(linkRepository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
-		when(link.isDeleted()).thenReturn(false);
-		when(link.isExpiredAt(any(Instant.class))).thenReturn(false);
-		when(linkRepository.incrementClickCountByCode("aB3x9Q")).thenReturn(1);
-		when(linkRepository.incrementRedirectCountByCode("aB3x9Q")).thenReturn(1);
-		when(link.getCode()).thenReturn("aB3x9Q");
-		when(link.getOriginalUrl()).thenReturn("https://example.com/path");
-		when(link.isTrusted()).thenReturn(true);
-
-		RedirectLink redirectLink = linkService.resolveRedirect("aB3x9Q", requestInfo);
-
-		assertThat(redirectLink.code()).isEqualTo("aB3x9Q");
-		assertThat(redirectLink.originalUrl()).isEqualTo("https://example.com/path");
-		assertThat(redirectLink.trusted()).isTrue();
-		verify(clickEventRecorder).record(link, requestInfo);
-		verify(redirectEventRecorder).record(link, requestInfo);
-		verify(linkRepository).incrementClickCountByCode("aB3x9Q");
-		verify(linkRepository).incrementRedirectCountByCode("aB3x9Q");
+	void doesNotReturnUrlThatChangedWhileItWasChecked() {
+		Link oldLink = link("https://old.example");
+		Link newLink = link("https://new.example");
+		when(repository.findByCode("aB3x9Q")).thenReturn(Optional.of(oldLink), Optional.of(newLink));
+		when(riskChecker.check(any())).thenReturn(UrlRiskCheckResult.NO_THREAT_FOUND);
+		RedirectCheckResponse response = service.checkRedirect("aB3x9Q", requestInfo);
+		assertThat(response.status()).isEqualTo(UrlRiskCheckResult.CHECK_FAILED);
+		assertThat(response.redirectUrl()).isNull();
+		verify(checkRecorder, never()).recordCheck(any(), any(), any(), any());
 	}
 
 	@Test
-	void resolvesUntrustedLinkWithoutRedirectCount() {
-		Link link = mock(Link.class);
-		when(linkRepository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
-		when(link.isDeleted()).thenReturn(false);
-		when(link.isExpiredAt(any(Instant.class))).thenReturn(false);
-		when(linkRepository.incrementClickCountByCode("aB3x9Q")).thenReturn(1);
-		when(link.getCode()).thenReturn("aB3x9Q");
-		when(link.getOriginalUrl()).thenReturn("https://example.com/path");
-		when(link.isTrusted()).thenReturn(false);
+	void reusesVerificationWithinOneHourWithoutCallingRiskChecker() {
+		Link link = availableLink("https://example.com/path");
+		Instant verifiedAt = Instant.now().minusSeconds(1800);
+		when(link.getStatus()).thenReturn(LinkStatus.NO_THREAT_FOUND);
+		when(link.getVerifiedAt()).thenReturn(verifiedAt);
+		when(checkRecorder.reuseCachedCheck("aB3x9Q", "https://example.com/path",
+				LinkStatus.NO_THREAT_FOUND, verifiedAt, requestInfo))
+				.thenReturn(Optional.of(LinkStatus.NO_THREAT_FOUND));
 
-		RedirectLink redirectLink = linkService.resolveRedirect("aB3x9Q", requestInfo);
+		var response = service.resolveRedirectPage("aB3x9Q", requestInfo);
 
-		assertThat(redirectLink.trusted()).isFalse();
-		verify(clickEventRecorder).record(link, requestInfo);
-		verify(redirectEventRecorder, never()).record(any(Link.class), any(ClientRequestInfo.class));
-		verify(linkRepository).incrementClickCountByCode("aB3x9Q");
-		verify(linkRepository, never()).incrementRedirectCountByCode(any(String.class));
+		assertThat(response.cachedStatus()).isEqualTo(LinkStatus.NO_THREAT_FOUND);
+		verify(riskChecker, never()).check(any());
+		verify(checkRecorder).reuseCachedCheck("aB3x9Q", "https://example.com/path",
+				LinkStatus.NO_THREAT_FOUND, verifiedAt, requestInfo);
 	}
 
 	@Test
-	void confirmedRedirectIncrementsOnlyRedirectCount() {
-		Link link = mock(Link.class);
-		when(linkRepository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
-		when(link.isDeleted()).thenReturn(false);
-		when(link.isExpiredAt(any(Instant.class))).thenReturn(false);
-		when(linkRepository.incrementRedirectCountByCode("aB3x9Q")).thenReturn(1);
-		when(link.getCode()).thenReturn("aB3x9Q");
-		when(link.getOriginalUrl()).thenReturn("https://example.com/path");
-		when(link.isTrusted()).thenReturn(false);
+	void doesNotReuseVerificationOlderThanOneHour() {
+		Link link = availableLink("https://example.com/path");
+		when(link.getStatus()).thenReturn(LinkStatus.NO_THREAT_FOUND);
+		when(link.getVerifiedAt()).thenReturn(Instant.now().minusSeconds(3601));
 
-		RedirectLink redirectLink = linkService.confirmRedirect("aB3x9Q", requestInfo);
+		var response = service.resolveRedirectPage("aB3x9Q", requestInfo);
 
-		assertThat(redirectLink.originalUrl()).isEqualTo("https://example.com/path");
-		verify(clickEventRecorder, never()).record(any(Link.class), any(ClientRequestInfo.class));
-		verify(redirectEventRecorder).record(link, requestInfo);
-		verify(linkRepository, never()).incrementClickCountByCode(any(String.class));
-		verify(linkRepository).incrementRedirectCountByCode("aB3x9Q");
+		assertThat(response.cachedStatus()).isNull();
+		verify(checkRecorder, never()).reuseCachedCheck(any(), any(), any(), any(), any());
 	}
 
-	@Test
-	void throwsNotFoundWhenCodeDoesNotExist() {
-		when(linkRepository.findByCode("abcdef")).thenReturn(Optional.empty());
-
-		assertThatThrownBy(() -> linkService.resolveRedirect("abcdef", requestInfo))
-				.isInstanceOf(LinkNotFoundException.class);
-		verify(linkRepository, never()).incrementClickCountByCode(any(String.class));
-		verify(linkRepository, never()).incrementRedirectCountByCode(any(String.class));
-		verify(clickEventRecorder, never()).record(any(Link.class), any(ClientRequestInfo.class));
-		verify(redirectEventRecorder, never()).record(any(Link.class), any(ClientRequestInfo.class));
-	}
-
-	@Test
-	void throwsGoneAndDoesNotIncrementWhenLinkIsDeleted() {
-		Link link = mock(Link.class);
-		when(linkRepository.findByCode("deleted")).thenReturn(Optional.of(link));
-		when(link.isDeleted()).thenReturn(true);
-
-		assertThatThrownBy(() -> linkService.resolveRedirect("deleted", requestInfo))
-				.isInstanceOf(LinkGoneException.class);
-		verify(linkRepository, never()).incrementClickCountByCode(any(String.class));
-		verify(linkRepository, never()).incrementRedirectCountByCode(any(String.class));
-		verify(clickEventRecorder, never()).record(any(Link.class), any(ClientRequestInfo.class));
-		verify(redirectEventRecorder, never()).record(any(Link.class), any(ClientRequestInfo.class));
-	}
-
-	@Test
-	void throwsGoneAndDoesNotIncrementWhenLinkIsExpired() {
-		Link link = mock(Link.class);
-		when(linkRepository.findByCode("expired")).thenReturn(Optional.of(link));
-		when(link.isDeleted()).thenReturn(false);
-		when(link.isExpiredAt(any(Instant.class))).thenReturn(true);
-
-		assertThatThrownBy(() -> linkService.resolveRedirect("expired", requestInfo))
-				.isInstanceOf(LinkGoneException.class);
-		verify(linkRepository, never()).incrementClickCountByCode(any(String.class));
-		verify(linkRepository, never()).incrementRedirectCountByCode(any(String.class));
-		verify(clickEventRecorder, never()).record(any(Link.class), any(ClientRequestInfo.class));
-		verify(redirectEventRecorder, never()).record(any(Link.class), any(ClientRequestInfo.class));
-	}
-
-	private Link managedLink(Instant expiresAt) {
-		Link link = mock(Link.class);
-		when(link.getCode()).thenReturn("aB3x9Q");
-		when(link.getOriginalUrl()).thenReturn("https://example.com/path");
-		when(link.getSecretKeyHash()).thenReturn("bcrypt-hash");
-		when(link.getExpiresAt()).thenReturn(expiresAt);
-		when(link.getClickCount()).thenReturn(12L);
-		when(link.getRedirectCount()).thenReturn(8L);
-		when(link.getCreatedAt()).thenReturn(Instant.parse("2026-07-10T10:00:00Z"));
-		when(link.getUpdatedAt()).thenReturn(Instant.parse("2026-07-10T11:00:00Z"));
+	private Link managedLink(String url) {
+		Link link = link(url);
+		when(link.getSecretKeyHash()).thenReturn("hash");
+		when(secretKeyManager.matches("secret", "hash")).thenReturn(true);
+		when(repository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
 		return link;
+	}
+
+	private Link availableLink(String url) {
+		Link link = link(url);
+		when(repository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
+		when(checkRecorder.recordCheck(any(), any(), any(), any())).thenReturn(true);
+		return link;
+	}
+
+	private Link link(String url) {
+		Link link = mock(Link.class);
+		when(link.getCode()).thenReturn("aB3x9Q");
+		when(link.getOriginalUrl()).thenReturn(url);
+		when(link.isDeleted()).thenReturn(false);
+		when(link.isExpiredAt(any(Instant.class))).thenReturn(false);
+		return link;
+	}
+
+	private UpdateLinkRequest updateUrl(String url) {
+		UpdateLinkRequest request = new UpdateLinkRequest();
+		request.setOriginalUrl(url);
+		return request;
 	}
 }
