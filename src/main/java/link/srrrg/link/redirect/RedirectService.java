@@ -2,6 +2,7 @@ package link.srrrg.link.redirect;
 
 import java.time.Instant;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionOperations;
@@ -35,6 +36,7 @@ public class RedirectService {
 	private final LinkRedirectEventRecorder redirectEventRecorder;
 	private final TransactionOperations transactions;
 
+	@Autowired
 	public RedirectService(LinkRepository linkRepository, UrlValidator urlValidator,
 			UrlRiskVerificationService riskVerificationService,
 			LinkClickEventRecorder clickEventRecorder,

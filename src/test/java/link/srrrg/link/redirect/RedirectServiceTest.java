@@ -14,6 +14,8 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.SimpleTransactionStatus;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionOperations;
@@ -50,6 +52,24 @@ class RedirectServiceTest {
 	void setUp() {
 		service = new RedirectService(repository, validator, riskVerificationService,
 				clickRecorder, redirectRecorder, transactions);
+	}
+
+	@Test
+	void springSelectsThePlatformTransactionManagerConstructor() {
+		try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
+			context.registerBean(LinkRepository.class, () -> repository);
+			context.registerBean(UrlValidator.class, () -> validator);
+			context.registerBean(UrlRiskVerificationService.class, () -> riskVerificationService);
+			context.registerBean(LinkClickEventRecorder.class, () -> clickRecorder);
+			context.registerBean(LinkRedirectEventRecorder.class, () -> redirectRecorder);
+			context.registerBean(PlatformTransactionManager.class,
+					() -> mock(PlatformTransactionManager.class));
+			context.registerBean(RedirectService.class);
+
+			context.refresh();
+
+			assertThat(context.getBean(RedirectService.class)).isNotNull();
+		}
 	}
 
 	@Test
