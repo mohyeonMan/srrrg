@@ -1,4 +1,4 @@
-package link.srrrg.link;
+package link.srrrg.link.management;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -22,17 +22,20 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import link.srrrg.common.GlobalExceptionHandler;
-import link.srrrg.link.dto.CreateLinkResponse;
-import link.srrrg.link.dto.DeleteLinkResponse;
-import link.srrrg.link.dto.LinkManagementResponse;
-import link.srrrg.link.dto.LinkStatisticsSummary;
-import link.srrrg.link.dto.UpdateLinkRequest;
+import link.srrrg.link.LinkGoneException;
+import link.srrrg.link.LinkNotFoundException;
+import link.srrrg.link.LinkStatus;
+import link.srrrg.link.management.dto.CreateLinkResponse;
+import link.srrrg.link.management.dto.DeleteLinkResponse;
+import link.srrrg.link.management.dto.LinkManagementResponse;
+import link.srrrg.link.management.dto.LinkStatisticsSummary;
+import link.srrrg.link.management.dto.UpdateLinkRequest;
 
 class LinkControllerTest {
 
 	private static final String SECRET_KEY_HEADER = "X-Srrrg-Secret-Key";
 
-	private final LinkService linkService = mock(LinkService.class);
+	private final LinkManagementService linkService = mock(LinkManagementService.class);
 	private MockMvc mockMvc;
 
 	@BeforeEach

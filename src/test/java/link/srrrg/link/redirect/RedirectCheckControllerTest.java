@@ -1,4 +1,4 @@
-package link.srrrg.link;
+package link.srrrg.link.redirect;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -15,11 +15,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import link.srrrg.link.access.ClientRequestInfoResolver;
-import link.srrrg.link.dto.RedirectCheckResponse;
+import link.srrrg.link.redirect.dto.RedirectCheckResponse;
 import link.srrrg.link.risk.UrlRiskCheckResult;
 
 class RedirectCheckControllerTest {
-	private final LinkService service = mock(LinkService.class);
+	private final RedirectService service = mock(RedirectService.class);
 	private final ClientRequestInfoResolver resolver = mock(ClientRequestInfoResolver.class);
 	private MockMvc mvc;
 

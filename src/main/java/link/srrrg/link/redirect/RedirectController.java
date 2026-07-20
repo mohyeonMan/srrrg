@@ -1,4 +1,4 @@
-package link.srrrg.link;
+package link.srrrg.link.redirect;
 
 import java.net.URI;
 
@@ -9,9 +9,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import link.srrrg.link.dto.RedirectLink;
 import link.srrrg.link.access.ClientRequestInfo;
 import link.srrrg.link.access.ClientRequestInfoResolver;
+import link.srrrg.link.redirect.dto.RedirectLink;
 import lombok.RequiredArgsConstructor;
 
 @Controller
@@ -21,7 +21,7 @@ public class RedirectController {
 	private static final String CSP = "default-src 'self'; script-src 'self'; connect-src 'self'; "
 			+ "object-src 'none'; base-uri 'none'; frame-ancestors 'none';";
 
-	private final LinkService linkService;
+	private final RedirectService linkService;
 	private final ClientRequestInfoResolver requestInfoResolver;
 
 	@GetMapping("/{code:[0-9A-Za-z]{6}}")

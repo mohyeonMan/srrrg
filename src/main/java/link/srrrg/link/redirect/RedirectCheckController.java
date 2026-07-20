@@ -1,4 +1,4 @@
-package link.srrrg.link;
+package link.srrrg.link.redirect;
 
 import java.net.URI;
 
@@ -13,14 +13,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.servlet.http.HttpServletRequest;
 import link.srrrg.link.access.ClientRequestInfoResolver;
-import link.srrrg.link.dto.RedirectCheckResponse;
+import link.srrrg.link.redirect.dto.RedirectCheckResponse;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
 public class RedirectCheckController {
 
-	private final LinkService linkService;
+	private final RedirectService linkService;
 	private final ClientRequestInfoResolver requestInfoResolver;
 
 	@PostMapping("/api/redirect-check/{code:[0-9A-Za-z]{6}}")

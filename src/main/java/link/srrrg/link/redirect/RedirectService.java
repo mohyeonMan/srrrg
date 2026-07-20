@@ -1,4 +1,4 @@
-package link.srrrg.link;
+package link.srrrg.link.redirect;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -6,133 +6,51 @@ import java.time.Instant;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionOperations;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import link.srrrg.link.SecretKeyManager.GeneratedSecretKey;
-import link.srrrg.link.RedirectTicketManager.RejectReason;
-import link.srrrg.link.RedirectTicketManager.RedirectGrant;
-import link.srrrg.link.RedirectTicketManager.Validation;
+import link.srrrg.link.Link;
+import link.srrrg.link.LinkGoneException;
+import link.srrrg.link.LinkNotFoundException;
+import link.srrrg.link.LinkRepository;
+import link.srrrg.link.LinkStatus;
+import link.srrrg.link.UrlValidator;
 import link.srrrg.link.access.ClientRequestInfo;
 import link.srrrg.link.access.LinkClickEventRecorder;
 import link.srrrg.link.access.LinkRedirectEventRecorder;
-import link.srrrg.link.dto.CreateLinkRequest;
-import link.srrrg.link.dto.CreateLinkResponse;
-import link.srrrg.link.dto.DeleteLinkResponse;
-import link.srrrg.link.dto.LinkManagementResponse;
-import link.srrrg.link.dto.LinkStatisticsSummary;
-import link.srrrg.link.dto.RedirectCheckResponse;
-import link.srrrg.link.dto.RedirectLink;
-import link.srrrg.link.dto.UpdateLinkRequest;
+import link.srrrg.link.redirect.RedirectTicketManager.RedirectGrant;
+import link.srrrg.link.redirect.RedirectTicketManager.RejectReason;
+import link.srrrg.link.redirect.RedirectTicketManager.Validation;
+import link.srrrg.link.redirect.dto.RedirectCheckResponse;
+import link.srrrg.link.redirect.dto.RedirectLink;
 import link.srrrg.link.risk.UrlRiskCheckResult;
 import link.srrrg.link.risk.UrlRiskChecker;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
-public class LinkService {
-
-	private static final int MAX_CODE_GENERATION_ATTEMPTS = 5;
+@RequiredArgsConstructor(access = AccessLevel.PACKAGE)
+public class RedirectService {
 
 	private final LinkRepository linkRepository;
-	private final LinkCodeGenerator linkCodeGenerator;
-	private final SecretKeyManager secretKeyManager;
 	private final UrlValidator urlValidator;
 	private final UrlRiskChecker urlRiskChecker;
 	private final RedirectTicketManager redirectTicketManager;
 	private final LinkClickEventRecorder clickEventRecorder;
 	private final LinkRedirectEventRecorder redirectEventRecorder;
 	private final TransactionOperations transactions;
-	private final String baseUrl;
 	private final Duration verificationTtl;
 
-	public LinkService(LinkRepository linkRepository, LinkCodeGenerator linkCodeGenerator,
-			SecretKeyManager secretKeyManager, UrlValidator urlValidator,
+	public RedirectService(LinkRepository linkRepository, UrlValidator urlValidator,
 			UrlRiskChecker urlRiskChecker, RedirectTicketManager redirectTicketManager,
 			LinkClickEventRecorder clickEventRecorder,
 			LinkRedirectEventRecorder redirectEventRecorder, PlatformTransactionManager transactionManager,
-			@Value("${srrrg.base-url}") String baseUrl,
 			@Value("${srrrg.redirect.verification-ttl:1h}") Duration verificationTtl) {
-		this(linkRepository, linkCodeGenerator, secretKeyManager, urlValidator, urlRiskChecker,
-				redirectTicketManager, clickEventRecorder, redirectEventRecorder,
-				new TransactionTemplate(transactionManager), baseUrl, verificationTtl);
-	}
-
-	LinkService(LinkRepository linkRepository, LinkCodeGenerator linkCodeGenerator,
-			SecretKeyManager secretKeyManager, UrlValidator urlValidator,
-			UrlRiskChecker urlRiskChecker, RedirectTicketManager redirectTicketManager,
-			LinkClickEventRecorder clickEventRecorder,
-			LinkRedirectEventRecorder redirectEventRecorder, TransactionOperations transactions,
-			String baseUrl, Duration verificationTtl) {
-		this.linkRepository = linkRepository;
-		this.linkCodeGenerator = linkCodeGenerator;
-		this.secretKeyManager = secretKeyManager;
-		this.urlValidator = urlValidator;
-		this.urlRiskChecker = urlRiskChecker;
-		this.redirectTicketManager = redirectTicketManager;
-		this.clickEventRecorder = clickEventRecorder;
-		this.redirectEventRecorder = redirectEventRecorder;
-		this.transactions = transactions;
-		this.baseUrl = removeTrailingSlash(baseUrl);
-		this.verificationTtl = verificationTtl;
-	}
-
-	public CreateLinkResponse create(CreateLinkRequest request) {
-		log.debug("Link creation started: expiresAtPresent={}", request.expiresAt() != null);
-		urlValidator.validate(request.originalUrl());
-		validateExpiration(request.expiresAt());
-		// 신규 링크는 위협 미탐지 결과가 있어야만 저장함.
-		requireNoKnownThreat(request.originalUrl());
-
-		String code = generateUniqueCode();
-		GeneratedSecretKey secretKey = secretKeyManager.generate();
-		Link link = Link.create(code, request.originalUrl(), secretKey.hash(), request.expiresAt());
-		link.updateVerification(LinkStatus.NO_THREAT_FOUND, Instant.now());
-		Link savedLink = linkRepository.save(link);
-		log.info("Link created: code={}, expiresAtPresent={}", savedLink.getCode(), savedLink.getExpiresAt() != null);
-		return new CreateLinkResponse(savedLink.getCode(), baseUrl + "/" + savedLink.getCode(),
-				secretKey.value(), savedLink.getExpiresAt());
-	}
-
-	@Transactional(readOnly = true)
-	public LinkManagementResponse getManagedLink(String code, String secretKey) {
-		return toManagementResponse(findManagedLink(code, secretKey));
-	}
-
-	public LinkManagementResponse updateManagedLink(String code, String secretKey, UpdateLinkRequest request) {
-		// 외부 검사 시간 동안 DB 트랜잭션을 유지하지 않고 검사가 끝난 뒤 저장함.
-		log.debug("Managed link update started: code={}", code);
-		Link link = findManagedLink(code, secretKey);
-		validateUpdateRequest(request);
-		boolean urlChanged = request.isOriginalUrlPresent()
-				&& !link.getOriginalUrl().equals(request.getOriginalUrl());
-		if (request.isOriginalUrlPresent()) {
-			urlValidator.validate(request.getOriginalUrl());
-		}
-		if (request.isExpiresAtPresent()) {
-			validateExpiration(request.getExpiresAt());
-		}
-		if (urlChanged) {
-			// 원본 URL이 실제로 바뀐 경우에만 새 URL을 검사함.
-			requireNoKnownThreat(request.getOriginalUrl());
-			link.updateOriginalUrl(request.getOriginalUrl());
-			link.updateVerification(LinkStatus.NO_THREAT_FOUND, Instant.now());
-		}
-		if (request.isExpiresAtPresent()) {
-			link.updateExpiresAt(request.getExpiresAt());
-		}
-		Link savedLink = linkRepository.save(link);
-		log.info("Managed link updated: code={}, originalUrlChanged={}, expiresAtChanged={}",
-				code, urlChanged, request.isExpiresAtPresent());
-		return toManagementResponse(savedLink);
-	}
-
-	@Transactional
-	public DeleteLinkResponse deleteManagedLink(String code, String secretKey) {
-		findManagedLink(code, secretKey).delete();
-		log.info("Managed link deleted: code={}", code);
-		return new DeleteLinkResponse(true);
+		this(linkRepository, urlValidator, urlRiskChecker, redirectTicketManager,
+				clickEventRecorder, redirectEventRecorder, new TransactionTemplate(transactionManager),
+				verificationTtl);
 	}
 
 	public RedirectLink resolveRedirectPage(String code, ClientRequestInfo requestInfo) {
@@ -307,19 +225,6 @@ public class LinkService {
 		}
 	}
 
-	private void requireNoKnownThreat(String url) {
-		UrlRiskCheckResult result = urlRiskChecker.check(url);
-		if (result == UrlRiskCheckResult.THREAT_DETECTED) {
-			log.warn("Link write rejected by URL risk check: result={}", result);
-			throw new UnsafeUrlException();
-		}
-		if (result == UrlRiskCheckResult.CHECK_FAILED) {
-			log.warn("Link write rejected by URL risk check: result={}", result);
-			throw new UrlRiskCheckFailedException();
-		}
-		log.debug("Link write URL risk check completed: result={}", result);
-	}
-
 	private Link findAvailableLink(String code) {
 		Link link = linkRepository.findByCode(code).orElseThrow(() -> {
 			log.info("Link lookup failed: reason=NOT_FOUND, code={}", code);
@@ -332,47 +237,6 @@ public class LinkService {
 			throw new LinkGoneException();
 		}
 		return link;
-	}
-
-	private Link findManagedLink(String code, String secretKey) {
-		Link link = linkRepository.findByCode(code).orElseThrow(() -> {
-			log.info("Managed link lookup failed: reason=NOT_FOUND, code={}", code);
-			return new LinkNotFoundException();
-		});
-		if (!secretKeyManager.matches(secretKey, link.getSecretKeyHash())) {
-			log.warn("Managed link authentication failed: code={}", code);
-			throw new LinkNotFoundException();
-		}
-		if (link.isDeleted()) {
-			log.info("Managed link unavailable: reason=DELETED, code={}", code);
-			throw new LinkGoneException();
-		}
-		return link;
-	}
-
-	private LinkManagementResponse toManagementResponse(Link link) {
-		return new LinkManagementResponse(link.getCode(), baseUrl + "/" + link.getCode(),
-				link.getOriginalUrl(), link.getExpiresAt(), link.getStatus(), link.getVerifiedAt(),
-				new LinkStatisticsSummary(link.getClickCount(), link.getRedirectCount()),
-				link.getCreatedAt(), link.getUpdatedAt());
-	}
-
-	private void validateUpdateRequest(UpdateLinkRequest request) {
-		if (request == null || !request.hasChanges()) {
-			throw new IllegalArgumentException("변경할 값을 하나 이상 입력해야 합니다.");
-		}
-	}
-
-	private String generateUniqueCode() {
-		for (int attempt = 0; attempt < MAX_CODE_GENERATION_ATTEMPTS; attempt++) {
-			String code = linkCodeGenerator.generate();
-			if (!linkRepository.existsByCode(code)) {
-				return code;
-			}
-			log.debug("Generated link code collision: attempt={}", attempt + 1);
-		}
-		log.error("Link code generation exhausted: attempts={}", MAX_CODE_GENERATION_ATTEMPTS);
-		throw new IllegalStateException("단축 코드를 생성하지 못했습니다.");
 	}
 
 	private long elapsedMillis(long startedAt) {
@@ -397,16 +261,6 @@ public class LinkService {
 	private boolean hasFreshVerifiedAt(Link link) {
 		return link.getVerifiedAt() != null
 				&& link.getVerifiedAt().isAfter(Instant.now().minus(verificationTtl));
-	}
-
-	private void validateExpiration(Instant expiresAt) {
-		if (expiresAt != null && !expiresAt.isAfter(Instant.now())) {
-			throw new IllegalArgumentException("만료 시각은 현재보다 미래여야 합니다.");
-		}
-	}
-
-	private String removeTrailingSlash(String value) {
-		return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
 	}
 
 	private record CachedRedirect(LinkStatus status, String redirectUrl) {

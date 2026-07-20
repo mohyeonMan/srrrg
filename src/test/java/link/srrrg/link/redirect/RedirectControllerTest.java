@@ -1,4 +1,4 @@
-package link.srrrg.link;
+package link.srrrg.link.redirect;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -10,15 +10,16 @@ import org.springframework.ui.Model;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import link.srrrg.link.dto.RedirectLink;
+import link.srrrg.link.LinkStatus;
 import link.srrrg.link.access.ClientRequestInfo;
 import link.srrrg.link.access.ClientRequestInfoResolver;
+import link.srrrg.link.redirect.dto.RedirectLink;
 
 class RedirectControllerTest {
 
 	@Test
 	void validCodeReturnsSecureRedirectPageInsteadOf302() {
-		LinkService service = mock(LinkService.class);
+		RedirectService service = mock(RedirectService.class);
 		HttpServletRequest request = mock(HttpServletRequest.class);
 		HttpServletResponse response = mock(HttpServletResponse.class);
 		Model model = mock(Model.class);
@@ -41,7 +42,7 @@ class RedirectControllerTest {
 
 	@Test
 	void exposesFreshCachedResultToThePage() {
-		LinkService service = mock(LinkService.class);
+		RedirectService service = mock(RedirectService.class);
 		ClientRequestInfoResolver resolver = mock(ClientRequestInfoResolver.class);
 		HttpServletRequest request = mock(HttpServletRequest.class);
 		HttpServletResponse response = mock(HttpServletResponse.class);

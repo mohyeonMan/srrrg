@@ -1,4 +1,4 @@
-package link.srrrg.link;
+package link.srrrg.link.redirect;
 
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import link.srrrg.link.LinkGoneException;
+import link.srrrg.link.LinkNotFoundException;
 
 @ControllerAdvice(assignableTypes = RedirectController.class)
 @Order(Ordered.HIGHEST_PRECEDENCE)

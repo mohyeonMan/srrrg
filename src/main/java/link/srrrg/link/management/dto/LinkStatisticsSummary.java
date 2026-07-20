@@ -1,4 +1,4 @@
-package link.srrrg.link.dto;
+package link.srrrg.link.management.dto;
 
 public record LinkStatisticsSummary(
 		long clickCount,

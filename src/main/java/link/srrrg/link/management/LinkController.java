@@ -1,4 +1,4 @@
-package link.srrrg.link;
+package link.srrrg.link.management;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,11 +17,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import link.srrrg.link.dto.CreateLinkRequest;
-import link.srrrg.link.dto.CreateLinkResponse;
-import link.srrrg.link.dto.DeleteLinkResponse;
-import link.srrrg.link.dto.LinkManagementResponse;
-import link.srrrg.link.dto.UpdateLinkRequest;
+import link.srrrg.link.management.dto.CreateLinkRequest;
+import link.srrrg.link.management.dto.CreateLinkResponse;
+import link.srrrg.link.management.dto.DeleteLinkResponse;
+import link.srrrg.link.management.dto.LinkManagementResponse;
+import link.srrrg.link.management.dto.UpdateLinkRequest;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -31,7 +31,7 @@ import lombok.RequiredArgsConstructor;
 public class LinkController {
 	private static final String SECRET_KEY_HEADER = "X-Srrrg-Secret-Key";
 
-	private final LinkService linkService;
+	private final LinkManagementService linkService;
 
 	@PostMapping
 	@Operation(summary = "단축 링크 생성", description = "원본 URL을 등록하고 단축 URL과 관리용 secret key를 발급합니다.")

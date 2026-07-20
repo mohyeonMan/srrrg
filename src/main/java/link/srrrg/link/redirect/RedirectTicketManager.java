@@ -1,4 +1,4 @@
-package link.srrrg.link;
+package link.srrrg.link.redirect;
 
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;

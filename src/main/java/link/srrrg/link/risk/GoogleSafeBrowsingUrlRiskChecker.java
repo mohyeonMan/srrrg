@@ -14,22 +14,16 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class GoogleSafeBrowsingUrlRiskChecker implements UrlRiskChecker {
 
 	private final RestClient restClient;
 	private final GoogleSafeBrowsingProperties properties;
-
-	public GoogleSafeBrowsingUrlRiskChecker(
-			RestClient safeBrowsingRestClient,
-			GoogleSafeBrowsingProperties properties
-	) {
-		this.restClient = safeBrowsingRestClient;
-		this.properties = properties;
-	}
 
 	@Override
 	public UrlRiskCheckResult check(String url) {

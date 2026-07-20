@@ -1,4 +1,4 @@
-package link.srrrg.link.dto;
+package link.srrrg.link.redirect.dto;
 
 import link.srrrg.link.LinkStatus;
 
