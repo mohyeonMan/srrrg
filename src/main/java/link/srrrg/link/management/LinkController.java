@@ -37,7 +37,8 @@ public class LinkController {
 	@Operation(summary = "단축 링크 생성", description = "원본 URL을 등록하고 단축 URL과 관리용 secret key를 발급합니다.")
 	@ApiResponses({
 			@ApiResponse(responseCode = "201", description = "생성 성공"),
-			@ApiResponse(responseCode = "400", description = "잘못된 URL 또는 만료 시각")
+			@ApiResponse(responseCode = "400", description = "잘못된 URL, 만료 시각 또는 위협 URL"),
+			@ApiResponse(responseCode = "503", description = "URL 안전 검사 불가")
 	})
 	public ResponseEntity<CreateLinkResponse> create(@Valid @RequestBody CreateLinkRequest request) {
 		return ResponseEntity.status(HttpStatus.CREATED).body(linkService.create(request));
@@ -62,9 +63,10 @@ public class LinkController {
 	@Operation(summary = "단축 링크 수정", description = "secret key로 인증한 뒤 원본 URL 또는 만료 시각을 수정합니다.")
 	@ApiResponses({
 			@ApiResponse(responseCode = "200", description = "수정 성공"),
-			@ApiResponse(responseCode = "400", description = "잘못된 요청"),
+			@ApiResponse(responseCode = "400", description = "잘못된 요청 또는 위협 URL"),
 			@ApiResponse(responseCode = "404", description = "링크 없음 또는 secret key 불일치"),
-			@ApiResponse(responseCode = "410", description = "삭제된 링크")
+			@ApiResponse(responseCode = "410", description = "삭제된 링크"),
+			@ApiResponse(responseCode = "503", description = "URL 안전 검사 불가")
 	})
 	public LinkManagementResponse updateManagedLink(
 			@PathVariable String code,

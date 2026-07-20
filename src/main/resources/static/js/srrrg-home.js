@@ -47,8 +47,6 @@
 	const managementShortUrl = byId('management-short-url');
 	const copyManagementShortUrlButton = byId('copy-management-short-url');
 	const managementExpirationStatus = byId('management-expiration-status');
-	const managementVerificationStatus = byId('management-verification-status');
-	const managementVerifiedAt = byId('management-verified-at');
 	const managementCreatedAt = byId('management-created-at');
 	const managementUpdatedAt = byId('management-updated-at');
 	const managementEditForm = byId('management-edit-form');
@@ -485,10 +483,6 @@
 		managementClickCount.textContent = String(link.statistics.clickCount);
 		managementRedirectCount.textContent = String(link.statistics.redirectCount);
 		managementExpirationStatus.textContent = formatExpiration(link.expiresAt);
-		// 저장된 검사 상태와 시각을 관리 화면에 그대로 표시함.
-		const verification = verificationPresentation(link.status);
-		managementVerificationStatus.textContent = verification.detail;
-		managementVerifiedAt.textContent = link.verifiedAt ? formatDateTime(link.verifiedAt) : '-';
 		managementCreatedAt.textContent = formatDateTime(link.createdAt);
 		managementUpdatedAt.textContent = formatDateTime(link.updatedAt);
 		managementOriginalUrlInput.value = link.originalUrl;
@@ -497,22 +491,8 @@
 		updateManagementSaveButtonState();
 
 		const expired = link.expiresAt && new Date(link.expiresAt).getTime() <= Date.now();
-		managementStatusBadge.textContent = expired ? '만료됨' : verification.label;
-		managementStatusBadge.className = expired ? 'status-badge warning' : `status-badge ${verification.className}`.trim();
-	}
-
-	function verificationPresentation(status) {
-		// 서버 상태를 사용자 문구와 배지 색상으로 변환함.
-		switch (status) {
-			case 'NO_THREAT_FOUND':
-				return { label: '위협 미탐지', detail: '알려진 위협 미탐지', className: 'success' };
-			case 'THREAT_DETECTED':
-				return { label: '위협 탐지됨', detail: '알려진 피싱·악성 사이트 위협 탐지', className: 'danger' };
-			case 'CHECK_FAILED':
-				return { label: '검사 실패', detail: '최근 안전 검사를 완료하지 못함', className: 'warning' };
-			default:
-				return { label: '검사 이력 없음', detail: '아직 안전 검사 이력이 없음', className: '' };
-		}
+		managementStatusBadge.textContent = expired ? '만료됨' : '사용 가능';
+		managementStatusBadge.className = expired ? 'status-badge warning' : 'status-badge success';
 	}
 
 	function renderManagedExpiration(expiresAt) {

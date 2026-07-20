@@ -19,7 +19,6 @@ import link.srrrg.link.LinkCodeGenerator;
 import link.srrrg.link.LinkGoneException;
 import link.srrrg.link.LinkNotFoundException;
 import link.srrrg.link.LinkRepository;
-import link.srrrg.link.LinkStatus;
 import link.srrrg.link.SecretKeyManager;
 import link.srrrg.link.SecretKeyManager.GeneratedSecretKey;
 import link.srrrg.link.UnsafeUrlException;
@@ -27,8 +26,9 @@ import link.srrrg.link.UrlRiskCheckFailedException;
 import link.srrrg.link.UrlValidator;
 import link.srrrg.link.management.dto.CreateLinkRequest;
 import link.srrrg.link.management.dto.UpdateLinkRequest;
-import link.srrrg.link.risk.UrlRiskCheckResult;
-import link.srrrg.link.risk.UrlRiskChecker;
+import link.srrrg.link.risk.RiskVerdict;
+import link.srrrg.link.risk.UrlRiskAssessment;
+import link.srrrg.link.risk.UrlRiskVerificationService;
 
 class LinkManagementServiceTest {
 
@@ -36,18 +36,19 @@ class LinkManagementServiceTest {
 	private final LinkCodeGenerator codeGenerator = mock(LinkCodeGenerator.class);
 	private final SecretKeyManager secretKeyManager = mock(SecretKeyManager.class);
 	private final UrlValidator validator = mock(UrlValidator.class);
-	private final UrlRiskChecker riskChecker = mock(UrlRiskChecker.class);
+	private final UrlRiskVerificationService riskVerificationService = mock(UrlRiskVerificationService.class);
 	private LinkManagementService service;
 
 	@BeforeEach
 	void setUp() {
 		service = new LinkManagementService(repository, codeGenerator, secretKeyManager, validator,
-				riskChecker, "https://srrrg.link/");
+				riskVerificationService, "https://srrrg.link/");
 	}
 
 	@Test
 	void createsUrlWhenNoThreatIsFound() {
-		when(riskChecker.check("https://example.com/path?q=1")).thenReturn(UrlRiskCheckResult.NO_THREAT_FOUND);
+		when(riskVerificationService.verify("https://example.com/path?q=1"))
+				.thenReturn(assessment(RiskVerdict.SAFE));
 		when(codeGenerator.generate()).thenReturn("aB3x9Q");
 		when(repository.existsByCode("aB3x9Q")).thenReturn(false);
 		when(secretKeyManager.generate()).thenReturn(new GeneratedSecretKey("plain", "hash"));
@@ -57,13 +58,12 @@ class LinkManagementServiceTest {
 
 		assertThat(response.code()).isEqualTo("aB3x9Q");
 		verify(validator).validate("https://example.com/path?q=1");
-		verify(repository).save(org.mockito.ArgumentMatchers.argThat(link ->
-				link.getStatus() == LinkStatus.NO_THREAT_FOUND && link.getVerifiedAt() != null));
+		verify(repository).save(any(Link.class));
 	}
 
 	@Test
 	void rejectsCreationWhenThreatIsDetected() {
-		when(riskChecker.check(any())).thenReturn(UrlRiskCheckResult.THREAT_DETECTED);
+		when(riskVerificationService.verify(any())).thenReturn(assessment(RiskVerdict.THREAT));
 		assertThatThrownBy(() -> service.create(new CreateLinkRequest("https://bad.example", null)))
 				.isInstanceOf(UnsafeUrlException.class);
 		verify(repository, never()).save(any());
@@ -71,7 +71,7 @@ class LinkManagementServiceTest {
 
 	@Test
 	void rejectsCreationWhenCheckFails() {
-		when(riskChecker.check(any())).thenReturn(UrlRiskCheckResult.CHECK_FAILED);
+		when(riskVerificationService.verify(any())).thenReturn(UrlRiskAssessment.unknown(Instant.now()));
 		assertThatThrownBy(() -> service.create(new CreateLinkRequest("https://example.com", null)))
 				.isInstanceOf(UrlRiskCheckFailedException.class);
 		verify(repository, never()).save(any());
@@ -80,20 +80,20 @@ class LinkManagementServiceTest {
 	@Test
 	void updatesChangedUrlOnlyAfterNoThreatResult() {
 		Link link = managedLink("https://old.example");
-		when(riskChecker.check("https://new.example/path")).thenReturn(UrlRiskCheckResult.NO_THREAT_FOUND);
+		when(riskVerificationService.verify("https://new.example/path"))
+				.thenReturn(assessment(RiskVerdict.SAFE));
 		when(repository.save(link)).thenReturn(link);
 		UpdateLinkRequest request = updateUrl("https://new.example/path");
 
 		service.updateManagedLink("aB3x9Q", "secret", request);
 
 		verify(link).updateOriginalUrl("https://new.example/path");
-		verify(link).updateVerification(org.mockito.ArgumentMatchers.eq(LinkStatus.NO_THREAT_FOUND), any(Instant.class));
 	}
 
 	@Test
 	void keepsExistingUrlWhenChangedUrlHasThreat() {
 		Link link = managedLink("https://old.example");
-		when(riskChecker.check(any())).thenReturn(UrlRiskCheckResult.THREAT_DETECTED);
+		when(riskVerificationService.verify(any())).thenReturn(assessment(RiskVerdict.THREAT));
 		assertThatThrownBy(() -> service.updateManagedLink("aB3x9Q", "secret", updateUrl("https://bad.example")))
 				.isInstanceOf(UnsafeUrlException.class);
 		verify(link, never()).updateOriginalUrl(any());
@@ -103,7 +103,7 @@ class LinkManagementServiceTest {
 	@Test
 	void keepsExistingUrlWhenChangedUrlCheckFails() {
 		Link link = managedLink("https://old.example");
-		when(riskChecker.check(any())).thenReturn(UrlRiskCheckResult.CHECK_FAILED);
+		when(riskVerificationService.verify(any())).thenReturn(UrlRiskAssessment.unknown(Instant.now()));
 		assertThatThrownBy(() -> service.updateManagedLink("aB3x9Q", "secret", updateUrl("https://new.example")))
 				.isInstanceOf(UrlRiskCheckFailedException.class);
 		verify(link, never()).updateOriginalUrl(any());
@@ -115,7 +115,7 @@ class LinkManagementServiceTest {
 		Link link = managedLink("https://same.example");
 		when(repository.save(link)).thenReturn(link);
 		service.updateManagedLink("aB3x9Q", "secret", updateUrl("https://same.example"));
-		verify(riskChecker, never()).check(any());
+		verify(riskVerificationService, never()).verify(any());
 		verify(link, never()).updateOriginalUrl(any());
 	}
 
@@ -158,5 +158,10 @@ class LinkManagementServiceTest {
 		UpdateLinkRequest request = new UpdateLinkRequest();
 		request.setOriginalUrl(url);
 		return request;
+	}
+
+	private UrlRiskAssessment assessment(RiskVerdict verdict) {
+		Instant verifiedAt = Instant.now();
+		return new UrlRiskAssessment(verdict, verifiedAt, verifiedAt.plusSeconds(300));
 	}
 }

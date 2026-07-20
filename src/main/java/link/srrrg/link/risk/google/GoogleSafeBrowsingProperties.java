@@ -1,4 +1,4 @@
-package link.srrrg.link.risk;
+package link.srrrg.link.risk.google;
 
 import java.time.Duration;
 

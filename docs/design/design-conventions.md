@@ -152,15 +152,14 @@ backdrop-filter: blur(8px);
 - 버튼 문구는 짧은 동사형으로 작성한다. 예: `조회하기`, `변경 저장`, `링크 삭제`, `닫기`
 - 보안 관련 문구는 명령형보다 안내형으로 쓴다.
 - secret key는 `secret key` 표기를 유지한다.
-- 원본 URL 확인 화면은 불안감을 과도하게 키우지 않고, 원본 주소 확인 행동을 분명하게 안내한다.
+- 위협 차단 화면은 잠재적 위험임을 분명히 하되 판정의 한계와 Google 출처를 함께 안내한다.
 
 ## 13. 현재 템플릿 기준
 
 현재 디자인 규칙의 기준 파일은 아래와 같다.
 
 - `src/main/resources/templates/index.html`: 홈, 링크 생성, 링크 관리, 결과 모달, 관리 모달
-- `src/main/resources/templates/redirect-confirm.html`: 신뢰되지 않은 링크 이동 전 확인 화면
-- `src/main/resources/templates/redirect-error.html`: 링크 없음, 만료, 삭제 등 리다이렉트 오류 화면
+- `src/main/resources/templates/redirect-error.html`: 링크 없음, 만료, 위협 탐지, 검사 불가 등 리다이렉트 오류 화면
 - `src/main/resources/templates/fragments/srrrg-layout.html`: 공통 header와 footer 마크업
 
 공통 CSS 파일이 생기기 전까지는 위 파일의 스타일을 변경할 때 같은 컴포넌트가 다른 페이지에도 있는지 함께 확인한다.

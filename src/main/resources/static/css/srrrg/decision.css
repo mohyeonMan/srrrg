@@ -34,20 +34,6 @@
 	gap: var(--space-2);
 }
 
-.domain-value {
-	margin: 0;
-	overflow-wrap: anywhere;
-	color: var(--color-text);
-	font-size: clamp(26px, 6vw, 34px);
-	font-weight: 900;
-	line-height: 1.15;
-}
-
-.url-reveal {
-	display: grid;
-	gap: var(--space-2);
-}
-
 .action-row {
 	display: flex;
 	flex-wrap: wrap;
@@ -66,45 +52,3 @@
 	font-size: 13px;
 	font-weight: 800;
 }
-
-.secure-redirect {
-	max-width: 720px;
-	margin-inline: auto;
-}
-
-.destination-url {
-	max-height: 7.5rem;
-	overflow: auto;
-	overflow-wrap: anywhere;
-}
-
-.security-checklist {
-	display: grid;
-	gap: 0;
-	margin: 0;
-	padding: 3px 10px;
-	list-style: none;
-	background: rgba(248, 250, 252, 0.72);
-	border: 1px solid var(--color-border);
-	border-radius: var(--radius-lg);
-}
-
-.check-step {
-	display: grid;
-	grid-template-columns: 18px minmax(0, 1fr) auto;
-	align-items: center;
-	gap: 8px;
-	min-height: 32px;
-	padding: 5px 2px;
-	border-bottom: 1px solid var(--color-border);
-	color: var(--color-text-muted);
-	font-size: 13px;
-}
-
-.check-step:last-child { border-bottom: 0; }
-.check-step strong { font-size: 11px; }
-.step-marker { font-weight: 900; text-align: center; }
-.check-step.is-complete { color: var(--color-success, #15803d); }
-.check-step.is-active { color: var(--color-primary); }
-.check-step.is-danger, .check-step.is-blocked { color: var(--color-danger); }
-.check-step.is-warning { color: #a16207; }

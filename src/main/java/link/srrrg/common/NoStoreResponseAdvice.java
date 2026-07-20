@@ -22,7 +22,7 @@ public class NoStoreResponseAdvice implements ResponseBodyAdvice<Object> {
 	public Object beforeBodyWrite(Object body, MethodParameter returnType, MediaType selectedContentType,
 			Class<? extends HttpMessageConverter<?>> selectedConverterType,
 			ServerHttpRequest request, ServerHttpResponse response) {
-		// 검사 결과와 관리 API 응답이 브라우저나 중간 캐시에 남지 않게 함.
+		// 관리 API 응답이 브라우저나 중간 캐시에 남지 않게 함.
 		response.getHeaders().setCacheControl(CacheControl.noStore());
 		return body;
 	}

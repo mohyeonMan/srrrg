@@ -24,7 +24,6 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import link.srrrg.common.GlobalExceptionHandler;
 import link.srrrg.link.LinkGoneException;
 import link.srrrg.link.LinkNotFoundException;
-import link.srrrg.link.LinkStatus;
 import link.srrrg.link.management.dto.CreateLinkResponse;
 import link.srrrg.link.management.dto.DeleteLinkResponse;
 import link.srrrg.link.management.dto.LinkManagementResponse;
@@ -73,8 +72,8 @@ class LinkControllerTest {
 				.andExpect(jsonPath("$.code").value("aB3x9Q"))
 				.andExpect(jsonPath("$.statistics.clickCount").value(12))
 				.andExpect(jsonPath("$.statistics.redirectCount").value(8))
-				.andExpect(jsonPath("$.status").value("NO_THREAT_FOUND"))
-				.andExpect(jsonPath("$.verifiedAt").value("2026-07-10T10:30:00Z"))
+				.andExpect(jsonPath("$.status").doesNotExist())
+				.andExpect(jsonPath("$.verifiedAt").doesNotExist())
 				.andExpect(jsonPath("$.secretKey").doesNotExist())
 				.andExpect(jsonPath("$.secretKeyHash").doesNotExist());
 	}
@@ -158,8 +157,6 @@ class LinkControllerTest {
 				"https://srrrg.link/aB3x9Q",
 				"https://example.com/path",
 				null,
-				LinkStatus.NO_THREAT_FOUND,
-				Instant.parse("2026-07-10T10:30:00Z"),
 				new LinkStatisticsSummary(12, 8),
 				Instant.parse("2026-07-10T10:00:00Z"),
 				Instant.parse("2026-07-10T11:00:00Z")

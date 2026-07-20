@@ -11,7 +11,6 @@ import link.srrrg.link.LinkCodeGenerator;
 import link.srrrg.link.LinkGoneException;
 import link.srrrg.link.LinkNotFoundException;
 import link.srrrg.link.LinkRepository;
-import link.srrrg.link.LinkStatus;
 import link.srrrg.link.SecretKeyManager;
 import link.srrrg.link.SecretKeyManager.GeneratedSecretKey;
 import link.srrrg.link.UnsafeUrlException;
@@ -23,8 +22,8 @@ import link.srrrg.link.management.dto.DeleteLinkResponse;
 import link.srrrg.link.management.dto.LinkManagementResponse;
 import link.srrrg.link.management.dto.LinkStatisticsSummary;
 import link.srrrg.link.management.dto.UpdateLinkRequest;
-import link.srrrg.link.risk.UrlRiskCheckResult;
-import link.srrrg.link.risk.UrlRiskChecker;
+import link.srrrg.link.risk.RiskVerdict;
+import link.srrrg.link.risk.UrlRiskVerificationService;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -37,17 +36,18 @@ public class LinkManagementService {
 	private final LinkCodeGenerator linkCodeGenerator;
 	private final SecretKeyManager secretKeyManager;
 	private final UrlValidator urlValidator;
-	private final UrlRiskChecker urlRiskChecker;
+	private final UrlRiskVerificationService riskVerificationService;
 	private final String baseUrl;
 
 	public LinkManagementService(LinkRepository linkRepository, LinkCodeGenerator linkCodeGenerator,
-			SecretKeyManager secretKeyManager, UrlValidator urlValidator, UrlRiskChecker urlRiskChecker,
+			SecretKeyManager secretKeyManager, UrlValidator urlValidator,
+			UrlRiskVerificationService riskVerificationService,
 			@Value("${srrrg.base-url}") String baseUrl) {
 		this.linkRepository = linkRepository;
 		this.linkCodeGenerator = linkCodeGenerator;
 		this.secretKeyManager = secretKeyManager;
 		this.urlValidator = urlValidator;
-		this.urlRiskChecker = urlRiskChecker;
+		this.riskVerificationService = riskVerificationService;
 		this.baseUrl = removeTrailingSlash(baseUrl);
 	}
 
@@ -61,7 +61,6 @@ public class LinkManagementService {
 		String code = generateUniqueCode();
 		GeneratedSecretKey secretKey = secretKeyManager.generate();
 		Link link = Link.create(code, request.originalUrl(), secretKey.hash(), request.expiresAt());
-		link.updateVerification(LinkStatus.NO_THREAT_FOUND, Instant.now());
 		Link savedLink = linkRepository.save(link);
 		log.info("Link created: code={}, expiresAtPresent={}", savedLink.getCode(), savedLink.getExpiresAt() != null);
 		return new CreateLinkResponse(savedLink.getCode(), baseUrl + "/" + savedLink.getCode(),
@@ -90,7 +89,6 @@ public class LinkManagementService {
 			// 원본 URL이 실제로 바뀐 경우에만 새 URL을 검사함.
 			requireNoKnownThreat(request.getOriginalUrl());
 			link.updateOriginalUrl(request.getOriginalUrl());
-			link.updateVerification(LinkStatus.NO_THREAT_FOUND, Instant.now());
 		}
 		if (request.isExpiresAtPresent()) {
 			link.updateExpiresAt(request.getExpiresAt());
@@ -109,16 +107,16 @@ public class LinkManagementService {
 	}
 
 	private void requireNoKnownThreat(String url) {
-		UrlRiskCheckResult result = urlRiskChecker.check(url);
-		if (result == UrlRiskCheckResult.THREAT_DETECTED) {
-			log.warn("Link write rejected by URL risk check: result={}", result);
+		RiskVerdict verdict = riskVerificationService.verify(url).verdict();
+		if (verdict == RiskVerdict.THREAT) {
+			log.warn("Link write rejected by URL risk check: verdict={}", verdict);
 			throw new UnsafeUrlException();
 		}
-		if (result == UrlRiskCheckResult.CHECK_FAILED) {
-			log.warn("Link write rejected by URL risk check: result={}", result);
+		if (verdict == RiskVerdict.UNKNOWN) {
+			log.warn("Link write rejected by URL risk check: verdict={}", verdict);
 			throw new UrlRiskCheckFailedException();
 		}
-		log.debug("Link write URL risk check completed: result={}", result);
+		log.debug("Link write URL risk check completed: verdict={}", verdict);
 	}
 
 	private Link findManagedLink(String code, String secretKey) {
@@ -139,7 +137,7 @@ public class LinkManagementService {
 
 	private LinkManagementResponse toManagementResponse(Link link) {
 		return new LinkManagementResponse(link.getCode(), baseUrl + "/" + link.getCode(),
-				link.getOriginalUrl(), link.getExpiresAt(), link.getStatus(), link.getVerifiedAt(),
+				link.getOriginalUrl(), link.getExpiresAt(),
 				new LinkStatisticsSummary(link.getClickCount(), link.getRedirectCount()),
 				link.getCreatedAt(), link.getUpdatedAt());
 	}

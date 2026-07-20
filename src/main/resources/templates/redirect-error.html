@@ -15,6 +15,10 @@
 			<span class="status-code" th:text="${status}">404</span>
 			<h1 id="error-title" class="page-title" th:text="${title}">링크를 찾을 수 없습니다</h1>
 			<p class="page-description" th:text="${message}">주소가 잘못되었거나 존재하지 않는 단축 링크입니다.</p>
+			<p class="page-description" th:if="${safeBrowsingAdvisory}">
+				Google Safe Browsing의 판정은 완전하거나 오류가 없음을 보장하지 않습니다.
+				<a href="https://developers.google.com/safe-browsing/v4/advisory" target="_blank" rel="noopener noreferrer">Advisory provided by Google</a>
+			</p>
 		</div>
 
 		<section class="data-section" aria-labelledby="error-short-url-label">
@@ -23,7 +27,8 @@
 		</section>
 
 		<div class="action-row">
-			<a class="primary-button" th:href="@{/}">새 단축 링크 만들기</a>
+			<a class="primary-button" th:if="${retryable}" th:href="${shortUrl}">다시 시도</a>
+			<a class="secondary-button" th:href="@{/}">새 단축 링크 만들기</a>
 		</div>
 	</section>
 </main>
