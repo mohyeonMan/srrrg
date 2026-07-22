@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import link.srrrg.link.LinkGoneException;
 import link.srrrg.link.UnsafeUrlException;
 import link.srrrg.link.UrlRiskCheckFailedException;
 import link.srrrg.link.access.ClientRequestInfoResolver;
@@ -49,7 +50,8 @@ class RedirectControllerTest {
 		mvc.perform(get("/aB3x9Q"))
 				.andExpect(status().isForbidden())
 				.andExpect(view().name("redirect-error"))
-				.andExpect(model().attribute("status", 403))
+					.andExpect(model().attribute("status", 403))
+					.andExpect(model().attribute("statusKind", "blocked"))
 				.andExpect(model().attribute("title", "잠재적으로 위험한 링크입니다"))
 				.andExpect(model().attribute("safeBrowsingAdvisory", true));
 	}
@@ -62,6 +64,20 @@ class RedirectControllerTest {
 				.andExpect(status().isServiceUnavailable())
 				.andExpect(header().string("Retry-After", "30"))
 				.andExpect(view().name("redirect-error"))
-				.andExpect(model().attribute("status", 503));
+					.andExpect(model().attribute("status", 503))
+					.andExpect(model().attribute("retryAfterSeconds", 30))
+					.andExpect(model().attribute("statusKind", "retryable"));
+	}
+
+	@Test
+	void expiredLinkReturnsDistinctGonePage() throws Exception {
+		when(service.redirect(eq("aB3x9Q"), any()))
+				.thenThrow(new LinkGoneException(LinkGoneException.Reason.EXPIRED));
+
+		mvc.perform(get("/aB3x9Q"))
+				.andExpect(status().isGone())
+				.andExpect(view().name("redirect-error"))
+				.andExpect(model().attribute("title", "만료된 링크입니다"))
+				.andExpect(model().attribute("statusKind", "gone"));
 	}
 }

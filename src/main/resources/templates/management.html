@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>srrrg - 링크 관리 및 통계</title>
+	<link rel="stylesheet" th:href="@{/css/srrrg.css}">
+	<link rel="stylesheet" th:href="@{/css/srrrg/management.css}">
+	<script defer th:src="@{/js/srrrg-management.js}"></script>
+</head>
+<body>
+<div th:replace="~{fragments/srrrg-layout :: header}"></div>
+
+<main
+		id="management-app"
+		class="management-shell"
+		th:attr="data-api-url=@{/api/links},data-prefilled-code=${prefilledCode}"
+>
+	<section id="management-gate" class="management-gate" aria-labelledby="management-gate-title">
+		<div class="management-gate-heading">
+			<p class="section-kicker">LINK CONSOLE</p>
+			<h1 id="management-gate-title">링크 관리 및 통계</h1>
+			<p>단축 URL과 발급 당시의 secret key로 링크 설정과 상세 통계를 확인합니다.</p>
+		</div>
+
+		<form id="management-auth-form" class="management-auth-form" autocomplete="off" novalidate>
+			<label class="field" for="management-code-input">
+				<span class="field-label">단축 URL 또는 코드</span>
+				<input
+						id="management-code-input"
+						class="field-input"
+						type="text"
+						placeholder="srrrg.link/aB3x9Q 또는 aB3x9Q"
+						autocomplete="off"
+						autocapitalize="none"
+						autocorrect="off"
+						spellcheck="false"
+						aria-describedby="management-code-error"
+						required
+				>
+				<span id="management-code-error" class="field-error" hidden></span>
+			</label>
+
+			<label class="field" for="management-secret-input">
+				<span class="field-label">secret key</span>
+				<span class="secret-input-wrap">
+					<input
+							id="management-secret-input"
+							class="field-input"
+							type="password"
+							placeholder="srrrg_sk_xxxxxxxxx"
+							autocomplete="off"
+							autocapitalize="none"
+							autocorrect="off"
+							spellcheck="false"
+							aria-describedby="management-secret-error management-auth-message"
+							required
+					>
+					<button id="toggle-secret-visibility" class="input-action" type="button" aria-pressed="false">보기</button>
+				</span>
+				<span id="management-secret-error" class="field-error" hidden></span>
+			</label>
+
+			<p id="management-auth-message" class="form-message" role="status" aria-live="polite"></p>
+			<div class="management-auth-actions">
+				<button id="management-auth-button" class="primary-button" type="submit">관리 화면 열기</button>
+				<button id="open-sample-dashboard" class="secondary-button" type="button">샘플 통계 보기</button>
+			</div>
+		</form>
+
+		<p class="credential-privacy-note">secret key는 이 페이지를 벗어나면 폐기되며 브라우저 저장소에 보관하지 않습니다.</p>
+	</section>
+
+	<section id="management-console" class="management-console" aria-labelledby="managed-link-title" hidden>
+		<header class="console-header">
+			<div class="console-header-top">
+				<div>
+					<p class="section-kicker">LINK CONSOLE</p>
+					<h1 id="managed-link-title" tabindex="-1">링크 관리 및 통계</h1>
+				</div>
+				<button id="change-managed-link" class="secondary-button compact-action" type="button">다른 링크 조회</button>
+			</div>
+
+			<div class="link-identity">
+				<div class="link-identity-main">
+					<div class="link-status-line">
+						<span id="managed-link-status" class="status-badge success">사용 가능</span>
+						<span id="analytics-data-badge" class="sample-badge">샘플 통계</span>
+					</div>
+					<div class="managed-short-url-row">
+						<a id="managed-short-url" class="managed-short-url" target="_blank" rel="noopener noreferrer"></a>
+						<button id="copy-managed-short-url" class="copy-button" type="button">복사</button>
+						<a id="open-managed-short-url" class="secondary-button compact-action" target="_blank" rel="noopener noreferrer">열기</a>
+					</div>
+					<p id="managed-destination" class="managed-destination"></p>
+				</div>
+				<dl class="link-identity-meta">
+					<div><dt>생성</dt><dd id="managed-created-at">-</dd></div>
+					<div><dt>최근 수정</dt><dd id="managed-updated-at">-</dd></div>
+					<div><dt>만료</dt><dd id="managed-expiration-summary">-</dd></div>
+				</dl>
+			</div>
+		</header>
+
+		<div class="console-tabs" role="tablist" aria-label="링크 관리 화면">
+			<button id="analytics-tab" class="console-tab" type="button" role="tab" aria-selected="true" aria-controls="analytics-panel">통계</button>
+			<button id="settings-tab" class="console-tab" type="button" role="tab" aria-selected="false" aria-controls="settings-panel">링크 설정</button>
+		</div>
+
+		<section id="analytics-panel" class="console-panel analytics-panel" role="tabpanel" aria-labelledby="analytics-tab">
+			<div class="analytics-toolbar">
+				<div>
+					<h2>상세 통계</h2>
+					<p id="analytics-period-label">최근 30일 · Asia/Seoul</p>
+				</div>
+				<div class="period-control" role="group" aria-label="통계 기간">
+					<button type="button" data-period="7" aria-pressed="false">7일</button>
+					<button type="button" data-period="30" aria-pressed="true">30일</button>
+					<button type="button" data-period="90" aria-pressed="false">90일</button>
+				</div>
+			</div>
+
+			<div class="sample-data-notice">
+				<strong>현재 통계는 화면 검증을 위한 샘플 데이터입니다.</strong>
+				<span>링크 설정과 누적 수치는 실제 관리 API를 사용하며, 상세 통계는 집계 API 연결 후 교체됩니다.</span>
+			</div>
+
+			<dl class="metric-grid" aria-label="기간 핵심 통계">
+				<div class="metric-item"><dt>단축 URL 진입</dt><dd id="metric-entries">0</dd><p id="metric-entries-delta">-</p></div>
+				<div class="metric-item"><dt>실제 이동</dt><dd id="metric-redirects">0</dd><p id="metric-redirects-delta">-</p></div>
+				<div class="metric-item"><dt>미이동</dt><dd id="metric-no-redirect">0</dd><p>안전 확인 또는 이탈</p></div>
+				<div class="metric-item"><dt>봇 감지</dt><dd id="metric-bots">0</dd><p id="metric-bots-share">-</p></div>
+			</dl>
+
+			<section class="analytics-section trend-section" aria-labelledby="trend-title">
+				<div class="analytics-section-heading">
+					<div><h3 id="trend-title">진입 및 실제 이동 추이</h3><p>일별 요청량과 안전 확인 후 이동한 횟수입니다.</p></div>
+					<div class="chart-legend" aria-hidden="true"><span class="entries">진입</span><span class="redirects">실제 이동</span></div>
+				</div>
+				<div class="trend-chart-wrap">
+					<svg id="trend-chart" class="trend-chart" viewBox="0 0 960 300" role="img" aria-labelledby="trend-chart-title trend-chart-description">
+						<title id="trend-chart-title">일별 진입 및 실제 이동 추이</title>
+						<desc id="trend-chart-description">선택 기간 동안의 일별 진입 수와 실제 이동 수를 비교합니다.</desc>
+					</svg>
+				</div>
+				<table class="sr-only"><caption>일별 진입 및 이동 데이터</caption><thead><tr><th>날짜</th><th>진입</th><th>실제 이동</th></tr></thead><tbody id="trend-data-table"></tbody></table>
+			</section>
+
+			<div class="analytics-breakdowns">
+				<section class="analytics-section" aria-labelledby="referrer-title">
+					<div class="analytics-section-heading"><div><h3 id="referrer-title">주요 유입 경로</h3><p>전체 URL이 아닌 도메인 단위 집계입니다.</p></div></div>
+					<div id="referrer-breakdown" class="breakdown-list"></div>
+				</section>
+
+				<section class="analytics-section" aria-labelledby="device-title">
+					<div class="analytics-section-heading"><div><h3 id="device-title">접속 환경</h3><p>봇을 포함한 user agent 분석 결과입니다.</p></div></div>
+					<div id="device-breakdown" class="breakdown-list"></div>
+				</section>
+			</div>
+
+			<div class="analytics-breakdowns compact-breakdowns">
+				<section class="analytics-section" aria-labelledby="browser-title">
+					<div class="analytics-section-heading"><div><h3 id="browser-title">브라우저</h3></div></div>
+					<div id="browser-breakdown" class="compact-data-list"></div>
+				</section>
+				<section class="analytics-section" aria-labelledby="os-title">
+					<div class="analytics-section-heading"><div><h3 id="os-title">운영체제</h3></div></div>
+					<div id="os-breakdown" class="compact-data-list"></div>
+				</section>
+			</div>
+
+			<section class="analytics-section recent-section" aria-labelledby="recent-title">
+				<div class="analytics-section-heading"><div><h3 id="recent-title">최근 활동</h3><p>IP 주소와 전체 referer는 표시하지 않습니다.</p></div></div>
+				<div class="data-table-wrap">
+					<table class="activity-table">
+						<thead><tr><th>시각</th><th>결과</th><th>유입 경로</th><th>디바이스</th><th>브라우저</th></tr></thead>
+						<tbody id="recent-activity-body"></tbody>
+					</table>
+				</div>
+			</section>
+		</section>
+
+		<section id="settings-panel" class="console-panel settings-panel" role="tabpanel" aria-labelledby="settings-tab" hidden>
+			<div class="settings-heading"><h2 tabindex="-1">링크 설정</h2><p>변경사항은 저장 전까지 실제 링크에 반영되지 않습니다.</p></div>
+
+			<form id="management-settings-form" class="settings-form" novalidate>
+				<label class="field" for="settings-original-url">
+					<span class="field-label">원본 URL</span>
+					<input id="settings-original-url" class="field-input" type="url" maxlength="2048" autocomplete="off" aria-describedby="settings-original-url-error settings-message" required>
+					<span id="settings-original-url-error" class="field-error" hidden></span>
+				</label>
+
+				<div class="field settings-expiration-field">
+					<fieldset id="settings-expire-options" class="expire-options" aria-describedby="settings-expiration-error settings-message">
+						<legend>만료 시각</legend>
+						<button type="button" data-settings-expires-option="none" aria-pressed="true">없음</button>
+						<button type="button" data-settings-expires-option="1:hours" aria-pressed="false">1시간</button>
+						<button type="button" data-settings-expires-option="1:days" aria-pressed="false">하루</button>
+						<button type="button" data-settings-expires-option="1:months" aria-pressed="false">1개월</button>
+						<button type="button" data-settings-expires-option="1:years" aria-pressed="false">1년</button>
+						<button type="button" data-settings-expires-option="custom" aria-pressed="false">직접 입력</button>
+					</fieldset>
+					<input id="settings-expires-at" class="field-input" type="text" value="-" aria-label="만료 시각" disabled>
+					<span id="settings-expiration-error" class="field-error" hidden></span>
+				</div>
+
+				<p id="settings-message" class="form-message" role="status" aria-live="polite"></p>
+				<div class="settings-actions">
+					<button id="revert-settings" class="secondary-button" type="button" disabled>변경 되돌리기</button>
+					<button id="save-settings" class="primary-button" type="submit" disabled>변경 저장</button>
+				</div>
+			</form>
+
+			<section class="danger-zone" aria-labelledby="danger-zone-title">
+				<div><h3 id="danger-zone-title">링크 삭제</h3><p>삭제하면 단축 URL이 더 이상 원본 URL로 이동하지 않습니다.</p></div>
+				<button id="open-delete-dialog" class="danger-button" type="button">링크 삭제</button>
+			</section>
+		</section>
+	</section>
+</main>
+
+<dialog id="delete-link-dialog" class="confirmation-dialog" aria-labelledby="delete-dialog-title">
+	<form method="dialog">
+		<h2 id="delete-dialog-title">이 링크를 삭제할까요?</h2>
+		<p>삭제 후에는 이 단축 URL로 이동할 수 없습니다. 이 작업은 되돌릴 수 없습니다.</p>
+		<div class="dialog-actions">
+			<button class="secondary-button" value="cancel">취소</button>
+			<button id="confirm-delete-link" class="danger-button" value="confirm">삭제하기</button>
+		</div>
+	</form>
+</dialog>
+
+<dialog id="discard-changes-dialog" class="confirmation-dialog" aria-labelledby="discard-dialog-title">
+	<form method="dialog">
+		<h2 id="discard-dialog-title">저장하지 않은 변경사항이 있습니다</h2>
+		<p>계속하면 원본 URL과 만료 설정의 변경사항이 사라집니다.</p>
+		<div class="dialog-actions">
+			<button class="secondary-button" value="cancel">계속 편집</button>
+			<button id="confirm-discard-changes" class="danger-button" value="confirm">변경사항 버리기</button>
+		</div>
+	</form>
+</dialog>
+
+<div th:replace="~{fragments/srrrg-layout :: footer}"></div>
+</body>
+</html>

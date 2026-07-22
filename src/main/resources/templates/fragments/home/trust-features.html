@@ -1,19 +1,21 @@
 <!doctype html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <body>
-<section class="home-section trust-features" th:fragment="trustFeatures" aria-label="srrrg 신뢰 기능">
-	<article class="trust-card">
-		<h2>알려진 위협 차단</h2>
-		<p>Google Safe Browsing의 알려진 위협 정보를 확인합니다. 판정에는 오탐이나 미탐이 있을 수 있습니다.</p>
-	</article>
-	<article class="trust-card">
-		<h2>secret key 관리</h2>
-		<p>secret key로 링크 조회, 수정, 삭제를 처리합니다.</p>
-	</article>
-	<article class="trust-card">
-		<h2>이동 통계</h2>
-		<p>단축 URL의 누적 클릭 수와 실제 원본 URL 이동 수를 확인합니다.</p>
-	</article>
+<section class="home-section service-facts" th:fragment="trustFeatures" aria-label="서비스 주요 기능">
+	<dl>
+		<div>
+			<dt>위협 확인</dt>
+			<dd>등록과 이동 시 알려진 위협을 확인하며 판정에는 오탐이나 미탐이 있을 수 있습니다.</dd>
+		</div>
+		<div>
+			<dt>직접 관리</dt>
+			<dd>secret key로 링크를 조회, 수정, 삭제합니다.</dd>
+		</div>
+		<div>
+			<dt>이동 통계</dt>
+			<dd>누적 클릭과 실제 이동 횟수를 확인합니다.</dd>
+		</div>
+	</dl>
 </section>
 </body>
 </html>

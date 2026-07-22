@@ -1,7 +1,7 @@
 .surface-panel {
 	background: var(--color-surface-glass);
 	border: 1px solid rgba(226, 232, 240, 0.9);
-	border-radius: var(--radius-2xl);
+	border-radius: var(--radius-xs);
 	box-shadow: var(--shadow-panel);
 }
 
@@ -58,7 +58,7 @@
 	min-width: 0;
 	align-items: center;
 	justify-content: center;
-	border-radius: var(--radius-lg);
+	border-radius: var(--radius-xs);
 	font-weight: 800;
 	line-height: 1.25;
 	text-align: center;
@@ -82,14 +82,15 @@
 
 .primary-button {
 	color: #ffffff;
-	background: linear-gradient(135deg, var(--color-brand), var(--color-brand-deep));
+	background: var(--color-brand);
 	border: 0;
-	box-shadow: var(--shadow-action);
+	box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
 }
 
 .primary-button:hover:not(:disabled) {
 	transform: translateY(-1px);
-	box-shadow: var(--shadow-action-hover);
+	background: var(--color-brand-strong);
+	box-shadow: 0 10px 22px rgba(37, 99, 235, 0.22);
 }
 
 .secondary-button {
@@ -169,7 +170,7 @@
 	color: #334155;
 	background: var(--color-surface-muted);
 	border: 1px solid var(--color-border-strong);
-	border-radius: var(--radius-lg);
+	border-radius: var(--radius-xs);
 	line-height: 1.25;
 }
 
@@ -196,8 +197,7 @@
 }
 
 .field-error,
-.form-message,
-.management-message {
+.form-message {
 	min-height: 20px;
 	margin: 0;
 	font-size: var(--text-small);
@@ -209,13 +209,11 @@
 	color: var(--color-danger);
 }
 
-.form-message,
-.management-message {
+.form-message {
 	color: var(--color-text-muted);
 }
 
-.form-message.error,
-.management-message.error {
+.form-message.error {
 	color: var(--color-danger);
 }
 
@@ -250,7 +248,7 @@
 	color: var(--color-text-subtle);
 	background: var(--color-surface-rail);
 	border: 1px solid var(--color-border-strong);
-	border-radius: var(--radius-md);
+	border-radius: var(--radius-xs);
 	font-size: var(--text-small);
 	font-weight: 800;
 	line-height: 1.25;

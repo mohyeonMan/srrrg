@@ -51,6 +51,7 @@ public class RedirectService {
 		Link initialLink = findAvailableLink(code);
 		String checkedUrl = initialLink.getOriginalUrl();
 		urlValidator.validate(checkedUrl);
+		recordClick(initialLink, requestInfo);
 
 		RiskVerdict verdict = riskVerificationService.verify(checkedUrl).verdict();
 		if (verdict == RiskVerdict.THREAT) {
@@ -83,16 +84,25 @@ public class RedirectService {
 	}
 
 	private void recordSuccessfulRedirect(Link link, ClientRequestInfo requestInfo) {
-		clickEventRecorder.record(link, requestInfo);
 		redirectEventRecorder.record(link, requestInfo);
 
-		int clickUpdates = linkRepository.incrementClickCountByCode(link.getCode());
 		int redirectUpdates = linkRepository.incrementRedirectCountByCode(link.getCode());
-		if (clickUpdates != 1 || redirectUpdates != 1) {
-			log.warn("Redirect statistics update failed: code={}, clickUpdates={}, redirectUpdates={}",
-					link.getCode(), clickUpdates, redirectUpdates);
+		if (redirectUpdates != 1) {
+			log.warn("Redirect statistics update failed: code={}, redirectUpdates={}",
+					link.getCode(), redirectUpdates);
 			throw new LinkNotFoundException();
 		}
+	}
+
+	private void recordClick(Link link, ClientRequestInfo requestInfo) {
+		transactions.executeWithoutResult(status -> {
+			clickEventRecorder.record(link, requestInfo);
+			int clickUpdates = linkRepository.incrementClickCountByCode(link.getCode());
+			if (clickUpdates != 1) {
+				log.warn("Click statistics update failed: code={}, clickUpdates={}", link.getCode(), clickUpdates);
+				throw new LinkNotFoundException();
+			}
+		});
 	}
 
 	private Link findAvailableLink(String code) {
@@ -104,7 +114,7 @@ public class RedirectService {
 		boolean expired = link.isExpiredAt(Instant.now());
 		if (deleted || expired) {
 			log.info("Link unavailable: code={}, deleted={}, expired={}", code, deleted, expired);
-			throw new LinkGoneException();
+			throw new LinkGoneException(deleted ? LinkGoneException.Reason.DELETED : LinkGoneException.Reason.EXPIRED);
 		}
 		return link;
 	}

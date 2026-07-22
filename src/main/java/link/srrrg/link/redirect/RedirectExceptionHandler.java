@@ -42,9 +42,14 @@ public class RedirectExceptionHandler {
 			HttpServletResponse response,
 			Model model
 	) {
+		String title = switch (exception.getReason()) {
+			case EXPIRED -> "만료된 링크입니다";
+			case DELETED -> "삭제된 링크입니다";
+			case UNKNOWN -> "사용할 수 없는 링크입니다";
+		};
 		return errorPage(
 				HttpStatus.GONE,
-				"사용할 수 없는 링크입니다",
+				title,
 				exception.getMessage(),
 				request,
 				response,
@@ -104,6 +109,27 @@ public class RedirectExceptionHandler {
 		model.addAttribute("message", message);
 		model.addAttribute("shortUrl", request.getRequestURL().toString());
 		model.addAttribute("retryable", status == HttpStatus.SERVICE_UNAVAILABLE);
+		model.addAttribute("retryAfterSeconds", status == HttpStatus.SERVICE_UNAVAILABLE ? 30 : 0);
+		model.addAttribute("statusKind", statusKind(status));
+		model.addAttribute("statusLabel", statusLabel(status));
 		return "redirect-error";
+	}
+
+	private String statusKind(HttpStatus status) {
+		return switch (status) {
+			case FORBIDDEN -> "blocked";
+			case GONE -> "gone";
+			case SERVICE_UNAVAILABLE -> "retryable";
+			default -> "not-found";
+		};
+	}
+
+	private String statusLabel(HttpStatus status) {
+		return switch (status) {
+			case FORBIDDEN -> "이동 차단";
+			case GONE -> "사용 종료";
+			case SERVICE_UNAVAILABLE -> "일시적 오류";
+			default -> "링크 없음";
+		};
 	}
 }

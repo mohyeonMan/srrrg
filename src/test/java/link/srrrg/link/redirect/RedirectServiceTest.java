@@ -3,6 +3,7 @@ package link.srrrg.link.redirect;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -21,6 +22,7 @@ import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionOperations;
 
 import link.srrrg.link.Link;
+import link.srrrg.link.LinkGoneException;
 import link.srrrg.link.LinkRepository;
 import link.srrrg.link.UnsafeUrlException;
 import link.srrrg.link.UrlRiskCheckFailedException;
@@ -87,25 +89,41 @@ class RedirectServiceTest {
 	}
 
 	@Test
-	void threatUrlIsBlockedWithoutRecordingRedirect() {
+	void threatUrlRecordsClickButDoesNotRecordRedirect() {
 		availableLink("https://bad.example");
 		when(riskVerificationService.verify("https://bad.example")).thenReturn(assessment(RiskVerdict.THREAT));
+		when(repository.incrementClickCountByCode("aB3x9Q")).thenReturn(1);
 
 		assertThatThrownBy(() -> service.redirect("aB3x9Q", requestInfo))
 				.isInstanceOf(UnsafeUrlException.class);
-		verifyNoInteractions(clickRecorder, redirectRecorder);
+		verify(clickRecorder).record(any(Link.class), eq(requestInfo));
+		verifyNoInteractions(redirectRecorder);
 		verify(repository, never()).incrementRedirectCountByCode(any());
 	}
 
 	@Test
-	void unknownUrlReturnsServiceUnavailableWithoutRecordingRedirect() {
+	void unknownUrlRecordsClickButDoesNotRecordRedirect() {
 		availableLink("https://example.com");
 		when(riskVerificationService.verify("https://example.com"))
 				.thenReturn(UrlRiskAssessment.unknown(Instant.now()));
+		when(repository.incrementClickCountByCode("aB3x9Q")).thenReturn(1);
 
 		assertThatThrownBy(() -> service.redirect("aB3x9Q", requestInfo))
 				.isInstanceOf(UrlRiskCheckFailedException.class);
-		verifyNoInteractions(clickRecorder, redirectRecorder);
+		verify(clickRecorder).record(any(Link.class), eq(requestInfo));
+		verifyNoInteractions(redirectRecorder);
+	}
+
+	@Test
+	void expiredLinkReportsExpiredReason() {
+		Link link = link("https://example.com");
+		when(link.isExpiredAt(any(Instant.class))).thenReturn(true);
+		when(repository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
+
+		assertThatThrownBy(() -> service.redirect("aB3x9Q", requestInfo))
+				.isInstanceOf(LinkGoneException.class)
+				.extracting(exception -> ((LinkGoneException) exception).getReason())
+				.isEqualTo(LinkGoneException.Reason.EXPIRED);
 	}
 
 	@Test
@@ -116,10 +134,12 @@ class RedirectServiceTest {
 				.thenReturn(Optional.of(oldLink))
 				.thenReturn(Optional.of(newLink));
 		when(riskVerificationService.verify("https://old.example")).thenReturn(assessment(RiskVerdict.SAFE));
+		when(repository.incrementClickCountByCode("aB3x9Q")).thenReturn(1);
 
 		assertThatThrownBy(() -> service.redirect("aB3x9Q", requestInfo))
 				.isInstanceOf(UrlRiskCheckFailedException.class);
-		verifyNoInteractions(clickRecorder, redirectRecorder);
+		verify(clickRecorder).record(oldLink, requestInfo);
+		verifyNoInteractions(redirectRecorder);
 	}
 
 	private Link availableLink(String url) {

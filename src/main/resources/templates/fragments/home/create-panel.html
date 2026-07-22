@@ -1,74 +1,97 @@
 <!doctype html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <body>
-<section class="surface-panel create-tool" th:fragment="createPanel" aria-labelledby="create-panel-title">
-	<div class="panel-heading">
-		<h2 id="create-panel-title" class="panel-title">단축 링크 만들기</h2>
-		<p class="panel-description">긴 URL을 붙여넣고 필요한 경우 만료 시각을 정하세요.</p>
+<section class="surface-panel create-tool" th:fragment="createPanel" aria-label="단축 링크 만들기">
+	<div id="create-stage" class="create-stage" data-state="form">
+		<div id="create-form-panel" class="create-state" aria-hidden="false">
+			<div class="panel-heading">
+				<h2 id="create-panel-title" class="panel-title">단축 링크 만들기</h2>
+				<p class="panel-description">긴 URL을 붙여넣고 필요한 경우 만료 시각을 정하세요.</p>
+			</div>
+
+			<form id="shortener-form" class="form-grid" novalidate>
+				<label class="field" for="original-url">
+					<span class="field-label">원본 URL</span>
+					<input
+							id="original-url"
+							class="field-input"
+							name="originalUrl"
+							type="url"
+							placeholder="https://example.com/very/long/path?with=query"
+							maxlength="2048"
+							aria-describedby="create-url-error create-form-message"
+							required
+					>
+					<span id="create-url-error" class="field-error" hidden></span>
+				</label>
+
+				<button id="toggle-expiration-options" class="expiration-disclosure" type="button" aria-expanded="false" aria-controls="expiration-settings">
+					<span>만료 설정</span>
+					<strong id="expiration-disclosure-value">없음</strong>
+				</button>
+
+				<div id="expiration-settings" class="field expiration-settings">
+					<fieldset class="expire-options" aria-describedby="create-expiration-error">
+						<legend>만료 시각</legend>
+						<button class="quick-expire-option" type="button" data-expires-option="none" aria-pressed="true">없음</button>
+						<button class="quick-expire-option" type="button" data-expires-option="1:hours" aria-pressed="false">1시간</button>
+						<button class="quick-expire-option" type="button" data-expires-option="1:days" aria-pressed="false">하루</button>
+						<button class="quick-expire-option" type="button" data-expires-option="1:months" aria-pressed="false">1개월</button>
+						<button class="quick-expire-option" type="button" data-expires-option="1:years" aria-pressed="false">1년</button>
+						<button class="quick-expire-option" type="button" data-expires-option="custom" aria-pressed="false">직접 입력</button>
+					</fieldset>
+					<label id="expires-field" class="field expire-value-field" for="expires-at">
+						<input id="expires-at" class="field-input" name="expiresAt" type="text" value="-" aria-label="만료 시각" aria-describedby="create-expiration-error" disabled>
+					</label>
+					<span id="create-expiration-error" class="field-error" hidden></span>
+				</div>
+
+				<div class="create-submit-row">
+					<button id="shortener-button" class="primary-button" type="submit" disabled>단축 URL 만들기</button>
+					<p id="create-form-message" class="form-message" role="status" aria-live="polite"></p>
+				</div>
+			</form>
+		</div>
+
+		<section id="result-panel" class="create-state result-panel" aria-live="polite" aria-labelledby="result-title" aria-hidden="true" inert>
+			<header class="result-header">
+				<span class="result-success-mark" aria-hidden="true">✓</span>
+				<div class="result-heading">
+					<p class="result-kicker">생성 완료</p>
+					<h2 id="result-title" class="result-title" tabindex="-1">링크가 준비됐어요</h2>
+					<p class="result-description">아래 정보를 지금 복사해 안전하게 보관하세요.</p>
+				</div>
+			</header>
+
+			<div class="result-field result-url-field">
+				<p id="result-label" class="result-label">단축 URL</p>
+				<div class="copy-row result-copy-row">
+					<a id="short-url" class="result-link" target="_blank" rel="noopener noreferrer"></a>
+					<button id="copy-short-url" class="copy-button" type="button" aria-label="단축 URL 복사">복사</button>
+				</div>
+			</div>
+
+			<div id="secret-key-section" class="result-field secret-credential">
+				<div class="credential-heading">
+					<p class="result-label">secret key</p>
+					<span id="secret-copy-status" class="credential-state">복사 전</span>
+				</div>
+				<div class="copy-row result-copy-row">
+					<code id="secret-key" class="secret-key"></code>
+					<button id="copy-secret-key" class="copy-button" type="button" aria-label="secret key 복사">복사</button>
+				</div>
+				<p id="secret-guidance" class="credential-warning" aria-live="polite">
+					<strong id="secret-guidance-title">이 키는 다시 확인할 수 없습니다.</strong>
+					<span id="secret-guidance-detail">링크 조회, 수정, 삭제에 필요합니다.</span>
+				</p>
+			</div>
+
+			<div class="result-actions">
+				<a id="manage-created-link" class="secondary-button" href="/manage" target="_blank" rel="noopener noreferrer">관리 및 통계</a>
+				<button id="create-another-link" class="secondary-button" type="button">새 링크 만들기</button>
+			</div>
+		</section>
 	</div>
-
-	<form id="shortener-form" class="form-grid" novalidate>
-		<label class="field" for="original-url">
-			<span class="field-label">원본 URL</span>
-			<input
-					id="original-url"
-					class="field-input"
-					name="originalUrl"
-					type="url"
-					placeholder="https://example.com/very/long/path?with=query"
-					maxlength="2048"
-					aria-describedby="create-url-error create-form-message"
-					required
-			>
-			<span id="create-url-error" class="field-error" hidden></span>
-		</label>
-
-		<div class="field">
-			<fieldset class="expire-options" aria-describedby="create-expiration-error">
-				<legend>만료 시각</legend>
-				<button class="quick-expire-option" type="button" data-expires-option="none" aria-pressed="true">없음</button>
-				<button class="quick-expire-option" type="button" data-expires-option="1:hours" aria-pressed="false">1시간</button>
-				<button class="quick-expire-option" type="button" data-expires-option="1:days" aria-pressed="false">하루</button>
-				<button class="quick-expire-option" type="button" data-expires-option="1:months" aria-pressed="false">1개월</button>
-				<button class="quick-expire-option" type="button" data-expires-option="1:years" aria-pressed="false">1년</button>
-				<button class="quick-expire-option" type="button" data-expires-option="custom" aria-pressed="false">직접 입력</button>
-			</fieldset>
-			<label id="expires-field" class="field expire-value-field" for="expires-at">
-				<input id="expires-at" class="field-input" name="expiresAt" type="text" value="-" aria-label="만료 시각" aria-describedby="create-expiration-error" disabled>
-			</label>
-			<span id="create-expiration-error" class="field-error" hidden></span>
-		</div>
-
-		<div class="create-submit-row">
-			<button id="shortener-button" class="primary-button" type="submit" disabled>단축 URL 만들기</button>
-			<p id="create-form-message" class="form-message" role="status" aria-live="polite"></p>
-		</div>
-	</form>
-
-	<section id="result-panel" class="result-panel" aria-live="polite" aria-labelledby="result-title" hidden>
-		<span id="result-status-badge" class="status-badge success">생성 완료</span>
-		<h2 id="result-title" class="result-title" tabindex="-1">단축 URL이 생성되었습니다</h2>
-
-		<div class="result-field">
-			<p id="result-label" class="result-label">단축 URL</p>
-			<div class="copy-row">
-				<a id="short-url" class="result-link" target="_blank" rel="noopener noreferrer"></a>
-				<button id="copy-short-url" class="copy-button" type="button" aria-label="단축 URL 복사">복사</button>
-			</div>
-		</div>
-
-		<div id="secret-key-section" class="result-field">
-			<p class="result-label">Secret key</p>
-			<div class="copy-row">
-				<code id="secret-key" class="secret-key"></code>
-				<button id="copy-secret-key" class="copy-button" type="button" aria-label="secret key 복사">복사</button>
-			</div>
-			<p class="warning-note">
-				<strong>이 secret key는 다시 확인할 수 없습니다.</strong>
-				<span>링크를 조회, 수정, 삭제하려면 지금 안전한 곳에 보관하세요.</span>
-			</p>
-		</div>
-	</section>
 </section>
 </body>
 </html>

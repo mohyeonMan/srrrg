@@ -10,7 +10,7 @@
 <body>
 <div th:replace="~{fragments/srrrg-layout :: header}"></div>
 
-<main id="home-app" class="page-shell" th:attr="data-api-url=@{/api/links}">
+<main id="home-app" class="page-shell" th:attr="data-api-url=@{/api/links},data-manage-url=@{/manage}">
 	<section class="home-hero">
 		<div th:replace="~{fragments/home/product-intro :: productIntro}"></div>
 		<div th:replace="~{fragments/home/create-panel :: createPanel}"></div>
@@ -22,6 +22,5 @@
 </main>
 
 <div th:replace="~{fragments/srrrg-layout :: footer}"></div>
-<div th:replace="~{fragments/management-modal :: managementModal}"></div>
 </body>
 </html>

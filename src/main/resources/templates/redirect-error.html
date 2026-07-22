@@ -3,21 +3,25 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title th:text="'srrrg - ' + ${status}">srrrg - error</title>
+	<title th:text="${'srrrg - ' + title}">srrrg - 링크 오류</title>
 	<link rel="stylesheet" th:href="@{/css/srrrg.css}">
+	<script defer th:if="${retryable}" th:src="@{/js/srrrg-decision.js}"></script>
 </head>
-<body class="error-page">
+<body class="error-page" th:classappend="${'decision-' + statusKind}">
 <div th:replace="~{fragments/srrrg-layout :: header}"></div>
 
 <main class="decision-shell">
-	<section class="decision-panel" aria-labelledby="error-title">
-		<div class="decision-heading">
-			<span class="status-code" th:text="${status}">404</span>
+		<section class="decision-panel" th:attr="data-status-kind=${statusKind}" aria-labelledby="error-title">
+			<div class="decision-heading">
+				<div class="decision-status-line">
+					<span class="status-code" th:text="${status}">404</span>
+					<span class="decision-status-label" th:text="${statusLabel}">링크 없음</span>
+				</div>
 			<h1 id="error-title" class="page-title" th:text="${title}">링크를 찾을 수 없습니다</h1>
 			<p class="page-description" th:text="${message}">주소가 잘못되었거나 존재하지 않는 단축 링크입니다.</p>
 			<p class="page-description" th:if="${safeBrowsingAdvisory}">
 				Google Safe Browsing의 판정은 완전하거나 오류가 없음을 보장하지 않습니다.
-				<a href="https://developers.google.com/safe-browsing/v4/advisory" target="_blank" rel="noopener noreferrer">Advisory provided by Google</a>
+					<a class="text-link" href="https://developers.google.com/safe-browsing/v4/advisory" target="_blank" rel="noopener noreferrer">Google Safe Browsing 고지 보기</a>
 			</p>
 		</div>
 
@@ -26,10 +30,18 @@
 			<p class="url-box" th:text="${shortUrl}">https://srrrg.link/abc123</p>
 		</section>
 
-		<div class="action-row">
-			<a class="primary-button" th:if="${retryable}" th:href="${shortUrl}">다시 시도</a>
-			<a class="secondary-button" th:href="@{/}">새 단축 링크 만들기</a>
-		</div>
+			<div class="action-row">
+				<a
+						id="retry-link"
+						class="primary-button retry-link"
+						th:if="${retryable}"
+						th:href="${shortUrl}"
+						th:attr="data-retry-after=${retryAfterSeconds}"
+						aria-disabled="true"
+						tabindex="-1"
+				><span id="retry-label" th:text="${retryAfterSeconds + '초 후 다시 시도'}">30초 후 다시 시도</span></a>
+				<a class="secondary-button" th:href="@{/}">srrrg 홈으로</a>
+			</div>
 	</section>
 </main>
 
