@@ -1,5 +1,6 @@
 package link.srrrg.link.risk.google;
 
+import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -7,11 +8,9 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HexFormat;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
@@ -28,7 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class GoogleSafeBrowsingClient {
 
-	private static final Pattern PROTOBUF_DURATION = Pattern.compile("^(\\d+)(?:\\.(\\d{1,9}))?s$");
+	private static final MediaType PROTOBUF_MEDIA_TYPE = MediaType.parseMediaType("application/x-protobuf");
 	private static final Duration MAX_THREAT_CACHE_DURATION = Duration.ofMinutes(30);
 
 	private final RestClient restClient;
@@ -54,21 +53,28 @@ public class GoogleSafeBrowsingClient {
 					.build()
 					.encode()
 					.toUri();
-			SafeBrowsingResponse response = restClient.get()
+			byte[] responseBody = restClient.get()
 					.uri(requestUri)
+					.accept(PROTOBUF_MEDIA_TYPE)
 					.retrieve()
 					.onStatus(HttpStatusCode::isError, (request, result) -> {
 						throw new SafeBrowsingHttpException(result.getStatusCode());
 					})
-					.body(SafeBrowsingResponse.class);
-			if (response == null || !StringUtils.hasText(response.cacheDuration())) {
+					.body(byte[].class);
+			if (responseBody == null) {
 				log.warn("Safe Browsing request failed: reason=INVALID_RESPONSE, elapsedMs={}, urlHost={}, urlId={}",
 						elapsedMillis(startedAt), urlHost, urlId);
 				return UrlRiskAssessment.unknown(verifiedAt);
 			}
 
-			Duration cacheDuration = parseDuration(response.cacheDuration());
-			RiskVerdict verdict = response.threats() == null || response.threats().isEmpty()
+			SafeBrowsingProtobufDecoder.Response response = SafeBrowsingProtobufDecoder.decode(responseBody);
+			Duration cacheDuration = response.cacheDuration();
+			if (cacheDuration == null || cacheDuration.isZero() || cacheDuration.isNegative()) {
+				log.warn("Safe Browsing request failed: reason=INVALID_RESPONSE, elapsedMs={}, urlHost={}, urlId={}",
+						elapsedMillis(startedAt), urlHost, urlId);
+				return UrlRiskAssessment.unknown(verifiedAt);
+			}
+			RiskVerdict verdict = response.threatCount() == 0
 					? RiskVerdict.SAFE
 					: RiskVerdict.THREAT;
 			if (verdict == RiskVerdict.THREAT && cacheDuration.compareTo(MAX_THREAT_CACHE_DURATION) > 0) {
@@ -78,7 +84,7 @@ public class GoogleSafeBrowsingClient {
 					verdict, verifiedAt, verifiedAt.plus(cacheDuration));
 			if (verdict == RiskVerdict.THREAT) {
 				log.warn("Safe Browsing threat detected: elapsedMs={}, matchCount={}, urlHost={}, urlId={}",
-						elapsedMillis(startedAt), response.threats().size(), urlHost, urlId);
+						elapsedMillis(startedAt), response.threatCount(), urlHost, urlId);
 			} else {
 				log.info("Safe Browsing request completed: verdict={}, cacheDuration={}, elapsedMs={}, urlHost={}, urlId={}",
 						verdict, cacheDuration, elapsedMillis(startedAt), urlHost, urlId);
@@ -92,26 +98,15 @@ public class GoogleSafeBrowsingClient {
 			log.warn("Safe Browsing transport error: type={}, causeType={}, elapsedMs={}, urlHost={}, urlId={}",
 					exception.getClass().getSimpleName(), causeType(exception), elapsedMillis(startedAt), urlHost, urlId);
 			return UrlRiskAssessment.unknown(verifiedAt);
+		} catch (IOException exception) {
+			log.warn("Safe Browsing processing error: type={}, causeType={}, elapsedMs={}, urlHost={}, urlId={}",
+					exception.getClass().getSimpleName(), causeType(exception), elapsedMillis(startedAt), urlHost, urlId);
+			return UrlRiskAssessment.unknown(verifiedAt);
 		} catch (RuntimeException exception) {
 			log.warn("Safe Browsing processing error: type={}, causeType={}, elapsedMs={}, urlHost={}, urlId={}",
 					exception.getClass().getSimpleName(), causeType(exception), elapsedMillis(startedAt), urlHost, urlId);
 			return UrlRiskAssessment.unknown(verifiedAt);
 		}
-	}
-
-	private Duration parseDuration(String value) {
-		Matcher matcher = PROTOBUF_DURATION.matcher(value);
-		if (!matcher.matches()) {
-			throw new IllegalArgumentException("Invalid protobuf duration");
-		}
-		long seconds = Long.parseLong(matcher.group(1));
-		String fraction = matcher.group(2);
-		int nanos = fraction == null ? 0 : Integer.parseInt(fraction + "0".repeat(9 - fraction.length()));
-		Duration duration = Duration.ofSeconds(seconds, nanos);
-		if (duration.isZero()) {
-			throw new IllegalArgumentException("Safe Browsing cache duration must be positive");
-		}
-		return duration;
 	}
 
 	private long elapsedMillis(long startedAt) {
@@ -141,9 +136,6 @@ public class GoogleSafeBrowsingClient {
 		Throwable cause = exception.getCause();
 		return cause == null ? "none" : cause.getClass().getSimpleName();
 	}
-
-	private record SafeBrowsingResponse(List<ThreatUrl> threats, String cacheDuration) { }
-	private record ThreatUrl(String url, List<String> threatTypes) { }
 
 	private static class SafeBrowsingHttpException extends RuntimeException {
 		private final HttpStatusCode status;
