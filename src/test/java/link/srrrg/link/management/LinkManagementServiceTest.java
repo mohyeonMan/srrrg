@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -13,6 +14,7 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import link.srrrg.link.Link;
 import link.srrrg.link.LinkCodeGenerator;
@@ -50,15 +52,30 @@ class LinkManagementServiceTest {
 		when(riskVerificationService.verify("https://example.com/path?q=1"))
 				.thenReturn(assessment(RiskVerdict.SAFE));
 		when(codeGenerator.generate()).thenReturn("aB3x9Q");
-		when(repository.existsByCode("aB3x9Q")).thenReturn(false);
 		when(secretKeyManager.generate()).thenReturn(new GeneratedSecretKey("plain", "hash"));
-		when(repository.save(any(Link.class))).thenAnswer(call -> call.getArgument(0));
+		when(repository.saveAndFlush(any(Link.class))).thenAnswer(call -> call.getArgument(0));
 
 		var response = service.create(new CreateLinkRequest("https://example.com/path?q=1", null));
 
 		assertThat(response.code()).isEqualTo("aB3x9Q");
 		verify(validator).validate("https://example.com/path?q=1");
-		verify(repository).save(any(Link.class));
+		verify(repository).saveAndFlush(any(Link.class));
+	}
+
+	@Test
+	void retriesCreationWhenGeneratedCodeAlreadyExists() {
+		when(riskVerificationService.verify("https://example.com"))
+				.thenReturn(assessment(RiskVerdict.SAFE));
+		when(codeGenerator.generate()).thenReturn("aaaaaa", "bbbbbb");
+		when(secretKeyManager.generate()).thenReturn(new GeneratedSecretKey("plain", "hash"));
+		when(repository.saveAndFlush(any(Link.class)))
+				.thenThrow(new DataIntegrityViolationException("duplicate code"))
+				.thenAnswer(call -> call.getArgument(0));
+
+		var response = service.create(new CreateLinkRequest("https://example.com", null));
+
+		assertThat(response.code()).isEqualTo("bbbbbb");
+		verify(repository, times(2)).saveAndFlush(any(Link.class));
 	}
 
 	@Test
@@ -66,7 +83,7 @@ class LinkManagementServiceTest {
 		when(riskVerificationService.verify(any())).thenReturn(assessment(RiskVerdict.THREAT));
 		assertThatThrownBy(() -> service.create(new CreateLinkRequest("https://bad.example", null)))
 				.isInstanceOf(UnsafeUrlException.class);
-		verify(repository, never()).save(any());
+		verify(repository, never()).saveAndFlush(any());
 	}
 
 	@Test
@@ -74,7 +91,7 @@ class LinkManagementServiceTest {
 		when(riskVerificationService.verify(any())).thenReturn(UrlRiskAssessment.unknown(Instant.now()));
 		assertThatThrownBy(() -> service.create(new CreateLinkRequest("https://example.com", null)))
 				.isInstanceOf(UrlRiskCheckFailedException.class);
-		verify(repository, never()).save(any());
+		verify(repository, never()).saveAndFlush(any());
 	}
 
 	@Test

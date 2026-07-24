@@ -3,6 +3,7 @@ package link.srrrg.link.management;
 import java.time.Instant;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,16 +53,16 @@ public class LinkManagementService {
 	}
 
 	public CreateLinkResponse create(CreateLinkRequest request) {
+		
 		log.debug("Link creation started: expiresAtPresent={}", request.expiresAt() != null);
+		
 		urlValidator.validate(request.originalUrl());
 		validateExpiration(request.expiresAt());
 		// 신규 링크는 위협 미탐지 결과가 있어야만 저장함.
 		requireNoKnownThreat(request.originalUrl());
 
-		String code = generateUniqueCode();
 		GeneratedSecretKey secretKey = secretKeyManager.generate();
-		Link link = Link.create(code, request.originalUrl(), secretKey.hash(), request.expiresAt());
-		Link savedLink = linkRepository.save(link);
+		Link savedLink = saveWithUniqueCode(request.originalUrl(), secretKey.hash(), request.expiresAt());
 		log.info("Link created: code={}, expiresAtPresent={}", savedLink.getCode(), savedLink.getExpiresAt() != null);
 		return new CreateLinkResponse(savedLink.getCode(), baseUrl + "/" + savedLink.getCode(),
 				secretKey.value(), savedLink.getExpiresAt());
@@ -148,13 +149,15 @@ public class LinkManagementService {
 		}
 	}
 
-	private String generateUniqueCode() {
-		for (int attempt = 0; attempt < MAX_CODE_GENERATION_ATTEMPTS; attempt++) {
+	private Link saveWithUniqueCode(String originalUrl, String secretKeyHash, Instant expiresAt) {
+		for (int attempt = 1; attempt <= MAX_CODE_GENERATION_ATTEMPTS; attempt++) {
 			String code = linkCodeGenerator.generate();
-			if (!linkRepository.existsByCode(code)) {
-				return code;
+			Link link = Link.create(code, originalUrl, secretKeyHash, expiresAt);
+			try {
+				return linkRepository.saveAndFlush(link);
+			} catch (DataIntegrityViolationException exception) {
+				log.debug("Generated link code collision: attempt={}, code={}", attempt, code);
 			}
-			log.debug("Generated link code collision: attempt={}", attempt + 1);
 		}
 		log.error("Link code generation exhausted: attempts={}", MAX_CODE_GENERATION_ATTEMPTS);
 		throw new IllegalStateException("단축 코드를 생성하지 못했습니다.");

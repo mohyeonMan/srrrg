@@ -9,8 +9,6 @@ import org.springframework.data.repository.query.Param;
 
 public interface LinkRepository extends JpaRepository<Link, Long> {
 
-	boolean existsByCode(String code);
-
 	Optional<Link> findByCode(String code);
 
 	@Modifying
