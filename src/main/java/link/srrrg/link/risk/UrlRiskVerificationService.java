@@ -5,108 +5,45 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.HexFormat;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.stereotype.Service;
 
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Timer;
 import link.srrrg.link.risk.google.GoogleSafeBrowsingClient;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
+/**
+ * DB에 유효한 검증 결과가 있으면 재사용하고, 없거나 만료됐으면 Google Safe Browsing으로 다시 검사한다.
+ *
+ * <p>검사에 실패한 {@link RiskVerdict#UNKNOWN} 결과는 저장하지 않아 다음 요청에서 다시 검사한다.
+ */
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class UrlRiskVerificationService {
 
 	private final UrlVerificationRepository repository;
 	private final GoogleSafeBrowsingClient safeBrowsingClient;
-	private final MeterRegistry meterRegistry;
-	private final ConcurrentHashMap<String, CompletableFuture<UrlRiskAssessment>> inFlight = new ConcurrentHashMap<>();
 
 	public UrlRiskAssessment verify(String url) {
 		String urlHash = hash(url);
-		UrlRiskAssessment cached = findFresh(urlHash, url, Instant.now()).orElse(null);
-		if (cached != null) {
-			recordCacheRequest("hit");
-			log.debug("URL risk verification cache hit: urlId={}, verdict={}, expiresAt={}",
-					shortId(urlHash), cached.verdict(), cached.expiresAt());
-			return cached;
-		}
-		recordCacheRequest("miss");
-		return verifyOnce(urlHash, url);
+		return repository.findById(urlHash)
+				.filter(verification -> verification.matches(url))
+				.filter(verification -> verification.isFreshAt(Instant.now()))
+				.map(UrlVerification::toAssessment)
+				.orElseGet(() -> checkAndStore(urlHash, url));
 	}
 
-	private UrlRiskAssessment verifyOnce(String urlHash, String url) {
-		CompletableFuture<UrlRiskAssessment> pending = new CompletableFuture<>();
-		CompletableFuture<UrlRiskAssessment> existing = inFlight.putIfAbsent(urlHash, pending);
-		if (existing != null) {
-			meterRegistry.counter("srrrg.url.risk.inflight.joins").increment();
-			log.debug("URL risk verification joined in-flight request: urlId={}", shortId(urlHash));
-			return await(existing);
-		}
-
-		try {
-			UrlRiskAssessment result = refresh(urlHash, url);
-			pending.complete(result);
-			return result;
-		} catch (RuntimeException exception) {
-			pending.completeExceptionally(exception);
-			throw exception;
-		} finally {
-			inFlight.remove(urlHash, pending);
-		}
-	}
-
-	private UrlRiskAssessment refresh(String urlHash, String url) {
-		UrlRiskAssessment cached = findFresh(urlHash, url, Instant.now()).orElse(null);
-		if (cached != null) {
-			return cached;
-		}
-
-		Timer.Sample sample = Timer.start(meterRegistry);
+	private UrlRiskAssessment checkAndStore(String urlHash, String url) {
 		UrlRiskAssessment assessment = safeBrowsingClient.check(url);
-		sample.stop(Timer.builder("srrrg.url.risk.provider.duration")
-				.tag("verdict", assessment.verdict().name())
-				.register(meterRegistry));
-		meterRegistry.counter(
-				"srrrg.url.risk.provider.requests",
-				"verdict", assessment.verdict().name()
-		).increment();
 		if (assessment.isCacheable()) {
-			repository.upsert(
+			repository.saveIfNewer(
 					urlHash,
 					url,
 					assessment.verdict().name(),
 					assessment.verifiedAt(),
 					assessment.expiresAt()
 			);
-			log.info("URL risk verification cached: urlId={}, verdict={}, expiresAt={}",
-					shortId(urlHash), assessment.verdict(), assessment.expiresAt());
 		}
 		return assessment;
-	}
-
-	private Optional<UrlRiskAssessment> findFresh(String urlHash, String url, Instant now) {
-		return repository.findById(urlHash)
-				.filter(verification -> verification.matches(url))
-				.filter(verification -> verification.isFreshAt(now))
-				.map(UrlVerification::toAssessment);
-	}
-
-	private UrlRiskAssessment await(CompletableFuture<UrlRiskAssessment> existing) {
-		try {
-			return existing.join();
-		} catch (CompletionException exception) {
-			if (exception.getCause() instanceof RuntimeException runtimeException) {
-				throw runtimeException;
-			}
-			throw exception;
-		}
 	}
 
 	private String hash(String url) {
@@ -117,13 +54,5 @@ public class UrlRiskVerificationService {
 		} catch (NoSuchAlgorithmException exception) {
 			throw new IllegalStateException("SHA-256 is unavailable", exception);
 		}
-	}
-
-	private String shortId(String urlHash) {
-		return urlHash.substring(0, 12);
-	}
-
-	private void recordCacheRequest(String result) {
-		meterRegistry.counter("srrrg.url.risk.cache.requests", "result", result).increment();
 	}
 }

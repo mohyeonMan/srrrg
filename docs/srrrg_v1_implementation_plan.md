@@ -10,7 +10,7 @@
 
 - Java 21, Spring Boot 4.0.3, Gradle 기반 프로젝트 골격이 생성되어 있다.
 - 기본 패키지는 `link.srrrg`이다.
-- Actuator와 Prometheus 의존성 및 기본 설정이 있다.
+- Actuator health probe 설정이 있다.
 - Web, Validation, JPA, PostgreSQL 의존성은 아직 없다.
 - 도메인 코드와 DB 마이그레이션은 아직 없다.
 - Dockerfile은 있으나 애플리케이션 완성 후 실행 방식과 빌드 결과물을 다시 확인해야 한다.
@@ -203,7 +203,7 @@ PATCH와 DELETE도 같은 헤더를 사용하고 body에는 변경 데이터만 
 
 ### 5단계: 운영 준비
 
-- Actuator health probe와 Prometheus endpoint 확인
+- Actuator health probe 확인
 - Docker 이미지 빌드 및 비루트 실행 여부 확인
 - k3s Deployment, Service, Ingress, Secret/ConfigMap 명세 작성
 - graceful shutdown과 readiness/liveness probe 확인
@@ -249,6 +249,6 @@ v1 완료 여부는 다음 시나리오 하나로 확인한다.
 3. 단축 URL에서 원본 URL로 302 이동하는지 확인한다.
 4. secret key로 링크를 조회하고 URL과 만료일을 수정한다.
 5. 링크를 삭제한 뒤 리다이렉트가 410을 반환하는지 확인한다.
-6. health 및 Prometheus endpoint가 배포 환경에서 정상인지 확인한다.
+6. health endpoint가 배포 환경에서 정상인지 확인한다.
 
 이 시나리오가 자동 테스트와 배포 환경에서 통과하면 v1의 최소 범위를 완료한 것으로 본다.

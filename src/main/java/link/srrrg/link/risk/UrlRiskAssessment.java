@@ -2,6 +2,9 @@ package link.srrrg.link.risk;
 
 import java.time.Instant;
 
+/**
+ * URL 위험도 검사 결과. UNKNOWN은 캐시하지 않으므로 expiresAt이 없다.
+ */
 public record UrlRiskAssessment(
 		RiskVerdict verdict,
 		Instant verifiedAt,

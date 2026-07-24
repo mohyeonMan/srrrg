@@ -6,6 +6,9 @@ import java.time.Duration;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.WireFormat;
 
+/**
+ * Safe Browsing 응답에서 위협 개수와 캐시 유효기간만 읽는다.
+ */
 final class SafeBrowsingProtobufDecoder {
 
 	private static final int THREATS_FIELD_NUMBER = 1;
@@ -22,15 +25,21 @@ final class SafeBrowsingProtobufDecoder {
 		int tag;
 		while ((tag = input.readTag()) != 0) {
 			int fieldNumber = WireFormat.getTagFieldNumber(tag);
+			if (fieldNumber != THREATS_FIELD_NUMBER && fieldNumber != CACHE_DURATION_FIELD_NUMBER) {
+				if (!input.skipField(tag)) {
+					break;
+				}
+				continue;
+			}
+			if (WireFormat.getTagWireType(tag) != WireFormat.WIRETYPE_LENGTH_DELIMITED) {
+				throw new IOException("Invalid Safe Browsing protobuf wire type");
+			}
+
+			byte[] value = input.readByteArray();
 			if (fieldNumber == THREATS_FIELD_NUMBER) {
-				requireLengthDelimited(tag);
-				input.readByteArray();
 				threatCount++;
-			} else if (fieldNumber == CACHE_DURATION_FIELD_NUMBER) {
-				requireLengthDelimited(tag);
-				cacheDuration = decodeDuration(input.readByteArray());
-			} else if (!input.skipField(tag)) {
-				break;
+			} else {
+				cacheDuration = decodeDuration(value);
 			}
 		}
 		return new Response(threatCount, cacheDuration);
@@ -42,12 +51,6 @@ final class SafeBrowsingProtobufDecoder {
 			throw new IOException("Invalid protobuf duration");
 		}
 		return Duration.ofSeconds(value.getSeconds(), value.getNanos());
-	}
-
-	private static void requireLengthDelimited(int tag) throws IOException {
-		if (WireFormat.getTagWireType(tag) != WireFormat.WIRETYPE_LENGTH_DELIMITED) {
-			throw new IOException("Invalid Safe Browsing protobuf wire type");
-		}
 	}
 
 	record Response(int threatCount, Duration cacheDuration) {

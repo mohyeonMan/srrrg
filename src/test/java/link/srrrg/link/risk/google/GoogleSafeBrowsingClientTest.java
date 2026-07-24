@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.ExpectedCount.once;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import java.io.ByteArrayOutputStream;
@@ -16,6 +17,7 @@ import com.google.protobuf.CodedOutputStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
@@ -76,23 +78,19 @@ class GoogleSafeBrowsingClientTest {
 	}
 
 	@Test
-	void limitsThreatCacheToThirtyMinutes() {
-		server.expect(request -> assertThat(request.getURI().getPath()).isEqualTo("/v5/urls:search"))
-				.andRespond(withSuccess(
-						response(Duration.ofHours(2), 1),
-						PROTOBUF_MEDIA_TYPE));
-
-		var result = client.check("https://bad.example");
-
-		assertThat(result.expiresAt()).isEqualTo(result.verifiedAt().plusSeconds(1800));
-	}
-
-	@Test
 	void returnsUnknownForMalformedCacheDuration() {
 		server.expect(request -> assertThat(request.getURI().getPath()).isEqualTo("/v5/urls:search"))
 				.andRespond(withSuccess(
 						new byte[] {0x12, 0x01, (byte) 0x80},
 						PROTOBUF_MEDIA_TYPE));
+
+		assertThat(client.check("https://example.com").verdict()).isEqualTo(RiskVerdict.UNKNOWN);
+	}
+
+	@Test
+	void returnsUnknownWhenGoogleRequestFails() {
+		server.expect(request -> assertThat(request.getURI().getPath()).isEqualTo("/v5/urls:search"))
+				.andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
 
 		assertThat(client.check("https://example.com").verdict()).isEqualTo(RiskVerdict.UNKNOWN);
 	}

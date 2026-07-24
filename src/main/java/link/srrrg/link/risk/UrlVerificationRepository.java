@@ -23,8 +23,9 @@ interface UrlVerificationRepository extends JpaRepository<UrlVerification, Strin
 				verdict = EXCLUDED.verdict,
 				verified_at = EXCLUDED.verified_at,
 				expires_at = EXCLUDED.expires_at
+			WHERE url_verifications.verified_at <= EXCLUDED.verified_at
 			""", nativeQuery = true)
-	int upsert(
+	void saveIfNewer(
 			@Param("urlHash") String urlHash,
 			@Param("originalUrl") String originalUrl,
 			@Param("verdict") String verdict,

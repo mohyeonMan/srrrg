@@ -12,6 +12,10 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * DB에 저장된 SAFE 또는 THREAT 검증 결과.
+ * expiresAt은 Google이 내려준 캐시 기간을 verifiedAt에 더한 시각이다.
+ */
 @Entity
 @Table(name = "url_verifications")
 @Getter

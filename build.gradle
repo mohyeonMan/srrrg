@@ -28,7 +28,6 @@ dependencies {
 	implementation 'org.flywaydb:flyway-database-postgresql'
 	implementation 'org.springframework.security:spring-security-crypto'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3'
-	implementation 'io.micrometer:micrometer-registry-prometheus'
 	implementation 'com.google.protobuf:protobuf-java:4.35.0'
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
