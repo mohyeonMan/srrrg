@@ -1,5 +1,8 @@
 server:
   shutdown: graceful
+  tomcat:
+    mbeanregistry:
+      enabled: true
 
 spring:
   application:
