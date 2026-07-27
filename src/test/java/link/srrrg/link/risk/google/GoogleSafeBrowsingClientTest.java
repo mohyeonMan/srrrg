@@ -9,6 +9,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -21,7 +22,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.ResourceAccessException;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import link.srrrg.common.metrics.SrrrgMetrics;
 import link.srrrg.link.risk.RiskVerdict;
 
 class GoogleSafeBrowsingClientTest {
@@ -29,15 +33,19 @@ class GoogleSafeBrowsingClientTest {
 	private static final MediaType PROTOBUF_MEDIA_TYPE = MediaType.parseMediaType("application/x-protobuf");
 
 	private MockRestServiceServer server;
+	private SimpleMeterRegistry registry;
+	private SrrrgMetrics metrics;
 	private GoogleSafeBrowsingClient client;
 
 	@BeforeEach
 	void setUp() {
 		RestClient.Builder builder = RestClient.builder();
 		server = MockRestServiceServer.bindTo(builder).build();
+		registry = new SimpleMeterRegistry();
+		metrics = new SrrrgMetrics(registry);
 		client = new GoogleSafeBrowsingClient(builder.build(), new GoogleSafeBrowsingProperties(
 				"test-key", "https://safe.example/v5/urls:search",
-				Duration.ofSeconds(1), Duration.ofSeconds(1)));
+				Duration.ofSeconds(1), Duration.ofSeconds(1)), metrics);
 	}
 
 	@Test
@@ -62,6 +70,7 @@ class GoogleSafeBrowsingClientTest {
 		assertThat(result.verifiedAt()).isBetween(before, Instant.now());
 		assertThat(result.expiresAt()).isEqualTo(result.verifiedAt().plusSeconds(300));
 		server.verify();
+		assertCheckTimerCount("safe", 1);
 	}
 
 	@Test
@@ -75,6 +84,7 @@ class GoogleSafeBrowsingClientTest {
 
 		assertThat(result.verdict()).isEqualTo(RiskVerdict.THREAT);
 		assertThat(result.expiresAt()).isEqualTo(result.verifiedAt().plusSeconds(60).plusMillis(500));
+		assertCheckTimerCount("threat", 1);
 	}
 
 	@Test
@@ -85,6 +95,7 @@ class GoogleSafeBrowsingClientTest {
 						PROTOBUF_MEDIA_TYPE));
 
 		assertThat(client.check("https://example.com").verdict()).isEqualTo(RiskVerdict.UNKNOWN);
+		assertCheckTimerCount("invalid_response", 1);
 	}
 
 	@Test
@@ -93,15 +104,31 @@ class GoogleSafeBrowsingClientTest {
 				.andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
 
 		assertThat(client.check("https://example.com").verdict()).isEqualTo(RiskVerdict.UNKNOWN);
+		assertCheckTimerCount("error", 1);
 	}
 
 	@Test
 	void returnsUnknownWithoutRequestWhenApiKeyIsMissing() {
 		GoogleSafeBrowsingClient noKeyClient = new GoogleSafeBrowsingClient(
 				RestClient.create(), new GoogleSafeBrowsingProperties("", "https://safe.example",
-				Duration.ofSeconds(1), Duration.ofSeconds(1)));
+				Duration.ofSeconds(1), Duration.ofSeconds(1)), metrics);
 
 		assertThat(noKeyClient.check("https://example.com").verdict()).isEqualTo(RiskVerdict.UNKNOWN);
+		assertCheckTimerCount("not_configured", 1);
+	}
+
+	@Test
+	void recordsTimeoutOutcomeWhenGoogleRequestTimesOut() {
+		server.expect(request -> assertThat(request.getURI().getPath()).isEqualTo("/v5/urls:search"))
+				.andRespond(request -> {
+					throw new ResourceAccessException(
+							"timed out",
+							new HttpTimeoutException("timed out")
+					);
+				});
+
+		assertThat(client.check("https://example.com").verdict()).isEqualTo(RiskVerdict.UNKNOWN);
+		assertCheckTimerCount("timeout", 1);
 	}
 
 	private byte[] response(Duration cacheDuration, int threatCount) {
@@ -121,5 +148,13 @@ class GoogleSafeBrowsingClientTest {
 		} catch (IOException exception) {
 			throw new IllegalStateException(exception);
 		}
+	}
+
+	private void assertCheckTimerCount(String outcome, long count) {
+		assertThat(registry.get("srrrg.url.risk.check")
+				.tag("provider", "google")
+				.tag("outcome", outcome)
+				.timer()
+				.count()).isEqualTo(count);
 	}
 }

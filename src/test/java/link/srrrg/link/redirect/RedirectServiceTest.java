@@ -21,6 +21,8 @@ import org.springframework.transaction.support.SimpleTransactionStatus;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionOperations;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import link.srrrg.common.metrics.SrrrgMetrics;
 import link.srrrg.link.Link;
 import link.srrrg.link.LinkGoneException;
 import link.srrrg.link.LinkRepository;
@@ -48,12 +50,16 @@ class RedirectServiceTest {
 		}
 	};
 	private final ClientRequestInfo requestInfo = new ClientRequestInfo("203.0.113.10", null, "agent");
+	private SimpleMeterRegistry registry;
+	private SrrrgMetrics metrics;
 	private RedirectService service;
 
 	@BeforeEach
 	void setUp() {
+		registry = new SimpleMeterRegistry();
+		metrics = new SrrrgMetrics(registry);
 		service = new RedirectService(repository, validator, riskVerificationService,
-				clickRecorder, redirectRecorder, transactions);
+				clickRecorder, redirectRecorder, transactions, metrics);
 	}
 
 	@Test
@@ -66,6 +72,7 @@ class RedirectServiceTest {
 			context.registerBean(LinkRedirectEventRecorder.class, () -> redirectRecorder);
 			context.registerBean(PlatformTransactionManager.class,
 					() -> mock(PlatformTransactionManager.class));
+			context.registerBean(SrrrgMetrics.class, () -> metrics);
 			context.registerBean(RedirectService.class);
 
 			context.refresh();
@@ -86,6 +93,9 @@ class RedirectServiceTest {
 		assertThat(redirectUrl).isEqualTo("https://example.com/path?q=1");
 		verify(clickRecorder).record(link, requestInfo);
 		verify(redirectRecorder).record(link, requestInfo);
+		assertTimerCount("srrrg.redirect", "outcome", "redirected", 1);
+		assertWriteTimerCount("click", "success", 1);
+		assertWriteTimerCount("redirect", "success", 1);
 	}
 
 	@Test
@@ -99,6 +109,8 @@ class RedirectServiceTest {
 		verify(clickRecorder).record(any(Link.class), eq(requestInfo));
 		verifyNoInteractions(redirectRecorder);
 		verify(repository, never()).incrementRedirectCountByCode(any());
+		assertTimerCount("srrrg.redirect", "outcome", "blocked", 1);
+		assertWriteTimerCount("click", "success", 1);
 	}
 
 	@Test
@@ -112,6 +124,7 @@ class RedirectServiceTest {
 				.isInstanceOf(UrlRiskCheckFailedException.class);
 		verify(clickRecorder).record(any(Link.class), eq(requestInfo));
 		verifyNoInteractions(redirectRecorder);
+		assertTimerCount("srrrg.redirect", "outcome", "check_failed", 1);
 	}
 
 	@Test
@@ -124,6 +137,7 @@ class RedirectServiceTest {
 				.isInstanceOf(LinkGoneException.class)
 				.extracting(exception -> ((LinkGoneException) exception).getReason())
 				.isEqualTo(LinkGoneException.Reason.EXPIRED);
+		assertTimerCount("srrrg.redirect", "outcome", "gone", 1);
 	}
 
 	@Test
@@ -140,6 +154,18 @@ class RedirectServiceTest {
 				.isInstanceOf(UrlRiskCheckFailedException.class);
 		verify(clickRecorder).record(oldLink, requestInfo);
 		verifyNoInteractions(redirectRecorder);
+		assertTimerCount("srrrg.redirect", "outcome", "check_failed", 1);
+		assertWriteTimerCount("redirect", "error", 1);
+	}
+
+	@Test
+	void missingLinkRecordsNotFoundOutcome() {
+		when(repository.findByCode("aB3x9Q")).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> service.redirect("aB3x9Q", requestInfo))
+				.isInstanceOf(link.srrrg.link.LinkNotFoundException.class);
+
+		assertTimerCount("srrrg.redirect", "outcome", "not_found", 1);
 	}
 
 	private Link availableLink(String url) {
@@ -160,5 +186,20 @@ class RedirectServiceTest {
 	private UrlRiskAssessment assessment(RiskVerdict verdict) {
 		Instant verifiedAt = Instant.now();
 		return new UrlRiskAssessment(verdict, verifiedAt, verifiedAt.plusSeconds(300));
+	}
+
+	private void assertWriteTimerCount(String type, String outcome, long count) {
+		assertThat(registry.get("srrrg.redirect.write")
+				.tag("type", type)
+				.tag("outcome", outcome)
+				.timer()
+				.count()).isEqualTo(count);
+	}
+
+	private void assertTimerCount(String name, String tag, String value, long count) {
+		assertThat(registry.get(name)
+				.tag(tag, value)
+				.timer()
+				.count()).isEqualTo(count);
 	}
 }

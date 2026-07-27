@@ -7,7 +7,9 @@ import java.util.concurrent.TimeUnit;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PostConstruct;
+import link.srrrg.common.metrics.SrrrgMetrics;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -22,6 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 public class FixedSafeUrlRiskChecker implements UrlRiskChecker {
 
 	private final UrlRiskCheckerProperties properties;
+	private final SrrrgMetrics metrics;
 
 	@PostConstruct
 	void logConfiguration() {
@@ -31,17 +34,24 @@ public class FixedSafeUrlRiskChecker implements UrlRiskChecker {
 
 	@Override
 	public UrlRiskAssessment check(String url) {
-		UrlRiskCheckerProperties.FixedSafe settings = settings();
-		if (!waitFor(settings.delay())) {
-			return UrlRiskAssessment.unknown(Instant.now());
-		}
+		Timer.Sample sample = metrics.startTimer();
+		String outcome = "error";
+		try {
+			UrlRiskCheckerProperties.FixedSafe settings = settings();
+			if (!waitFor(settings.delay())) {
+				return UrlRiskAssessment.unknown(Instant.now());
+			}
 
-		Instant verifiedAt = Instant.now();
-		return new UrlRiskAssessment(
-				RiskVerdict.SAFE,
-				verifiedAt,
-				verifiedAt.plus(settings.cacheDuration())
-		);
+			Instant verifiedAt = Instant.now();
+			outcome = "safe";
+			return new UrlRiskAssessment(
+					RiskVerdict.SAFE,
+					verifiedAt,
+					verifiedAt.plus(settings.cacheDuration())
+			);
+		} finally {
+			metrics.recordUrlRiskCheck(sample, "fixed_safe", outcome);
+		}
 	}
 
 	private UrlRiskCheckerProperties.FixedSafe settings() {

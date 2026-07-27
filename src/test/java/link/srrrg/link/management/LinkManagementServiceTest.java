@@ -16,6 +16,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import link.srrrg.common.metrics.SrrrgMetrics;
 import link.srrrg.link.Link;
 import link.srrrg.link.LinkCodeGenerator;
 import link.srrrg.link.LinkGoneException;
@@ -39,12 +41,14 @@ class LinkManagementServiceTest {
 	private final SecretKeyManager secretKeyManager = mock(SecretKeyManager.class);
 	private final UrlValidator validator = mock(UrlValidator.class);
 	private final UrlRiskVerificationService riskVerificationService = mock(UrlRiskVerificationService.class);
+	private SimpleMeterRegistry registry;
 	private LinkManagementService service;
 
 	@BeforeEach
 	void setUp() {
+		registry = new SimpleMeterRegistry();
 		service = new LinkManagementService(repository, codeGenerator, secretKeyManager, validator,
-				riskVerificationService, "https://srrrg.link/");
+				riskVerificationService, new SrrrgMetrics(registry), "https://srrrg.link/");
 	}
 
 	@Test
@@ -60,6 +64,7 @@ class LinkManagementServiceTest {
 		assertThat(response.code()).isEqualTo("aB3x9Q");
 		verify(validator).validate("https://example.com/path?q=1");
 		verify(repository).saveAndFlush(any(Link.class));
+		assertCreateTimerCount("created", 1);
 	}
 
 	@Test
@@ -76,6 +81,10 @@ class LinkManagementServiceTest {
 
 		assertThat(response.code()).isEqualTo("bbbbbb");
 		verify(repository, times(2)).saveAndFlush(any(Link.class));
+		assertThat(registry.get("srrrg.link.code_generation")
+				.tag("outcome", "collision")
+				.counter()
+				.count()).isEqualTo(1);
 	}
 
 	@Test
@@ -84,6 +93,7 @@ class LinkManagementServiceTest {
 		assertThatThrownBy(() -> service.create(new CreateLinkRequest("https://bad.example", null)))
 				.isInstanceOf(UnsafeUrlException.class);
 		verify(repository, never()).saveAndFlush(any());
+		assertCreateTimerCount("threat", 1);
 	}
 
 	@Test
@@ -92,6 +102,41 @@ class LinkManagementServiceTest {
 		assertThatThrownBy(() -> service.create(new CreateLinkRequest("https://example.com", null)))
 				.isInstanceOf(UrlRiskCheckFailedException.class);
 		verify(repository, never()).saveAndFlush(any());
+		assertCreateTimerCount("check_failed", 1);
+	}
+
+	@Test
+	void recordsInvalidCreationOutcome() {
+		org.mockito.Mockito.doThrow(new IllegalArgumentException("invalid"))
+				.when(validator).validate("not-a-url");
+
+		assertThatThrownBy(() -> service.create(new CreateLinkRequest("not-a-url", null)))
+				.isInstanceOf(IllegalArgumentException.class);
+
+		assertCreateTimerCount("invalid", 1);
+	}
+
+	@Test
+	void recordsExhaustedCodeGenerationRetries() {
+		when(riskVerificationService.verify("https://example.com"))
+				.thenReturn(assessment(RiskVerdict.SAFE));
+		when(codeGenerator.generate()).thenReturn("aaaaaa");
+		when(secretKeyManager.generate()).thenReturn(new GeneratedSecretKey("plain", "hash"));
+		when(repository.saveAndFlush(any(Link.class)))
+				.thenThrow(new DataIntegrityViolationException("duplicate code"));
+
+		assertThatThrownBy(() -> service.create(new CreateLinkRequest("https://example.com", null)))
+				.isInstanceOf(IllegalStateException.class);
+
+		assertThat(registry.get("srrrg.link.code_generation")
+				.tag("outcome", "collision")
+				.counter()
+				.count()).isEqualTo(5);
+		assertThat(registry.get("srrrg.link.code_generation")
+				.tag("outcome", "exhausted")
+				.counter()
+				.count()).isEqualTo(1);
+		assertCreateTimerCount("error", 1);
 	}
 
 	@Test
@@ -180,5 +225,12 @@ class LinkManagementServiceTest {
 	private UrlRiskAssessment assessment(RiskVerdict verdict) {
 		Instant verifiedAt = Instant.now();
 		return new UrlRiskAssessment(verdict, verifiedAt, verifiedAt.plusSeconds(300));
+	}
+
+	private void assertCreateTimerCount(String outcome, long count) {
+		assertThat(registry.get("srrrg.link.create")
+				.tag("outcome", outcome)
+				.timer()
+				.count()).isEqualTo(count);
 	}
 }

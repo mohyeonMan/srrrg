@@ -7,7 +7,12 @@ import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import link.srrrg.common.metrics.SrrrgMetrics;
+
 class FixedSafeUrlRiskCheckerTest {
+
+	private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
 
 	@Test
 	void returnsSafeAssessmentWithConfiguredCacheDuration() {
@@ -20,6 +25,11 @@ class FixedSafeUrlRiskCheckerTest {
 		assertThat(assessment.verdict()).isEqualTo(RiskVerdict.SAFE);
 		assertThat(assessment.verifiedAt()).isBetween(before, Instant.now());
 		assertThat(assessment.expiresAt()).isEqualTo(assessment.verifiedAt().plus(cacheDuration));
+		assertThat(registry.get("srrrg.url.risk.check")
+				.tag("provider", "fixed_safe")
+				.tag("outcome", "safe")
+				.timer()
+				.count()).isEqualTo(1);
 	}
 
 	@Test
@@ -38,6 +48,6 @@ class FixedSafeUrlRiskCheckerTest {
 				UrlRiskCheckerProperties.Provider.FIXED_SAFE,
 				fixedSafe
 		);
-		return new FixedSafeUrlRiskChecker(properties);
+		return new FixedSafeUrlRiskChecker(properties, new SrrrgMetrics(registry));
 	}
 }

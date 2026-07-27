@@ -10,13 +10,24 @@ import static org.mockito.Mockito.when;
 import java.time.Instant;
 import java.util.Optional;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import link.srrrg.common.metrics.SrrrgMetrics;
 
 class UrlRiskVerificationServiceTest {
 
 	private final UrlVerificationRepository repository = mock(UrlVerificationRepository.class);
 	private final UrlRiskChecker client = mock(UrlRiskChecker.class);
-	private final UrlRiskVerificationService service = new UrlRiskVerificationService(repository, client);
+	private SimpleMeterRegistry registry;
+	private UrlRiskVerificationService service;
+
+	@BeforeEach
+	void setUp() {
+		registry = new SimpleMeterRegistry();
+		service = new UrlRiskVerificationService(repository, client, new SrrrgMetrics(registry));
+	}
 
 	@Test
 	void returnsFreshCachedAssessmentWithoutCallingGoogle() {
@@ -29,6 +40,7 @@ class UrlRiskVerificationServiceTest {
 
 		assertThat(service.verify("https://example.com")).isEqualTo(assessment);
 		verify(client, never()).check(anyString());
+		assertCacheCount("hit", 1);
 	}
 
 	@Test
@@ -49,6 +61,7 @@ class UrlRiskVerificationServiceTest {
 				org.mockito.ArgumentMatchers.eq(assessment.verifiedAt()),
 				org.mockito.ArgumentMatchers.eq(assessment.expiresAt())
 		);
+		assertCacheCount("miss_stale", 1);
 	}
 
 	@Test
@@ -61,10 +74,18 @@ class UrlRiskVerificationServiceTest {
 		verify(repository, never()).saveIfNewer(
 				anyString(), anyString(), anyString(),
 				org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+		assertCacheCount("miss_absent", 1);
 	}
 
 	private UrlRiskAssessment assessment(RiskVerdict verdict, long cacheSeconds) {
 		Instant verifiedAt = Instant.now();
 		return new UrlRiskAssessment(verdict, verifiedAt, verifiedAt.plusSeconds(cacheSeconds));
+	}
+
+	private void assertCacheCount(String result, double count) {
+		assertThat(registry.get("srrrg.url.risk.cache")
+				.tag("result", result)
+				.counter()
+				.count()).isEqualTo(count);
 	}
 }

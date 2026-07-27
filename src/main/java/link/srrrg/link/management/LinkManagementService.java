@@ -7,6 +7,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import io.micrometer.core.instrument.Timer;
+import link.srrrg.common.metrics.SrrrgMetrics;
 import link.srrrg.link.Link;
 import link.srrrg.link.LinkCodeGenerator;
 import link.srrrg.link.LinkGoneException;
@@ -38,34 +40,52 @@ public class LinkManagementService {
 	private final SecretKeyManager secretKeyManager;
 	private final UrlValidator urlValidator;
 	private final UrlRiskVerificationService riskVerificationService;
+	private final SrrrgMetrics metrics;
 	private final String baseUrl;
 
 	public LinkManagementService(LinkRepository linkRepository, LinkCodeGenerator linkCodeGenerator,
 			SecretKeyManager secretKeyManager, UrlValidator urlValidator,
 			UrlRiskVerificationService riskVerificationService,
+			SrrrgMetrics metrics,
 			@Value("${srrrg.base-url}") String baseUrl) {
 		this.linkRepository = linkRepository;
 		this.linkCodeGenerator = linkCodeGenerator;
 		this.secretKeyManager = secretKeyManager;
 		this.urlValidator = urlValidator;
 		this.riskVerificationService = riskVerificationService;
+		this.metrics = metrics;
 		this.baseUrl = removeTrailingSlash(baseUrl);
 	}
 
 	public CreateLinkResponse create(CreateLinkRequest request) {
-		
-		log.debug("Link creation started: expiresAtPresent={}", request.expiresAt() != null);
-		
-		urlValidator.validate(request.originalUrl());
-		validateExpiration(request.expiresAt());
-		// 신규 링크는 위협 미탐지 결과가 있어야만 저장함.
-		requireNoKnownThreat(request.originalUrl());
+		Timer.Sample sample = metrics.startTimer();
+		String outcome = "error";
+		try {
+			log.debug("Link creation started: expiresAtPresent={}", request.expiresAt() != null);
 
-		GeneratedSecretKey secretKey = secretKeyManager.generate();
-		Link savedLink = saveWithUniqueCode(request.originalUrl(), secretKey.hash(), request.expiresAt());
-		log.info("Link created: code={}, expiresAtPresent={}", savedLink.getCode(), savedLink.getExpiresAt() != null);
-		return new CreateLinkResponse(savedLink.getCode(), baseUrl + "/" + savedLink.getCode(),
-				secretKey.value(), savedLink.getExpiresAt());
+			urlValidator.validate(request.originalUrl());
+			validateExpiration(request.expiresAt());
+			// 신규 링크는 위협 미탐지 결과가 있어야만 저장함.
+			requireNoKnownThreat(request.originalUrl());
+
+			GeneratedSecretKey secretKey = secretKeyManager.generate();
+			Link savedLink = saveWithUniqueCode(request.originalUrl(), secretKey.hash(), request.expiresAt());
+			log.info("Link created: code={}, expiresAtPresent={}", savedLink.getCode(), savedLink.getExpiresAt() != null);
+			outcome = "created";
+			return new CreateLinkResponse(savedLink.getCode(), baseUrl + "/" + savedLink.getCode(),
+					secretKey.value(), savedLink.getExpiresAt());
+		} catch (UnsafeUrlException exception) {
+			outcome = "threat";
+			throw exception;
+		} catch (UrlRiskCheckFailedException exception) {
+			outcome = "check_failed";
+			throw exception;
+		} catch (IllegalArgumentException exception) {
+			outcome = "invalid";
+			throw exception;
+		} finally {
+			metrics.recordLinkCreate(sample, outcome);
+		}
 	}
 
 	@Transactional(readOnly = true)
@@ -156,9 +176,11 @@ public class LinkManagementService {
 			try {
 				return linkRepository.saveAndFlush(link);
 			} catch (DataIntegrityViolationException exception) {
+				metrics.recordLinkCodeGeneration("collision");
 				log.debug("Generated link code collision: attempt={}, code={}", attempt, code);
 			}
 		}
+		metrics.recordLinkCodeGeneration("exhausted");
 		log.error("Link code generation exhausted: attempts={}", MAX_CODE_GENERATION_ATTEMPTS);
 		throw new IllegalStateException("단축 코드를 생성하지 못했습니다.");
 	}

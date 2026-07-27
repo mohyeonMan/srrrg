@@ -2,6 +2,8 @@ package link.srrrg.link.risk.google;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.http.HttpTimeoutException;
+import java.net.SocketTimeoutException;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -13,6 +15,8 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import io.micrometer.core.instrument.Timer;
+import link.srrrg.common.metrics.SrrrgMetrics;
 import link.srrrg.link.risk.RiskVerdict;
 import link.srrrg.link.risk.UrlRiskAssessment;
 import link.srrrg.link.risk.UrlRiskChecker;
@@ -37,17 +41,21 @@ public class GoogleSafeBrowsingClient implements UrlRiskChecker {
 
 	private final RestClient restClient;
 	private final GoogleSafeBrowsingProperties properties;
+	private final SrrrgMetrics metrics;
 
 	@Override
 	public UrlRiskAssessment check(String url) {
+		Timer.Sample sample = metrics.startTimer();
+		String outcome = "error";
 		Instant verifiedAt = Instant.now();
 		String urlHost = hostOf(url);
-		if (!StringUtils.hasText(properties.apiKey())) {
-			log.warn("Safe Browsing check skipped: reason=API_KEY_NOT_CONFIGURED, urlHost={}", urlHost);
-			return UrlRiskAssessment.unknown(verifiedAt);
-		}
-
 		try {
+			if (!StringUtils.hasText(properties.apiKey())) {
+				log.warn("Safe Browsing check skipped: reason=API_KEY_NOT_CONFIGURED, urlHost={}", urlHost);
+				outcome = "not_configured";
+				return UrlRiskAssessment.unknown(verifiedAt);
+			}
+
 			URI requestUri = UriComponentsBuilder.fromUriString(properties.endpoint())
 					.queryParam("key", properties.apiKey())
 					.queryParam("urls", url)
@@ -60,12 +68,14 @@ public class GoogleSafeBrowsingClient implements UrlRiskChecker {
 					.retrieve()
 					.body(byte[].class);
 			if (responseBody == null) {
+				outcome = "invalid_response";
 				return invalidResponse(verifiedAt, urlHost);
 			}
 
 			SafeBrowsingProtobufDecoder.Response response = SafeBrowsingProtobufDecoder.decode(responseBody);
 			Duration cacheDuration = response.cacheDuration();
 			if (cacheDuration == null || cacheDuration.isZero() || cacheDuration.isNegative()) {
+				outcome = "invalid_response";
 				return invalidResponse(verifiedAt, urlHost);
 			}
 
@@ -80,12 +90,31 @@ public class GoogleSafeBrowsingClient implements UrlRiskChecker {
 				log.debug("Safe Browsing check completed: verdict={}, cacheDuration={}, urlHost={}",
 						verdict, cacheDuration, urlHost);
 			}
+			outcome = verdict == RiskVerdict.SAFE ? "safe" : "threat";
 			return new UrlRiskAssessment(verdict, verifiedAt, verifiedAt.plus(cacheDuration));
-		} catch (RestClientException | IOException exception) {
+		} catch (IOException exception) {
+			outcome = "invalid_response";
+			log.warn("Safe Browsing check failed: reason=INVALID_RESPONSE, urlHost={}", urlHost);
+			return UrlRiskAssessment.unknown(verifiedAt);
+		} catch (RestClientException exception) {
+			outcome = isTimeout(exception) ? "timeout" : "error";
 			log.warn("Safe Browsing check failed: errorType={}, urlHost={}",
 					exception.getClass().getSimpleName(), urlHost);
 			return UrlRiskAssessment.unknown(verifiedAt);
+		} finally {
+			metrics.recordUrlRiskCheck(sample, "google", outcome);
 		}
+	}
+
+	private boolean isTimeout(Throwable exception) {
+		Throwable current = exception;
+		while (current != null) {
+			if (current instanceof HttpTimeoutException || current instanceof SocketTimeoutException) {
+				return true;
+			}
+			current = current.getCause();
+		}
+		return false;
 	}
 
 	private UrlRiskAssessment invalidResponse(Instant verifiedAt, String urlHost) {

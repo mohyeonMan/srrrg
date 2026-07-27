@@ -95,7 +95,7 @@ Prometheus가 모든 Pod의 bucket을 합산한 뒤 `histogram_quantile()`로 �
 
 ### 3.3 URL 위험 검증 캐시
 
-#### `srrrg.url_risk.cache`
+#### `srrrg.url.risk.cache`
 
 URL 검증 캐시 조회 결과를 기록하는 Counter다.
 
@@ -113,7 +113,7 @@ Warm-cache와 Cold-cache 테스트가 의도한 상태로 수행됐는지 확인
 
 ### 3.4 URL 위험 검사
 
-#### `srrrg.url_risk.check`
+#### `srrrg.url.risk.check`
 
 캐시 miss 이후 선택된 URL 위험 검사 구현체의 처리 시간을 측정하는 Timer다.
 
@@ -316,7 +316,7 @@ delay는 외부 검사로 인해 요청 처리가 대기하는 시간을 재현�
 | 일반적인 외부 검사 대기 모사 | `100ms` |
 | 느린 외부 검사 상황 | `500ms` |
 
-`fixed-safe`도 실제 구현과 동일하게 `UrlRiskAssessment`를 반환하므로 DB 캐시의 저장, 만료와 hit/miss 흐름은 그대로 수행된다. 같은 미검증 URL의 동시 요청과 replica별 중복 검사도 `srrrg.url_risk.check` 메트릭으로 측정할 수 있다.
+`fixed-safe`도 실제 구현과 동일하게 `UrlRiskAssessment`를 반환하므로 DB 캐시의 저장, 만료와 hit/miss 흐름은 그대로 수행된다. 같은 미검증 URL의 동시 요청과 replica별 중복 검사도 `srrrg.url.risk.check` 메트릭으로 측정할 수 있다.
 
 실제 Google API 연동은 k6 부하 테스트와 분리한다. 배포 전 통합 확인에서 소수의 고정된 안전·위협 URL만 요청하며 처리량이나 동시성 측정에는 사용하지 않는다.
 
@@ -363,8 +363,8 @@ delay는 외부 검사로 인해 요청 처리가 대기하는 시간을 재현�
 
 주요 확인 항목:
 
-- `srrrg.url_risk.cache{result=~"miss_absent|miss_stale"}`
-- `srrrg.url_risk.check{provider="fixed_safe"}`의 호출 수와 지연
+- `srrrg.url.risk.cache{result=~"miss_absent|miss_stale"}`
+- `srrrg.url.risk.check{provider="fixed_safe"}`의 호출 수와 지연
 - `srrrg.redirect`에서 URL 위험 검사가 차지하는 지연
 
 ### 7.4 Concurrent cold-cache
@@ -499,7 +499,7 @@ scaling efficiency = replica 2의 최대 처리량 / replica 1의 최대 처리�
 | replica별 요청 분배 | 충분한 시간 동안 한 Pod에 과도하게 편중되지 않을 것 |
 | replica 2 처리량 | 동일한 p95 기준에서 replica 1의 1.5배 이상을 목표로 함 |
 
-Cold-cache와 링크 생성 지연은 URL 위험 검사 시간에 크게 영향을 받는다. 따라서 전체 시간뿐 아니라 `srrrg.url_risk.check` 시간을 제외한 애플리케이션 자체 처리 시간도 함께 판단한다.
+Cold-cache와 링크 생성 지연은 URL 위험 검사 시간에 크게 영향을 받는다. 따라서 전체 시간뿐 아니라 `srrrg.url.risk.check` 시간을 제외한 애플리케이션 자체 처리 시간도 함께 판단한다.
 
 ## 9. 테스트 결과 기록
 

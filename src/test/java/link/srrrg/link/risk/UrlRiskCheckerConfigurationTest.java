@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.web.client.RestClient;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import link.srrrg.common.metrics.SrrrgMetrics;
 import link.srrrg.link.risk.google.GoogleSafeBrowsingClient;
 import link.srrrg.link.risk.google.GoogleSafeBrowsingProperties;
 
@@ -21,6 +23,7 @@ class UrlRiskCheckerConfigurationTest {
 					GoogleSafeBrowsingClient.class
 			)
 			.withBean(RestClient.class, () -> mock(RestClient.class))
+			.withBean(SrrrgMetrics.class, () -> new SrrrgMetrics(new SimpleMeterRegistry()))
 			.withBean(
 					GoogleSafeBrowsingProperties.class,
 					() -> new GoogleSafeBrowsingProperties(

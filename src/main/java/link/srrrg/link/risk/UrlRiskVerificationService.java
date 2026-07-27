@@ -8,6 +8,7 @@ import java.util.HexFormat;
 
 import org.springframework.stereotype.Service;
 
+import link.srrrg.common.metrics.SrrrgMetrics;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -21,14 +22,28 @@ public class UrlRiskVerificationService {
 
 	private final UrlVerificationRepository repository;
 	private final UrlRiskChecker urlRiskChecker;
+	private final SrrrgMetrics metrics;
 
 	public UrlRiskAssessment verify(String url) {
 		String urlHash = hash(url);
-		return repository.findById(urlHash)
-				.filter(verification -> verification.matches(url))
-				.filter(verification -> verification.isFreshAt(Instant.now()))
-				.map(UrlVerification::toAssessment)
-				.orElseGet(() -> checkAndStore(urlHash, url));
+		var cached = repository.findById(urlHash);
+		if (cached.isEmpty()) {
+			metrics.recordUrlRiskCache("miss_absent");
+			return checkAndStore(urlHash, url);
+		}
+
+		UrlVerification verification = cached.get();
+		if (!verification.matches(url)) {
+			metrics.recordUrlRiskCache("miss_absent");
+			return checkAndStore(urlHash, url);
+		}
+		if (!verification.isFreshAt(Instant.now())) {
+			metrics.recordUrlRiskCache("miss_stale");
+			return checkAndStore(urlHash, url);
+		}
+
+		metrics.recordUrlRiskCache("hit");
+		return verification.toAssessment();
 	}
 
 	private UrlRiskAssessment checkAndStore(String urlHash, String url) {
