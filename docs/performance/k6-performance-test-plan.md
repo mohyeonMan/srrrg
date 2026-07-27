@@ -3,6 +3,8 @@
 ## 1. 목적
 
 이 문서는 srrrg의 성능 테스트를 수행하기 전에 추가할 애플리케이션 메트릭과 k6 테스트 시나리오를 정의한다.
+실제 준비와 실행 순서는
+[`performance-test-checklist.md`](./performance-test-checklist.md)를 따른다.
 
 성능 테스트에서는 다음 질문에 답할 수 있어야 한다.
 
@@ -35,6 +37,10 @@
 
 요청마다 달라질 수 있는 값을 label로 사용하면 Prometheus 시계열 수가 지속적으로 증가한다. 모든 label은 미리 정해진 제한된 값만 가져야 한다.
 
+Timer의 p50, p95와 p99는 각 Pod에서 미리 계산하지 않는다. 각 Pod는 percentile histogram bucket을 노출하고,
+Prometheus가 모든 Pod의 bucket을 합산한 뒤 `histogram_quantile()`로 전체 서비스의 percentile을 계산한다.
+병목과 부하 편중을 확인하기 위한 Pod별 percentile도 같은 histogram에서 별도로 계산한다.
+
 ## 3. 적용 예정 애플리케이션 메트릭
 
 ### 3.1 리다이렉트
@@ -65,7 +71,7 @@
 
 | Label | 값 |
 |---|---|
-| `outcome` | `created`, `invalid`, `threat`, `check_failed`, `conflict`, `error` |
+| `outcome` | `created`, `invalid`, `threat`, `check_failed`, `error` |
 
 측정 범위에는 다음 작업을 포함한다.
 
@@ -77,6 +83,16 @@
 
 이 메트릭으로 링크 생성 처리량과 외부 검사 및 BCrypt 연산을 포함한 전체 지연 시간을 확인한다.
 
+링크 코드 충돌은 내부에서 재시도되므로 링크 생성 outcome과 별도로 측정한다.
+
+#### `srrrg.link.code_generation`
+
+링크 코드 생성 충돌과 재시도 소진을 기록하는 Counter다.
+
+| Label | 값 |
+|---|---|
+| `outcome` | `collision`, `exhausted` |
+
 ### 3.3 URL 위험 검증 캐시
 
 #### `srrrg.url_risk.cache`
@@ -85,15 +101,15 @@ URL 검증 캐시 조회 결과를 기록하는 Counter다.
 
 | Label | 값 |
 |---|---|
-| `result` | `hit`, `miss` |
+| `result` | `hit`, `miss_absent`, `miss_stale` |
 
 캐시 효율은 다음과 같이 계산한다.
 
 ```text
-cache hit ratio = hit / (hit + miss)
+cache hit ratio = hit / (hit + miss_absent + miss_stale)
 ```
 
-Warm-cache와 Cold-cache 테스트가 의도한 상태로 수행됐는지 확인하는 기준으로도 사용한다.
+Warm-cache와 Cold-cache 테스트가 의도한 상태로 수행됐는지 확인하고, 데이터 부재와 만료로 인한 miss를 구분하는 기준으로도 사용한다.
 
 ### 3.4 URL 위험 검사
 
@@ -104,7 +120,7 @@ Warm-cache와 Cold-cache 테스트가 의도한 상태로 수행됐는지 확인
 | Label | 값 |
 |---|---|
 | `provider` | `google`, `fixed_safe` |
-| `outcome` | `safe`, `threat`, `timeout`, `error` |
+| `outcome` | `safe`, `threat`, `timeout`, `invalid_response`, `not_configured`, `error` |
 
 다음 항목을 확인한다.
 
@@ -119,18 +135,20 @@ check ratio = URL 위험 검사 호출 수 / cache miss 수
 
 `google` provider에서는 실제 Safe Browsing 외부 호출 시간을 나타내고, `fixed_safe` provider에서는 설정한 검사 지연 시간을 나타낸다.
 
-### 3.5 이벤트 저장
+### 3.5 리다이렉트 쓰기 트랜잭션
 
-#### `srrrg.event.persist`
+#### `srrrg.redirect.write`
 
-클릭 및 리다이렉트 이벤트의 DB 저장 시간을 측정하는 Timer다.
+클릭 및 리다이렉트 쓰기 트랜잭션 전체 시간을 측정하는 Timer다.
 
 | Label | 값 |
 |---|---|
 | `type` | `click`, `redirect` |
 | `outcome` | `success`, `error` |
 
-이 메트릭은 부하 증가 시 이벤트 테이블 insert와 카운터 update가 리다이렉트 지연의 병목인지 확인하는 데 사용한다.
+측정 범위에는 이벤트 테이블 insert, 링크 counter update, flush와 transaction commit을 포함한다.
+JPA `save()` 호출만 측정하면 실제 SQL 실행과 commit 시간이 빠질 수 있으므로 `TransactionTemplate` 실행 전체를 측정한다.
+이 메트릭은 부하 증가 시 DB 쓰기가 리다이렉트 지연의 병목인지 확인하는 데 사용한다.
 
 ## 4. 함께 확인할 런타임 메트릭
 
@@ -145,7 +163,15 @@ check ratio = URL 위험 검사 호출 수 / cache miss 수
 
 URI는 실제 단축 코드가 아니라 `/{code}`와 같은 route template으로 집계되어야 한다.
 
-### 4.2 JDBC connection pool
+### 4.2 Servlet thread pool
+
+- current thread
+- busy thread
+- configured maximum thread
+
+HTTP 지연이 증가할 때 요청 처리 thread가 먼저 포화됐는지 확인한다.
+
+### 4.3 JDBC connection pool
 
 - active connection
 - idle connection
@@ -156,7 +182,11 @@ URI는 실제 단축 코드가 아니라 `/{code}`와 같은 route template으�
 
 정상 부하에서는 pending connection이 지속적으로 발생하지 않아야 하며 connection timeout은 없어야 한다.
 
-### 4.3 JVM 및 컨테이너
+성능 테스트에서는 HikariCP 설정을 기본값에 맡기지 않고 명시한다. 초기에는 replica당
+`maximum-pool-size=10`, `minimum-idle=10`, `connection-timeout=2s`로 시작한다.
+전체 connection 상한은 `replica 수 × maximum-pool-size`로 계산하고 PostgreSQL 관리자 및 exporter connection을 위한 여유를 둔다.
+
+### 4.4 JVM 및 컨테이너
 
 - JVM heap 사용량
 - Process RSS 메모리
@@ -166,7 +196,7 @@ URI는 실제 단축 코드가 아니라 `/{code}`와 같은 route template으�
 - Pod restart 및 OOMKill
 - Pod별 네트워크 송수신량
 
-### 4.4 PostgreSQL
+### 4.5 PostgreSQL
 
 - 현재 및 최대 connection 수
 - transaction 처리량
@@ -174,6 +204,34 @@ URI는 실제 단축 코드가 아니라 `/{code}`와 같은 route template으�
 - query 및 transaction 지연
 - CPU 및 메모리 사용량
 - 디스크 I/O latency 및 사용량
+
+DB 전체 상태의 시계열은 postgres_exporter로 수집하고, SQL별 호출 수와 실행 시간은 `pg_stat_statements`로 확인한다.
+`pg_stat_statements`는 `shared_preload_libraries`, `compute_query_id`와 `track_io_timing`을 명시하고 PostgreSQL을 재시작한 뒤
+각 대상 DB에 extension을 생성한다. 테스트마다 공유 통계를 초기화하기보다 테스트 전후 snapshot 차이를 비교한다.
+
+### 4.6 Histogram과 수집 주기
+
+다음 Timer에는 percentile histogram, 예상 최소·최대값과 판정용 SLO bucket을 설정한다.
+
+- `http.server.requests`
+- `srrrg.redirect`
+- `srrrg.redirect.write`
+- `srrrg.link.create`
+- `srrrg.url.risk.check`
+
+각 Pod가 percentile을 직접 계산해 노출하는 client-side `percentiles` 설정은 사용하지 않는다.
+Prometheus의 집계 가능한 histogram을 사용하며 `/actuator/prometheus`에서 `_bucket`, `_count`, `_sum`이 노출되는지 확인한다.
+
+권장 scrape 설정은 다음과 같다.
+
+| 대상 | interval | timeout |
+|---|---:|---:|
+| dev 성능 테스트 애플리케이션 | 5초 | 3초 |
+| 운영 애플리케이션 | 10초 | 3초 |
+| postgres_exporter | 10초 | 5초 |
+
+30초 주기는 짧은 spike, HikariCP pending connection과 thread pool 포화를 놓칠 수 있으므로 성능 테스트에는 사용하지 않는다.
+5초 scrape에서는 30초~2분, 10초 scrape에서는 1~5분의 PromQL rate 구간을 사용한다.
 
 ## 5. 메트릭 확인 방법
 
@@ -186,6 +244,9 @@ URI는 실제 단축 코드가 아니라 `/{code}`와 같은 route template으�
 - 테스트에 사용할 delay와 cache duration이 의도한 값으로 설정됐는가?
 - 테스트 데이터와 Safe Browsing 캐시 상태가 시나리오 조건과 일치하는가?
 - 각 replica에서 요청 메트릭이 수집되는가?
+- 모든 커스텀 Timer의 histogram bucket이 노출되는가?
+- postgres_exporter와 `pg_stat_statements`가 준비됐는가?
+- Grafana 성능 테스트 대시보드에 전체 집계와 Pod별 지표가 표시되는가?
 - PostgreSQL과 애플리케이션의 초기 CPU 및 메모리 사용량이 안정됐는가?
 - 이전 테스트의 이벤트와 캐시가 이번 테스트 결과에 영향을 주지 않는가?
 
@@ -195,7 +256,7 @@ k6 결과와 서버 메트릭의 시간을 맞춰 다음 관계를 확인한다.
 
 | k6 관측값 | 함께 확인할 서버 메트릭 |
 |---|---|
-| p95, p99 증가 | 리다이렉트·생성 Timer, URL 위험 검사, DB connection 획득 시간 |
+| p95, p99 증가 | 리다이렉트·쓰기·생성 Timer, URL 위험 검사, DB connection 획득 시간 |
 | 요청 실패 증가 | HTTP status, 업무 outcome, 외부 API 오류, DB 저장 오류 |
 | 처리량 정체 | CPU throttling, connection pending, PostgreSQL I/O, 외부 API latency |
 | replica 간 처리량 차이 | Pod별 요청 수, CPU, readiness |
@@ -216,6 +277,24 @@ k6 결과와 서버 메트릭의 시간을 맞춰 다음 관계를 확인한다.
 - URL 위험 검증 cache hit ratio
 - provider별 URL 위험 검사 수
 - Pod별 요청 분배
+- PostgreSQL 상위 SQL의 호출 수와 실행 시간 변화
+
+### 5.4 Grafana 대시보드
+
+성능 테스트 전에 다음 패널을 포함한 전용 대시보드를 만든다.
+
+- 전체 및 endpoint별 RPS, 오류율과 p50, p95, p99
+- srrrg 커스텀 Timer의 p95와 p99
+- URL 위험 검증 cache hit ratio와 provider별 검사 지연
+- Pod별 RPS, p95, CPU, CPU throttling, 메모리와 restart
+- JVM heap, GC pause와 Servlet busy thread
+- HikariCP active, idle, pending, max와 timeout
+- PostgreSQL connection, transaction, lock, deadlock, cache와 I/O
+
+전체 서비스 percentile은 모든 Pod의 histogram bucket을 합산해 계산한다.
+Pod별 패널은 요청 편중과 특정 Pod의 이상을 진단하기 위해 함께 유지한다.
+낮은 부하의 기본 검증에서 Grafana 전체 요청 수가 Pod별 요청 수 합계 및 k6 요청 수와 일치하는지 확인한 뒤 본 테스트를 실행한다.
+테스트 구간은 annotation 또는 실행 시각으로 식별하고 대시보드 JSON이나 provisioning 파일을 버전 관리한다.
 
 ## 6. 성능 테스트용 URL 위험 검사 설정
 
@@ -269,7 +348,7 @@ delay는 외부 검사로 인해 요청 처리가 대기하는 시간을 재현�
 
 - `srrrg.redirect`의 p95와 p99
 - 초당 리다이렉트 수
-- 클릭 및 리다이렉트 이벤트 저장 시간
+- `srrrg.redirect.write`의 click 및 redirect 트랜잭션 시간
 - active 및 pending DB connection
 - PostgreSQL I/O
 - Pod CPU와 CPU throttling
@@ -284,7 +363,7 @@ delay는 외부 검사로 인해 요청 처리가 대기하는 시간을 재현�
 
 주요 확인 항목:
 
-- `srrrg.url_risk.cache{result="miss"}`
+- `srrrg.url_risk.cache{result=~"miss_absent|miss_stale"}`
 - `srrrg.url_risk.check{provider="fixed_safe"}`의 호출 수와 지연
 - `srrrg.redirect`에서 URL 위험 검사가 차지하는 지연
 
@@ -300,6 +379,7 @@ delay는 외부 검사로 인해 요청 처리가 대기하는 시간을 재현�
 
 - cache miss 수
 - URL 위험 검사 수
+- URL 위험 검사 수 / 고유 cold URL 수로 계산한 중복 검사 배수
 - replica 수에 따른 외부 호출 증가량
 - URL 검증 캐시 저장 오류와 DB lock wait
 - 요청별 p95와 p99
@@ -317,7 +397,8 @@ delay는 외부 검사로 인해 요청 처리가 대기하는 시간을 재현�
 주요 확인 항목:
 
 - `srrrg.link.create`의 p95와 p99
-- `created`, `conflict`, `check_failed`, `error` 비율
+- `created`, `check_failed`, `error` 비율
+- 링크 코드 생성 collision 및 exhausted 수
 - URL 위험 검증 cache hit ratio
 - URL 위험 검사 수
 - CPU 사용량
@@ -341,7 +422,7 @@ delay는 외부 검사로 인해 요청 처리가 대기하는 시간을 재현�
 - 전체 및 endpoint별 실패율
 - DB connection pool
 - PostgreSQL I/O와 lock wait
-- 이벤트 저장 지연
+- 리다이렉트 쓰기 트랜잭션 지연
 - Pod별 요청 분배
 
 ### 7.7 Spike
@@ -428,8 +509,10 @@ Cold-cache와 링크 생성 지연은 URL 위험 검사 시간에 크게 영향�
 - 배포 환경
 - replica 수
 - Pod resource request와 limit
-- JVM 및 connection pool 설정
+- JVM 설정
 - PostgreSQL 설정
+- HikariCP 설정
+- Prometheus scrape interval과 timeout
 - k6 시나리오와 script 버전
 - VU 또는 arrival rate 단계
 - 테스트 데이터 수와 캐시 상태
@@ -437,6 +520,8 @@ Cold-cache와 링크 생성 지연은 URL 위험 검사 시간에 크게 영향�
 - HTTP 및 업무 오류율
 - 최대 CPU, 메모리와 DB connection
 - URL 위험 검증 cache hit ratio와 provider별 검사 수
+- PostgreSQL 상위 SQL의 호출 수와 실행 시간 변화
+- 사용한 Grafana 대시보드 버전 또는 링크
 - 이전 실행 대비 변화와 결론
 
 테스트 결과는 평균값 하나로 합치지 않고 시나리오와 부하 단계별로 구분해 기록한다.
