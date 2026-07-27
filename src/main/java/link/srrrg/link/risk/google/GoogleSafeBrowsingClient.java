@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.time.Instant;
 
 import org.springframework.http.MediaType;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
@@ -14,6 +15,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import link.srrrg.link.risk.RiskVerdict;
 import link.srrrg.link.risk.UrlRiskAssessment;
+import link.srrrg.link.risk.UrlRiskChecker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -21,15 +23,22 @@ import lombok.extern.slf4j.Slf4j;
  * Google Safe Browsing v5로 URL을 검사한다. 통신 또는 응답 처리 실패는 UNKNOWN으로 반환한다.
  */
 @Component
+@ConditionalOnProperty(
+		prefix = "srrrg.url-risk",
+		name = "provider",
+		havingValue = "google",
+		matchIfMissing = true
+)
 @RequiredArgsConstructor
 @Slf4j
-public class GoogleSafeBrowsingClient {
+public class GoogleSafeBrowsingClient implements UrlRiskChecker {
 
 	private static final MediaType PROTOBUF_MEDIA_TYPE = MediaType.parseMediaType("application/x-protobuf");
 
 	private final RestClient restClient;
 	private final GoogleSafeBrowsingProperties properties;
 
+	@Override
 	public UrlRiskAssessment check(String url) {
 		Instant verifiedAt = Instant.now();
 		String urlHost = hostOf(url);

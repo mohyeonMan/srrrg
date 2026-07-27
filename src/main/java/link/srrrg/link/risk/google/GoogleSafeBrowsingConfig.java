@@ -3,6 +3,7 @@ package link.srrrg.link.risk.google;
 import java.net.URI;
 import java.net.http.HttpClient;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -12,6 +13,12 @@ import org.springframework.web.client.RestClient;
 import lombok.extern.slf4j.Slf4j;
 
 @Configuration
+@ConditionalOnProperty(
+		prefix = "srrrg.url-risk",
+		name = "provider",
+		havingValue = "google",
+		matchIfMissing = true
+)
 @EnableConfigurationProperties(GoogleSafeBrowsingProperties.class)
 @Slf4j
 class GoogleSafeBrowsingConfig {

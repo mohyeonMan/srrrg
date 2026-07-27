@@ -22,6 +22,11 @@ spring:
 srrrg:
   base-url: ${SRRRG_BASE_URL:https://srrrg.link}
   trust-forwarded-headers: ${SRRRG_TRUST_FORWARDED_HEADERS:false}
+  url-risk:
+    provider: ${SRRRG_URL_RISK_PROVIDER:google}
+    fixed-safe:
+      delay: ${SRRRG_URL_RISK_FIXED_SAFE_DELAY:0ms}
+      cache-duration: ${SRRRG_URL_RISK_FIXED_SAFE_CACHE_DURATION:5m}
   safe-browsing:
     api-key: ${GOOGLE_SAFE_BROWSING_API_KEY:}
     endpoint: ${GOOGLE_SAFE_BROWSING_ENDPOINT:https://safebrowsing.googleapis.com/v5/urls:search}

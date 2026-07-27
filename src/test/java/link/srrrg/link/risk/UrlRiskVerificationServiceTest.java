@@ -12,12 +12,10 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
-import link.srrrg.link.risk.google.GoogleSafeBrowsingClient;
-
 class UrlRiskVerificationServiceTest {
 
 	private final UrlVerificationRepository repository = mock(UrlVerificationRepository.class);
-	private final GoogleSafeBrowsingClient client = mock(GoogleSafeBrowsingClient.class);
+	private final UrlRiskChecker client = mock(UrlRiskChecker.class);
 	private final UrlRiskVerificationService service = new UrlRiskVerificationService(repository, client);
 
 	@Test

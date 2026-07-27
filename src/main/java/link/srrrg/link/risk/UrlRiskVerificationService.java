@@ -8,7 +8,6 @@ import java.util.HexFormat;
 
 import org.springframework.stereotype.Service;
 
-import link.srrrg.link.risk.google.GoogleSafeBrowsingClient;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -21,7 +20,7 @@ import lombok.RequiredArgsConstructor;
 public class UrlRiskVerificationService {
 
 	private final UrlVerificationRepository repository;
-	private final GoogleSafeBrowsingClient safeBrowsingClient;
+	private final UrlRiskChecker urlRiskChecker;
 
 	public UrlRiskAssessment verify(String url) {
 		String urlHash = hash(url);
@@ -33,7 +32,7 @@ public class UrlRiskVerificationService {
 	}
 
 	private UrlRiskAssessment checkAndStore(String urlHash, String url) {
-		UrlRiskAssessment assessment = safeBrowsingClient.check(url);
+		UrlRiskAssessment assessment = urlRiskChecker.check(url);
 		if (assessment.isCacheable()) {
 			repository.saveIfNewer(
 					urlHash,
