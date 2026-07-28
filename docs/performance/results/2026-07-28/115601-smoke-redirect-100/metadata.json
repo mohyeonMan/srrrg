@@ -1,0 +1,10 @@
+{
+  "scenario": "smoke",
+  "startedAt": "2026-07-28T11:56:01+09:00",
+  "baseUrl": "https://jhhomehub.gonetis.com/srrrg-dev",
+  "redirectRequests": 100,
+  "commitSha": "353b8234783ac6b15aa17e099d85e0e9d06adc54",
+  "workingTreeDirty": true,
+  "exitCode": 0,
+  "analysisStatus": "complete"
+}

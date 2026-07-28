@@ -1,13 +1,18 @@
 param(
-    [string]$BaseUrl = 'https://jhhomehub.gonetis.com/srrrg-dev',
-    [ValidateRange(1, 100000)]
-    [int]$RedirectRequests = 20
+    [Parameter(Mandatory = $true)]
+    [ValidatePattern('^[a-z0-9-]+$')]
+    [string]$Scenario
 )
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+$scriptPath = Join-Path $PSScriptRoot "$Scenario.js"
+if (-not (Test-Path -LiteralPath $scriptPath)) {
+    throw "Performance script was not found: $scriptPath"
+}
+
 $startedAt = Get-Date
-$runName = '{0}-smoke-redirect-{1}' -f $startedAt.ToString('HHmmss'), $RedirectRequests
+$runName = '{0}-{1}' -f $startedAt.ToString('HHmmss'), $Scenario
 $resultDirectory = Join-Path $repoRoot ('docs\performance\results\{0}\{1}' -f $startedAt.ToString('yyyy-MM-dd'), $runName)
 $logPath = Join-Path $resultDirectory 'k6-output.log'
 $metadataPath = Join-Path $resultDirectory 'metadata.json'
@@ -28,27 +33,40 @@ $workingTreeDirty = [bool](& git -C $repoRoot status --porcelain)
 
 Push-Location $repoRoot
 try {
-    & $k6Executable run `
-        -e "BASE_URL=$BaseUrl" `
-        -e "SMOKE_REDIRECT_REQUESTS=$RedirectRequests" `
-        .\scripts\performance\smoke.js 2>&1 |
-        Tee-Object -FilePath $logPath
-    $exitCode = $LASTEXITCODE
+    # Windows PowerShell 5는 k6의 정상 stderr 로그도 NativeCommandError로 변환하므로 중단하지 않음.
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    $utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
+    $logWriter = New-Object System.IO.StreamWriter($logPath, $false, $utf8WithoutBom)
+    try {
+        # Tee-Object는 Windows PowerShell 5에서 UTF-16으로 저장하므로 직접 UTF-8 로그를 작성함.
+        & $k6Executable run $scriptPath 2>&1 | ForEach-Object {
+            $line = $_.ToString()
+            Write-Host $line
+            $logWriter.WriteLine($line)
+        }
+        $exitCode = $LASTEXITCODE
+    }
+    finally {
+        $logWriter.Dispose()
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
 }
 finally {
+    $ErrorActionPreference = $previousErrorActionPreference
     Pop-Location
 }
 
 $metadata = [ordered]@{
-    scenario = 'smoke'
+    scenario = $Scenario
     startedAt = $startedAt.ToString('o')
     finishedAt = (Get-Date).ToString('o')
-    baseUrl = $BaseUrl
-    redirectRequests = $RedirectRequests
+    script = $scriptPath
     commitSha = $commitSha
     workingTreeDirty = $workingTreeDirty
     k6Executable = $k6Executable
     exitCode = $exitCode
+    analysisStatus = 'pending'
 }
 $metadata | ConvertTo-Json | Set-Content -LiteralPath $metadataPath -Encoding UTF8
 

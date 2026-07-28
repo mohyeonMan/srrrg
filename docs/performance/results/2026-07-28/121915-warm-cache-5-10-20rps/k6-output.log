@@ -1,0 +1,18 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: .\scripts\performance\warm-cache.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 50 max VUs, 1m50s max duration (incl. graceful stop):
+              * warm_cache: Up to 20.00 iterations/s for 1m40s over 5 stages (maxVUs: 10-50, gracefulStop: 10s)
+
+
+Run          [ 100% ] setup()
+warm_cache   [   0% ]

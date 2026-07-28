@@ -35,24 +35,25 @@ k6 run scripts/performance/smoke.js
 Windows PowerShell:
 
 ```powershell
-.\scripts\performance\run-smoke.ps1 -RedirectRequests 100
+$env:SMOKE_REDIRECT_REQUESTS = '100'
+.\scripts\performance\run.ps1 -Scenario smoke
 ```
 
 macOS 또는 Linux:
 
 ```bash
-bash scripts/performance/run-smoke.sh --redirect-requests 100
+SMOKE_REDIRECT_REQUESTS=100 bash scripts/performance/run.sh smoke
 ```
 
 결과는 다음 규칙으로 저장한다.
 
 ```text
-docs/performance/results/YYYY-MM-DD/HHmmss-smoke-redirect-N/
+docs/performance/results/YYYY-MM-DD/HHmmss-smoke/
 ```
 
-두 래퍼는 동일하게 `k6-output.log`와 `metadata.json`을 자동 생성한다.
+공용 실행기는 `k6-output.log`와 `metadata.json`을 자동 생성한다.
 Prometheus 실행 전후 비교와
-판정은 같은 디렉터리에 `prometheus-result.json`과 `summary.md`로 추가한다.
+판정은 같은 디렉터리에 `prometheus-result.json`과 `analysis.md`로 추가한다.
 
 기본 대상은 dev 환경인 `https://jhhomehub.gonetis.com/srrrg-dev`다.
 대상과 redirect 요청 수는 환경 변수로 변경할 수 있다.

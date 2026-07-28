@@ -1,0 +1,13 @@
+{
+  "scenario": "warm-cache",
+  "startedAt": "2026-07-28T12:19:15+09:00",
+  "baseUrl": "https://jhhomehub.gonetis.com/srrrg-dev",
+  "rates": "5,10,20",
+  "stageDuration": "30s",
+  "rampDuration": "5s",
+  "dataLinks": 20,
+  "exitCode": 1,
+  "loadStarted": false,
+  "cleanupCompleted": true,
+  "analysisStatus": "complete"
+}

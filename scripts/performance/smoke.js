@@ -23,6 +23,10 @@ export const options = {
 };
 
 export function setup() {
+  console.log(
+    `test configuration: scenario=smoke, baseUrl=${BASE_URL}, redirectRequests=${REDIRECT_REQUESTS}`,
+  );
+
   // 실행마다 다른 URL을 사용해 링크 생성 시 cache miss와 risk check를 발생시킴.
   const runId = `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
   const separator = ORIGINAL_URL_BASE.includes('?') ? '&' : '?';

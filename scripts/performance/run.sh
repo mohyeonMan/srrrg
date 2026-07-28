@@ -2,28 +2,9 @@
 
 set -uo pipefail
 
-base_url="${BASE_URL:-https://jhhomehub.gonetis.com/srrrg-dev}"
-redirect_requests="${SMOKE_REDIRECT_REQUESTS:-20}"
-
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --base-url)
-      base_url="$2"
-      shift 2
-      ;;
-    --redirect-requests)
-      redirect_requests="$2"
-      shift 2
-      ;;
-    *)
-      echo "Unknown option: $1" >&2
-      exit 2
-      ;;
-  esac
-done
-
-if ! [[ "$redirect_requests" =~ ^[1-9][0-9]*$ ]]; then
-  echo "redirect requests must be a positive integer: $redirect_requests" >&2
+scenario="${1:-}"
+if ! [[ "$scenario" =~ ^[a-z0-9-]+$ ]]; then
+  echo "Usage: bash scripts/performance/run.sh <scenario>" >&2
   exit 2
 fi
 
@@ -33,9 +14,15 @@ if ! command -v k6 >/dev/null 2>&1; then
 fi
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+script_path="${repo_root}/scripts/performance/${scenario}.js"
+if [[ ! -f "$script_path" ]]; then
+  echo "Performance script was not found: $script_path" >&2
+  exit 2
+fi
+
 started_at="$(date '+%Y-%m-%dT%H:%M:%S%z')"
 date_path="$(date '+%Y-%m-%d')"
-run_name="$(date '+%H%M%S')-smoke-redirect-${redirect_requests}"
+run_name="$(date '+%H%M%S')-${scenario}"
 result_directory="${repo_root}/docs/performance/results/${date_path}/${run_name}"
 log_path="${result_directory}/k6-output.log"
 metadata_path="${result_directory}/metadata.json"
@@ -50,26 +37,22 @@ else
 fi
 
 set +e
-k6 run \
-  -e "BASE_URL=${base_url}" \
-  -e "SMOKE_REDIRECT_REQUESTS=${redirect_requests}" \
-  "${repo_root}/scripts/performance/smoke.js" 2>&1 |
-  tee "$log_path"
+k6 run "$script_path" 2>&1 | tee "$log_path"
 exit_code=${PIPESTATUS[0]}
 set -e
 
 finished_at="$(date '+%Y-%m-%dT%H:%M:%S%z')"
 cat >"$metadata_path" <<EOF
 {
-  "scenario": "smoke",
+  "scenario": "${scenario}",
   "startedAt": "${started_at}",
   "finishedAt": "${finished_at}",
-  "baseUrl": "${base_url}",
-  "redirectRequests": ${redirect_requests},
+  "script": "${script_path}",
   "commitSha": "${commit_sha}",
   "workingTreeDirty": ${working_tree_dirty},
   "k6Executable": "$(command -v k6)",
-  "exitCode": ${exit_code}
+  "exitCode": ${exit_code},
+  "analysisStatus": "pending"
 }
 EOF
 

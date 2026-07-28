@@ -1,5 +1,15 @@
 {
   "capturedAt": "2026-07-28T11:56:44+09:00",
+  "queryContext": {
+    "evaluationUnixTime": 1785207404.688,
+    "rateWindow": "5m",
+    "promql": {
+      "redirectQuantile": "1000 * histogram_quantile(QUANTILE, sum by (le) (rate(srrrg_redirect_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev.*\"}[5m])))",
+      "redirectWriteQuantile": "1000 * histogram_quantile(QUANTILE, sum by (le, type) (rate(srrrg_redirect_write_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev.*\"}[5m])))",
+      "http5xx": "sum(increase(http_server_requests_seconds_count{namespace=\"srrrg\",pod=~\"srrrg-dev.*\",status=~\"5..\"}[5m])) or vector(0)",
+      "hikariTimeout": "sum(hikaricp_connections_timeout_total{namespace=\"srrrg\",pod=~\"srrrg-dev.*\"}) or vector(0)"
+    }
+  },
   "window": {
     "before": {
       "httpPostLinks201": 1,
@@ -29,7 +39,17 @@
     }
   },
   "serverMetrics": {
+    "redirectP50Ms": 6.659234316659583,
     "redirectP95Ms": 67.108864,
+    "redirectP99Ms": 85.0045608,
+    "redirectWriteClickP50Ms": 2.3650877217280075,
+    "redirectWriteClickP95Ms": 15.379112,
+    "redirectWriteClickP99Ms": 67.108864,
+    "redirectWriteRedirectP50Ms": 2.268396157561925,
+    "redirectWriteRedirectP95Ms": 13.981011,
+    "redirectWriteRedirectP99Ms": 41.9430385,
+    "linkCreateP95Ms": 178.08216755434776,
+    "riskCheckP95Ms": 111.2557007,
     "http5xxLast5m": 0,
     "hikariTimeoutTotal": 0,
     "hikariActiveAfterRun": 0

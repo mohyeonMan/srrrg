@@ -98,7 +98,7 @@
 
 - [ ] 테스트 데이터 생성 및 정리 도구를 작성한다.
 - [ ] Baseline 시나리오를 작성한다.
-- [ ] Warm-cache redirect 시나리오를 작성한다.
+- [x] Warm-cache redirect 시나리오를 작성한다.
 - [ ] Cold-cache redirect 시나리오를 작성한다.
 - [ ] 시나리오별 arrival rate, 단계 시간과 테스트 데이터 수를 명시한다.
 - [ ] p95, p99와 예상하지 않은 오류율에 대한 k6 threshold를 정의한다.
@@ -118,6 +118,8 @@
 
 ## 11. 부하 테스트 실행
 
+- Warm-cache 단계별 테스트 실행 방법은
+  [`warm-cache-test.md`](./warm-cache-test.md)를 참고한다.
 - [ ] Warm-cache redirect의 최대 지속 처리량을 찾는다.
 - [ ] Cold-cache redirect를 실행한다.
 - [ ] Concurrent cold-cache로 동일 URL의 중복 검사 수준을 확인한다.

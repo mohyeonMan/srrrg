@@ -1,0 +1,85 @@
+{
+  "capturedAt": "2026-07-28T12:22:02+09:00",
+  "queryContext": {
+    "rateWindow": "20s",
+    "gaugeWindow": "30s",
+    "evaluationUnixTimes": {
+      "5rps": 1785208852,
+      "10rps": 1785208887,
+      "20rps": 1785208922
+    },
+    "promql": {
+      "actualRps": "sum(rate(srrrg_redirect_seconds_count{namespace=\"srrrg\",pod=~\"srrrg-dev.*\",outcome=\"redirected\"}[20s]))",
+      "redirectQuantile": "1000 * histogram_quantile(QUANTILE, sum by (le) (rate(srrrg_redirect_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev.*\"}[20s])))",
+      "redirectWriteP95": "1000 * histogram_quantile(0.95, sum by (le, type) (rate(srrrg_redirect_write_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev.*\"}[20s])))",
+      "hikariPendingMax": "max(max_over_time(hikaricp_connections_pending{namespace=\"srrrg\",pod=~\"srrrg-dev.*\"}[30s]))",
+      "tomcatBusyMax": "max(max_over_time(tomcat_threads_busy_threads{namespace=\"srrrg\",pod=~\"srrrg-dev.*\"}[30s]))",
+      "appCpu": "sum(rate(container_cpu_usage_seconds_total{namespace=\"srrrg\",pod=~\"srrrg-dev.*\",container=~\"srrrg-.*\",image!=\"\"}[20s]))",
+      "postgresConnections": "pg_stat_database_numbackends{namespace=\"postgres\",datname=\"srrrg-dev\"}",
+      "postgresCommits": "rate(pg_stat_database_xact_commit{namespace=\"postgres\",datname=\"srrrg-dev\"}[20s])",
+      "http5xx": "sum(rate(http_server_requests_seconds_count{namespace=\"srrrg\",pod=~\"srrrg-dev.*\",status=~\"5..\"}[20s])) or vector(0)"
+    }
+  },
+  "stages": [
+    {
+      "targetRps": 5,
+      "actualRps": 5,
+      "redirectP50Ms": 8.675834198509312,
+      "redirectP95Ms": 10.0740505625,
+      "redirectP99Ms": 10.962657312500001,
+      "clickWriteP95Ms": 4.815361333333334,
+      "redirectWriteP95Ms": 3.0692674062500003,
+      "hikariActiveMaxObserved": 0,
+      "hikariPendingMaxObserved": 0,
+      "tomcatBusyMaxObserved": 1,
+      "postgresConnections": 10,
+      "postgresCommitsPerSecond": 18.5,
+      "postgresLocks": 0,
+      "http5xxPerSecond": 0
+    },
+    {
+      "targetRps": 10,
+      "actualRps": 10,
+      "redirectP50Ms": 5.012287047374154,
+      "redirectP95Ms": 7.252649937499998,
+      "redirectP99Ms": 8.3012256875,
+      "clickWriteP95Ms": 3.241845374999997,
+      "redirectWriteP95Ms": 2.2719135,
+      "hikariActiveMaxObserved": 1,
+      "hikariPendingMaxObserved": 0,
+      "tomcatBusyMaxObserved": 2,
+      "postgresConnections": 10,
+      "postgresCommitsPerSecond": 40.800000000000004,
+      "postgresLocks": 0,
+      "http5xxPerSecond": 0
+    },
+    {
+      "targetRps": 20,
+      "actualRps": 20,
+      "redirectP50Ms": 3.907511794871795,
+      "redirectP95Ms": 5.71950509090909,
+      "redirectP99Ms": 9.786707999999999,
+      "clickWriteP95Ms": 2.446676,
+      "redirectWriteP95Ms": 1.725076,
+      "hikariActiveMaxObserved": 0,
+      "hikariPendingMaxObserved": 0,
+      "tomcatBusyMaxObserved": 1,
+      "appCpuCoresObserved": 0.2920251000000001,
+      "appMemoryMiBObserved": 329.98046875,
+      "postgresConnections": 10,
+      "postgresCommitsPerSecond": 74.9,
+      "postgresLocks": {
+        "rowExclusive": 3,
+        "rowShare": 1
+      },
+      "postgresDeadlocksLast5m": 0,
+      "http5xxPerSecond": 0
+    }
+  ],
+  "targets": {
+    "redirectIterations": 1162,
+    "droppedIterations": 0,
+    "httpFailures": 0,
+    "podRestarts": 0
+  }
+}
