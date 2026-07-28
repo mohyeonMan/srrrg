@@ -1,0 +1,42 @@
+{
+  "capturedAt": "2026-07-28T11:56:44+09:00",
+  "window": {
+    "before": {
+      "httpPostLinks201": 1,
+      "httpGetManagement200": 1,
+      "httpGetRedirect302": 20,
+      "httpDeleteLink200": 1,
+      "linkCreateCreated": 1,
+      "riskCacheMissAbsent": 1,
+      "riskCheckFixedSafeSafe": 1,
+      "riskCacheHit": 20,
+      "redirectRedirected": 20,
+      "redirectWriteClickSuccess": 20,
+      "redirectWriteRedirectSuccess": 20
+    },
+    "after": {
+      "httpPostLinks201": 2,
+      "httpGetManagement200": 2,
+      "httpGetRedirect302": 120,
+      "httpDeleteLink200": 2,
+      "linkCreateCreated": 2,
+      "riskCacheMissAbsent": 2,
+      "riskCheckFixedSafeSafe": 2,
+      "riskCacheHit": 120,
+      "redirectRedirected": 120,
+      "redirectWriteClickSuccess": 120,
+      "redirectWriteRedirectSuccess": 120
+    }
+  },
+  "serverMetrics": {
+    "redirectP95Ms": 67.108864,
+    "http5xxLast5m": 0,
+    "hikariTimeoutTotal": 0,
+    "hikariActiveAfterRun": 0
+  },
+  "targets": {
+    "srrrgDev": 1,
+    "srrrgProd": 1,
+    "postgres": 1
+  }
+}

@@ -106,6 +106,8 @@
 
 ## 10. 기본 검증
 
+- 실행 방법과 예상 메트릭 증가량은
+  [`smoke-test.md`](./smoke-test.md)를 참고한다.
 - [ ] URL 위험 검사 provider를 `fixed-safe`로 설정한다.
 - [ ] 순수 애플리케이션 및 DB 성능 확인은 delay `0ms`로 시작한다.
 - [ ] VU 1로 Baseline을 실행한다.

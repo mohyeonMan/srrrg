@@ -1,0 +1,30 @@
+execution: local
+script: .\scripts\performance\smoke.js
+scenario: smoke, 1 VU, 1 shared iteration
+
+time="2026-07-28T11:56:01+09:00" level=info msg="test link created: code=SDc6zc, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/SDc6zc, secretKey=srrrg_sk_KXVVgQH2BgkSeBHaByLwNyG7sDN-uISB0e8WEhWvBAb"
+
+THRESHOLDS
+checks: rate==1, actual=100.00%, passed
+http_req_failed: rate==0, actual=0.00%, passed
+
+TOTAL RESULTS
+checks_total: 208
+checks_succeeded: 208
+checks_failed: 0
+
+HTTP
+http_req_duration: avg=27.62ms min=10.94ms med=14.75ms max=191.38ms p(90)=62.94ms p(95)=87.02ms
+http_req_failed: 0.00%, 0 out of 103
+http_reqs: 103, 32.134735/s
+
+EXECUTION
+iteration_duration: 2.58s
+iterations: 1
+vus_max: 1
+
+NETWORK
+data_received: 24 kB
+data_sent: 9.3 kB
+
+exit_code: 0
