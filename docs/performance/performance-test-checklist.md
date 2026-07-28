@@ -26,20 +26,23 @@
 - [x] Timer별 `minimum-expected-value`와 `maximum-expected-value`를 설정한다.
 - [x] 100ms, 250ms, 500ms 등 판정에 사용할 SLO bucket을 설정한다.
 - [x] 각 Pod가 p50, p95, p99를 직접 계산하는 client-side `percentiles` 설정은 사용하지 않는다.
-- [ ] Prometheus의 `histogram_quantile()`로 전체 Pod를 합산한 p50, p95, p99를 계산한다.
-- [ ] `/actuator/prometheus`에 각 Timer의 `_bucket`, `_count`, `_sum`이 노출되는지 확인한다.
+- [x] Prometheus의 `histogram_quantile()`로 전체 Pod를 합산한 p50, p95, p99를 계산한다.
+- [x] `/actuator/prometheus`에 각 Timer의 `_bucket`, `_count`, `_sum`이 노출되는지 확인한다.
 
 ## 4. JDBC connection pool 설정 고정
 
 - [x] HikariCP `maximum-pool-size`를 명시한다.
 - [x] HikariCP `minimum-idle`을 명시한다.
 - [x] `connection-timeout`과 `validation-timeout`을 명시한다.
-- [ ] `replica 수 × maximum-pool-size`로 애플리케이션의 최대 DB connection 수를 계산한다.
-- [ ] exporter, 관리자 접속과 다른 애플리케이션을 고려해 PostgreSQL connection에 20~30% 여유를 둔다.
-- [ ] 성능 테스트 결과에 실제 HikariCP 설정값을 기록한다.
+- [x] `replica 수 × maximum-pool-size`로 애플리케이션의 최대 DB connection 수를 계산한다.
+- [x] exporter, 관리자 접속과 다른 애플리케이션을 고려해 PostgreSQL connection에 20~30% 여유를 둔다.
+- [x] 성능 테스트 결과에 실제 HikariCP 설정값을 기록한다.
 
 초기값은 replica당 `maximum-pool-size=10`, `minimum-idle=10`,
 `connection-timeout=2s`로 시작하고 테스트 결과에 따라 조정한다.
+현재 dev 1개와 prod 1개 replica의 애플리케이션 connection 상한은 합계 20개다.
+PostgreSQL `max_connections=100`에서 exporter와 관리자 접속을 포함해 30% 이상의
+여유를 확보한다.
 
 ## 5. Prometheus 수집 주기 설정
 
@@ -48,8 +51,8 @@
 - [x] postgres_exporter의 scrape interval을 10초로 설정한다.
 - [x] 애플리케이션 scrape timeout을 3초로 설정한다.
 - [x] postgres_exporter scrape timeout을 5초로 설정한다.
-- [ ] Prometheus Targets 화면에서 모든 Pod와 exporter가 정상 수집되는지 확인한다.
-- [ ] 5초 scrape에서는 30초~2분, 10초 scrape에서는 1~5분의 PromQL rate 구간을 사용한다.
+- [x] Prometheus Targets 화면에서 모든 Pod와 exporter가 정상 수집되는지 확인한다.
+- [x] 5초 scrape에서는 30초~2분, 10초 scrape에서는 1~5분의 PromQL rate 구간을 사용한다.
 
 ## 6. PostgreSQL 통계 구성
 
@@ -57,8 +60,8 @@
 - [x] `compute_query_id=on`을 설정한다.
 - [x] `track_io_timing=on`을 설정한다.
 - [x] `pg_stat_statements.max`와 `pg_stat_statements.track`을 명시한다.
-- [ ] 설정 변경 후 PostgreSQL을 재시작한다.
-- [ ] `postgres`, `srrrg-dev`, `srrrg-prod` DB에 `pg_stat_statements` extension을 생성한다.
+- [x] 설정 변경 후 PostgreSQL을 재시작한다.
+- [x] `postgres`, `srrrg-dev`, `srrrg-prod` DB에 `pg_stat_statements` extension을 생성한다.
 - [x] 기존 PVC에서는 `/docker-entrypoint-initdb.d`가 재실행되지 않는 점을 고려해 일회성 Job 또는 관리자 작업으로 extension을 생성한다.
 - [ ] 테스트 전후 `pg_stat_statements` snapshot을 저장하고 차이를 비교한다.
 - [ ] 공유 인스턴스 전체 통계를 무심코 초기화하지 않도록 `pg_stat_statements_reset()` 사용을 제한한다.
@@ -71,7 +74,7 @@
 - [x] `postgres` namespace에 exporter Deployment 또는 PostgreSQL sidecar를 추가한다.
 - [x] exporter의 9187 포트를 노출하는 Service를 추가한다.
 - [x] exporter ServiceMonitor를 추가한다.
-- [ ] connection, transaction, lock, table, cache와 I/O 관련 metric이 수집되는지 확인한다.
+- [x] connection, transaction, lock, table, cache와 I/O 관련 metric이 수집되는지 확인한다.
 - [x] 초기에는 `pg_stat_statements` exporter collector와 SQL 전문 label을 사용하지 않는다.
 - [ ] SQL별 시계열이 필요해지면 query 수를 제한해 `stat_statements` collector를 추가한다.
 
@@ -96,25 +99,25 @@
 
 ## 9. k6 기본 스크립트 작성
 
-- [ ] 테스트 데이터 생성 및 정리 도구를 작성한다.
+- [x] 테스트 데이터 생성 및 정리 도구를 작성한다.
 - [ ] Baseline 시나리오를 작성한다.
 - [x] Warm-cache redirect 시나리오를 작성한다.
 - [ ] Cold-cache redirect 시나리오를 작성한다.
-- [ ] 시나리오별 arrival rate, 단계 시간과 테스트 데이터 수를 명시한다.
-- [ ] p95, p99와 예상하지 않은 오류율에 대한 k6 threshold를 정의한다.
-- [ ] 실행 일시, commit SHA, 환경 설정과 결과를 함께 저장한다.
+- [x] 시나리오별 arrival rate, 단계 시간과 테스트 데이터 수를 명시한다.
+- [x] p95, p99와 예상하지 않은 오류율에 대한 k6 threshold를 정의한다.
+- [x] 실행 일시, commit SHA, 환경 설정과 결과를 함께 저장한다.
 
 ## 10. 기본 검증
 
 - 실행 방법과 예상 메트릭 증가량은
   [`smoke-test.md`](./smoke-test.md)를 참고한다.
-- [ ] URL 위험 검사 provider를 `fixed-safe`로 설정한다.
+- [x] URL 위험 검사 provider를 `fixed-safe`로 설정한다.
 - [ ] 순수 애플리케이션 및 DB 성능 확인은 delay `0ms`로 시작한다.
 - [ ] VU 1로 Baseline을 실행한다.
-- [ ] k6 요청 수와 Prometheus HTTP 요청 증가량이 일치하는지 확인한다.
+- [x] k6 요청 수와 Prometheus HTTP 요청 증가량이 일치하는지 확인한다.
 - [ ] Warm-cache에서 cache hit가, Cold-cache에서 cache miss가 의도대로 발생하는지 확인한다.
-- [ ] Grafana에서 p95, p99, 오류율과 자원 지표가 테스트 시간대에 표시되는지 확인한다.
-- [ ] HikariCP와 PostgreSQL connection 수가 설정값과 일치하는지 확인한다.
+- [x] Grafana에서 p95, p99, 오류율과 자원 지표가 테스트 시간대에 표시되는지 확인한다.
+- [x] HikariCP와 PostgreSQL connection 수가 설정값과 일치하는지 확인한다.
 
 ## 11. 부하 테스트 실행
 
@@ -131,11 +134,11 @@
 
 ## 12. 결과 판정 및 기록
 
-- [ ] 부하 단계별 RPS, p50, p95, p99와 오류율을 기록한다.
-- [ ] 최대 CPU, 메모리, CPU throttling과 GC pause를 기록한다.
-- [ ] HikariCP 최대 active 및 pending connection과 timeout 수를 기록한다.
+- [x] 부하 단계별 RPS, p50, p95, p99와 오류율을 기록한다.
+- [x] 최대 CPU, 메모리, CPU throttling과 GC pause를 기록한다.
+- [x] HikariCP 최대 active 및 pending connection과 timeout 수를 기록한다.
 - [ ] PostgreSQL lock, I/O와 상위 SQL의 실행 시간 변화를 기록한다.
-- [ ] cache hit ratio와 URL 위험 검사 중복 호출 수를 기록한다.
+- [x] cache hit ratio와 URL 위험 검사 중복 호출 수를 기록한다.
 - [ ] Pod별 요청 분배와 replica 확장 효율을 기록한다.
 - [ ] 기준을 초과한 최초 부하 단계와 병목 원인을 기록한다.
 - [ ] 개선 전후 테스트는 동일한 설정과 데이터로 다시 실행한다.

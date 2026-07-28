@@ -7,6 +7,8 @@ const BASE_URL = (__ENV.BASE_URL || 'https://jhhomehub.gonetis.com/srrrg-dev').r
 const RATES = parseRates(__ENV.WARM_RATES || '5,10,20');
 const STAGE_DURATION = __ENV.WARM_STAGE_DURATION || '30s';
 const RAMP_DURATION = __ENV.WARM_RAMP_DURATION || '5s';
+const WARMUP_RATE = parsePositiveInteger(__ENV.WARMUP_RATE || '10', 'WARMUP_RATE');
+const WARMUP_DURATION = __ENV.WARMUP_DURATION || '30s';
 const DATA_LINKS = parsePositiveInteger(__ENV.WARM_DATA_LINKS || '20', 'WARM_DATA_LINKS');
 const SLOW_REQUEST_THRESHOLD_MS = parsePositiveInteger(
   __ENV.WARM_SLOW_REQUEST_THRESHOLD_MS || '250',
@@ -22,6 +24,8 @@ const MAX_VUS = parsePositiveInteger(
   __ENV.WARM_MAX_VUS || String(Math.max(PRE_ALLOCATED_VUS, MAX_RATE * 4)),
   'WARM_MAX_VUS',
 );
+const WARMUP_PRE_ALLOCATED_VUS = Math.max(10, WARMUP_RATE * 2);
+const WARMUP_MAX_VUS = Math.max(WARMUP_PRE_ALLOCATED_VUS, WARMUP_RATE * 4);
 
 // 느린 요청이 어느 네트워크 구간에서 지연됐는지 결과 요약에 남김.
 const redirectBlocked = new Trend('redirect_client_blocked', true);
@@ -46,8 +50,20 @@ export const options = {
   setupTimeout: '2m',
   teardownTimeout: '2m',
   scenarios: {
+    warmup: {
+      executor: 'constant-arrival-rate',
+      exec: 'warmup',
+      rate: WARMUP_RATE,
+      duration: WARMUP_DURATION,
+      timeUnit: '1s',
+      preAllocatedVUs: WARMUP_PRE_ALLOCATED_VUS,
+      maxVUs: WARMUP_MAX_VUS,
+      gracefulStop: '5s',
+    },
     warm_cache: {
       executor: 'ramping-arrival-rate',
+      exec: 'warmCache',
+      startTime: WARMUP_DURATION,
       startRate: RATES[0],
       timeUnit: '1s',
       preAllocatedVUs: PRE_ALLOCATED_VUS,
@@ -68,6 +84,7 @@ export function setup() {
   console.log(
       `test configuration: scenario=warm-cache, baseUrl=${BASE_URL}, rates=${RATES.join(',')}, ` +
       `stageDuration=${STAGE_DURATION}, rampDuration=${RAMP_DURATION}, dataLinks=${DATA_LINKS}, ` +
+      `warmupRate=${WARMUP_RATE}, warmupDuration=${WARMUP_DURATION}, ` +
       `preAllocatedVUs=${PRE_ALLOCATED_VUS}, maxVUs=${MAX_VUS}, ` +
       `slowRequestThresholdMs=${SLOW_REQUEST_THRESHOLD_MS}`,
   );
@@ -124,19 +141,29 @@ export function setup() {
   return { links };
 }
 
-export default function (data) {
+export function warmup(data) {
+  requestRedirect(data, 'redirect_warm_cache_warmup', false);
+}
+
+export function warmCache(data) {
+  requestRedirect(data, 'redirect_warm_cache', true);
+}
+
+function requestRedirect(data, endpoint, recordMeasuredTimings) {
   // 전체 실행의 iteration 번호로 링크를 순환해 특정 row에 부하가 몰리지 않게 함.
   const link = data.links[exec.scenario.iterationInTest % data.links.length];
   const startedAt = new Date().toISOString();
   const response = http.get(link.shortUrl, {
     redirects: 0,
-    tags: { endpoint: 'redirect_warm_cache' },
+    tags: { endpoint },
   });
 
-  recordRedirectTimings(response);
+  if (recordMeasuredTimings) {
+    recordRedirectTimings(response);
+  }
 
-  // 기준보다 느린 요청만 세부 시간을 출력해 지연 위치를 추적함.
-  if (response.timings.duration >= SLOW_REQUEST_THRESHOLD_MS) {
+  // 본 측정에서 기준보다 느린 요청만 세부 시간을 출력해 지연 위치를 추적함.
+  if (recordMeasuredTimings && response.timings.duration >= SLOW_REQUEST_THRESHOLD_MS) {
     console.warn(
       `slow redirect: startedAt=${startedAt}, code=${link.code}, status=${response.status}, ` +
         `duration=${response.timings.duration}ms, blocked=${response.timings.blocked}ms, ` +
@@ -149,7 +176,7 @@ export default function (data) {
   }
 
   check(response, {
-    'warm-cache redirect returns 302': (res) => res.status === 302,
+    [`${endpoint} returns 302`]: (res) => res.status === 302,
   });
 }
 

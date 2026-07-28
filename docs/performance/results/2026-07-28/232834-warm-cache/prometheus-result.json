@@ -1,0 +1,73 @@
+{
+  "capturedAt": "2026-07-28T23:35:00+09:00",
+  "queryContext": {
+    "rateWindow": "1m",
+    "gaugeWindow": "3m",
+    "loadStartedAt": "2026-07-28T23:28:39+09:00",
+    "loadFinishedAt": "2026-07-28T23:31:39+09:00",
+    "evaluationUnixTimes": {
+      "firstMinute": 1785248979,
+      "middleMinute": 1785249039,
+      "finalMinute": 1785249099
+    }
+  },
+  "windows": [
+    {
+      "window": "first",
+      "actualRps": 39.60540121212121,
+      "redirectP95Ms": 143.22929215431014,
+      "redirectP99Ms": 501.45492167885817,
+      "appCpuCores": 0.26992932
+    },
+    {
+      "window": "middle",
+      "actualRps": 40,
+      "redirectP95Ms": 4.846751133333334,
+      "redirectP99Ms": 33.554431,
+      "appCpuCores": 0.12829520000000003
+    },
+    {
+      "window": "final",
+      "actualRps": 40,
+      "redirectP50Ms": 2.9104927657550532,
+      "redirectP95Ms": 3.7065916976744187,
+      "redirectP99Ms": 5.554618486486491,
+      "clickWriteP95Ms": 2.018013264150943,
+      "redirectWriteP95Ms": 1.1135319734513276,
+      "appCpuCores": 0.07285533999999984
+    }
+  ],
+  "resources": {
+    "appMemoryMaxMiB": 381.0625,
+    "cpuThrottledSecondsPerSecond": 0,
+    "gcPauseSecondsPerSecond": 0.00023636363636363655,
+    "hikariActiveMax": 4,
+    "hikariPendingMax": 0,
+    "hikariTimeoutIncrease": 0,
+    "tomcatBusyMax": 8,
+    "postgresConnections": 10,
+    "postgresCommitsPerSecondFinal": 165.06,
+    "postgresDeadlockIncrease": 0,
+    "podRestartIncrease": 0,
+    "http5xxPerSecond": 0
+  },
+  "serverLatency": {
+    "redirectsOver250Ms": 82
+  },
+  "cache": {
+    "redirectIncrease": 7199,
+    "hitIncrease": 7199,
+    "missStaleIncrease": 0,
+    "riskCheckTotalAfterSetup": 20,
+    "riskCheckIncreaseDuringLoad": 0
+  },
+  "k6": {
+    "redirectIterationsCompleted": 7199,
+    "droppedIterations": 0,
+    "httpFailures": 0,
+    "redirectP95Ms": 47.59,
+    "redirectP99Ms": 344.11,
+    "redirectMaxMs": 1070,
+    "exitCode": 99
+  }
+}

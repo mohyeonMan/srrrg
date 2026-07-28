@@ -1,0 +1,95 @@
+{
+  "capturedAt": "2026-07-29T00:01:30+09:00",
+  "queryContext": {
+    "rateWindow": "1m",
+    "gaugeWindow": "2m",
+    "warmupStartedAt": "2026-07-28T23:53:34+09:00",
+    "measuredLoadStartedAt": "2026-07-28T23:54:04+09:00",
+    "measuredLoadFinishedAt": "2026-07-29T00:00:24+09:00",
+    "evaluationUnixTimes": {
+      "50rps": 1785250564,
+      "60rps": 1785250694,
+      "80rps": 1785250824
+    }
+  },
+  "stages": [
+    {
+      "targetRps": 50,
+      "actualRps": 50,
+      "redirectP50Ms": 2.7117246073674752,
+      "redirectP95Ms": 3.4050280833333337,
+      "redirectP99Ms": 4.019540000000023,
+      "clickWriteP95Ms": 1.9423233859315587,
+      "redirectWriteP95Ms": 0.9918375094912681,
+      "appCpuCores": 0.06633589999999998,
+      "appMemoryMaxMiB": 364.93359375,
+      "hikariActiveMaxObserved": 1,
+      "hikariPendingMaxObserved": 0,
+      "tomcatBusyMaxObserved": 2,
+      "postgresCommitsPerSecond": 202.1,
+      "redirectsOver250Ms": 0
+    },
+    {
+      "targetRps": 60,
+      "actualRps": 59.98181818181818,
+      "redirectP50Ms": 2.4926503680377037,
+      "redirectP95Ms": 3.1399249065762005,
+      "redirectP99Ms": 3.7051990166666684,
+      "clickWriteP95Ms": 1.736255314002829,
+      "redirectWriteP95Ms": 0.9886593059936909,
+      "appCpuCores": 0.061970739999999865,
+      "appMemoryMaxMiB": 365.0625,
+      "hikariActiveMaxObserved": 1,
+      "hikariPendingMaxObserved": 0,
+      "tomcatBusyMaxObserved": 2,
+      "postgresCommitsPerSecond": 240.4,
+      "redirectsOver250Ms": 0
+    },
+    {
+      "targetRps": 80,
+      "actualRps": 80,
+      "redirectP50Ms": 2.34805612906097,
+      "redirectP95Ms": 3.0089553478260873,
+      "redirectP99Ms": 3.535580807692313,
+      "clickWriteP95Ms": 1.6553802268041238,
+      "redirectWriteP95Ms": 0.9888810030754674,
+      "appCpuCores": 0.0844625400000001,
+      "appMemoryMaxMiB": 365.0859375,
+      "hikariActiveMaxObserved": 1,
+      "hikariPendingMaxObserved": 0,
+      "tomcatBusyMaxObserved": 2,
+      "postgresCommitsPerSecond": 323.36,
+      "redirectsOver250Ms": 0
+    }
+  ],
+  "finalState": {
+    "cpuThrottledPeriodsPerSecond": 0,
+    "gcPauseSecondsPerSecond": 0.0004181818181818185,
+    "hikariTimeoutIncrease": 0,
+    "postgresConnections": 10,
+    "postgresDeadlockIncrease": 0,
+    "podRestartIncrease": 0,
+    "http5xxIncrease": 0
+  },
+  "cache": {
+    "redirectIncreaseIncludingWarmup": 24349,
+    "hitIncreaseIncludingWarmup": 24349,
+    "missStaleIncrease": 0,
+    "riskCheckIncreaseDuringSetup": 20,
+    "riskCheckIncreaseDuringWarmupAndMeasuredLoad": 0
+  },
+  "k6": {
+    "warmupIterationsCompleted": 300,
+    "measuredIterationsCompleted": 24049,
+    "droppedIterations": 0,
+    "httpFailures": 0,
+    "measuredRedirectP95Ms": 22.07,
+    "measuredRedirectP99Ms": 23.65,
+    "measuredRedirectMaxMs": 61.56,
+    "exitCode": 0
+  },
+  "limitations": [
+    "HikariCP와 Tomcat gauge는 요청 처리 시간보다 긴 scrape 간격 때문에 순간 최고치를 놓칠 수 있다.",
+    "단계별 CPU 값은 각 단계 종료 시점의 1분 rate이며 단계 전체의 절대 최대값은 아니다."
+  ]
+}

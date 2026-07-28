@@ -1,0 +1,79 @@
+{
+  "capturedAt": "2026-07-28T23:50:30+09:00",
+  "queryContext": {
+    "rateWindow": "1m",
+    "gaugeWindow": "3m",
+    "warmupStartedAt": "2026-07-28T23:46:10+09:00",
+    "measuredLoadStartedAt": "2026-07-28T23:46:40+09:00",
+    "measuredLoadFinishedAt": "2026-07-28T23:49:40+09:00",
+    "evaluationUnixTimes": {
+      "firstMinute": 1785250060,
+      "middleMinute": 1785250120,
+      "finalMinute": 1785250180
+    }
+  },
+  "windows": [
+    {
+      "window": "first",
+      "actualRps": 40,
+      "redirectP50Ms": 2.910242780821918,
+      "redirectP95Ms": 3.7375353749999993,
+      "redirectP99Ms": 5.41764237500001,
+      "appCpuCores": 0.06473017999999996
+    },
+    {
+      "window": "middle",
+      "actualRps": 40,
+      "redirectP50Ms": 2.8381618556832695,
+      "redirectP95Ms": 3.523438500000001,
+      "redirectP99Ms": 5.199189093750014,
+      "appCpuCores": 0.05646680000000004
+    },
+    {
+      "window": "final",
+      "actualRps": 40,
+      "redirectP50Ms": 2.873635547123623,
+      "redirectP95Ms": 3.6826774492753627,
+      "redirectP99Ms": 5.33561093877552,
+      "clickWriteP95Ms": 2.027482165540541,
+      "redirectWriteP95Ms": 1.1184810000000005,
+      "appCpuCores": 0.05460495999999978
+    }
+  ],
+  "resources": {
+    "appMemoryMaxMiB": 364.44921875,
+    "gcPauseSecondsPerSecond": 0.00023636363636363655,
+    "hikariActiveMaxObserved": 0,
+    "hikariPendingMaxObserved": 0,
+    "hikariTimeoutIncrease": 0,
+    "tomcatBusyMaxObserved": 1,
+    "postgresConnections": 10,
+    "postgresCommitsPerSecondFinal": 158.52,
+    "postgresDeadlockIncrease": 0,
+    "podRestartIncrease": 0,
+    "http5xxPerSecond": 0
+  },
+  "serverLatency": {
+    "redirectsOver250MsDuringMeasuredLoad": 0
+  },
+  "cache": {
+    "redirectIncreaseIncludingWarmup": 7499,
+    "hitIncreaseIncludingWarmup": 7499,
+    "missStaleIncrease": 0,
+    "riskCheckIncreaseDuringSetup": 20,
+    "riskCheckIncreaseDuringWarmupAndMeasuredLoad": 0
+  },
+  "k6": {
+    "warmupIterationsCompleted": 300,
+    "measuredIterationsCompleted": 7199,
+    "droppedIterations": 0,
+    "httpFailures": 0,
+    "measuredRedirectP95Ms": 27.58,
+    "measuredRedirectP99Ms": 28.73,
+    "measuredRedirectMaxMs": 75.21,
+    "exitCode": 0
+  },
+  "limitations": [
+    "HikariCP와 Tomcat gauge는 요청 처리 시간보다 긴 scrape 간격 때문에 순간 최고치를 놓칠 수 있다."
+  ]
+}

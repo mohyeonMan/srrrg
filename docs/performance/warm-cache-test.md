@@ -13,12 +13,17 @@ DB 쓰기와 connection 상태를 확인한다. 첫 실행은 낮은 요청률�
 | 요청률 | 5, 10, 20 RPS |
 | 각 요청률 유지 시간 | 30초 |
 | 요청률 증가 시간 | 5초 |
+| 측정 전 워밍업 | 10 RPS, 30초 |
 | 테스트 링크 | 20개 |
 | 초기 판정 기준 | p95 100ms 미만, p99 250ms 미만 |
 | 예상하지 않은 HTTP 실패율 | 0.1% 미만 |
 | dropped iteration | 0 |
 
 setup에서 서로 다른 원본 URL을 사용하는 링크를 생성해 위험 검사 캐시를 채운다.
+본 측정 전에 10 RPS로 30초 동안 redirect 경로를 워밍업한다. 워밍업 요청은
+`endpoint=redirect_warm_cache_warmup`으로 분리해 본 측정 p95와 p99 threshold에서
+제외하지만 check와 HTTP 실패율에는 포함한다.
+
 부하 구간에서는 링크를 순환 선택하고 redirect를 따라가지 않은 채 302 응답만 확인한다.
 teardown에서 생성한 링크를 삭제한다.
 
@@ -54,6 +59,12 @@ bash scripts/performance/run.sh warm-cache
 
 ```shell
 k6 run -e WARM_RATES=10,25,50 -e WARM_STAGE_DURATION=1m scripts/performance/warm-cache.js
+```
+
+워밍업 요청률과 시간도 변경할 수 있다.
+
+```shell
+k6 run -e WARMUP_RATE=10 -e WARMUP_DURATION=30s scripts/performance/warm-cache.js
 ```
 
 공용 실행기를 사용할 때는 운영체제의 환경 변수로 설정을 전달한다.

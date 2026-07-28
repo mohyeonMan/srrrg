@@ -1,0 +1,11 @@
+{
+  "scenario": "warm-cache",
+  "startedAt": "2026-07-29T00:04:56+0900",
+  "finishedAt": "2026-07-29T00:11:52+0900",
+  "script": "/Users/jihoon/Desktop/workspace/personal/srrrg/scripts/performance/warm-cache.js",
+  "commitSha": "1f43e7453ff031c7b58ead0e6305f6ed58f40097",
+  "workingTreeDirty": true,
+  "k6Executable": "/opt/homebrew/bin/k6",
+  "exitCode": 0,
+  "analysisStatus": "complete"
+}

@@ -1,0 +1,757 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: /Users/jihoon/Desktop/workspace/personal/srrrg/scripts/performance/warm-cache.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 160 max VUs, 3m10s max duration (incl. graceful stop):
+              * warm_cache: Up to 40.00 iterations/s for 3m0s over 1 stages (maxVUs: 80-160, gracefulStop: 10s)
+
+time="2026-07-28T23:28:34+09:00" level=info msg="test configuration: scenario=warm-cache, baseUrl=https://jhhomehub.gonetis.com/srrrg-dev, rates=40, stageDuration=3m, rampDuration=5s, dataLinks=20, preAllocatedVUs=80, maxVUs=160, slowRequestThresholdMs=250" source=console
+time="2026-07-28T23:28:35+09:00" level=info msg="test link created: code=lesFzq, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/lesFzq, secretKey=srrrg_sk_8fHjjImPYWm8RVlGO8HJVAMPqqCYQH-jmruMV9NKaNa" source=console
+
+Run          [ 100% ] setup()
+warm_cache   [   0% ]
+time="2026-07-28T23:28:35+09:00" level=info msg="test link created: code=rrI1EP, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/rrI1EP, secretKey=srrrg_sk_Nipmm4acOlhdC7W0EzEZ0mSAFsHOZ0I7AOXgFAyaCYk" source=console
+time="2026-07-28T23:28:36+09:00" level=info msg="test link created: code=nFMAAo, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/nFMAAo, secretKey=srrrg_sk_8x2385TONQiPgOH6d0mEFnzVgI9dFlnCOU97FHnET2O" source=console
+time="2026-07-28T23:28:36+09:00" level=info msg="test link created: code=Wc60pM, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/Wc60pM, secretKey=srrrg_sk_UaZj7flTU_Onkh2rL9SzNafqaeAu2F1f9saLGm_bEBG" source=console
+time="2026-07-28T23:28:36+09:00" level=info msg="test link created: code=V5cEEE, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/V5cEEE, secretKey=srrrg_sk_DQ37RhzYvAvq_nf0zP5r-KKgvJCxdW2eYmInVZI3ewi" source=console
+
+Run          [ 100% ] setup()
+warm_cache   [   0% ]
+time="2026-07-28T23:28:36+09:00" level=info msg="test link created: code=pBHIT9, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/pBHIT9, secretKey=srrrg_sk_Aq6PMxXx4tr1VQH7EtCeniYUrvk3U8PkHa6YE2Y6pcA" source=console
+time="2026-07-28T23:28:36+09:00" level=info msg="test link created: code=0BHXEk, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/0BHXEk, secretKey=srrrg_sk_h3mZ-DBpiGAprJDRU5l5kEtTKHTmMagj9LBhr7LOha6" source=console
+time="2026-07-28T23:28:36+09:00" level=info msg="test link created: code=9jUPh2, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/9jUPh2, secretKey=srrrg_sk_ZV_RUftmtn0ZCcaxf-KNYjYpJBFmS7b68D0zuw80YQ7" source=console
+time="2026-07-28T23:28:37+09:00" level=info msg="test link created: code=cCQHjV, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/cCQHjV, secretKey=srrrg_sk_9yFfOhJLc3oAWN9W4YFYCJFeTlAt37oMR-D7Jja4CJ1" source=console
+time="2026-07-28T23:28:37+09:00" level=info msg="test link created: code=esAcAl, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/esAcAl, secretKey=srrrg_sk_LJ2U2GVnyjXmn1IFxC6o82K9iuZ2Ii5tI7UXCv-Xyx4" source=console
+
+Run          [ 100% ] setup()
+warm_cache   [   0% ]
+time="2026-07-28T23:28:37+09:00" level=info msg="test link created: code=KYIoGt, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/KYIoGt, secretKey=srrrg_sk_QxfdoeTYNd7c-doCpe4n3I_jRpdwZG5V9-TIH7RJr9I" source=console
+time="2026-07-28T23:28:37+09:00" level=info msg="test link created: code=EbJNsy, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/EbJNsy, secretKey=srrrg_sk_GTgZtXPRYOQSPFAeTYtNZKNq9SYa-Iq3qhj349RDZIK" source=console
+time="2026-07-28T23:28:38+09:00" level=info msg="test link created: code=qYiOa5, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/qYiOa5, secretKey=srrrg_sk_-CNdGlekKR5i_1van8XKhLuwqte9rZuq5XVQvjdnLrY" source=console
+time="2026-07-28T23:28:38+09:00" level=info msg="test link created: code=Uk6K6r, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/Uk6K6r, secretKey=srrrg_sk_49A12GSulTkChq6em_nKXWYI6s58JgqtLZ5CsfhsPpJ" source=console
+
+Run          [ 100% ] setup()
+warm_cache   [   0% ]
+time="2026-07-28T23:28:38+09:00" level=info msg="test link created: code=XEkW9l, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/XEkW9l, secretKey=srrrg_sk_dDxFkLnvrG7kfpospi8quoMUAsuKM58j97WFvioxBL1" source=console
+time="2026-07-28T23:28:38+09:00" level=info msg="test link created: code=Bl8fKR, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/Bl8fKR, secretKey=srrrg_sk_DBDrktIfIPYY2bJaBWGEmZmpJdSF3orfIqrM9zdG-mB" source=console
+time="2026-07-28T23:28:38+09:00" level=info msg="test link created: code=l81bxT, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/l81bxT, secretKey=srrrg_sk_zRF9JK3WgYO_7Mw6MXT6RQOnHdpbppR734OWClfOB1K" source=console
+time="2026-07-28T23:28:39+09:00" level=info msg="test link created: code=KY4VKw, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/KY4VKw, secretKey=srrrg_sk_1Bl2JFbph-wSK685q9Y1CO4OC96DYvFA0U_W-w2V-IU" source=console
+time="2026-07-28T23:28:39+09:00" level=info msg="test link created: code=V6V7j1, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/V6V7j1, secretKey=srrrg_sk_rNidkziUrartXldLQtfr-NMNtKfp1EdCqZ16GcKG0Mn" source=console
+
+Run          [ 100% ] setup()
+warm_cache   [   0% ]
+time="2026-07-28T23:28:39+09:00" level=info msg="test link created: code=rY839a, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/rY839a, secretKey=srrrg_sk_RFnPVx92fGvm95R3mTHwvf3P6e4vSm5993QtMoo9iuZ" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:39.690Z, code=0BHXEk, status=302, duration=581.077ms, blocked=23.739ms, connecting=5.282ms, tlsHandshaking=18.34ms, sending=0.067ms, waiting=580.973ms, receiving=0.037ms, vu=2, iteration=6" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:39.815Z, code=EbJNsy, status=302, duration=430.574ms, blocked=49.543ms, connecting=23.465ms, tlsHandshaking=25.857ms, sending=0.315ms, waiting=430.221ms, receiving=0.038ms, vu=12, iteration=11" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:39.615Z, code=Wc60pM, status=302, duration=649.598ms, blocked=30.79ms, connecting=8.518ms, tlsHandshaking=22.186ms, sending=0.094ms, waiting=649.083ms, receiving=0.421ms, vu=11, iteration=3" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:39.715Z, code=9jUPh2, status=302, duration=513.798ms, blocked=66.755ms, connecting=21.155ms, tlsHandshaking=45.219ms, sending=0.661ms, waiting=512.84ms, receiving=0.297ms, vu=9, iteration=7" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:39.740Z, code=cCQHjV, status=302, duration=538.429ms, blocked=68.725ms, connecting=41.096ms, tlsHandshaking=27.509ms, sending=0.071ms, waiting=538.317ms, receiving=0.041ms, vu=13, iteration=8" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:39.766Z, code=esAcAl, status=302, duration=541.35ms, blocked=39.658ms, connecting=14.91ms, tlsHandshaking=24.429ms, sending=0.102ms, waiting=541.131ms, receiving=0.117ms, vu=14, iteration=9" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:39.966Z, code=KY4VKw, status=302, duration=362.021ms, blocked=24.918ms, connecting=3.845ms, tlsHandshaking=20.974ms, sending=0.078ms, waiting=361.891ms, receiving=0.052ms, vu=24, iteration=17" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:39.590Z, code=nFMAAo, status=302, duration=743.214ms, blocked=19.006ms, connecting=4.706ms, tlsHandshaking=14.2ms, sending=0.092ms, waiting=743.09ms, receiving=0.032ms, vu=3, iteration=2" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.065Z, code=rrI1EP, status=302, duration=300.896ms, blocked=28.082ms, connecting=5.353ms, tlsHandshaking=22.659ms, sending=0.084ms, waiting=300.775ms, receiving=0.037ms, vu=27, iteration=21" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:39.565Z, code=rrI1EP, status=302, duration=811.666ms, blocked=18.133ms, connecting=4.261ms, tlsHandshaking=13.785ms, sending=0.079ms, waiting=811.559ms, receiving=0.028ms, vu=8, iteration=1" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:39.790Z, code=KYIoGt, status=302, duration=610.481ms, blocked=48.371ms, connecting=15.901ms, tlsHandshaking=32.397ms, sending=0.073ms, waiting=610.357ms, receiving=0.051ms, vu=7, iteration=10" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:39.640Z, code=V5cEEE, status=302, duration=777.532ms, blocked=30.986ms, connecting=7.047ms, tlsHandshaking=23.767ms, sending=0.125ms, waiting=777.368ms, receiving=0.039ms, vu=6, iteration=4" source=console
+
+running (0m06.0s), 026/080 VUs, 12 complete and 0 interrupted iterations
+warm_cache   [   1% ] 026/080 VUs  0m01.0s/3m0s  40.00 iters/s
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:39.665Z, code=pBHIT9, status=302, duration=789.52ms, blocked=29.156ms, connecting=6.375ms, tlsHandshaking=22.636ms, sending=0.136ms, waiting=789.338ms, receiving=0.046ms, vu=5, iteration=5" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:39.915Z, code=Bl8fKR, status=302, duration=609.452ms, blocked=27.214ms, connecting=5.097ms, tlsHandshaking=22.034ms, sending=0.068ms, waiting=609.361ms, receiving=0.023ms, vu=15, iteration=15" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:39.940Z, code=l81bxT, status=302, duration=586.767ms, blocked=25.566ms, connecting=4.958ms, tlsHandshaking=20.539ms, sending=0.07ms, waiting=586.679ms, receiving=0.018ms, vu=17, iteration=16" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:39.541Z, code=lesFzq, status=302, duration=988.983ms, blocked=22.422ms, connecting=4.435ms, tlsHandshaking=17.857ms, sending=0.15ms, waiting=988.812ms, receiving=0.021ms, vu=1, iteration=0" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:39.991Z, code=V6V7j1, status=302, duration=569.465ms, blocked=24.672ms, connecting=6.256ms, tlsHandshaking=18.347ms, sending=0.068ms, waiting=569.382ms, receiving=0.015ms, vu=16, iteration=18" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.090Z, code=nFMAAo, status=302, duration=553.352ms, blocked=26.316ms, connecting=5.231ms, tlsHandshaking=20.908ms, sending=0.07ms, waiting=553.231ms, receiving=0.051ms, vu=22, iteration=22" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.265Z, code=esAcAl, status=302, duration=344.116ms, blocked=60.783ms, connecting=29.578ms, tlsHandshaking=31.128ms, sending=0.067ms, waiting=344.022ms, receiving=0.027ms, vu=29, iteration=29" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.015Z, code=rY839a, status=302, duration=647.606ms, blocked=27.738ms, connecting=7.58ms, tlsHandshaking=20.061ms, sending=0.058ms, waiting=647.531ms, receiving=0.017ms, vu=19, iteration=19" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.365Z, code=Uk6K6r, status=302, duration=269.21ms, blocked=56.987ms, connecting=29.626ms, tlsHandshaking=27.298ms, sending=0.06ms, waiting=269.13ms, receiving=0.02ms, vu=30, iteration=33" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.290Z, code=KYIoGt, status=302, duration=363.227ms, blocked=37.231ms, connecting=5.901ms, tlsHandshaking=31.21ms, sending=0.064ms, waiting=363.094ms, receiving=0.069ms, vu=38, iteration=30" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:39.840Z, code=qYiOa5, status=302, duration=925.894ms, blocked=27.957ms, connecting=4.815ms, tlsHandshaking=23.056ms, sending=0.057ms, waiting=925.804ms, receiving=0.033ms, vu=4, iteration=12" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.117Z, code=Wc60pM, status=302, duration=643.043ms, blocked=33.948ms, connecting=7.712ms, tlsHandshaking=26.165ms, sending=0.06ms, waiting=642.965ms, receiving=0.018ms, vu=20, iteration=23" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:39.892Z, code=XEkW9l, status=302, duration=853.834ms, blocked=47.557ms, connecting=28.191ms, tlsHandshaking=19.206ms, sending=0.127ms, waiting=853.688ms, receiving=0.019ms, vu=10, iteration=14" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.216Z, code=9jUPh2, status=302, duration=549.653ms, blocked=24.479ms, connecting=5.566ms, tlsHandshaking=18.744ms, sending=0.052ms, waiting=549.573ms, receiving=0.028ms, vu=33, iteration=27" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.241Z, code=cCQHjV, status=302, duration=596.51ms, blocked=18.421ms, connecting=3.776ms, tlsHandshaking=14.583ms, sending=0.054ms, waiting=596.429ms, receiving=0.027ms, vu=18, iteration=28" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.415Z, code=Bl8fKR, status=302, duration=416.8ms, blocked=23.241ms, connecting=6.168ms, tlsHandshaking=17.001ms, sending=0.081ms, waiting=416.671ms, receiving=0.048ms, vu=40, iteration=35" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.315Z, code=EbJNsy, status=302, duration=531.033ms, blocked=35.611ms, connecting=6.266ms, tlsHandshaking=29.21ms, sending=0.066ms, waiting=530.936ms, receiving=0.031ms, vu=31, iteration=31" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.043Z, code=lesFzq, status=302, duration=787.464ms, blocked=52.425ms, connecting=22.827ms, tlsHandshaking=29.526ms, sending=0.065ms, waiting=787.371ms, receiving=0.028ms, vu=25, iteration=20" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.141Z, code=V5cEEE, status=302, duration=718.026ms, blocked=25.482ms, connecting=9.48ms, tlsHandshaking=15.872ms, sending=0.057ms, waiting=717.951ms, receiving=0.018ms, vu=26, iteration=24" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:39.865Z, code=Uk6K6r, status=302, duration=1070.71ms, blocked=27.173ms, connecting=5.043ms, tlsHandshaking=21.968ms, sending=0.092ms, waiting=1070.569ms, receiving=0.049ms, vu=21, iteration=13" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.490Z, code=V6V7j1, status=302, duration=451.073ms, blocked=21.927ms, connecting=5.336ms, tlsHandshaking=16.53ms, sending=0.053ms, waiting=450.988ms, receiving=0.032ms, vu=44, iteration=38" source=console
+time="2026-07-28T23:28:40+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.390Z, code=XEkW9l, status=302, duration=570.067ms, blocked=33.637ms, connecting=6.805ms, tlsHandshaking=26.739ms, sending=0.078ms, waiting=569.952ms, receiving=0.037ms, vu=32, iteration=34" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.640Z, code=V5cEEE, status=302, duration=351.909ms, blocked=56.206ms, connecting=29.626ms, tlsHandshaking=26.52ms, sending=0.056ms, waiting=351.8ms, receiving=0.053ms, vu=46, iteration=44" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.440Z, code=l81bxT, status=302, duration=577.086ms, blocked=31.983ms, connecting=8.079ms, tlsHandshaking=23.846ms, sending=0.054ms, waiting=577.013ms, receiving=0.019ms, vu=37, iteration=36" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.515Z, code=rY839a, status=302, duration=496.559ms, blocked=37.336ms, connecting=17.626ms, tlsHandshaking=19.649ms, sending=0.055ms, waiting=496.481ms, receiving=0.023ms, vu=34, iteration=39" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.167Z, code=pBHIT9, status=302, duration=874.812ms, blocked=41.233ms, connecting=20.93ms, tlsHandshaking=20.183ms, sending=0.056ms, waiting=874.737ms, receiving=0.019ms, vu=28, iteration=25" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.190Z, code=0BHXEk, status=302, duration=858.553ms, blocked=34.381ms, connecting=12.336ms, tlsHandshaking=21.786ms, sending=0.068ms, waiting=858.449ms, receiving=0.036ms, vu=23, iteration=26" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.615Z, code=Wc60pM, status=302, duration=410.14ms, blocked=57.427ms, connecting=21.319ms, tlsHandshaking=36.032ms, sending=0.068ms, waiting=410.037ms, receiving=0.035ms, vu=36, iteration=43" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.790Z, code=KYIoGt, status=302, duration=338.818ms, blocked=17.453ms, connecting=5.41ms, tlsHandshaking=11.971ms, sending=0.066ms, waiting=338.703ms, receiving=0.049ms, vu=47, iteration=50" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.691Z, code=0BHXEk, status=302, duration=429.721ms, blocked=26.426ms, connecting=5.203ms, tlsHandshaking=21.164ms, sending=0.058ms, waiting=429.646ms, receiving=0.017ms, vu=48, iteration=46" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.740Z, code=cCQHjV, status=302, duration=383.908ms, blocked=24.223ms, connecting=5.62ms, tlsHandshaking=18.536ms, sending=0.066ms, waiting=383.797ms, receiving=0.045ms, vu=51, iteration=48" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.540Z, code=lesFzq, status=302, duration=622.382ms, blocked=21.093ms, connecting=5.19ms, tlsHandshaking=15.845ms, sending=0.053ms, waiting=622.297ms, receiving=0.032ms, vu=41, iteration=40" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.666Z, code=pBHIT9, status=302, duration=556.757ms, blocked=28.382ms, connecting=5.879ms, tlsHandshaking=22.436ms, sending=0.054ms, waiting=556.677ms, receiving=0.026ms, vu=52, iteration=45" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.590Z, code=nFMAAo, status=302, duration=635.85ms, blocked=24.837ms, connecting=5.586ms, tlsHandshaking=19.175ms, sending=0.077ms, waiting=635.757ms, receiving=0.016ms, vu=42, iteration=42" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.840Z, code=qYiOa5, status=302, duration=366.585ms, blocked=43.794ms, connecting=19.349ms, tlsHandshaking=24.323ms, sending=0.063ms, waiting=366.503ms, receiving=0.019ms, vu=56, iteration=52" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.941Z, code=l81bxT, status=302, duration=322.273ms, blocked=26.518ms, connecting=6.024ms, tlsHandshaking=20.42ms, sending=0.07ms, waiting=322.154ms, receiving=0.049ms, vu=53, iteration=56" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.765Z, code=esAcAl, status=302, duration=493.807ms, blocked=32.492ms, connecting=10.996ms, tlsHandshaking=21.421ms, sending=0.081ms, waiting=493.696ms, receiving=0.03ms, vu=45, iteration=49" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.865Z, code=Uk6K6r, status=302, duration=392.94ms, blocked=33.209ms, connecting=16.844ms, tlsHandshaking=16.286ms, sending=0.07ms, waiting=392.847ms, receiving=0.023ms, vu=59, iteration=53" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.564Z, code=rrI1EP, status=302, duration=764.765ms, blocked=20.278ms, connecting=4.089ms, tlsHandshaking=16.121ms, sending=0.05ms, waiting=764.675ms, receiving=0.04ms, vu=39, iteration=41" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.717Z, code=9jUPh2, status=302, duration=637.793ms, blocked=28.035ms, connecting=9.147ms, tlsHandshaking=18.816ms, sending=0.059ms, waiting=637.704ms, receiving=0.03ms, vu=49, iteration=47" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.040Z, code=lesFzq, status=302, duration=327.242ms, blocked=16.466ms, connecting=4.012ms, tlsHandshaking=12.394ms, sending=0.051ms, waiting=327.17ms, receiving=0.021ms, vu=50, iteration=60" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.815Z, code=EbJNsy, status=302, duration=523.472ms, blocked=44.86ms, connecting=24.792ms, tlsHandshaking=19.901ms, sending=0.069ms, waiting=523.385ms, receiving=0.018ms, vu=55, iteration=51" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.065Z, code=rrI1EP, status=302, duration=301.382ms, blocked=16.552ms, connecting=3.626ms, tlsHandshaking=12.865ms, sending=0.052ms, waiting=301.276ms, receiving=0.054ms, vu=64, iteration=61" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.890Z, code=XEkW9l, status=302, duration=526.51ms, blocked=31.5ms, connecting=7.909ms, tlsHandshaking=23.523ms, sending=0.066ms, waiting=526.419ms, receiving=0.025ms, vu=57, iteration=54" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.115Z, code=Wc60pM, status=302, duration=305.4ms, blocked=28.006ms, connecting=8.81ms, tlsHandshaking=19.128ms, sending=0.06ms, waiting=305.292ms, receiving=0.048ms, vu=66, iteration=63" source=console
+
+running (0m07.0s), 018/080 VUs, 60 complete and 0 interrupted iterations
+warm_cache   [   1% ] 018/080 VUs  0m02.0s/3m0s  40.00 iters/s
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.915Z, code=Bl8fKR, status=302, duration=550.859ms, blocked=31.306ms, connecting=6.126ms, tlsHandshaking=25.118ms, sending=0.071ms, waiting=550.767ms, receiving=0.021ms, vu=58, iteration=55" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.090Z, code=nFMAAo, status=302, duration=443.965ms, blocked=23.705ms, connecting=4.205ms, tlsHandshaking=19.393ms, sending=0.132ms, waiting=443.793ms, receiving=0.04ms, vu=54, iteration=62" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.965Z, code=KY4VKw, status=302, duration=560.962ms, blocked=32.36ms, connecting=4.36ms, tlsHandshaking=27.93ms, sending=0.071ms, waiting=560.873ms, receiving=0.018ms, vu=61, iteration=57" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.242Z, code=cCQHjV, status=302, duration=285.807ms, blocked=30.495ms, connecting=9.072ms, tlsHandshaking=21.337ms, sending=0.084ms, waiting=285.699ms, receiving=0.024ms, vu=73, iteration=68" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.265Z, code=esAcAl, status=302, duration=262.172ms, blocked=30.927ms, connecting=7.159ms, tlsHandshaking=23.657ms, sending=0.114ms, waiting=262.034ms, receiving=0.024ms, vu=70, iteration=69" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.165Z, code=pBHIT9, status=302, duration=360.427ms, blocked=32.614ms, connecting=17.031ms, tlsHandshaking=15.511ms, sending=0.077ms, waiting=360.31ms, receiving=0.04ms, vu=68, iteration=65" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.140Z, code=V5cEEE, status=302, duration=417.671ms, blocked=25.178ms, connecting=4.684ms, tlsHandshaking=20.415ms, sending=0.066ms, waiting=417.581ms, receiving=0.024ms, vu=60, iteration=64" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.216Z, code=9jUPh2, status=302, duration=343.264ms, blocked=25.959ms, connecting=6.455ms, tlsHandshaking=19.433ms, sending=0.062ms, waiting=343.179ms, receiving=0.023ms, vu=71, iteration=67" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.190Z, code=0BHXEk, status=302, duration=427.329ms, blocked=31.817ms, connecting=7.406ms, tlsHandshaking=24.312ms, sending=0.089ms, waiting=427.193ms, receiving=0.047ms, vu=62, iteration=66" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.340Z, code=qYiOa5, status=302, duration=285.787ms, blocked=23.693ms, connecting=5.017ms, tlsHandshaking=18.585ms, sending=0.077ms, waiting=285.671ms, receiving=0.039ms, vu=76, iteration=72" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:40.990Z, code=V6V7j1, status=302, duration=635.208ms, blocked=23.698ms, connecting=5.473ms, tlsHandshaking=18.151ms, sending=0.064ms, waiting=635.123ms, receiving=0.021ms, vu=63, iteration=58" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.290Z, code=KYIoGt, status=302, duration=371.109ms, blocked=32.825ms, connecting=8.311ms, tlsHandshaking=24.427ms, sending=0.096ms, waiting=370.898ms, receiving=0.115ms, vu=74, iteration=70" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.364Z, code=Uk6K6r, status=302, duration=380.518ms, blocked=17.954ms, connecting=3.783ms, tlsHandshaking=14.113ms, sending=0.054ms, waiting=380.438ms, receiving=0.026ms, vu=72, iteration=73" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.415Z, code=Bl8fKR, status=302, duration=353.906ms, blocked=22.699ms, connecting=4.851ms, tlsHandshaking=17.78ms, sending=0.071ms, waiting=353.806ms, receiving=0.029ms, vu=77, iteration=75" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.390Z, code=XEkW9l, status=302, duration=377.89ms, blocked=23.249ms, connecting=3.663ms, tlsHandshaking=19.517ms, sending=0.062ms, waiting=377.805ms, receiving=0.023ms, vu=78, iteration=74" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.440Z, code=l81bxT, status=302, duration=384.077ms, blocked=22.393ms, connecting=3.967ms, tlsHandshaking=18.369ms, sending=0.054ms, waiting=383.983ms, receiving=0.04ms, vu=80, iteration=76" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.465Z, code=KY4VKw, status=302, duration=389.811ms, blocked=32.702ms, connecting=4.774ms, tlsHandshaking=27.808ms, sending=0.058ms, waiting=389.734ms, receiving=0.019ms, vu=79, iteration=77" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.590Z, code=nFMAAo, status=302, duration=377.426ms, blocked=0.001ms, connecting=0ms, tlsHandshaking=0ms, sending=0.199ms, waiting=377.196ms, receiving=0.031ms, vu=11, iteration=82" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.640Z, code=V5cEEE, status=302, duration=327.864ms, blocked=0ms, connecting=0ms, tlsHandshaking=0ms, sending=0.077ms, waiting=327.731ms, receiving=0.056ms, vu=13, iteration=84" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.691Z, code=0BHXEk, status=302, duration=296.055ms, blocked=0.001ms, connecting=0ms, tlsHandshaking=0ms, sending=0.226ms, waiting=295.791ms, receiving=0.038ms, vu=24, iteration=86" source=console
+time="2026-07-28T23:28:41+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.490Z, code=V6V7j1, status=302, duration=476.487ms, blocked=19.903ms, connecting=6.912ms, tlsHandshaking=12.92ms, sending=0.071ms, waiting=476.396ms, receiving=0.02ms, vu=75, iteration=78" source=console
+time="2026-07-28T23:28:42+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.715Z, code=9jUPh2, status=302, duration=332.757ms, blocked=0ms, connecting=0ms, tlsHandshaking=0ms, sending=0.058ms, waiting=332.657ms, receiving=0.042ms, vu=3, iteration=87" source=console
+time="2026-07-28T23:28:42+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.616Z, code=Wc60pM, status=302, duration=529.971ms, blocked=0.001ms, connecting=0ms, tlsHandshaking=0ms, sending=0.284ms, waiting=529.672ms, receiving=0.015ms, vu=9, iteration=83" source=console
+time="2026-07-28T23:28:42+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.740Z, code=cCQHjV, status=302, duration=410.646ms, blocked=0.001ms, connecting=0ms, tlsHandshaking=0ms, sending=0.096ms, waiting=410.521ms, receiving=0.029ms, vu=27, iteration=88" source=console
+time="2026-07-28T23:28:42+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.916Z, code=Bl8fKR, status=302, duration=266.008ms, blocked=0.001ms, connecting=0ms, tlsHandshaking=0ms, sending=0.096ms, waiting=265.881ms, receiving=0.031ms, vu=17, iteration=95" source=console
+time="2026-07-28T23:28:42+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.790Z, code=KYIoGt, status=302, duration=392.098ms, blocked=0.001ms, connecting=0ms, tlsHandshaking=0ms, sending=0.069ms, waiting=392.005ms, receiving=0.024ms, vu=7, iteration=90" source=console
+time="2026-07-28T23:28:42+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.816Z, code=EbJNsy, status=302, duration=464.854ms, blocked=0.001ms, connecting=0ms, tlsHandshaking=0ms, sending=0.317ms, waiting=464.416ms, receiving=0.121ms, vu=6, iteration=91" source=console
+time="2026-07-28T23:28:42+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.890Z, code=XEkW9l, status=302, duration=393.023ms, blocked=0ms, connecting=0ms, tlsHandshaking=0ms, sending=0.059ms, waiting=392.931ms, receiving=0.033ms, vu=1, iteration=94" source=console
+time="2026-07-28T23:28:42+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.990Z, code=V6V7j1, status=302, duration=295.113ms, blocked=0ms, connecting=0ms, tlsHandshaking=0ms, sending=0.055ms, waiting=295.01ms, receiving=0.048ms, vu=43, iteration=98" source=console
+time="2026-07-28T23:28:42+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:42.065Z, code=rrI1EP, status=302, duration=285.323ms, blocked=0ms, connecting=0ms, tlsHandshaking=0ms, sending=0.06ms, waiting=285.245ms, receiving=0.018ms, vu=19, iteration=101" source=console
+time="2026-07-28T23:28:42+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:42.090Z, code=nFMAAo, status=302, duration=260.299ms, blocked=0ms, connecting=0ms, tlsHandshaking=0ms, sending=0.046ms, waiting=260.225ms, receiving=0.028ms, vu=30, iteration=102" source=console
+time="2026-07-28T23:28:42+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:41.865Z, code=Uk6K6r, status=302, duration=587.737ms, blocked=0ms, connecting=0ms, tlsHandshaking=0ms, sending=0.05ms, waiting=587.644ms, receiving=0.043ms, vu=15, iteration=93" source=console
+time="2026-07-28T23:28:42+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:42.115Z, code=Wc60pM, status=302, duration=339.798ms, blocked=0.001ms, connecting=0ms, tlsHandshaking=0ms, sending=0.078ms, waiting=339.694ms, receiving=0.026ms, vu=38, iteration=103" source=console
+
+running (0m08.0s), 010/080 VUs, 108 complete and 0 interrupted iterations
+warm_cache   [   2% ] 010/080 VUs  0m03.0s/3m0s  40.00 iters/s
+time="2026-07-28T23:28:42+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:42.189Z, code=0BHXEk, status=302, duration=298.482ms, blocked=0.001ms, connecting=0ms, tlsHandshaking=0ms, sending=0.169ms, waiting=298.253ms, receiving=0.06ms, vu=4, iteration=106" source=console
+time="2026-07-28T23:28:42+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:42.015Z, code=rY839a, status=302, duration=472.587ms, blocked=0ms, connecting=0ms, tlsHandshaking=0ms, sending=0.034ms, waiting=472.453ms, receiving=0.1ms, vu=22, iteration=99" source=console
+time="2026-07-28T23:28:42+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:42.315Z, code=EbJNsy, status=302, duration=265.6ms, blocked=0.001ms, connecting=0ms, tlsHandshaking=0ms, sending=0.271ms, waiting=265.226ms, receiving=0.103ms, vu=25, iteration=111" source=console
+time="2026-07-28T23:28:42+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:42.341Z, code=qYiOa5, status=302, duration=344.271ms, blocked=0.001ms, connecting=0ms, tlsHandshaking=0ms, sending=0.069ms, waiting=344.126ms, receiving=0.076ms, vu=26, iteration=112" source=console
+time="2026-07-28T23:28:42+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:42.465Z, code=KY4VKw, status=302, duration=292.539ms, blocked=0ms, connecting=0ms, tlsHandshaking=0ms, sending=0.085ms, waiting=292.386ms, receiving=0.068ms, vu=37, iteration=117" source=console
+time="2026-07-28T23:28:43+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:43.190Z, code=0BHXEk, status=302, duration=259.716ms, blocked=0.001ms, connecting=0ms, tlsHandshaking=0ms, sending=0.257ms, waiting=259.375ms, receiving=0.084ms, vu=68, iteration=146" source=console
+
+running (0m09.0s), 008/080 VUs, 150 complete and 0 interrupted iterations
+warm_cache   [   2% ] 008/080 VUs  0m04.0s/3m0s  40.00 iters/s
+time="2026-07-28T23:28:43+09:00" level=warning msg="slow redirect: startedAt=2026-07-28T14:28:43.216Z, code=9jUPh2, status=302, duration=278.963ms, blocked=0.001ms, connecting=0ms, tlsHandshaking=0ms, sending=0.315ms, waiting=278.615ms, receiving=0.033ms, vu=60, iteration=147" source=console
+
+running (0m10.0s), 005/080 VUs, 193 complete and 0 interrupted iterations
+warm_cache   [   3% ] 005/080 VUs  0m05.0s/3m0s  40.00 iters/s
+
+running (0m11.0s), 004/080 VUs, 234 complete and 0 interrupted iterations
+warm_cache   [   3% ] 004/080 VUs  0m06.0s/3m0s  40.00 iters/s
+
+running (0m12.0s), 001/080 VUs, 277 complete and 0 interrupted iterations
+warm_cache   [   4% ] 001/080 VUs  0m07.0s/3m0s  40.00 iters/s
+
+running (0m13.0s), 001/080 VUs, 317 complete and 0 interrupted iterations
+warm_cache   [   4% ] 001/080 VUs  0m08.0s/3m0s  40.00 iters/s
+
+running (0m14.0s), 002/080 VUs, 356 complete and 0 interrupted iterations
+warm_cache   [   5% ] 002/080 VUs  0m09.0s/3m0s  40.00 iters/s
+
+running (0m15.0s), 001/080 VUs, 397 complete and 0 interrupted iterations
+warm_cache   [   6% ] 001/080 VUs  0m10.0s/3m0s  40.00 iters/s
+
+running (0m16.0s), 001/080 VUs, 437 complete and 0 interrupted iterations
+warm_cache   [   6% ] 001/080 VUs  0m11.0s/3m0s  40.00 iters/s
+
+running (0m17.0s), 001/080 VUs, 477 complete and 0 interrupted iterations
+warm_cache   [   7% ] 001/080 VUs  0m12.0s/3m0s  40.00 iters/s
+
+running (0m18.0s), 001/080 VUs, 517 complete and 0 interrupted iterations
+warm_cache   [   7% ] 001/080 VUs  0m13.0s/3m0s  40.00 iters/s
+
+running (0m19.0s), 001/080 VUs, 557 complete and 0 interrupted iterations
+warm_cache   [   8% ] 001/080 VUs  0m14.0s/3m0s  40.00 iters/s
+
+running (0m20.0s), 001/080 VUs, 597 complete and 0 interrupted iterations
+warm_cache   [   8% ] 001/080 VUs  0m15.0s/3m0s  40.00 iters/s
+
+running (0m21.0s), 002/080 VUs, 636 complete and 0 interrupted iterations
+warm_cache   [   9% ] 002/080 VUs  0m16.0s/3m0s  40.00 iters/s
+
+running (0m22.0s), 001/080 VUs, 677 complete and 0 interrupted iterations
+warm_cache   [   9% ] 001/080 VUs  0m17.0s/3m0s  40.00 iters/s
+
+running (0m23.0s), 001/080 VUs, 717 complete and 0 interrupted iterations
+warm_cache   [  10% ] 001/080 VUs  0m18.0s/3m0s  40.00 iters/s
+
+running (0m24.0s), 001/080 VUs, 757 complete and 0 interrupted iterations
+warm_cache   [  11% ] 001/080 VUs  0m19.0s/3m0s  40.00 iters/s
+
+running (0m25.0s), 001/080 VUs, 797 complete and 0 interrupted iterations
+warm_cache   [  11% ] 001/080 VUs  0m20.0s/3m0s  40.00 iters/s
+
+running (0m26.0s), 001/080 VUs, 837 complete and 0 interrupted iterations
+warm_cache   [  12% ] 001/080 VUs  0m21.0s/3m0s  40.00 iters/s
+
+running (0m27.0s), 001/080 VUs, 877 complete and 0 interrupted iterations
+warm_cache   [  12% ] 001/080 VUs  0m22.0s/3m0s  40.00 iters/s
+
+running (0m28.0s), 001/080 VUs, 917 complete and 0 interrupted iterations
+warm_cache   [  13% ] 001/080 VUs  0m23.0s/3m0s  40.00 iters/s
+
+running (0m29.0s), 001/080 VUs, 957 complete and 0 interrupted iterations
+warm_cache   [  13% ] 001/080 VUs  0m24.0s/3m0s  40.00 iters/s
+
+running (0m30.0s), 001/080 VUs, 997 complete and 0 interrupted iterations
+warm_cache   [  14% ] 001/080 VUs  0m25.0s/3m0s  40.00 iters/s
+
+running (0m31.0s), 001/080 VUs, 1037 complete and 0 interrupted iterations
+warm_cache   [  14% ] 001/080 VUs  0m26.0s/3m0s  40.00 iters/s
+
+running (0m32.0s), 001/080 VUs, 1077 complete and 0 interrupted iterations
+warm_cache   [  15% ] 001/080 VUs  0m27.0s/3m0s  40.00 iters/s
+
+running (0m33.0s), 001/080 VUs, 1117 complete and 0 interrupted iterations
+warm_cache   [  16% ] 001/080 VUs  0m28.0s/3m0s  40.00 iters/s
+
+running (0m34.0s), 001/080 VUs, 1157 complete and 0 interrupted iterations
+warm_cache   [  16% ] 001/080 VUs  0m29.0s/3m0s  40.00 iters/s
+
+running (0m35.0s), 001/080 VUs, 1197 complete and 0 interrupted iterations
+warm_cache   [  17% ] 001/080 VUs  0m30.0s/3m0s  40.00 iters/s
+
+running (0m36.0s), 002/080 VUs, 1236 complete and 0 interrupted iterations
+warm_cache   [  17% ] 002/080 VUs  0m31.0s/3m0s  40.00 iters/s
+
+running (0m37.0s), 001/080 VUs, 1277 complete and 0 interrupted iterations
+warm_cache   [  18% ] 001/080 VUs  0m32.0s/3m0s  40.00 iters/s
+
+running (0m38.0s), 001/080 VUs, 1317 complete and 0 interrupted iterations
+warm_cache   [  18% ] 001/080 VUs  0m33.0s/3m0s  40.00 iters/s
+
+running (0m39.0s), 001/080 VUs, 1357 complete and 0 interrupted iterations
+warm_cache   [  19% ] 001/080 VUs  0m34.0s/3m0s  40.00 iters/s
+
+running (0m40.0s), 001/080 VUs, 1397 complete and 0 interrupted iterations
+warm_cache   [  19% ] 001/080 VUs  0m35.0s/3m0s  40.00 iters/s
+
+running (0m41.0s), 003/080 VUs, 1435 complete and 0 interrupted iterations
+warm_cache   [  20% ] 003/080 VUs  0m36.0s/3m0s  40.00 iters/s
+
+running (0m42.0s), 001/080 VUs, 1477 complete and 0 interrupted iterations
+warm_cache   [  21% ] 001/080 VUs  0m37.0s/3m0s  40.00 iters/s
+
+running (0m43.0s), 001/080 VUs, 1517 complete and 0 interrupted iterations
+warm_cache   [  21% ] 001/080 VUs  0m38.0s/3m0s  40.00 iters/s
+
+running (0m44.0s), 002/080 VUs, 1556 complete and 0 interrupted iterations
+warm_cache   [  22% ] 002/080 VUs  0m39.0s/3m0s  40.00 iters/s
+
+running (0m45.0s), 001/080 VUs, 1597 complete and 0 interrupted iterations
+warm_cache   [  22% ] 001/080 VUs  0m40.0s/3m0s  40.00 iters/s
+
+running (0m46.0s), 001/080 VUs, 1637 complete and 0 interrupted iterations
+warm_cache   [  23% ] 001/080 VUs  0m41.0s/3m0s  40.00 iters/s
+
+running (0m47.0s), 001/080 VUs, 1677 complete and 0 interrupted iterations
+warm_cache   [  23% ] 001/080 VUs  0m42.0s/3m0s  40.00 iters/s
+
+running (0m48.0s), 001/080 VUs, 1717 complete and 0 interrupted iterations
+warm_cache   [  24% ] 001/080 VUs  0m43.0s/3m0s  40.00 iters/s
+
+running (0m49.0s), 001/080 VUs, 1757 complete and 0 interrupted iterations
+warm_cache   [  24% ] 001/080 VUs  0m44.0s/3m0s  40.00 iters/s
+
+running (0m50.0s), 001/080 VUs, 1797 complete and 0 interrupted iterations
+warm_cache   [  25% ] 001/080 VUs  0m45.0s/3m0s  40.00 iters/s
+
+running (0m51.0s), 001/080 VUs, 1837 complete and 0 interrupted iterations
+warm_cache   [  26% ] 001/080 VUs  0m46.0s/3m0s  40.00 iters/s
+
+running (0m52.0s), 001/080 VUs, 1877 complete and 0 interrupted iterations
+warm_cache   [  26% ] 001/080 VUs  0m47.0s/3m0s  40.00 iters/s
+
+running (0m53.0s), 001/080 VUs, 1917 complete and 0 interrupted iterations
+warm_cache   [  27% ] 001/080 VUs  0m48.0s/3m0s  40.00 iters/s
+
+running (0m54.0s), 001/080 VUs, 1957 complete and 0 interrupted iterations
+warm_cache   [  27% ] 001/080 VUs  0m49.0s/3m0s  40.00 iters/s
+
+running (0m55.0s), 001/080 VUs, 1997 complete and 0 interrupted iterations
+warm_cache   [  28% ] 001/080 VUs  0m50.0s/3m0s  40.00 iters/s
+
+running (0m56.0s), 001/080 VUs, 2037 complete and 0 interrupted iterations
+warm_cache   [  28% ] 001/080 VUs  0m51.0s/3m0s  40.00 iters/s
+
+running (0m57.0s), 001/080 VUs, 2077 complete and 0 interrupted iterations
+warm_cache   [  29% ] 001/080 VUs  0m52.0s/3m0s  40.00 iters/s
+
+running (0m58.0s), 001/080 VUs, 2117 complete and 0 interrupted iterations
+warm_cache   [  29% ] 001/080 VUs  0m53.0s/3m0s  40.00 iters/s
+
+running (0m59.0s), 001/080 VUs, 2157 complete and 0 interrupted iterations
+warm_cache   [  30% ] 001/080 VUs  0m54.0s/3m0s  40.00 iters/s
+
+running (1m00.0s), 001/080 VUs, 2197 complete and 0 interrupted iterations
+warm_cache   [  31% ] 001/080 VUs  0m55.0s/3m0s  40.00 iters/s
+
+running (1m01.0s), 001/080 VUs, 2237 complete and 0 interrupted iterations
+warm_cache   [  31% ] 001/080 VUs  0m56.0s/3m0s  40.00 iters/s
+
+running (1m02.0s), 001/080 VUs, 2277 complete and 0 interrupted iterations
+warm_cache   [  32% ] 001/080 VUs  0m57.0s/3m0s  40.00 iters/s
+
+running (1m03.0s), 001/080 VUs, 2317 complete and 0 interrupted iterations
+warm_cache   [  32% ] 001/080 VUs  0m58.0s/3m0s  40.00 iters/s
+
+running (1m04.0s), 001/080 VUs, 2357 complete and 0 interrupted iterations
+warm_cache   [  33% ] 001/080 VUs  0m59.0s/3m0s  40.00 iters/s
+
+running (1m05.0s), 001/080 VUs, 2397 complete and 0 interrupted iterations
+warm_cache   [  33% ] 001/080 VUs  1m00.0s/3m0s  40.00 iters/s
+
+running (1m06.0s), 001/080 VUs, 2437 complete and 0 interrupted iterations
+warm_cache   [  34% ] 001/080 VUs  1m01.0s/3m0s  40.00 iters/s
+
+running (1m07.0s), 001/080 VUs, 2477 complete and 0 interrupted iterations
+warm_cache   [  34% ] 001/080 VUs  1m02.0s/3m0s  40.00 iters/s
+
+running (1m08.0s), 001/080 VUs, 2517 complete and 0 interrupted iterations
+warm_cache   [  35% ] 001/080 VUs  1m03.0s/3m0s  40.00 iters/s
+
+running (1m09.0s), 001/080 VUs, 2557 complete and 0 interrupted iterations
+warm_cache   [  36% ] 001/080 VUs  1m04.0s/3m0s  40.00 iters/s
+
+running (1m10.0s), 001/080 VUs, 2597 complete and 0 interrupted iterations
+warm_cache   [  36% ] 001/080 VUs  1m05.0s/3m0s  40.00 iters/s
+
+running (1m11.0s), 001/080 VUs, 2637 complete and 0 interrupted iterations
+warm_cache   [  37% ] 001/080 VUs  1m06.0s/3m0s  40.00 iters/s
+
+running (1m12.0s), 001/080 VUs, 2677 complete and 0 interrupted iterations
+warm_cache   [  37% ] 001/080 VUs  1m07.0s/3m0s  40.00 iters/s
+
+running (1m13.0s), 001/080 VUs, 2717 complete and 0 interrupted iterations
+warm_cache   [  38% ] 001/080 VUs  1m08.0s/3m0s  40.00 iters/s
+
+running (1m14.0s), 001/080 VUs, 2757 complete and 0 interrupted iterations
+warm_cache   [  38% ] 001/080 VUs  1m09.0s/3m0s  40.00 iters/s
+
+running (1m15.0s), 002/080 VUs, 2796 complete and 0 interrupted iterations
+warm_cache   [  39% ] 002/080 VUs  1m10.0s/3m0s  40.00 iters/s
+
+running (1m16.0s), 001/080 VUs, 2837 complete and 0 interrupted iterations
+warm_cache   [  39% ] 001/080 VUs  1m11.0s/3m0s  40.00 iters/s
+
+running (1m17.0s), 001/080 VUs, 2877 complete and 0 interrupted iterations
+warm_cache   [  40% ] 001/080 VUs  1m12.0s/3m0s  40.00 iters/s
+
+running (1m18.0s), 001/080 VUs, 2917 complete and 0 interrupted iterations
+warm_cache   [  41% ] 001/080 VUs  1m13.0s/3m0s  40.00 iters/s
+
+running (1m19.0s), 001/080 VUs, 2957 complete and 0 interrupted iterations
+warm_cache   [  41% ] 001/080 VUs  1m14.0s/3m0s  40.00 iters/s
+
+running (1m20.0s), 001/080 VUs, 2997 complete and 0 interrupted iterations
+warm_cache   [  42% ] 001/080 VUs  1m15.0s/3m0s  40.00 iters/s
+
+running (1m21.0s), 001/080 VUs, 3037 complete and 0 interrupted iterations
+warm_cache   [  42% ] 001/080 VUs  1m16.0s/3m0s  40.00 iters/s
+
+running (1m22.0s), 001/080 VUs, 3077 complete and 0 interrupted iterations
+warm_cache   [  43% ] 001/080 VUs  1m17.0s/3m0s  40.00 iters/s
+
+running (1m23.0s), 001/080 VUs, 3117 complete and 0 interrupted iterations
+warm_cache   [  43% ] 001/080 VUs  1m18.0s/3m0s  40.00 iters/s
+
+running (1m24.0s), 001/080 VUs, 3157 complete and 0 interrupted iterations
+warm_cache   [  44% ] 001/080 VUs  1m19.0s/3m0s  40.00 iters/s
+
+running (1m25.0s), 001/080 VUs, 3197 complete and 0 interrupted iterations
+warm_cache   [  44% ] 001/080 VUs  1m20.0s/3m0s  40.00 iters/s
+
+running (1m26.0s), 001/080 VUs, 3237 complete and 0 interrupted iterations
+warm_cache   [  45% ] 001/080 VUs  1m21.0s/3m0s  40.00 iters/s
+
+running (1m27.0s), 001/080 VUs, 3277 complete and 0 interrupted iterations
+warm_cache   [  46% ] 001/080 VUs  1m22.0s/3m0s  40.00 iters/s
+
+running (1m28.0s), 001/080 VUs, 3317 complete and 0 interrupted iterations
+warm_cache   [  46% ] 001/080 VUs  1m23.0s/3m0s  40.00 iters/s
+
+running (1m29.0s), 001/080 VUs, 3357 complete and 0 interrupted iterations
+warm_cache   [  47% ] 001/080 VUs  1m24.0s/3m0s  40.00 iters/s
+
+running (1m30.0s), 001/080 VUs, 3397 complete and 0 interrupted iterations
+warm_cache   [  47% ] 001/080 VUs  1m25.0s/3m0s  40.00 iters/s
+
+running (1m31.0s), 001/080 VUs, 3437 complete and 0 interrupted iterations
+warm_cache   [  48% ] 001/080 VUs  1m26.0s/3m0s  40.00 iters/s
+
+running (1m32.0s), 001/080 VUs, 3477 complete and 0 interrupted iterations
+warm_cache   [  48% ] 001/080 VUs  1m27.0s/3m0s  40.00 iters/s
+
+running (1m33.0s), 001/080 VUs, 3517 complete and 0 interrupted iterations
+warm_cache   [  49% ] 001/080 VUs  1m28.0s/3m0s  40.00 iters/s
+
+running (1m34.0s), 001/080 VUs, 3557 complete and 0 interrupted iterations
+warm_cache   [  49% ] 001/080 VUs  1m29.0s/3m0s  40.00 iters/s
+
+running (1m35.0s), 001/080 VUs, 3597 complete and 0 interrupted iterations
+warm_cache   [  50% ] 001/080 VUs  1m30.0s/3m0s  40.00 iters/s
+
+running (1m36.0s), 001/080 VUs, 3637 complete and 0 interrupted iterations
+warm_cache   [  51% ] 001/080 VUs  1m31.0s/3m0s  40.00 iters/s
+
+running (1m37.0s), 001/080 VUs, 3677 complete and 0 interrupted iterations
+warm_cache   [  51% ] 001/080 VUs  1m32.0s/3m0s  40.00 iters/s
+
+running (1m38.0s), 001/080 VUs, 3717 complete and 0 interrupted iterations
+warm_cache   [  52% ] 001/080 VUs  1m33.0s/3m0s  40.00 iters/s
+
+running (1m39.0s), 001/080 VUs, 3757 complete and 0 interrupted iterations
+warm_cache   [  52% ] 001/080 VUs  1m34.0s/3m0s  40.00 iters/s
+
+running (1m40.0s), 001/080 VUs, 3797 complete and 0 interrupted iterations
+warm_cache   [  53% ] 001/080 VUs  1m35.0s/3m0s  40.00 iters/s
+
+running (1m41.0s), 001/080 VUs, 3837 complete and 0 interrupted iterations
+warm_cache   [  53% ] 001/080 VUs  1m36.0s/3m0s  40.00 iters/s
+
+running (1m42.0s), 001/080 VUs, 3877 complete and 0 interrupted iterations
+warm_cache   [  54% ] 001/080 VUs  1m37.0s/3m0s  40.00 iters/s
+
+running (1m43.0s), 001/080 VUs, 3917 complete and 0 interrupted iterations
+warm_cache   [  54% ] 001/080 VUs  1m38.0s/3m0s  40.00 iters/s
+
+running (1m44.0s), 001/080 VUs, 3957 complete and 0 interrupted iterations
+warm_cache   [  55% ] 001/080 VUs  1m39.0s/3m0s  40.00 iters/s
+
+running (1m45.0s), 001/080 VUs, 3997 complete and 0 interrupted iterations
+warm_cache   [  56% ] 001/080 VUs  1m40.0s/3m0s  40.00 iters/s
+
+running (1m46.0s), 001/080 VUs, 4037 complete and 0 interrupted iterations
+warm_cache   [  56% ] 001/080 VUs  1m41.0s/3m0s  40.00 iters/s
+
+running (1m47.0s), 001/080 VUs, 4077 complete and 0 interrupted iterations
+warm_cache   [  57% ] 001/080 VUs  1m42.0s/3m0s  40.00 iters/s
+
+running (1m48.0s), 001/080 VUs, 4117 complete and 0 interrupted iterations
+warm_cache   [  57% ] 001/080 VUs  1m43.0s/3m0s  40.00 iters/s
+
+running (1m49.0s), 001/080 VUs, 4157 complete and 0 interrupted iterations
+warm_cache   [  58% ] 001/080 VUs  1m44.0s/3m0s  40.00 iters/s
+
+running (1m50.0s), 001/080 VUs, 4197 complete and 0 interrupted iterations
+warm_cache   [  58% ] 001/080 VUs  1m45.0s/3m0s  40.00 iters/s
+
+running (1m51.0s), 001/080 VUs, 4237 complete and 0 interrupted iterations
+warm_cache   [  59% ] 001/080 VUs  1m46.0s/3m0s  40.00 iters/s
+
+running (1m52.0s), 001/080 VUs, 4277 complete and 0 interrupted iterations
+warm_cache   [  59% ] 001/080 VUs  1m47.0s/3m0s  40.00 iters/s
+
+running (1m53.0s), 001/080 VUs, 4317 complete and 0 interrupted iterations
+warm_cache   [  60% ] 001/080 VUs  1m48.0s/3m0s  40.00 iters/s
+
+running (1m54.0s), 001/080 VUs, 4357 complete and 0 interrupted iterations
+warm_cache   [  61% ] 001/080 VUs  1m49.0s/3m0s  40.00 iters/s
+
+running (1m55.0s), 001/080 VUs, 4397 complete and 0 interrupted iterations
+warm_cache   [  61% ] 001/080 VUs  1m50.0s/3m0s  40.00 iters/s
+
+running (1m56.0s), 001/080 VUs, 4437 complete and 0 interrupted iterations
+warm_cache   [  62% ] 001/080 VUs  1m51.0s/3m0s  40.00 iters/s
+
+running (1m57.0s), 001/080 VUs, 4477 complete and 0 interrupted iterations
+warm_cache   [  62% ] 001/080 VUs  1m52.0s/3m0s  40.00 iters/s
+
+running (1m58.0s), 001/080 VUs, 4517 complete and 0 interrupted iterations
+warm_cache   [  63% ] 001/080 VUs  1m53.0s/3m0s  40.00 iters/s
+
+running (1m59.0s), 001/080 VUs, 4557 complete and 0 interrupted iterations
+warm_cache   [  63% ] 001/080 VUs  1m54.0s/3m0s  40.00 iters/s
+
+running (2m00.0s), 001/080 VUs, 4597 complete and 0 interrupted iterations
+warm_cache   [  64% ] 001/080 VUs  1m55.0s/3m0s  40.00 iters/s
+
+running (2m01.0s), 001/080 VUs, 4637 complete and 0 interrupted iterations
+warm_cache   [  64% ] 001/080 VUs  1m56.0s/3m0s  40.00 iters/s
+
+running (2m02.0s), 001/080 VUs, 4677 complete and 0 interrupted iterations
+warm_cache   [  65% ] 001/080 VUs  1m57.0s/3m0s  40.00 iters/s
+
+running (2m03.0s), 001/080 VUs, 4717 complete and 0 interrupted iterations
+warm_cache   [  66% ] 001/080 VUs  1m58.0s/3m0s  40.00 iters/s
+
+running (2m04.0s), 001/080 VUs, 4757 complete and 0 interrupted iterations
+warm_cache   [  66% ] 001/080 VUs  1m59.0s/3m0s  40.00 iters/s
+
+running (2m05.0s), 001/080 VUs, 4797 complete and 0 interrupted iterations
+warm_cache   [  67% ] 001/080 VUs  2m00.0s/3m0s  40.00 iters/s
+
+running (2m06.0s), 001/080 VUs, 4837 complete and 0 interrupted iterations
+warm_cache   [  67% ] 001/080 VUs  2m01.0s/3m0s  40.00 iters/s
+
+running (2m07.0s), 001/080 VUs, 4877 complete and 0 interrupted iterations
+warm_cache   [  68% ] 001/080 VUs  2m02.0s/3m0s  40.00 iters/s
+
+running (2m08.0s), 002/080 VUs, 4916 complete and 0 interrupted iterations
+warm_cache   [  68% ] 002/080 VUs  2m03.0s/3m0s  40.00 iters/s
+
+running (2m09.0s), 001/080 VUs, 4957 complete and 0 interrupted iterations
+warm_cache   [  69% ] 001/080 VUs  2m04.0s/3m0s  40.00 iters/s
+
+running (2m10.0s), 001/080 VUs, 4997 complete and 0 interrupted iterations
+warm_cache   [  69% ] 001/080 VUs  2m05.0s/3m0s  40.00 iters/s
+
+running (2m11.0s), 001/080 VUs, 5037 complete and 0 interrupted iterations
+warm_cache   [  70% ] 001/080 VUs  2m06.0s/3m0s  40.00 iters/s
+
+running (2m12.0s), 001/080 VUs, 5077 complete and 0 interrupted iterations
+warm_cache   [  71% ] 001/080 VUs  2m07.0s/3m0s  40.00 iters/s
+
+running (2m13.0s), 001/080 VUs, 5117 complete and 0 interrupted iterations
+warm_cache   [  71% ] 001/080 VUs  2m08.0s/3m0s  40.00 iters/s
+
+running (2m14.0s), 001/080 VUs, 5157 complete and 0 interrupted iterations
+warm_cache   [  72% ] 001/080 VUs  2m09.0s/3m0s  40.00 iters/s
+
+running (2m15.0s), 001/080 VUs, 5197 complete and 0 interrupted iterations
+warm_cache   [  72% ] 001/080 VUs  2m10.0s/3m0s  40.00 iters/s
+
+running (2m16.0s), 001/080 VUs, 5237 complete and 0 interrupted iterations
+warm_cache   [  73% ] 001/080 VUs  2m11.0s/3m0s  40.00 iters/s
+
+running (2m17.0s), 001/080 VUs, 5277 complete and 0 interrupted iterations
+warm_cache   [  73% ] 001/080 VUs  2m12.0s/3m0s  40.00 iters/s
+
+running (2m18.0s), 001/080 VUs, 5317 complete and 0 interrupted iterations
+warm_cache   [  74% ] 001/080 VUs  2m13.0s/3m0s  40.00 iters/s
+
+running (2m19.0s), 001/080 VUs, 5357 complete and 0 interrupted iterations
+warm_cache   [  74% ] 001/080 VUs  2m14.0s/3m0s  40.00 iters/s
+
+running (2m20.0s), 003/080 VUs, 5395 complete and 0 interrupted iterations
+warm_cache   [  75% ] 003/080 VUs  2m15.0s/3m0s  40.00 iters/s
+
+running (2m21.0s), 001/080 VUs, 5437 complete and 0 interrupted iterations
+warm_cache   [  76% ] 001/080 VUs  2m16.0s/3m0s  40.00 iters/s
+
+running (2m22.0s), 001/080 VUs, 5477 complete and 0 interrupted iterations
+warm_cache   [  76% ] 001/080 VUs  2m17.0s/3m0s  40.00 iters/s
+
+running (2m23.0s), 001/080 VUs, 5517 complete and 0 interrupted iterations
+warm_cache   [  77% ] 001/080 VUs  2m18.0s/3m0s  40.00 iters/s
+
+running (2m24.0s), 001/080 VUs, 5557 complete and 0 interrupted iterations
+warm_cache   [  77% ] 001/080 VUs  2m19.0s/3m0s  40.00 iters/s
+
+running (2m25.0s), 001/080 VUs, 5597 complete and 0 interrupted iterations
+warm_cache   [  78% ] 001/080 VUs  2m20.0s/3m0s  40.00 iters/s
+
+running (2m26.0s), 001/080 VUs, 5637 complete and 0 interrupted iterations
+warm_cache   [  78% ] 001/080 VUs  2m21.0s/3m0s  40.00 iters/s
+
+running (2m27.0s), 001/080 VUs, 5677 complete and 0 interrupted iterations
+warm_cache   [  79% ] 001/080 VUs  2m22.0s/3m0s  40.00 iters/s
+
+running (2m28.0s), 001/080 VUs, 5717 complete and 0 interrupted iterations
+warm_cache   [  79% ] 001/080 VUs  2m23.0s/3m0s  40.00 iters/s
+
+running (2m29.0s), 001/080 VUs, 5757 complete and 0 interrupted iterations
+warm_cache   [  80% ] 001/080 VUs  2m24.0s/3m0s  40.00 iters/s
+
+running (2m30.0s), 001/080 VUs, 5797 complete and 0 interrupted iterations
+warm_cache   [  81% ] 001/080 VUs  2m25.0s/3m0s  40.00 iters/s
+
+running (2m31.0s), 001/080 VUs, 5837 complete and 0 interrupted iterations
+warm_cache   [  81% ] 001/080 VUs  2m26.0s/3m0s  40.00 iters/s
+
+running (2m32.0s), 001/080 VUs, 5877 complete and 0 interrupted iterations
+warm_cache   [  82% ] 001/080 VUs  2m27.0s/3m0s  40.00 iters/s
+
+running (2m33.0s), 001/080 VUs, 5917 complete and 0 interrupted iterations
+warm_cache   [  82% ] 001/080 VUs  2m28.0s/3m0s  40.00 iters/s
+
+running (2m34.0s), 001/080 VUs, 5957 complete and 0 interrupted iterations
+warm_cache   [  83% ] 001/080 VUs  2m29.0s/3m0s  40.00 iters/s
+
+running (2m35.0s), 001/080 VUs, 5997 complete and 0 interrupted iterations
+warm_cache   [  83% ] 001/080 VUs  2m30.0s/3m0s  40.00 iters/s
+
+running (2m36.0s), 001/080 VUs, 6037 complete and 0 interrupted iterations
+warm_cache   [  84% ] 001/080 VUs  2m31.0s/3m0s  40.00 iters/s
+
+running (2m37.0s), 001/080 VUs, 6077 complete and 0 interrupted iterations
+warm_cache   [  84% ] 001/080 VUs  2m32.0s/3m0s  40.00 iters/s
+
+running (2m38.0s), 001/080 VUs, 6117 complete and 0 interrupted iterations
+warm_cache   [  85% ] 001/080 VUs  2m33.0s/3m0s  40.00 iters/s
+
+running (2m39.0s), 001/080 VUs, 6157 complete and 0 interrupted iterations
+warm_cache   [  86% ] 001/080 VUs  2m34.0s/3m0s  40.00 iters/s
+
+running (2m40.0s), 001/080 VUs, 6197 complete and 0 interrupted iterations
+warm_cache   [  86% ] 001/080 VUs  2m35.0s/3m0s  40.00 iters/s
+
+running (2m41.0s), 001/080 VUs, 6237 complete and 0 interrupted iterations
+warm_cache   [  87% ] 001/080 VUs  2m36.0s/3m0s  40.00 iters/s
+
+running (2m42.0s), 001/080 VUs, 6277 complete and 0 interrupted iterations
+warm_cache   [  87% ] 001/080 VUs  2m37.0s/3m0s  40.00 iters/s
+
+running (2m43.0s), 001/080 VUs, 6317 complete and 0 interrupted iterations
+warm_cache   [  88% ] 001/080 VUs  2m38.0s/3m0s  40.00 iters/s
+
+running (2m44.0s), 001/080 VUs, 6357 complete and 0 interrupted iterations
+warm_cache   [  88% ] 001/080 VUs  2m39.0s/3m0s  40.00 iters/s
+
+running (2m45.0s), 001/080 VUs, 6397 complete and 0 interrupted iterations
+warm_cache   [  89% ] 001/080 VUs  2m40.0s/3m0s  40.00 iters/s
+
+running (2m46.0s), 001/080 VUs, 6437 complete and 0 interrupted iterations
+warm_cache   [  89% ] 001/080 VUs  2m41.0s/3m0s  40.00 iters/s
+
+running (2m47.0s), 001/080 VUs, 6477 complete and 0 interrupted iterations
+warm_cache   [  90% ] 001/080 VUs  2m42.0s/3m0s  40.00 iters/s
+
+running (2m48.0s), 001/080 VUs, 6517 complete and 0 interrupted iterations
+warm_cache   [  91% ] 001/080 VUs  2m43.0s/3m0s  40.00 iters/s
+
+running (2m49.0s), 001/080 VUs, 6557 complete and 0 interrupted iterations
+warm_cache   [  91% ] 001/080 VUs  2m44.0s/3m0s  40.00 iters/s
+
+running (2m50.0s), 001/080 VUs, 6597 complete and 0 interrupted iterations
+warm_cache   [  92% ] 001/080 VUs  2m45.0s/3m0s  40.00 iters/s
+
+running (2m51.0s), 001/080 VUs, 6637 complete and 0 interrupted iterations
+warm_cache   [  92% ] 001/080 VUs  2m46.0s/3m0s  40.00 iters/s
+
+running (2m52.0s), 002/080 VUs, 6676 complete and 0 interrupted iterations
+warm_cache   [  93% ] 002/080 VUs  2m47.0s/3m0s  40.00 iters/s
+
+running (2m53.0s), 002/080 VUs, 6716 complete and 0 interrupted iterations
+warm_cache   [  93% ] 002/080 VUs  2m48.0s/3m0s  40.00 iters/s
+
+running (2m54.0s), 001/080 VUs, 6757 complete and 0 interrupted iterations
+warm_cache   [  94% ] 001/080 VUs  2m49.0s/3m0s  40.00 iters/s
+
+running (2m55.0s), 001/080 VUs, 6797 complete and 0 interrupted iterations
+warm_cache   [  94% ] 001/080 VUs  2m50.0s/3m0s  40.00 iters/s
+
+running (2m56.0s), 001/080 VUs, 6837 complete and 0 interrupted iterations
+warm_cache   [  95% ] 001/080 VUs  2m51.0s/3m0s  40.00 iters/s
+
+running (2m57.0s), 001/080 VUs, 6877 complete and 0 interrupted iterations
+warm_cache   [  96% ] 001/080 VUs  2m52.0s/3m0s  40.00 iters/s
+
+running (2m58.0s), 001/080 VUs, 6917 complete and 0 interrupted iterations
+warm_cache   [  96% ] 001/080 VUs  2m53.0s/3m0s  40.00 iters/s
+
+running (2m59.0s), 001/080 VUs, 6957 complete and 0 interrupted iterations
+warm_cache   [  97% ] 001/080 VUs  2m54.0s/3m0s  40.00 iters/s
+
+running (3m00.0s), 001/080 VUs, 6997 complete and 0 interrupted iterations
+warm_cache   [  97% ] 001/080 VUs  2m55.0s/3m0s  40.00 iters/s
+
+running (3m01.0s), 001/080 VUs, 7037 complete and 0 interrupted iterations
+warm_cache   [  98% ] 001/080 VUs  2m56.0s/3m0s  40.00 iters/s
+
+running (3m02.0s), 001/080 VUs, 7077 complete and 0 interrupted iterations
+warm_cache   [  98% ] 001/080 VUs  2m57.0s/3m0s  40.00 iters/s
+
+running (3m03.0s), 001/080 VUs, 7117 complete and 0 interrupted iterations
+warm_cache   [  99% ] 001/080 VUs  2m58.0s/3m0s  40.00 iters/s
+
+running (3m04.0s), 001/080 VUs, 7157 complete and 0 interrupted iterations
+warm_cache   [  99% ] 001/080 VUs  2m59.0s/3m0s  40.00 iters/s
+
+running (3m05.0s), 001/080 VUs, 7197 complete and 0 interrupted iterations
+warm_cache   [ 100% ] 001/080 VUs  3m00.0s/3m0s  40.00 iters/s
+
+running (3m06.0s), 000/080 VUs, 7199 complete and 0 interrupted iterations
+warm_cache ✓ [ 100% ] 000/080 VUs  3m0s  40.00 iters/s
+
+running (3m07.0s), 000/080 VUs, 7199 complete and 0 interrupted iterations
+warm_cache ✓ [ 100% ] 000/080 VUs  3m0s  40.00 iters/s
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate==1' rate=100.00%
+
+    dropped_iterations
+    ✓ 'count==0' count=0
+
+    http_req_duration{endpoint:redirect_warm_cache}
+    ✓ 'p(95)<100' p(95)=47.59ms
+    ✗ 'p(99)<250' p(99)=344.11ms
+
+    http_req_failed
+    ✓ 'rate<0.001' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 7299    38.964961/s
+    checks_succeeded...: 100.00% 7299 out of 7299
+    checks_failed......: 0.00%   0 out of 7299
+
+    ✓ setup link create returns 201
+    ✓ setup link has a valid code
+    ✓ setup link has a short URL
+    ✓ setup link has a secret key
+    ✓ warm-cache redirect returns 302
+    ✓ test link cleanup returns 200
+
+    CUSTOM
+    redirect_client_blocked..............: avg=344.75µs min=0s     med=1µs     max=68.72ms p(90)=2µs     p(95)=2µs    
+    redirect_client_connecting...........: avg=107.38µs min=0s     med=0s      max=41.09ms p(90)=0s      p(95)=0s     
+    redirect_client_receiving............: avg=111.46µs min=9µs    med=104µs   max=4.13ms  p(90)=167µs   p(95)=218µs  
+    redirect_client_sending..............: avg=214.71µs min=23µs   med=236µs   max=4.68ms  p(90)=283µs   p(95)=310µs  
+    redirect_client_tls_handshaking......: avg=235.18µs min=0s     med=0s      max=45.21ms p(90)=0s      p(95)=0s     
+    redirect_client_waiting..............: avg=25.37ms  min=3.18ms med=14.12ms max=1.07s   p(90)=27.97ms p(95)=47.17ms
+
+    HTTP
+    http_req_duration....................: avg=26.54ms  min=6.17ms med=14.49ms max=1.07s   p(90)=28.39ms p(95)=53.17ms
+      { endpoint:redirect_warm_cache }...: avg=25.7ms   min=6.17ms med=14.44ms max=1.07s   p(90)=28.29ms p(95)=47.59ms
+      { expected_response:true }.........: avg=26.54ms  min=6.17ms med=14.49ms max=1.07s   p(90)=28.39ms p(95)=53.17ms
+    http_req_failed......................: 0.00%  0 out of 7239
+    http_reqs............................: 7239   38.644657/s
+
+    EXECUTION
+    dropped_iterations...................: 0      0/s
+    iteration_duration...................: avg=26.48ms  min=6.27ms med=14.89ms max=1.09s   p(90)=28.79ms p(95)=48.1ms 
+    iterations...........................: 7199   38.431122/s
+    vus..................................: 0      min=0         max=26
+    vus_max..............................: 80     min=80        max=80
+
+    NETWORK
+    data_received........................: 979 kB 5.2 kB/s
+    data_sent............................: 413 kB 2.2 kB/s
+
+
+
+
+running (3m07.3s), 000/080 VUs, 7199 complete and 0 interrupted iterations
+warm_cache ✓ [ 100% ] 000/080 VUs  3m0s  40.00 iters/s
+time="2026-07-28T23:31:42+09:00" level=error msg="thresholds on metrics 'http_req_duration{endpoint:redirect_warm_cache}' have been crossed"
