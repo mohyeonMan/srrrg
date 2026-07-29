@@ -10,10 +10,13 @@
 - 단일 Pod에서 실행한다.
 - `fixed-safe.delay=100ms`, `fixed-safe.cache-duration=15m`를 사용한다.
 - 링크 생성 전용 워밍업은 1 RPS로 30초 실행한다.
-- 측정 부하는 1, 2, 5 RPS를 각각 30초 실행한다.
+- 측정 부하는 각 RPS를 30초 실행하고 앞 단계가 안정적일 때 다음 단계로 올린다.
 - cache hit는 setup에서 한 URL을 캐시에 넣고 같은 URL을 재사용한다.
 - cache miss는 요청마다 고유 URL을 사용한다.
-- 생성한 링크는 응답의 secret key로 즉시 삭제하며 secret key를 결과에 기록하지 않는다.
+- 측정 중에는 링크 생성 요청만 전송한다.
+- 생성한 링크와 URL 검증 캐시는 run ID가 포함된 `original_url`을 기준으로 측정 종료
+  후 별도 정리한다.
+- secret key는 결과에 기록하지 않는다.
 
 링크 생성은 BCrypt와 쓰기 트랜잭션을 포함하므로 redirect 워밍업 10 RPS를 그대로
 사용하지 않는다.
@@ -28,7 +31,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 ```
 
 `LINK_CREATE_CACHE_MODE`를 `miss`로 바꿔 miss 시나리오를 실행한다. 각 RPS는 별도
-실행해 앞 단계의 실패가 다음 단계 결과에 섞이지 않게 한다.
+실행해 앞 단계의 실패가 다음 단계 결과에 섞이지 않게 한다. 스크립트가 출력한
+`runId`와 완전히 일치하는 테스트 URL만 종료 후 정리한다.
 
 ## 판정
 

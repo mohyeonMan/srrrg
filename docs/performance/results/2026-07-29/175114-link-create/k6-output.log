@@ -1,0 +1,53 @@
+time="2026-07-29T17:51:14+09:00" level=info msg="test configuration: scenario=link-create, cacheMode=miss, baseUrl=https://jhhomehub.gonetis.com/srrrg-dev, rates=8, stageDuration=30s, rampDuration=5s, warmupRate=1, warmupDuration=30s, preAllocatedVUs=20, maxVUs=80, runId=1785315074525-930153" source=console
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate==1' rate=100.00%
+
+    dropped_iterations
+    ✓ 'rate<1' rate=0/s
+    ✓ 'count<10' count=0
+
+    http_req_duration{endpoint:link_create_cache_miss}
+    ✓ 'p(95)<300' p(95)=192.57ms
+    ✓ 'p(99)<500' p(99)=236.76ms
+
+    http_req_failed
+    ✓ 'rate<0.001' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 879     13.490996/s
+    checks_succeeded...: 100.00% 879 out of 879
+    checks_failed......: 0.00%   0 out of 879
+
+    ✓ link_create_warmup returns 201
+    ✓ link_create_warmup has a valid code
+    ✓ link_create_warmup has a secret key
+    ✓ link_create_cache_miss returns 201
+    ✓ link_create_cache_miss has a valid code
+    ✓ link_create_cache_miss has a secret key
+
+    HTTP
+    http_req_duration.......................: avg=171.39ms min=158.16ms med=164.13ms max=298.15ms p(90)=186.98ms p(95)=216.12ms
+      { endpoint:link_create_cache_miss }...: avg=168.53ms min=158.16ms med=163.47ms max=249.36ms p(90)=183.09ms p(95)=192.57ms
+      { expected_response:true }............: avg=171.39ms min=158.16ms med=164.13ms max=298.15ms p(90)=186.98ms p(95)=216.12ms
+    http_req_failed.........................: 0.00%  0 out of 293
+    http_reqs...............................: 293    4.496999/s
+
+    EXECUTION
+    dropped_iterations......................: 0      0/s
+    iteration_duration......................: avg=181.56ms min=158.16ms med=164.72ms max=365.01ms p(90)=234.28ms p(95)=276.25ms
+    iterations..............................: 293    4.496999/s
+    vus.....................................: 2      min=0        max=2 
+    vus_max.................................: 40     min=40       max=40
+
+    NETWORK
+    data_received...........................: 337 kB 5.2 kB/s
+    data_sent...............................: 136 kB 2.1 kB/s
+
+
+

@@ -1,0 +1,54 @@
+time="2026-07-29T17:49:04+09:00" level=info msg="test configuration: scenario=link-create, cacheMode=miss, baseUrl=https://jhhomehub.gonetis.com/srrrg-dev, rates=10, stageDuration=30s, rampDuration=5s, warmupRate=1, warmupDuration=30s, preAllocatedVUs=20, maxVUs=100, runId=1785314944122-745067" source=console
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate==1' rate=100.00%
+
+    dropped_iterations
+    ✓ 'rate<1' rate=0/s
+    ✓ 'count<10' count=0
+
+    http_req_duration{endpoint:link_create_cache_miss}
+    ✗ 'p(95)<300' p(95)=324.65ms
+    ✓ 'p(99)<500' p(99)=344.43ms
+
+    http_req_failed
+    ✓ 'rate<0.001' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 978     15.780468/s
+    checks_succeeded...: 100.00% 978 out of 978
+    checks_failed......: 0.00%   0 out of 978
+
+    ✓ link_create_warmup returns 201
+    ✓ link_create_warmup has a valid code
+    ✓ link_create_warmup has a secret key
+    ✓ link_create_cache_miss returns 201
+    ✓ link_create_cache_miss has a valid code
+    ✓ link_create_cache_miss has a secret key
+
+    HTTP
+    http_req_duration.......................: avg=179.36ms min=157.61ms med=162.54ms max=439.7ms p(90)=208.36ms p(95)=322.76ms
+      { endpoint:link_create_cache_miss }...: avg=178.64ms min=157.61ms med=162.01ms max=439.7ms p(90)=208.6ms  p(95)=324.65ms
+      { expected_response:true }............: avg=179.36ms min=157.61ms med=162.54ms max=439.7ms p(90)=208.36ms p(95)=322.76ms
+    http_req_failed.........................: 0.00%  0 out of 326
+    http_reqs...............................: 326    5.260156/s
+
+    EXECUTION
+    dropped_iterations......................: 0      0/s
+    iteration_duration......................: avg=190.38ms min=157.61ms med=163.02ms max=1.42s   p(90)=247.7ms  p(95)=325.79ms
+    iterations..............................: 326    5.260156/s
+    vus.....................................: 1      min=0        max=3 
+    vus_max.................................: 40     min=40       max=40
+
+    NETWORK
+    data_received...........................: 346 kB 5.6 kB/s
+    data_sent...............................: 144 kB 2.3 kB/s
+
+
+
+time="2026-07-29T17:50:06+09:00" level=error msg="thresholds on metrics 'http_req_duration{endpoint:link_create_cache_miss}' were crossed; at least one has abortOnFail enabled, stopping test prematurely"

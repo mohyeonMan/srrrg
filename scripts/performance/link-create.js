@@ -4,7 +4,7 @@ import exec from 'k6/execution';
 
 const BASE_URL = (__ENV.BASE_URL || 'https://jhhomehub.gonetis.com/srrrg-dev').replace(/\/+$/, '');
 const CACHE_MODE = (__ENV.LINK_CREATE_CACHE_MODE || 'hit').toLowerCase();
-const RATES = parseRates(__ENV.LINK_CREATE_RATES || '1,2,5');
+const RATES = parseRates(__ENV.LINK_CREATE_RATES || '5,10,15');
 const STAGE_DURATION = __ENV.LINK_CREATE_STAGE_DURATION || '30s';
 const RAMP_DURATION = __ENV.LINK_CREATE_RAMP_DURATION || '5s';
 const WARMUP_RATE = parsePositiveInteger(__ENV.WARMUP_RATE || '1', 'WARMUP_RATE');
@@ -72,11 +72,11 @@ export function setup() {
       `baseUrl=${BASE_URL}, rates=${RATES.join(',')}, stageDuration=${STAGE_DURATION}, ` +
       `rampDuration=${RAMP_DURATION}, warmupRate=${WARMUP_RATE}, ` +
       `warmupDuration=${WARMUP_DURATION}, preAllocatedVUs=${PRE_ALLOCATED_VUS}, ` +
-      `maxVUs=${MAX_VUS}`,
+      `maxVUs=${MAX_VUS}, runId=${runId}`,
   );
 
   if (CACHE_MODE === 'hit') {
-    createAndDelete(hitUrl, 'link_create_setup_seed');
+    createLink(hitUrl, 'link_create_setup_seed');
   }
 
   return { runId, hitUrl };
@@ -86,14 +86,14 @@ export function warmup(data) {
   const originalUrl = CACHE_MODE === 'hit'
     ? data.hitUrl
     : uniqueUrl(data.runId, 'warmup');
-  createAndDelete(originalUrl, 'link_create_warmup');
+  createLink(originalUrl, 'link_create_warmup');
 }
 
 export function linkCreate(data) {
   const originalUrl = CACHE_MODE === 'hit'
     ? data.hitUrl
     : uniqueUrl(data.runId, 'measured');
-  createAndDelete(originalUrl, `link_create_cache_${CACHE_MODE}`);
+  createLink(originalUrl, `link_create_cache_${CACHE_MODE}`);
 }
 
 function uniqueUrl(runId, purpose) {
@@ -102,7 +102,7 @@ function uniqueUrl(runId, purpose) {
     `&vu=${exec.vu.idInTest}`;
 }
 
-function createAndDelete(originalUrl, endpoint) {
+function createLink(originalUrl, endpoint) {
   const response = http.post(
     `${BASE_URL}/api/links`,
     JSON.stringify({ originalUrl, expiresAt: null }),
@@ -129,14 +129,6 @@ function createAndDelete(originalUrl, endpoint) {
   if (!validResponse) {
     fail(`link creation response was invalid: endpoint=${endpoint}`);
   }
-
-  const deleted = http.del(`${BASE_URL}/api/links/${body.code}`, null, {
-    headers: { 'X-Srrrg-Secret-Key': body.secretKey },
-    tags: { endpoint: 'link_create_cleanup' },
-  });
-  check(deleted, {
-    'created link cleanup returns 200': (res) => res.status === 200,
-  });
 }
 
 function parseRates(value) {
