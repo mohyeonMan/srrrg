@@ -1,6 +1,10 @@
 package link.srrrg.link;
 
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
+
 import org.springframework.stereotype.Component;
 
 import link.srrrg.common.util.SecureRandomStringGenerator;
@@ -16,19 +20,31 @@ public class SecretKeyManager {
 	private static final int SECRET_LENGTH = 43;
 
 	private final SecureRandomStringGenerator randomStringGenerator;
-	private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
 	public GeneratedSecretKey generate() {
 		String value = SECRET_KEY_PREFIX
 				+ randomStringGenerator.generate(URL_SAFE_CHARACTERS, SECRET_LENGTH);
-		return new GeneratedSecretKey(value, passwordEncoder.encode(value));
+		return new GeneratedSecretKey(value, HexFormat.of().formatHex(digest(value)));
 	}
 
 	public boolean matches(String value, String hash) {
-		if (!hasValidFormat(value)) {
+		if (!hasValidFormat(value) || hash == null) {
 			return false;
 		}
-		return passwordEncoder.matches(value, hash);
+		try {
+			return MessageDigest.isEqual(digest(value), HexFormat.of().parseHex(hash));
+		} catch (IllegalArgumentException exception) {
+			return false;
+		}
+	}
+
+	private byte[] digest(String value) {
+		try {
+			return MessageDigest.getInstance("SHA-256")
+					.digest(value.getBytes(StandardCharsets.UTF_8));
+		} catch (NoSuchAlgorithmException exception) {
+			throw new IllegalStateException("SHA-256 is unavailable.", exception);
+		}
 	}
 
 	private boolean hasValidFormat(String value) {
