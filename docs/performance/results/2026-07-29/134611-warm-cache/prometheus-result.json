@@ -1,0 +1,19 @@
+{
+  "capturedAt": "2026-07-29T14:07:00+09:00",
+  "source": "Prometheus HTTP API via SSH tunnel",
+  "targetRps": 600,
+  "actualRps": 600.04,
+  "serverP95Ms": 2.8468,
+  "serverP99Ms": 3.4415,
+  "applicationCpuAverageCores": 0.3447,
+  "applicationCpuMaxCores": 0.611,
+  "steadyThrottlePercent": 0,
+  "maxHikariActive": 3,
+  "maxHikariPending": 0,
+  "postgresCpuMaxCores": 0.6376,
+  "postgresCommitsPerSecond": 2413.3,
+  "redirectDelta": 75348,
+  "podRestartDelta": 0,
+  "hikariTimeoutDelta": 0,
+  "postgresDeadlockDelta": 0
+}

@@ -37,7 +37,7 @@ else
 fi
 
 set +e
-k6 run "$script_path" 2>&1 | tee "$log_path"
+k6 run --quiet "$script_path" 2>&1 | tee "$log_path"
 exit_code=${PIPESTATUS[0]}
 set -e
 
@@ -51,6 +51,23 @@ cat >"$metadata_path" <<EOF
   "commitSha": "${commit_sha}",
   "workingTreeDirty": ${working_tree_dirty},
   "k6Executable": "$(command -v k6)",
+  "infrastructure": {
+    "commitSha": "${PERF_INFRA_COMMIT_SHA:-}",
+    "replicaCount": "${PERF_REPLICA_COUNT:-}",
+    "application": {
+      "cpuRequest": "${PERF_APP_CPU_REQUEST:-}",
+      "cpuLimit": "${PERF_APP_CPU_LIMIT:-}",
+      "memoryRequest": "${PERF_APP_MEMORY_REQUEST:-}",
+      "memoryLimit": "${PERF_APP_MEMORY_LIMIT:-}"
+    },
+    "postgres": {
+      "cpuRequest": "${PERF_POSTGRES_CPU_REQUEST:-}",
+      "cpuLimit": "${PERF_POSTGRES_CPU_LIMIT:-}",
+      "memoryRequest": "${PERF_POSTGRES_MEMORY_REQUEST:-}",
+      "memoryLimit": "${PERF_POSTGRES_MEMORY_LIMIT:-}"
+    },
+    "hikariMaximumPoolSize": "${PERF_HIKARI_MAX_POOL_SIZE:-}"
+  },
   "exitCode": ${exit_code},
   "analysisStatus": "pending"
 }

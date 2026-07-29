@@ -1,0 +1,73 @@
+{
+  "capturedAt": "2026-07-29T12:53:00.0815294+09:00",
+  "source": {
+    "type": "Prometheus HTTP API",
+    "access": "SSH tunnel to the cluster-internal Prometheus service",
+    "grafanaUsedForResultValues": false
+  },
+  "queryContext": {
+    "testStartedAt": "2026-07-29T12:49:50.2229896+09:00",
+    "testFinishedAt": "2026-07-29T12:50:54.8263243+09:00",
+    "counterBaselineAt": "2026-07-29T12:49:45+09:00",
+    "counterFinalAt": "2026-07-29T12:51:05+09:00",
+    "preRolloutEvaluationAt": "2026-07-29T12:50:35+09:00",
+    "rolloutEvaluationAt": "2026-07-29T12:50:50+09:00",
+    "rateWindow": "15s"
+  },
+  "k6": {
+    "configuredRates": [350, 400, 450, 500],
+    "completedRateStages": [],
+    "warmupIterations": 300,
+    "totalIterations": 8397,
+    "interruptedIterations": 59,
+    "httpFailures": 0,
+    "droppedIterations": 7,
+    "redirectP95Ms": 192.79,
+    "redirectP99Ms": 288.05,
+    "maxVUsObserved": 85,
+    "exitCode": 99
+  },
+  "counterDeltas": {
+    "redirect": 8456,
+    "http302": 8456,
+    "note": "k6 중단 시 진행 중이던 59개 요청이 서버에서 완료되어 k6 완료 iteration보다 59건 많다."
+  },
+  "deploymentOverlap": {
+    "oldPod": "srrrg-dev-app-6696f8ddf6-rwqbz",
+    "newPod": "srrrg-dev-app-5d674d89f5-thjlr",
+    "newImage": "ghcr.io/mohyeonman/srrrg:sha-b41e3a6",
+    "newPodCreatedAt": "2026-07-29T12:50:43+09:00",
+    "newPodReadyAtRolloutEvaluation": false,
+    "oldPodReadyAtRolloutEvaluation": true
+  },
+  "observations": {
+    "preRollout": {
+      "actualRps": 158.4,
+      "redirectP95Ms": 27.8226,
+      "tomcatBusy": 2,
+      "hikariPending": 0,
+      "applicationCpuCores": 0.097,
+      "applicationThrottlePercent": 0,
+      "postgresCpuCores": 0.0302
+    },
+    "duringRollout": {
+      "actualRpsOnOldPod": 349.9,
+      "redirectP95Ms": 115.6585,
+      "tomcatBusyOnOldPod": 14,
+      "hikariPendingOnOldPod": 0
+    }
+  },
+  "queries": {
+    "exactRedirectDelta": "sum(srrrg_redirect_seconds_count{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"} @ 1785297065) - sum(srrrg_redirect_seconds_count{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"} @ 1785296985)",
+    "readyPods": "kube_pod_status_ready{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",condition=\"true\"}",
+    "rpsByPod": "sum by(pod)(rate(http_server_requests_seconds_count{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",uri=~\".*code.*\"}[15s]))",
+    "redirectP95": "1000 * histogram_quantile(0.95, sum by(le)(rate(srrrg_redirect_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"}[15s])))",
+    "tomcatBusyByPod": "sum by(pod)(tomcat_threads_busy_threads{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"})",
+    "hikariPendingByPod": "sum by(pod)(hikaricp_connections_pending{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"})"
+  },
+  "limitations": [
+    "테스트 도중 Deployment rollout이 겹쳐 리소스 한계 또는 지속 처리량 판정에 사용할 수 없다.",
+    "새 Pod가 readiness를 통과하기 전 테스트가 중단되어 새 이미지의 안정 구간이 없다.",
+    "rollout 구간에는 기존 Pod의 container CPU scrape가 끊겨 순간 최고 CPU를 계산할 수 없다."
+  ]
+}

@@ -1,0 +1,56 @@
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate==1' rate=100.00%
+
+    dropped_iterations
+    ✓ 'rate<1' rate=0/s
+    ✓ 'count<10' count=0
+
+    http_req_duration{endpoint:redirect_warm_cache}
+    ✓ 'p(95)<100' p(95)=18.92ms
+    ✓ 'p(99)<250' p(99)=51.36ms
+
+    http_req_failed
+    ✓ 'rate<0.001' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 218949  394.341703/s
+    checks_succeeded...: 100.00% 218949 out of 218949
+    checks_failed......: 0.00%   0 out of 218949
+
+    ✓ setup link create returns 201
+    ✓ setup link has a valid code
+    ✓ setup link has a short URL
+    ✓ setup link has a secret key
+    ✓ redirect_warm_cache_warmup returns 302
+    ✓ redirect_warm_cache returns 302
+    ✓ test link cleanup returns 200
+
+    CUSTOM
+    redirect_client_blocked..............: avg=13.28µs  min=0s     med=0s     max=58.71ms  p(90)=0s      p(95)=0s     
+    redirect_client_connecting...........: avg=3.86µs   min=0s     med=0s     max=26.41ms  p(90)=0s      p(95)=0s     
+    redirect_client_receiving............: avg=95.57µs  min=0s     med=0s     max=8ms      p(90)=507.1µs p(95)=685.6µs
+    redirect_client_sending..............: avg=135.95µs min=0s     med=0s     max=6.87ms   p(90)=519µs   p(95)=556.5µs
+    redirect_client_tls_handshaking......: avg=9.2µs    min=0s     med=0s     max=51.36ms  p(90)=0s      p(95)=0s     
+    redirect_client_waiting..............: avg=11.58ms  min=0s     med=8.63ms max=848.58ms p(90)=15.47ms p(95)=18.72ms
+
+    HTTP
+    http_req_duration....................: avg=11.84ms  min=3.46ms med=8.86ms max=848.58ms p(90)=15.72ms p(95)=18.95ms
+      { endpoint:redirect_warm_cache }...: avg=11.81ms  min=3.46ms med=8.86ms max=848.58ms p(90)=15.72ms p(95)=18.92ms
+      { expected_response:true }.........: avg=11.84ms  min=3.46ms med=8.86ms max=848.58ms p(90)=15.72ms p(95)=18.95ms
+    http_req_failed......................: 0.00%  0 out of 218889
+    http_reqs............................: 218889 394.233639/s
+
+    EXECUTION
+    dropped_iterations...................: 0      0/s
+    iteration_duration...................: avg=11.98ms  min=4.52ms med=8.99ms max=848.58ms p(90)=15.89ms p(95)=19.12ms
+    iterations...........................: 218849 394.161596/s
+    vus..................................: 0      min=0           max=35 
+    vus_max..............................: 120    min=120         max=120
+
+    NETWORK
+    data_received........................: 11 MB  20 kB/s
+    data_sent............................: 8.1 MB 15 kB/s

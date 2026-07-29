@@ -83,6 +83,26 @@ $env:WARM_STAGE_DURATION = '1m'
 WARM_RATES=10,25,50 WARM_STAGE_DURATION=1m bash scripts/performance/run.sh warm-cache
 ```
 
+리소스 또는 replica를 변경한 비교 실행은 결과가 서로 섞이지 않도록 인프라 commit과
+실제 배포 설정도 함께 전달한다.
+
+```powershell
+$env:PERF_INFRA_COMMIT_SHA = '<home-k3s-infra commit>'
+$env:PERF_REPLICA_COUNT = '1'
+$env:PERF_APP_CPU_REQUEST = '250m'
+$env:PERF_APP_CPU_LIMIT = '750m'
+$env:PERF_APP_MEMORY_REQUEST = '512Mi'
+$env:PERF_APP_MEMORY_LIMIT = '1Gi'
+$env:PERF_POSTGRES_CPU_REQUEST = '500m'
+$env:PERF_POSTGRES_CPU_LIMIT = '1500m'
+$env:PERF_POSTGRES_MEMORY_REQUEST = '512Mi'
+$env:PERF_POSTGRES_MEMORY_LIMIT = '2Gi'
+$env:PERF_HIKARI_MAX_POOL_SIZE = '10'
+```
+
+이 값은 `metadata.json`의 `infrastructure`에 저장한다. 리소스를 변경한 뒤에는 직전
+검증 부하를 첫 단계에 포함해 동일 부하에서 변경 전후를 비교한 다음 상위 단계로 진행한다.
+
 실행 로그와 설정은 다음 위치에 저장된다.
 
 ```text

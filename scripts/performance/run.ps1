@@ -40,7 +40,7 @@ try {
     $logWriter = New-Object System.IO.StreamWriter($logPath, $false, $utf8WithoutBom)
     try {
         # Tee-Object는 Windows PowerShell 5에서 UTF-16으로 저장하므로 직접 UTF-8 로그를 작성함.
-        & $k6Executable run $scriptPath 2>&1 | ForEach-Object {
+        & $k6Executable run --quiet $scriptPath 2>&1 | ForEach-Object {
             $line = $_.ToString()
             Write-Host $line
             $logWriter.WriteLine($line)
@@ -65,6 +65,23 @@ $metadata = [ordered]@{
     commitSha = $commitSha
     workingTreeDirty = $workingTreeDirty
     k6Executable = $k6Executable
+    infrastructure = [ordered]@{
+        commitSha = $env:PERF_INFRA_COMMIT_SHA
+        replicaCount = $env:PERF_REPLICA_COUNT
+        application = [ordered]@{
+            cpuRequest = $env:PERF_APP_CPU_REQUEST
+            cpuLimit = $env:PERF_APP_CPU_LIMIT
+            memoryRequest = $env:PERF_APP_MEMORY_REQUEST
+            memoryLimit = $env:PERF_APP_MEMORY_LIMIT
+        }
+        postgres = [ordered]@{
+            cpuRequest = $env:PERF_POSTGRES_CPU_REQUEST
+            cpuLimit = $env:PERF_POSTGRES_CPU_LIMIT
+            memoryRequest = $env:PERF_POSTGRES_MEMORY_REQUEST
+            memoryLimit = $env:PERF_POSTGRES_MEMORY_LIMIT
+        }
+        hikariMaximumPoolSize = $env:PERF_HIKARI_MAX_POOL_SIZE
+    }
     exitCode = $exitCode
     analysisStatus = 'pending'
 }

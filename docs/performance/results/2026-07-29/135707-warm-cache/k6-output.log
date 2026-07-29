@@ -1,0 +1,82 @@
+time="2026-07-29T13:57:08+09:00" level=info msg="test configuration: scenario=warm-cache, baseUrl=https://jhhomehub.gonetis.com/srrrg-dev, rates=750, stageDuration=2m, rampDuration=10s, dataLinks=20, warmupRate=10, warmupDuration=30s, preAllocatedVUs=150, maxVUs=200" source=console
+time="2026-07-29T13:57:08+09:00" level=info msg="test link created: code=L0nAs4, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/L0nAs4" source=console
+time="2026-07-29T13:57:08+09:00" level=info msg="test link created: code=MkgH2r, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/MkgH2r" source=console
+time="2026-07-29T13:57:08+09:00" level=info msg="test link created: code=hUrhXi, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/hUrhXi" source=console
+time="2026-07-29T13:57:08+09:00" level=info msg="test link created: code=ML39Wj, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/ML39Wj" source=console
+time="2026-07-29T13:57:09+09:00" level=info msg="test link created: code=k2ve5E, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/k2ve5E" source=console
+time="2026-07-29T13:57:09+09:00" level=info msg="test link created: code=do0am4, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/do0am4" source=console
+time="2026-07-29T13:57:09+09:00" level=info msg="test link created: code=gpUjIn, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/gpUjIn" source=console
+time="2026-07-29T13:57:09+09:00" level=info msg="test link created: code=VGqBkv, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/VGqBkv" source=console
+time="2026-07-29T13:57:09+09:00" level=info msg="test link created: code=XsQLtq, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/XsQLtq" source=console
+time="2026-07-29T13:57:10+09:00" level=info msg="test link created: code=Ii2mOf, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/Ii2mOf" source=console
+time="2026-07-29T13:57:10+09:00" level=info msg="test link created: code=gbIC8c, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/gbIC8c" source=console
+time="2026-07-29T13:57:10+09:00" level=info msg="test link created: code=h5e2ou, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/h5e2ou" source=console
+time="2026-07-29T13:57:10+09:00" level=info msg="test link created: code=sfFnBY, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/sfFnBY" source=console
+time="2026-07-29T13:57:10+09:00" level=info msg="test link created: code=Rgumjr, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/Rgumjr" source=console
+time="2026-07-29T13:57:10+09:00" level=info msg="test link created: code=OtC6K6, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/OtC6K6" source=console
+time="2026-07-29T13:57:11+09:00" level=info msg="test link created: code=tD7MgW, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/tD7MgW" source=console
+time="2026-07-29T13:57:11+09:00" level=info msg="test link created: code=zkYj1x, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/zkYj1x" source=console
+time="2026-07-29T13:57:11+09:00" level=info msg="test link created: code=gbyWIa, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/gbyWIa" source=console
+time="2026-07-29T13:57:11+09:00" level=info msg="test link created: code=kkTHWl, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/kkTHWl" source=console
+time="2026-07-29T13:57:11+09:00" level=info msg="test link created: code=OCka7Y, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/OCka7Y" source=console
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate==1' rate=100.00%
+
+    dropped_iterations
+    ✓ 'rate<1' rate=0/s
+    ✓ 'count<10' count=0
+
+    http_req_duration{endpoint:redirect_warm_cache}
+    ✓ 'p(95)<100' p(95)=14.4ms
+    ✓ 'p(99)<250' p(99)=21.34ms
+
+    http_req_failed
+    ✓ 'rate<0.001' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 94198   570.34868/s
+    checks_succeeded...: 100.00% 94198 out of 94198
+    checks_failed......: 0.00%   0 out of 94198
+
+    ✓ setup link create returns 201
+    ✓ setup link has a valid code
+    ✓ setup link has a short URL
+    ✓ setup link has a secret key
+    ✓ redirect_warm_cache_warmup returns 302
+    ✓ redirect_warm_cache returns 302
+    ✓ test link cleanup returns 200
+
+    CUSTOM
+    redirect_client_blocked..............: avg=44.97µs min=0s     med=0s     max=73.78ms  p(90)=0s      p(95)=0s     
+    redirect_client_connecting...........: avg=14.26µs min=0s     med=0s     max=47.19ms  p(90)=0s      p(95)=0s     
+    redirect_client_receiving............: avg=26.84µs min=0s     med=0s     max=7.34ms   p(90)=0s      p(95)=0s     
+    redirect_client_sending..............: avg=5.4µs   min=0s     med=0s     max=6.64ms   p(90)=0s      p(95)=0s     
+    redirect_client_tls_handshaking......: avg=30.54µs min=0s     med=0s     max=60.1ms   p(90)=0s      p(95)=0s     
+    redirect_client_waiting..............: avg=9.28ms  min=1.05ms med=8.46ms max=271.71ms p(90)=12.36ms p(95)=14.33ms
+
+    HTTP
+    http_req_duration....................: avg=9.37ms  min=4.31ms med=8.5ms  max=271.71ms p(90)=12.44ms p(95)=14.45ms
+      { endpoint:redirect_warm_cache }...: avg=9.31ms  min=4.31ms med=8.49ms max=271.71ms p(90)=12.4ms  p(95)=14.4ms 
+      { expected_response:true }.........: avg=9.37ms  min=4.31ms med=8.5ms  max=271.71ms p(90)=12.44ms p(95)=14.45ms
+    http_req_failed......................: 0.00%  0 out of 94138
+    http_reqs............................: 94138  569.985393/s
+
+    EXECUTION
+    dropped_iterations...................: 0      0/s
+    iteration_duration...................: avg=9.42ms  min=4.31ms med=8.54ms max=271.71ms p(90)=12.5ms  p(95)=14.62ms
+    iterations...........................: 94098  569.743201/s
+    vus..................................: 0      min=0          max=20 
+    vus_max..............................: 170    min=170        max=170
+
+    NETWORK
+    data_received........................: 5.6 MB 34 kB/s
+    data_sent............................: 3.7 MB 23 kB/s
+
+
+

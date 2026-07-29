@@ -1,0 +1,28 @@
+﻿{
+    "scenario":  "warm-cache",
+    "startedAt":  "2026-07-29T13:49:57.9306241+09:00",
+    "finishedAt":  "2026-07-29T13:52:43.4592236+09:00",
+    "script":  "C:\\Users\\qkrwl\\Desktop\\repo\\my\\srrrg\\scripts\\performance\\warm-cache.js",
+    "commitSha":  "b41e3a6d090ae5f5f203c5bc1994d645224283b1",
+    "workingTreeDirty":  true,
+    "k6Executable":  "C:\\Program Files\\k6\\k6.exe",
+    "infrastructure":  {
+                           "commitSha":  "783b435b51d12e6bc8a4062084cefddbf7bba7ec",
+                           "replicaCount":  "1",
+                           "application":  {
+                                               "cpuRequest":  "250m",
+                                               "cpuLimit":  "750m",
+                                               "memoryRequest":  "512Mi",
+                                               "memoryLimit":  "1Gi"
+                                           },
+                           "postgres":  {
+                                            "cpuRequest":  "500m",
+                                            "cpuLimit":  "1500m",
+                                            "memoryRequest":  "512Mi",
+                                            "memoryLimit":  "2Gi"
+                                        },
+                           "hikariMaximumPoolSize":  "10"
+                       },
+    "exitCode":  0,
+    "analysisStatus":  "complete"
+}

@@ -1,0 +1,83 @@
+time="2026-07-29T14:14:22+09:00" level=info msg="test configuration: scenario=warm-cache, baseUrl=https://jhhomehub.gonetis.com/srrrg-dev, rates=850, stageDuration=2m, rampDuration=10s, dataLinks=20, warmupRate=10, warmupDuration=30s, preAllocatedVUs=170, maxVUs=300" source=console
+time="2026-07-29T14:14:23+09:00" level=info msg="test link created: code=tUBuiz, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/tUBuiz" source=console
+time="2026-07-29T14:14:23+09:00" level=info msg="test link created: code=hlAopH, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/hlAopH" source=console
+time="2026-07-29T14:14:23+09:00" level=info msg="test link created: code=kBD0rj, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/kBD0rj" source=console
+time="2026-07-29T14:14:23+09:00" level=info msg="test link created: code=LbvKb6, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/LbvKb6" source=console
+time="2026-07-29T14:14:23+09:00" level=info msg="test link created: code=oJwxnC, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/oJwxnC" source=console
+time="2026-07-29T14:14:24+09:00" level=info msg="test link created: code=OuAqVb, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/OuAqVb" source=console
+time="2026-07-29T14:14:24+09:00" level=info msg="test link created: code=T2REbL, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/T2REbL" source=console
+time="2026-07-29T14:14:24+09:00" level=info msg="test link created: code=TJ125K, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/TJ125K" source=console
+time="2026-07-29T14:14:24+09:00" level=info msg="test link created: code=GiZk3R, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/GiZk3R" source=console
+time="2026-07-29T14:14:24+09:00" level=info msg="test link created: code=49XAqf, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/49XAqf" source=console
+time="2026-07-29T14:14:24+09:00" level=info msg="test link created: code=r5fLs9, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/r5fLs9" source=console
+time="2026-07-29T14:14:25+09:00" level=info msg="test link created: code=4Orof4, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/4Orof4" source=console
+time="2026-07-29T14:14:25+09:00" level=info msg="test link created: code=ZrvDKY, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/ZrvDKY" source=console
+time="2026-07-29T14:14:25+09:00" level=info msg="test link created: code=dUvuXE, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/dUvuXE" source=console
+time="2026-07-29T14:14:25+09:00" level=info msg="test link created: code=mIHbVq, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/mIHbVq" source=console
+time="2026-07-29T14:14:25+09:00" level=info msg="test link created: code=CwmD2Y, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/CwmD2Y" source=console
+time="2026-07-29T14:14:25+09:00" level=info msg="test link created: code=nTFz2R, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/nTFz2R" source=console
+time="2026-07-29T14:14:26+09:00" level=info msg="test link created: code=cOBBDz, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/cOBBDz" source=console
+time="2026-07-29T14:14:26+09:00" level=info msg="test link created: code=lxWJoT, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/lxWJoT" source=console
+time="2026-07-29T14:14:26+09:00" level=info msg="test link created: code=Cos3BX, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/Cos3BX" source=console
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate==1' rate=100.00%
+
+    dropped_iterations
+    ✗ 'rate<1' rate=1.323181/s
+    ✗ 'count<10' count=63
+
+    http_req_duration{endpoint:redirect_warm_cache}
+    ✗ 'p(95)<100' p(95)=239.97ms
+    ✗ 'p(99)<250' p(99)=394.12ms
+
+    http_req_failed
+    ✓ 'rate<0.001' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 6406    134.544384/s
+    checks_succeeded...: 100.00% 6406 out of 6406
+    checks_failed......: 0.00%   0 out of 6406
+
+    ✓ setup link create returns 201
+    ✓ setup link has a valid code
+    ✓ setup link has a short URL
+    ✓ setup link has a secret key
+    ✓ redirect_warm_cache_warmup returns 302
+    ✓ redirect_warm_cache returns 302
+    ✓ test link cleanup returns 200
+
+    CUSTOM
+    redirect_client_blocked..............: avg=1.08ms   min=0s     med=0s      max=64.69ms  p(90)=0s       p(95)=0s      
+    redirect_client_connecting...........: avg=339.91µs min=0s     med=0s      max=49.66ms  p(90)=0s       p(95)=0s      
+    redirect_client_receiving............: avg=65.27µs  min=0s     med=0s      max=7.42ms   p(90)=0s       p(95)=545.8µs 
+    redirect_client_sending..............: avg=47.4µs   min=0s     med=0s      max=6.98ms   p(90)=302.35µs p(95)=421.25µs
+    redirect_client_tls_handshaking......: avg=735.84µs min=0s     med=0s      max=55.87ms  p(90)=0s       p(95)=0s      
+    redirect_client_waiting..............: avg=45.22ms  min=4.53ms med=10.09ms max=737.28ms p(90)=162.37ms p(95)=239.97ms
+
+    HTTP
+    http_req_duration....................: avg=44.27ms  min=4.53ms med=10.36ms max=737.28ms p(90)=160.24ms p(95)=230.26ms
+      { endpoint:redirect_warm_cache }...: avg=45.33ms  min=4.53ms med=10.2ms  max=737.28ms p(90)=162.37ms p(95)=239.97ms
+      { expected_response:true }.........: avg=44.27ms  min=4.53ms med=10.36ms max=737.28ms p(90)=160.24ms p(95)=230.26ms
+    http_req_failed......................: 0.00%  0 out of 6346
+    http_reqs............................: 6346   133.284212/s
+
+    EXECUTION
+    dropped_iterations...................: 63     1.323181/s
+    iteration_duration...................: avg=45ms     min=4.53ms med=10.55ms max=737.28ms p(90)=156.73ms p(95)=232.07ms
+    iterations...........................: 6306   132.444097/s
+    vus..................................: 223    min=0         max=223
+    vus_max..............................: 249    min=190       max=249
+
+    NETWORK
+    data_received........................: 2.0 MB 43 kB/s
+    data_sent............................: 726 kB 15 kB/s
+
+
+
+time="2026-07-29T14:15:10+09:00" level=error msg="thresholds on metrics 'dropped_iterations, http_req_duration{endpoint:redirect_warm_cache}' were crossed; at least one has abortOnFail enabled, stopping test prematurely"

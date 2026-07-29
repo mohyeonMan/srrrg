@@ -1,0 +1,22 @@
+{
+  "capturedAt": "2026-07-29T14:07:00+09:00",
+  "source": "Prometheus HTTP API via SSH tunnel",
+  "targetRps": 850,
+  "queryWindowMissedFailurePeak": true,
+  "maxActualRps": 850.6,
+  "serverP95MsNearFailure": 2.9365,
+  "serverP99MsNearFailure": 3.6533,
+  "redirectWriteP95MsNearFailure": 1.3719,
+  "applicationCpuMaxCoresAtPeak": 0.7355,
+  "maxThrottlePercentAtPeak": 3.3058,
+  "maxHikariActiveAtPeak": 3,
+  "maxHikariPendingAtPeak": 0,
+  "postgresCpuMaxCoresAtPeak": 0.691,
+  "serverRedirectDelta": 26749,
+  "k6CompletedIterations": 26557,
+  "k6DroppedIterations": 156,
+  "podRestartDelta": 0,
+  "hikariTimeoutDelta": 0,
+  "postgresDeadlockDelta": 0,
+  "conclusion": "The first run was inconclusive because the query window missed the failure peak. See the 141422 retry."
+}

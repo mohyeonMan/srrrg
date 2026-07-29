@@ -1,0 +1,84 @@
+time="2026-07-29T14:04:25+09:00" level=info msg="test configuration: scenario=warm-cache, baseUrl=https://jhhomehub.gonetis.com/srrrg-dev, rates=850, stageDuration=2m, rampDuration=10s, dataLinks=20, warmupRate=10, warmupDuration=30s, preAllocatedVUs=170, maxVUs=200" source=console
+time="2026-07-29T14:04:25+09:00" level=info msg="test link created: code=Q2HVNd, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/Q2HVNd" source=console
+time="2026-07-29T14:04:25+09:00" level=info msg="test link created: code=uaP2m3, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/uaP2m3" source=console
+time="2026-07-29T14:04:26+09:00" level=info msg="test link created: code=YZCSLY, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/YZCSLY" source=console
+time="2026-07-29T14:04:26+09:00" level=info msg="test link created: code=hSmPLB, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/hSmPLB" source=console
+time="2026-07-29T14:04:26+09:00" level=info msg="test link created: code=b7hZ5l, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/b7hZ5l" source=console
+time="2026-07-29T14:04:26+09:00" level=info msg="test link created: code=sqefys, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/sqefys" source=console
+time="2026-07-29T14:04:26+09:00" level=info msg="test link created: code=4i0mY9, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/4i0mY9" source=console
+time="2026-07-29T14:04:26+09:00" level=info msg="test link created: code=yRFXiY, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/yRFXiY" source=console
+time="2026-07-29T14:04:27+09:00" level=info msg="test link created: code=kjElxv, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/kjElxv" source=console
+time="2026-07-29T14:04:27+09:00" level=info msg="test link created: code=PXRcG3, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/PXRcG3" source=console
+time="2026-07-29T14:04:27+09:00" level=info msg="test link created: code=Bst1j6, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/Bst1j6" source=console
+time="2026-07-29T14:04:27+09:00" level=info msg="test link created: code=5LnqXx, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/5LnqXx" source=console
+time="2026-07-29T14:04:27+09:00" level=info msg="test link created: code=t2iBFQ, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/t2iBFQ" source=console
+time="2026-07-29T14:04:27+09:00" level=info msg="test link created: code=VegM8V, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/VegM8V" source=console
+time="2026-07-29T14:04:28+09:00" level=info msg="test link created: code=yH4rgQ, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/yH4rgQ" source=console
+time="2026-07-29T14:04:28+09:00" level=info msg="test link created: code=KSof2E, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/KSof2E" source=console
+time="2026-07-29T14:04:28+09:00" level=info msg="test link created: code=Nvp3kc, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/Nvp3kc" source=console
+time="2026-07-29T14:04:28+09:00" level=info msg="test link created: code=cirPJf, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/cirPJf" source=console
+time="2026-07-29T14:04:28+09:00" level=info msg="test link created: code=mAoXHH, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/mAoXHH" source=console
+time="2026-07-29T14:04:29+09:00" level=info msg="test link created: code=TQhY1E, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/TQhY1E" source=console
+time="2026-07-29T14:05:34+09:00" level=warning msg="Insufficient VUs, reached 200 active VUs and cannot initialize more" executor=ramping-arrival-rate scenario=warm_cache
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate==1' rate=100.00%
+
+    dropped_iterations
+    ✗ 'rate<1' rate=2.178539/s
+    ✗ 'count<10' count=156
+
+    http_req_duration{endpoint:redirect_warm_cache}
+    ✓ 'p(95)<100' p(95)=39.3ms
+    ✗ 'p(99)<250' p(99)=281.5ms
+
+    http_req_failed
+    ✓ 'rate<0.001' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 26657   372.264871/s
+    checks_succeeded...: 100.00% 26657 out of 26657
+    checks_failed......: 0.00%   0 out of 26657
+
+    ✓ setup link create returns 201
+    ✓ setup link has a valid code
+    ✓ setup link has a short URL
+    ✓ setup link has a secret key
+    ✓ redirect_warm_cache_warmup returns 302
+    ✓ redirect_warm_cache returns 302
+    ✓ test link cleanup returns 200
+
+    CUSTOM
+    redirect_client_blocked..............: avg=214.37µs min=0s     med=0s     max=68.96ms  p(90)=0s      p(95)=0s      
+    redirect_client_connecting...........: avg=65.89µs  min=0s     med=0s     max=47.59ms  p(90)=0s      p(95)=0s      
+    redirect_client_receiving............: avg=59.79µs  min=0s     med=0s     max=6.04ms   p(90)=0s      p(95)=530.12µs
+    redirect_client_sending..............: avg=51.67µs  min=0s     med=0s     max=11.18ms  p(90)=0s      p(95)=509µs   
+    redirect_client_tls_handshaking......: avg=147.45µs min=0s     med=0s     max=58.68ms  p(90)=0s      p(95)=0s      
+    redirect_client_waiting..............: avg=18.54ms  min=4.81ms med=9.19ms max=899.23ms p(90)=16.42ms p(95)=39.05ms 
+
+    HTTP
+    http_req_duration....................: avg=18.73ms  min=4.81ms med=9.32ms max=899.83ms p(90)=16.58ms p(95)=40.76ms 
+      { endpoint:redirect_warm_cache }...: avg=18.65ms  min=4.81ms med=9.29ms max=899.83ms p(90)=16.55ms p(95)=39.3ms  
+      { expected_response:true }.........: avg=18.73ms  min=4.81ms med=9.32ms max=899.83ms p(90)=16.58ms p(95)=40.76ms 
+    http_req_failed......................: 0.00%  0 out of 26597
+    http_reqs............................: 26597  371.426972/s
+
+    EXECUTION
+    dropped_iterations...................: 156    2.178539/s
+    iteration_duration...................: avg=18.93ms  min=5.06ms med=9.43ms max=899.83ms p(90)=17.38ms p(95)=40.76ms 
+    iterations...........................: 26557  370.868372/s
+    vus..................................: 191    min=0          max=191
+    vus_max..............................: 220    min=190        max=220
+
+    NETWORK
+    data_received........................: 2.8 MB 39 kB/s
+    data_sent............................: 1.4 MB 20 kB/s
+
+
+
+time="2026-07-29T14:05:37+09:00" level=error msg="thresholds on metrics 'dropped_iterations, http_req_duration{endpoint:redirect_warm_cache}' were crossed; at least one has abortOnFail enabled, stopping test prematurely"
