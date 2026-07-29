@@ -1,0 +1,38 @@
+{
+  "capturedAt": "2026-07-29T16:03:00+09:00",
+  "source": "Prometheus HTTP API via SSH tunnel",
+  "configuration": {
+    "concurrentVUs": 10,
+    "warmupRate": 10,
+    "warmupDuration": "30s",
+    "concurrentStartTime": "45s",
+    "fixedSafeDelay": "100ms",
+    "fixedSafeCacheDuration": "1s"
+  },
+  "concurrentCounterDeltas": {
+    "redirect": 10,
+    "cacheMissStale": 10,
+    "cacheHit": 0,
+    "fixedSafeChecks": 10,
+    "uniqueTargetUrls": 1,
+    "duplicateCheckMultiplier": 10
+  },
+  "latency": {
+    "k6P95Ms": 237.12,
+    "k6P99Ms": 237.3,
+    "serverP95Ms": 132.8196,
+    "serverP99Ms": 133.9381,
+    "fixedSafeP95Ms": 111.2557,
+    "redirectWriteP95Ms": 8.3886
+  },
+  "resources": {
+    "applicationCpuCores": 0.0926,
+    "postgresCpuCores": 0
+  },
+  "errors": {
+    "httpFailures": 0,
+    "podRestartDelta": 0,
+    "hikariTimeoutDelta": 0,
+    "postgresDeadlockDelta": 0
+  }
+}

@@ -1,0 +1,54 @@
+time="2026-07-29T16:51:01+09:00" level=info msg="test configuration: scenario=link-create, cacheMode=miss, baseUrl=https://jhhomehub.gonetis.com/srrrg-dev, rates=2, stageDuration=30s, rampDuration=5s, warmupRate=1, warmupDuration=30s, preAllocatedVUs=20, maxVUs=20" source=console
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate==1' rate=100.00%
+
+    dropped_iterations
+    ✓ 'rate<1' rate=0/s
+    ✓ 'count<10' count=0
+
+    http_req_duration{endpoint:link_create_cache_miss}
+    ✓ 'p(95)<300' p(95)=236.1ms
+    ✓ 'p(99)<500' p(99)=277.75ms
+
+    http_req_failed
+    ✓ 'rate<0.001' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 392     6.030187/s
+    checks_succeeded...: 100.00% 392 out of 392
+    checks_failed......: 0.00%   0 out of 392
+
+    ✓ link_create_warmup returns 201
+    ✓ link_create_warmup has a valid code
+    ✓ link_create_warmup has a secret key
+    ✓ created link cleanup returns 200
+    ✓ link_create_cache_miss returns 201
+    ✓ link_create_cache_miss has a valid code
+    ✓ link_create_cache_miss has a secret key
+
+    HTTP
+    http_req_duration.......................: avg=124.97ms min=55.72ms  med=127.97ms max=291.75ms p(90)=186.22ms p(95)=218.09ms
+      { endpoint:link_create_cache_miss }...: avg=181.56ms min=164.15ms med=175.16ms max=288.56ms p(90)=191.09ms p(95)=236.1ms 
+      { expected_response:true }............: avg=124.97ms min=55.72ms  med=127.97ms max=291.75ms p(90)=186.22ms p(95)=218.09ms
+    http_req_failed.........................: 0.00%  0 out of 196
+    http_reqs...............................: 196    3.015094/s
+
+    EXECUTION
+    dropped_iterations......................: 0      0/s
+    iteration_duration......................: avg=278.06ms min=234.49ms med=264.08ms max=462ms    p(90)=339.28ms p(95)=366.44ms
+    iterations..............................: 98     1.507547/s
+    vus.....................................: 1      min=0        max=1 
+    vus_max.................................: 40     min=40       max=40
+
+    NETWORK
+    data_received...........................: 294 kB 4.5 kB/s
+    data_sent...............................: 103 kB 1.6 kB/s
+
+
+

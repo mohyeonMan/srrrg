@@ -1,0 +1,48 @@
+time="2026-07-29T15:52:33+09:00" level=info msg="test configuration: scenario=concurrent-cold-cache, baseUrl=https://jhhomehub.gonetis.com/srrrg-dev, concurrentVUs=10, warmupRate=10, warmupDuration=30s, concurrentStartTime=45s" source=console
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate==1' rate=100.00%
+
+    http_req_duration{endpoint:redirect_concurrent_cold_cache}
+    ✓ 'p(95)<500' p(95)=237.12ms
+    ✓ 'p(99)<750' p(99)=237.3ms
+
+    http_req_failed
+    ✓ 'rate<0.001' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 318     6.864633/s
+    checks_succeeded...: 100.00% 318 out of 318
+    checks_failed......: 0.00%   0 out of 318
+
+    ✓ setup link create returns 201
+    ✓ setup link has a valid code
+    ✓ setup link has a secret key
+    ✓ redirect_concurrent_warmup returns 302
+    ✓ redirect_concurrent_cold_cache returns 302
+    ✓ test link cleanup returns 200
+
+    HTTP
+    http_req_duration...............................: avg=42.69ms  min=12.22ms  med=16.97ms  max=519.57ms p(90)=119.52ms p(95)=129.25ms
+      { endpoint:redirect_concurrent_cold_cache }...: avg=234.37ms min=230.79ms med=234.52ms max=237.35ms p(90)=236.9ms  p(95)=237.12ms
+      { expected_response:true }....................: avg=42.69ms  min=12.22ms  med=16.97ms  max=519.57ms p(90)=119.52ms p(95)=129.25ms
+    http_req_failed.................................: 0.00%  0 out of 314
+    http_reqs.......................................: 314    6.778285/s
+
+    EXECUTION
+    iteration_duration..............................: avg=42.23ms  min=12.22ms  med=17ms     max=237.35ms p(90)=119.23ms p(95)=136.52ms
+    iterations......................................: 310    6.691938/s
+    vus.............................................: 10     min=0        max=10
+    vus_max.........................................: 20     min=20       max=20
+
+    NETWORK
+    data_received...................................: 161 kB 3.5 kB/s
+    data_sent.......................................: 51 kB  1.1 kB/s
+
+
+

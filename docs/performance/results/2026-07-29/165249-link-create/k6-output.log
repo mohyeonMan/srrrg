@@ -1,0 +1,54 @@
+time="2026-07-29T16:52:49+09:00" level=info msg="test configuration: scenario=link-create, cacheMode=miss, baseUrl=https://jhhomehub.gonetis.com/srrrg-dev, rates=5, stageDuration=30s, rampDuration=5s, warmupRate=1, warmupDuration=30s, preAllocatedVUs=20, maxVUs=50" source=console
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate==1' rate=100.00%
+
+    dropped_iterations
+    ✓ 'rate<1' rate=0/s
+    ✓ 'count<10' count=0
+
+    http_req_duration{endpoint:link_create_cache_miss}
+    ✓ 'p(95)<300' p(95)=189.84ms
+    ✓ 'p(99)<500' p(99)=203.41ms
+
+    http_req_failed
+    ✓ 'rate<0.001' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 780     11.992164/s
+    checks_succeeded...: 100.00% 780 out of 780
+    checks_failed......: 0.00%   0 out of 780
+
+    ✓ link_create_warmup returns 201
+    ✓ link_create_warmup has a valid code
+    ✓ link_create_warmup has a secret key
+    ✓ created link cleanup returns 200
+    ✓ link_create_cache_miss returns 201
+    ✓ link_create_cache_miss has a valid code
+    ✓ link_create_cache_miss has a secret key
+
+    HTTP
+    http_req_duration.......................: avg=119.56ms min=55.37ms  med=135.27ms max=292ms    p(90)=181.48ms p(95)=189.69ms
+      { endpoint:link_create_cache_miss }...: avg=173.45ms min=157.76ms med=172.58ms max=212.49ms p(90)=184.3ms  p(95)=189.84ms
+      { expected_response:true }............: avg=119.56ms min=55.37ms  med=135.27ms max=292ms    p(90)=181.48ms p(95)=189.69ms
+    http_req_failed.........................: 0.00%  0 out of 390
+    http_reqs...............................: 390    5.996082/s
+
+    EXECUTION
+    dropped_iterations......................: 0      0/s
+    iteration_duration......................: avg=253.24ms min=218.87ms med=238.09ms max=455.88ms p(90)=311.5ms  p(95)=344.72ms
+    iterations..............................: 195    2.998041/s
+    vus.....................................: 1      min=0        max=1 
+    vus_max.................................: 40     min=40       max=40
+
+    NETWORK
+    data_received...........................: 332 kB 5.1 kB/s
+    data_sent...............................: 135 kB 2.1 kB/s
+
+
+

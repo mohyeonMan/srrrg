@@ -1,0 +1,28 @@
+﻿{
+    "scenario":  "link-create",
+    "startedAt":  "2026-07-29T16:51:01.6899490+09:00",
+    "finishedAt":  "2026-07-29T16:52:07.1396361+09:00",
+    "script":  "C:\\Users\\qkrwl\\Desktop\\repo\\my\\srrrg\\scripts\\performance\\link-create.js",
+    "commitSha":  "3611a3e5d534ac49a29112fcefdee44baed30c88",
+    "workingTreeDirty":  true,
+    "k6Executable":  "C:\\Program Files\\k6\\k6.exe",
+    "infrastructure":  {
+                           "commitSha":  "2ea588d69632b8ea8ec0829999a91a915b2e3477",
+                           "replicaCount":  "1",
+                           "application":  {
+                                               "cpuRequest":  "250m",
+                                               "cpuLimit":  "750m",
+                                               "memoryRequest":  "512Mi",
+                                               "memoryLimit":  "1Gi"
+                                           },
+                           "postgres":  {
+                                            "cpuRequest":  "500m",
+                                            "cpuLimit":  "1500m",
+                                            "memoryRequest":  "512Mi",
+                                            "memoryLimit":  "2Gi"
+                                        },
+                           "hikariMaximumPoolSize":  "10"
+                       },
+    "exitCode":  0,
+    "analysisStatus":  "complete"
+}

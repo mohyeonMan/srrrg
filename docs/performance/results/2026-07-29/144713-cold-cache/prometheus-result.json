@@ -1,0 +1,111 @@
+{
+  "capturedAt": "2026-07-29T14:51:00+09:00",
+  "source": {
+    "type": "Prometheus HTTP API",
+    "access": "SSH tunnel to the cluster-internal Prometheus service",
+    "grafanaUsedForResultValues": false
+  },
+  "queryContext": {
+    "testStartedAt": "2026-07-29T14:47:13.9917898+09:00",
+    "testFinishedAt": "2026-07-29T14:49:33.5503196+09:00",
+    "podCreatedAt": "2026-07-29T14:44:01+09:00",
+    "stage5EvaluationAt": "2026-07-29T14:48:15+09:00",
+    "stage10EvaluationAt": "2026-07-29T14:48:50+09:00",
+    "stage20EvaluationAt": "2026-07-29T14:49:25+09:00",
+    "stageRateWindow": "20s"
+  },
+  "configuration": {
+    "fixedSafeDelay": "0ms",
+    "fixedSafeCacheDuration": "1ms",
+    "warmupRate": 10,
+    "warmupDurationSeconds": 30,
+    "measuredTargetsRps": [5, 10, 20],
+    "stageDurationSeconds": 30,
+    "rampDurationSeconds": 5,
+    "dataLinks": 20
+  },
+  "k6": {
+    "redirectIterations": 1499,
+    "httpRequests": 1539,
+    "checksSucceeded": 1599,
+    "checksFailed": 0,
+    "httpFailures": 0,
+    "droppedIterations": 0,
+    "measuredP95Ms": 22.71,
+    "measuredP99Ms": 33,
+    "maxVUsObserved": 1,
+    "exitCode": 0
+  },
+  "counters": {
+    "redirect": 1499,
+    "cache": {
+      "hit": 0,
+      "missAbsent": 20,
+      "missStale": 1499
+    },
+    "riskCheck": {
+      "provider": "fixed_safe",
+      "outcome": "safe",
+      "count": 1519
+    },
+    "httpByRoute": {
+      "linkCreate201": 20,
+      "redirect302": 1499,
+      "linkDelete200": 20
+    },
+    "podRestartDelta": 0,
+    "hikariTimeoutDelta": 0,
+    "postgresRollbackDelta": 0,
+    "postgresDeadlockDelta": 0
+  },
+  "stages": [
+    {
+      "targetRps": 5,
+      "actualRps": 5,
+      "serverP95Ms": 9.3061,
+      "serverP99Ms": 11.5343,
+      "fixedSafeP95Ms": 0.95,
+      "applicationCpuCores": 0.0741,
+      "hikariActive": 0,
+      "hikariPending": 0,
+      "postgresCpuCores": 0
+    },
+    {
+      "targetRps": 10,
+      "actualRps": 10,
+      "serverP95Ms": 7.107,
+      "serverP99Ms": 8.7381,
+      "fixedSafeP95Ms": 0.95,
+      "applicationCpuCores": 0,
+      "hikariActive": 0,
+      "hikariPending": 0,
+      "postgresCpuCores": 0.0241
+    },
+    {
+      "targetRps": 20,
+      "actualRps": 20,
+      "serverP95Ms": 5.9419,
+      "serverP99Ms": 8.0391,
+      "fixedSafeP95Ms": 0.95,
+      "applicationCpuCores": 0.2633,
+      "hikariActive": 1,
+      "hikariPending": 0,
+      "postgresCpuCores": 0.0426
+    }
+  ],
+  "wholeRunResources": {
+    "applicationCpuMaxCores": 0.2633,
+    "applicationMemoryMaxBytes": 339312640,
+    "applicationMemoryMaxMiB": 323.59,
+    "hikariActiveMax": 1,
+    "hikariPendingMax": 0,
+    "postgresCpuMaxCores": 0.0426,
+    "postgresConnectionsMax": 10,
+    "postgresCommitDelta": 7792
+  },
+  "limitations": [
+    "새 Pod의 첫 Prometheus scrape가 테스트 시작 뒤에 생성돼 counter 차이 대신 해당 Pod의 전체 counter를 사용했다.",
+    "Pod 생성 후 이 테스트 외 애플리케이션 요청이 없었고 전체 counter가 k6 route별 요청 수와 정확히 일치했다.",
+    "Gauge는 scrape 사이의 순간 최고치를 놓칠 수 있다."
+  ]
+}

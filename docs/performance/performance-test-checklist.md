@@ -102,7 +102,7 @@ PostgreSQL `max_connections=100`에서 exporter와 관리자 접속을 포함해
 - [x] 테스트 데이터 생성 및 정리 도구를 작성한다.
 - [ ] Baseline 시나리오를 작성한다.
 - [x] Warm-cache redirect 시나리오를 작성한다.
-- [ ] Cold-cache redirect 시나리오를 작성한다.
+- [x] Cold-cache redirect 시나리오를 작성한다.
 - [x] 시나리오별 arrival rate, 단계 시간과 테스트 데이터 수를 명시한다.
 - [x] p95, p99와 예상하지 않은 오류율에 대한 k6 threshold를 정의한다.
 - [x] 실행 일시, 애플리케이션 commit SHA, 시나리오 설정과 결과를 함께 저장한다.
@@ -114,11 +114,11 @@ PostgreSQL `max_connections=100`에서 exporter와 관리자 접속을 포함해
 - 실행 방법과 예상 메트릭 증가량은
   [`smoke-test.md`](./smoke-test.md)를 참고한다.
 - [x] URL 위험 검사 provider를 `fixed-safe`로 설정한다.
-- [ ] 순수 애플리케이션 및 DB 성능 확인은 delay `0ms`로 시작한다.
+- [x] 순수 애플리케이션 및 DB 성능 확인은 delay `0ms`로 시작한다.
 - [ ] VU 1로 Baseline을 실행한다.
 - [x] k6 요청 수와 Prometheus HTTP 요청 증가량이 일치하는지 확인한다.
 - [x] Warm-cache에서 cache hit가 의도대로 발생하는지 확인한다.
-- [ ] Cold-cache에서 cache miss가 의도대로 발생하는지 확인한다.
+- [x] Cold-cache에서 cache miss가 의도대로 발생하는지 확인한다.
 - [x] Grafana에서 p95, p99, 오류율과 자원 지표가 테스트 시간대에 표시되는지 확인한다.
 - [x] HikariCP와 PostgreSQL connection 수가 설정값과 일치하는지 확인한다.
 
@@ -129,9 +129,9 @@ PostgreSQL `max_connections=100`에서 exporter와 관리자 접속을 포함해
 - [x] 기존 리소스(앱 CPU `100m/500m`, PostgreSQL CPU `300m/1`)에서 단일 dev Pod의 Warm-cache redirect를 350 RPS까지 검증한다.
 - [x] 변경 리소스(앱 CPU `250m/750m`, PostgreSQL CPU `500m/1500m`)에서 단일 dev Pod의 Warm-cache redirect를 350~500 RPS로 검증한다.
 - [x] Warm-cache redirect의 최대 지속 처리량을 찾는다. 단일 Pod 800 RPS를 2분 검증했고, 최대 VU를 300으로 올린 850 RPS 재시험에서도 Hikari pending 189와 지연 기준 초과가 발생했다.
-- [ ] Cold-cache redirect를 실행한다.
-- [ ] Concurrent cold-cache로 동일 URL의 중복 검사 수준을 확인한다.
-- [ ] Cache hit 및 miss 링크 생성을 분리해 실행한다.
+- [x] Cold-cache redirect를 실행한다.
+- [x] Concurrent cold-cache로 동일 URL의 중복 검사 수준을 확인한다. 단일 Pod 10·25·50 VU에서 중복 검사 배수는 각각 10·25·47배였다.
+- [x] Cache hit 및 miss 링크 생성을 분리해 실행한다. 단일 Pod에서 각 1·2·5 RPS를 검증했고 실패, dropped iteration, Hikari pending/timeout과 PostgreSQL deadlock은 0이었다.
 - [ ] Mixed workload를 실행한다.
 - [ ] Spike 테스트 후 지연과 connection이 정상 상태로 회복되는지 확인한다.
 - [ ] Soak 테스트에서 heap, RSS, GC, connection과 DB 크기의 장기 추세를 확인한다.

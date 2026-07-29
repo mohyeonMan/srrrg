@@ -1,0 +1,38 @@
+{
+  "capturedAt": "2026-07-29T16:51:00+09:00",
+  "source": "Prometheus HTTP API via SSH tunnel",
+  "configuration": {
+    "cacheMode": "miss",
+    "targetRps": 1,
+    "warmupRate": 1,
+    "warmupDuration": "30s",
+    "fixedSafeDelay": "100ms",
+    "fixedSafeCacheDuration": "15m"
+  },
+  "requests": {
+    "created": 65,
+    "errors": 0,
+    "cacheMissAbsent": 65,
+    "fixedSafeChecks": 65
+  },
+  "latency": {
+    "k6P95Ms": 280.09,
+    "k6P99Ms": 291.61,
+    "serverP95Ms": 155.4689,
+    "serverP99Ms": 156.3637,
+    "fixedSafeP95Ms": 111.2557
+  },
+  "resources": {
+    "applicationCpuAverageCores": 0.088,
+    "applicationCpuMaxCores": 0.215,
+    "postgresCpuMaxCores": 0.0148,
+    "hikariActiveMax": 1,
+    "hikariPendingMax": 0
+  },
+  "errors": {
+    "httpFailures": 0,
+    "droppedIterations": 0,
+    "hikariTimeoutDelta": 0,
+    "postgresDeadlockDelta": 0
+  }
+}
