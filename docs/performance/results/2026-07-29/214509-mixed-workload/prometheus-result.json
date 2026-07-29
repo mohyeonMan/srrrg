@@ -1,0 +1,40 @@
+{
+  "capturedAt": "2026-07-29T21:48:30+09:00",
+  "source": "Prometheus HTTP API via user-managed local port forwarding",
+  "configuration": {"secretHash": "SHA-256", "redirectRps": 500, "cacheHitCreateRps": 4, "cacheMissCreateRps": 1, "duration": "2m"},
+  "queryContext": {"evaluationStart": "2026-07-29T21:45:45+09:00", "evaluationEnd": "2026-07-29T21:47:55+09:00", "histogramWindow": "130s", "rateWindow": "30s", "rangeStep": "5s"},
+  "queries": {
+    "redirectP95": "1000 * histogram_quantile(0.95, sum by (le) (increase(srrrg_redirect_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"}[130s])))",
+    "redirectP99": "1000 * histogram_quantile(0.99, sum by (le) (increase(srrrg_redirect_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"}[130s])))",
+    "linkCreateP95": "1000 * histogram_quantile(0.95, sum by (le) (increase(srrrg_link_create_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"}[130s])))",
+    "linkCreateP99": "1000 * histogram_quantile(0.99, sum by (le) (increase(srrrg_link_create_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"}[130s])))",
+    "applicationCpu": "sum(rate(container_cpu_usage_seconds_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",container=~\"srrrg-.*\",image!=\"\"}[30s]))"
+  },
+  "latency": {
+    "k6RedirectP95Ms": 68.52,
+    "k6RedirectP99Ms": 392.83,
+    "serverRedirectP95Ms": 7.6727,
+    "serverRedirectP99Ms": 22.5163,
+    "k6LinkCreateHitP95Ms": 83.06,
+    "k6LinkCreateHitP99Ms": 361.22,
+    "k6LinkCreateMissP95Ms": 207.15,
+    "k6LinkCreateMissP99Ms": 1540,
+    "serverLinkCreateP95Ms": 109.2827,
+    "serverLinkCreateP99Ms": 111.7471,
+    "fixedSafeP95Ms": 111.2557
+  },
+  "resources": {
+    "redirectRpsAverageIncludingRampAndStop": 420.76,
+    "redirectRpsMax": 500.4,
+    "applicationCpuAverageCores": 0.3625,
+    "applicationCpuMaxCores": 0.6552,
+    "cpuThrottledPeriodsPercent": 3.23,
+    "cpuThrottledPeriodsMax30sPercent": 9.8,
+    "tomcatBusyMax": 4,
+    "hikariActiveMax": 2,
+    "hikariPendingMax": 0,
+    "postgresCpuMaxCores": 0.5213
+  },
+  "errors": {"k6HttpFailures": 0, "droppedIterations": 1083, "hikariTimeoutDelta": 0, "postgresDeadlockDelta": 0, "podRestartDelta": 0},
+  "limitations": ["Server latency and saturation metrics remained healthy while k6 recorded multi-second client tail latency and exhausted 200 redirect VUs. This run does not isolate the load-generator or network source of that tail."]
+}

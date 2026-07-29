@@ -1,0 +1,38 @@
+{
+  "capturedAt": "2026-07-29T20:39:55+09:00",
+  "source": "Prometheus HTTP API via SSH tunnel",
+  "configuration": {"cacheMode": "miss", "targetRps": 8, "warmupRate": 1, "warmupDuration": "30s", "fixedSafeDelay": "100ms", "fixedSafeCacheDuration": "15m"},
+  "queryContext": {
+    "evaluationStart": "2026-07-29T17:51:15+09:00",
+    "evaluationEnd": "2026-07-29T17:52:25+09:00",
+    "histogramWindow": "70s",
+    "cpuRateWindow": "30s",
+    "rangeStep": "5s",
+    "counterReducer": "maximum minus minimum over the padded execution range"
+  },
+  "queries": {
+    "created": "sum(srrrg_link_create_seconds_count{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",outcome=\"created\"})",
+    "cacheMiss": "sum(srrrg_url_risk_cache_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",result=\"miss_absent\"})",
+    "riskChecks": "sum(srrrg_url_risk_check_seconds_count{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",provider=\"fixed_safe\",outcome=\"safe\"})",
+    "linkCreateP95": "1000 * histogram_quantile(0.95, sum by (le) (increase(srrrg_link_create_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",outcome=\"created\"}[70s])))",
+    "linkCreateP99": "1000 * histogram_quantile(0.99, sum by (le) (increase(srrrg_link_create_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",outcome=\"created\"}[70s])))",
+    "fixedSafeLatency": "1000 * histogram_quantile(0.95, sum by (le) (increase(srrrg_url_risk_check_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",provider=\"fixed_safe\",outcome=\"safe\"}[70s])))",
+    "applicationCpu": "sum(rate(container_cpu_usage_seconds_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",container=~\"srrrg-.*\",image!=\"\"}[30s]))",
+    "postgresCpu": "sum(rate(container_cpu_usage_seconds_total{namespace=\"postgres\",pod=~\"postgres-.*\",container=\"postgres\",image!=\"\"}[30s]))"
+  },
+  "requests": {"k6CompletedCreates": 293, "prometheusObservedCreatedDelta": 293, "errors": 0, "cacheHitDelta": 0, "cacheMissAbsentDelta": 293, "fixedSafeChecksDelta": 293},
+  "latency": {"k6P95Ms": 192.57, "k6P99Ms": 236.76, "serverP95Ms": 156.3895, "serverP99Ms": 212.9215, "fixedSafeP95Ms": 111.2557},
+  "resources": {
+    "applicationCpuAverageCores": 0.119,
+    "applicationCpuMaxCores": 0.3974,
+    "applicationCpuThrottledPeriodsPercent": 1.7,
+    "applicationCpuThrottledPeriodsMax30sPercent": 2.12,
+    "postgresCpuAverageCores": 0.0092,
+    "postgresCpuMaxCores": 0.014,
+    "tomcatBusyMax": 2,
+    "hikariActiveMaxObserved": 0,
+    "hikariPendingMax": 0
+  },
+  "errors": {"httpFailures": 0, "http5xxDelta": 0, "droppedIterations": 0, "hikariTimeoutDelta": 0, "postgresDeadlockDelta": 0, "podRestartDelta": 0},
+  "limitations": ["A 5-second scrape can miss short-lived Hikari gauge peaks."]
+}

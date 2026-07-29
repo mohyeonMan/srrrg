@@ -1,0 +1,41 @@
+{
+  "capturedAt": "2026-07-29T20:39:55+09:00",
+  "source": "Prometheus HTTP API via SSH tunnel",
+  "configuration": {"cacheMode": "miss", "targetRps": 10, "warmupRate": 1, "warmupDuration": "30s", "fixedSafeDelay": "100ms", "fixedSafeCacheDuration": "15m"},
+  "queryContext": {
+    "evaluationStart": "2026-07-29T17:49:05+09:00",
+    "evaluationEnd": "2026-07-29T17:50:15+09:00",
+    "histogramWindow": "70s",
+    "cpuRateWindow": "30s",
+    "rangeStep": "5s",
+    "counterReducer": "maximum minus minimum over the padded execution range"
+  },
+  "queries": {
+    "created": "sum(srrrg_link_create_seconds_count{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",outcome=\"created\"})",
+    "cacheMiss": "sum(srrrg_url_risk_cache_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",result=\"miss_absent\"})",
+    "riskChecks": "sum(srrrg_url_risk_check_seconds_count{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",provider=\"fixed_safe\",outcome=\"safe\"})",
+    "linkCreateP95": "1000 * histogram_quantile(0.95, sum by (le) (increase(srrrg_link_create_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",outcome=\"created\"}[70s])))",
+    "linkCreateP99": "1000 * histogram_quantile(0.99, sum by (le) (increase(srrrg_link_create_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",outcome=\"created\"}[70s])))",
+    "fixedSafeLatency": "1000 * histogram_quantile(0.95, sum by (le) (increase(srrrg_url_risk_check_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",provider=\"fixed_safe\",outcome=\"safe\"}[70s])))",
+    "applicationCpu": "sum(rate(container_cpu_usage_seconds_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",container=~\"srrrg-.*\",image!=\"\"}[30s]))",
+    "postgresCpu": "sum(rate(container_cpu_usage_seconds_total{namespace=\"postgres\",pod=~\"postgres-.*\",container=\"postgres\",image!=\"\"}[30s]))"
+  },
+  "requests": {"k6CompletedCreates": 326, "prometheusObservedCreatedDelta": 327, "errors": 0, "cacheHitDelta": 0, "cacheMissAbsentDelta": 327, "fixedSafeChecksDelta": 327},
+  "latency": {"k6P95Ms": 324.65, "k6P99Ms": 344.43, "serverP95Ms": 278.1728, "serverP99Ms": 346.1765, "fixedSafeP95Ms": 111.2557},
+  "resources": {
+    "applicationCpuAverageCores": 0.1469,
+    "applicationCpuMaxCores": 0.4534,
+    "applicationCpuThrottledPeriodsPercent": 7.66,
+    "applicationCpuThrottledPeriodsMax30sPercent": 12.08,
+    "postgresCpuAverageCores": 0.0105,
+    "postgresCpuMaxCores": 0.0226,
+    "tomcatBusyMax": 5,
+    "hikariActiveMaxObserved": 0,
+    "hikariPendingMax": 0
+  },
+  "errors": {"httpFailures": 0, "http5xxDelta": 0, "droppedIterations": 0, "hikariTimeoutDelta": 0, "postgresDeadlockDelta": 0, "podRestartDelta": 0},
+  "limitations": [
+    "The server completed one request that k6 had already sent but did not count as completed before threshold abort.",
+    "A 5-second scrape can miss short-lived Hikari gauge peaks."
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "scenario": "warm-cache",
+  "startedAt": "2026-07-29T22:03:01+0900",
+  "finishedAt": "2026-07-29T22:05:20+0900",
+  "script": "/Users/jihoon/Desktop/workspace/personal/srrrg/scripts/performance/warm-cache.js",
+  "commitSha": "47485d598292b8bf93d21cfd514090447cec4c7b",
+  "workingTreeDirty": true,
+  "k6Executable": "/opt/homebrew/bin/k6",
+  "infrastructure": {
+    "commitSha": "",
+    "replicaCount": "",
+    "application": {
+      "cpuRequest": "",
+      "cpuLimit": "",
+      "memoryRequest": "",
+      "memoryLimit": ""
+    },
+    "postgres": {
+      "cpuRequest": "",
+      "cpuLimit": "",
+      "memoryRequest": "",
+      "memoryLimit": ""
+    },
+    "hikariMaximumPoolSize": ""
+  },
+  "exitCode": 0,
+  "analysisStatus": "complete"
+}

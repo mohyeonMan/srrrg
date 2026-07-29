@@ -1,0 +1,36 @@
+{
+  "capturedAt": "2026-07-29T20:39:55+09:00",
+  "source": "Prometheus HTTP API via SSH tunnel",
+  "configuration": {"cacheMode": "hit", "targetRps": 10, "warmupRate": 1, "warmupDuration": "30s", "fixedSafeDelay": "100ms", "fixedSafeCacheDuration": "15m"},
+  "queryContext": {
+    "evaluationStart": "2026-07-29T17:37:10+09:00",
+    "evaluationEnd": "2026-07-29T17:38:20+09:00",
+    "histogramWindow": "70s",
+    "cpuRateWindow": "30s",
+    "rangeStep": "5s",
+    "counterReducer": "maximum minus minimum over the padded execution range"
+  },
+  "queries": {
+    "created": "sum(srrrg_link_create_seconds_count{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",outcome=\"created\"})",
+    "cache": "sum(srrrg_url_risk_cache_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",result=~\"hit|miss_absent\"})",
+    "linkCreateP95": "1000 * histogram_quantile(0.95, sum by (le) (increase(srrrg_link_create_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",outcome=\"created\"}[70s])))",
+    "linkCreateP99": "1000 * histogram_quantile(0.99, sum by (le) (increase(srrrg_link_create_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",outcome=\"created\"}[70s])))",
+    "applicationCpu": "sum(rate(container_cpu_usage_seconds_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",container=~\"srrrg-.*\",image!=\"\"}[30s]))",
+    "postgresCpu": "sum(rate(container_cpu_usage_seconds_total{namespace=\"postgres\",pod=~\"postgres-.*\",container=\"postgres\",image!=\"\"}[30s]))"
+  },
+  "requests": {"k6CompletedCreates": 359, "prometheusObservedCreatedDelta": 359, "errors": 0, "cacheHitDelta": 358, "cacheMissAbsentDelta": 1, "fixedSafeChecksDelta": 1},
+  "latency": {"k6P95Ms": 76.66, "k6P99Ms": 91.95, "serverP95Ms": 55.6687, "serverP99Ms": 62.9146},
+  "resources": {
+    "applicationCpuAverageCores": 0.1689,
+    "applicationCpuMaxCores": 0.7228,
+    "applicationCpuThrottledPeriodsPercent": 1.48,
+    "applicationCpuThrottledPeriodsMax30sPercent": 2.04,
+    "postgresCpuAverageCores": 0.009,
+    "postgresCpuMaxCores": 0.0181,
+    "tomcatBusyMax": 2,
+    "hikariActiveMaxObserved": 0,
+    "hikariPendingMax": 0
+  },
+  "errors": {"httpFailures": 0, "http5xxDelta": 0, "droppedIterations": 0, "hikariTimeoutDelta": 0, "postgresDeadlockDelta": 0, "podRestartDelta": 0},
+  "limitations": ["A 5-second scrape can miss short-lived Hikari gauge peaks."]
+}

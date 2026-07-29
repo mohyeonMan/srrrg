@@ -1,0 +1,80 @@
+{
+  "capturedAt": "2026-07-29T22:06:59+09:00",
+  "source": "Prometheus HTTP API via user-managed local port forwarding",
+  "configuration": {
+    "scenario": "warm-cache-spike",
+    "ratesRps": [500, 1000, 500],
+    "stageDuration": "30s",
+    "rampDuration": "5s",
+    "preAllocatedVUs": 300,
+    "maxVUs": 500,
+    "thresholdsDisabledToObserveRecovery": true
+  },
+  "queryContext": {
+    "baseline500": {
+      "start": "2026-07-29T22:03:39+09:00",
+      "end": "2026-07-29T22:04:09+09:00"
+    },
+    "spike1000": {
+      "start": "2026-07-29T22:04:14+09:00",
+      "end": "2026-07-29T22:04:44+09:00"
+    },
+    "recovery500": {
+      "start": "2026-07-29T22:04:49+09:00",
+      "end": "2026-07-29T22:05:19+09:00"
+    },
+    "histogramWindow": "30s",
+    "rateWindow": "15s",
+    "rangeStep": "5s"
+  },
+  "phases": {
+    "baseline500": {
+      "redirectRpsMax": 500.1,
+      "redirectRpsLast": 497.4,
+      "serverRedirectP95Ms": 10.7389,
+      "serverRedirectP99Ms": 27.2006,
+      "applicationCpuMaxCores": 0.658,
+      "cpuThrottledPeriodsPercent": 3.59,
+      "tomcatBusyMax": 4,
+      "hikariActiveMax": 3,
+      "hikariPendingMax": 0
+    },
+    "spike1000": {
+      "redirectRpsAverage": 656.51,
+      "redirectRpsMax": 734,
+      "serverRedirectP95Ms": 625.7977,
+      "serverRedirectP99Ms": 881.4145,
+      "applicationCpuMaxCores": 1.4718,
+      "cpuThrottledPeriodsPercent": 91.41,
+      "tomcatBusyMax": 200,
+      "hikariActiveMax": 10,
+      "hikariPendingMax": 189,
+      "postgresCpuMaxCores": 0.6108
+    },
+    "recovery500": {
+      "redirectRpsLast": 500,
+      "serverRedirectP95Ms": 2.9839,
+      "serverRedirectP99Ms": 4.4563,
+      "applicationCpuLast30sRateCores": 0.3832,
+      "cpuThrottledPeriodsPercent": 34.27,
+      "tomcatBusyLast": 3,
+      "hikariActiveLast": 0,
+      "hikariPendingLast": 0
+    }
+  },
+  "k6": {
+    "httpFailures": 0,
+    "droppedIterations": 10186,
+    "redirectP95MsAcrossAllStages": 931.68,
+    "redirectMaxMsAcrossAllStages": 2020,
+    "vusMaxUsed": 500
+  },
+  "errors": {
+    "hikariTimeoutDelta": 0,
+    "podRestartDelta": 0
+  },
+  "limitations": [
+    "k6 latency is aggregated across all stages; phase-specific server latency uses Prometheus histogram windows.",
+    "The recovery CPU throttling value covers the full 30-second recovery window and includes its initially elevated portion."
+  ]
+}

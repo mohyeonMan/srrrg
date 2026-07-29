@@ -1,0 +1,79 @@
+time="2026-07-29T20:54:43+09:00" level=info msg="test configuration: scenario=mixed-workload, baseUrl=https://jhhomehub.gonetis.com/srrrg-dev, redirectRate=500, hitCreateRate=4, missCreateRate=1, duration=2m, rampDuration=10s, warmupRate=10, warmupDuration=30s, dataLinks=20, runId=1785326083520-608559" source=console
+time="2026-07-29T20:55:24+09:00" level=warning msg="Insufficient VUs, reached 200 active VUs and cannot initialize more" executor=ramping-arrival-rate scenario=redirect
+time="2026-07-29T20:55:33+09:00" level=error msg="GoError: link creation failed: endpoint=mixed_link_create_hit, status=500\n\tat go.k6.io/k6/v2/internal/js/modules/k6.(*K6).Fail-fm (native)\n\tat createLink (file:///Users/jihoon/Desktop/workspace/personal/srrrg/scripts/performance/mixed-workload.js:143:9(50))\n\tat linkCreateHit (file:///Users/jihoon/Desktop/workspace/personal/srrrg/scripts/performance/mixed-workload.js:109:13(6))\n" executor=constant-arrival-rate hint="script exception" scenario=link_create_hit source=stacktrace
+time="2026-07-29T20:55:40+09:00" level=error msg="GoError: link creation failed: endpoint=mixed_link_create_hit, status=500\n\tat go.k6.io/k6/v2/internal/js/modules/k6.(*K6).Fail-fm (native)\n\tat createLink (file:///Users/jihoon/Desktop/workspace/personal/srrrg/scripts/performance/mixed-workload.js:143:9(50))\n\tat linkCreateHit (file:///Users/jihoon/Desktop/workspace/personal/srrrg/scripts/performance/mixed-workload.js:109:13(6))\n" executor=constant-arrival-rate hint="script exception" scenario=link_create_hit source=stacktrace
+time="2026-07-29T20:55:54+09:00" level=error msg="GoError: link creation failed: endpoint=mixed_link_create_hit, status=500\n\tat go.k6.io/k6/v2/internal/js/modules/k6.(*K6).Fail-fm (native)\n\tat createLink (file:///Users/jihoon/Desktop/workspace/personal/srrrg/scripts/performance/mixed-workload.js:143:9(50))\n\tat linkCreateHit (file:///Users/jihoon/Desktop/workspace/personal/srrrg/scripts/performance/mixed-workload.js:109:13(6))\n" executor=constant-arrival-rate hint="script exception" scenario=link_create_hit source=stacktrace
+time="2026-07-29T20:55:59+09:00" level=error msg="GoError: link creation failed: endpoint=mixed_link_create_hit, status=500\n\tat go.k6.io/k6/v2/internal/js/modules/k6.(*K6).Fail-fm (native)\n\tat createLink (file:///Users/jihoon/Desktop/workspace/personal/srrrg/scripts/performance/mixed-workload.js:143:9(50))\n\tat linkCreateHit (file:///Users/jihoon/Desktop/workspace/personal/srrrg/scripts/performance/mixed-workload.js:109:13(6))\n" executor=constant-arrival-rate hint="script exception" scenario=link_create_hit source=stacktrace
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✗ 'rate==1' rate=99.28%
+
+    dropped_iterations
+    ✗ 'count==0' count=39681
+
+    http_req_duration{endpoint:mixed_link_create_hit}
+    ✗ 'p(95)<300' p(95)=2.39s
+    ✗ 'p(99)<500' p(99)=3.17s
+
+    http_req_duration{endpoint:mixed_link_create_miss}
+    ✗ 'p(95)<300' p(95)=3.23s
+    ✗ 'p(99)<500' p(99)=3.49s
+
+    http_req_duration{endpoint:mixed_redirect}
+    ✗ 'p(95)<100' p(95)=2.39s
+    ✗ 'p(99)<250' p(99)=3.19s
+
+    http_req_failed
+    ✗ 'rate<0.001' rate=0.75%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 25049  149.84091/s
+    checks_succeeded...: 99.28% 24869 out of 25049
+    checks_failed......: 0.71%  180 out of 25049
+
+    ✓ mixed_setup_redirect_link returns 201
+    ✓ mixed_setup_redirect_link has a valid code
+    ✓ mixed_setup_redirect_link has a secret key
+    ✓ mixed_setup_hit_seed returns 201
+    ✓ mixed_setup_hit_seed has a valid code
+    ✓ mixed_setup_hit_seed has a secret key
+    ✓ mixed_redirect_warmup returns 302
+    ✗ mixed_redirect returns 302
+      ↳  99% — ✓ 22692 / ✗ 176
+    ✓ mixed_link_create_miss returns 201
+    ✗ mixed_link_create_hit returns 201
+      ↳  99% — ✓ 477 / ✗ 4
+    ✓ mixed_link_create_miss has a valid code
+    ✓ mixed_link_create_hit has a valid code
+    ✓ mixed_link_create_hit has a secret key
+    ✓ mixed_link_create_miss has a secret key
+    ✓ mixed setup link cleanup returns 200
+
+    HTTP
+    http_req_duration.......................: avg=1.07s min=7.29ms   med=960.14ms max=5.57s p(90)=2.06s p(95)=2.39s
+      { endpoint:mixed_link_create_hit }....: avg=1.39s min=526.64ms med=1.27s    max=3.88s p(90)=2.12s p(95)=2.39s
+      { endpoint:mixed_link_create_miss }...: avg=1.88s min=753.31ms med=1.82s    max=3.62s p(90)=2.89s p(95)=3.23s
+      { endpoint:mixed_redirect }...........: avg=1.07s min=7.29ms   med=958.62ms max=5.57s p(90)=2.06s p(95)=2.39s
+      { expected_response:true }............: avg=1.06s min=7.29ms   med=949.23ms max=5.57s p(90)=1.99s p(95)=2.38s
+    http_req_failed.........................: 0.75%  180 out of 23811
+    http_reqs...............................: 23811  142.435304/s
+
+    EXECUTION
+    dropped_iterations......................: 39681  237.368245/s
+    iteration_duration......................: avg=1.07s min=7.5ms    med=962.5ms  max=5.57s p(90)=2.06s p(95)=2.39s
+    iterations..............................: 23770  142.190045/s
+    vus.....................................: 0      min=0            max=212
+    vus_max.................................: 260    min=160          max=260
+
+    NETWORK
+    data_received...........................: 3.6 MB 22 kB/s
+    data_sent...............................: 1.5 MB 8.7 kB/s
+
+
+
+time="2026-07-29T20:57:30+09:00" level=error msg="thresholds on metrics 'checks, dropped_iterations, http_req_duration{endpoint:mixed_link_create_hit}, http_req_duration{endpoint:mixed_link_create_miss}, http_req_duration{endpoint:mixed_redirect}, http_req_failed' have been crossed"

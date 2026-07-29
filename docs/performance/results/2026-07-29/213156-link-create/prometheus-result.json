@@ -1,0 +1,15 @@
+{
+  "capturedAt": "2026-07-29T21:38:29+09:00",
+  "source": "Prometheus HTTP API via user-managed local port forwarding",
+  "configuration": {"secretHash": "SHA-256", "cacheMode": "hit", "targetRps": 10, "fixedSafeDelay": "100ms"},
+  "queryContext": {"evaluationStart": "2026-07-29T21:32:00+09:00", "evaluationEnd": "2026-07-29T21:33:10+09:00", "histogramWindow": "70s", "cpuRateWindow": "30s", "rangeStep": "5s"},
+  "queries": {
+    "linkCreateP95": "1000 * histogram_quantile(0.95, sum by (le) (increase(srrrg_link_create_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",outcome=\"created\"}[70s])))",
+    "linkCreateP99": "1000 * histogram_quantile(0.99, sum by (le) (increase(srrrg_link_create_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",outcome=\"created\"}[70s])))",
+    "applicationCpu": "sum(rate(container_cpu_usage_seconds_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",container=~\"srrrg-.*\",image!=\"\"}[30s]))"
+  },
+  "requests": {"k6CompletedCreates": 359, "prometheusCreatedDelta": 359, "errors": 0, "cacheHitDelta": 358, "cacheMissAbsentDelta": 1, "fixedSafeChecksDelta": 1},
+  "latency": {"k6P95Ms": 49.07, "k6P99Ms": 78.71, "serverP95Ms": 4.7964, "serverP99Ms": 5.4332},
+  "resources": {"applicationCpuAverageCores": 0.0209, "applicationCpuMaxCores": 0.0617, "cpuThrottledPeriodsPercent": 0, "tomcatBusyMax": 1, "hikariPendingMax": 0, "postgresCpuMaxCores": 0.0172},
+  "errors": {"httpFailures": 0, "droppedIterations": 0, "hikariTimeoutDelta": 0, "postgresDeadlockDelta": 0, "podRestartDelta": 0}
+}

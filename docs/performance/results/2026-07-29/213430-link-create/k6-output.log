@@ -1,0 +1,56 @@
+time="2026-07-29T21:34:30+09:00" level=info msg="test configuration: scenario=link-create, cacheMode=hit, baseUrl=https://jhhomehub.gonetis.com/srrrg-dev, rates=15, stageDuration=30s, rampDuration=5s, warmupRate=1, warmupDuration=30s, preAllocatedVUs=20, maxVUs=100, runId=1785328470754-812756" source=console
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate==1' rate=100.00%
+
+    dropped_iterations
+    ✓ 'rate<1' rate=0/s
+    ✓ 'count<10' count=0
+
+    http_req_duration{endpoint:link_create_cache_hit}
+    ✓ 'p(95)<300' p(95)=59.12ms
+    ✓ 'p(99)<500' p(99)=93.87ms
+
+    http_req_failed
+    ✓ 'rate<0.001' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 1560    23.940899/s
+    checks_succeeded...: 100.00% 1560 out of 1560
+    checks_failed......: 0.00%   0 out of 1560
+
+    ✓ link_create_setup_seed returns 201
+    ✓ link_create_setup_seed has a valid code
+    ✓ link_create_setup_seed has a secret key
+    ✓ link_create_warmup returns 201
+    ✓ link_create_warmup has a valid code
+    ✓ link_create_warmup has a secret key
+    ✓ link_create_cache_hit returns 201
+    ✓ link_create_cache_hit has a valid code
+    ✓ link_create_cache_hit has a secret key
+
+    HTTP
+    http_req_duration......................: avg=25.65ms min=8.14ms med=18.85ms max=184.75ms p(90)=45.28ms p(95)=65.48ms
+      { endpoint:link_create_cache_hit }...: avg=24.08ms min=8.14ms med=18.44ms max=128.52ms p(90)=43.47ms p(95)=59.12ms
+      { expected_response:true }...........: avg=25.65ms min=8.14ms med=18.85ms max=184.75ms p(90)=45.28ms p(95)=65.48ms
+    http_req_failed........................: 0.00%  0 out of 520
+    http_reqs..............................: 520    7.9803/s
+
+    EXECUTION
+    dropped_iterations.....................: 0      0/s
+    iteration_duration.....................: avg=31.84ms min=8.86ms med=20.17ms max=263.45ms p(90)=62.83ms p(95)=89.58ms
+    iterations.............................: 519    7.964953/s
+    vus....................................: 0      min=0        max=1 
+    vus_max................................: 40     min=40       max=40
+
+    NETWORK
+    data_received..........................: 407 kB 6.2 kB/s
+    data_sent..............................: 164 kB 2.5 kB/s
+
+
+

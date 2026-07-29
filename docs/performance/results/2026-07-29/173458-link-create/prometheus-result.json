@@ -1,0 +1,39 @@
+{
+  "capturedAt": "2026-07-29T20:39:55+09:00",
+  "source": "Prometheus HTTP API via SSH tunnel",
+  "configuration": {"cacheMode": "hit", "targetRps": 5, "warmupRate": 1, "warmupDuration": "30s", "fixedSafeDelay": "100ms", "fixedSafeCacheDuration": "15m"},
+  "queryContext": {
+    "evaluationStart": "2026-07-29T17:35:00+09:00",
+    "evaluationEnd": "2026-07-29T17:36:15+09:00",
+    "histogramWindow": "75s",
+    "cpuRateWindow": "30s",
+    "rangeStep": "5s",
+    "counterReducer": "maximum minus minimum over the padded execution range"
+  },
+  "queries": {
+    "created": "sum(srrrg_link_create_seconds_count{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",outcome=\"created\"})",
+    "cache": "sum(srrrg_url_risk_cache_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",result=~\"hit|miss_absent\"})",
+    "linkCreateP95": "1000 * histogram_quantile(0.95, sum by (le) (increase(srrrg_link_create_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",outcome=\"created\"}[75s])))",
+    "linkCreateP99": "1000 * histogram_quantile(0.99, sum by (le) (increase(srrrg_link_create_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",outcome=\"created\"}[75s])))",
+    "applicationCpu": "sum(rate(container_cpu_usage_seconds_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",container=~\"srrrg-.*\",image!=\"\"}[30s]))",
+    "postgresCpu": "sum(rate(container_cpu_usage_seconds_total{namespace=\"postgres\",pod=~\"postgres-.*\",container=\"postgres\",image!=\"\"}[30s]))"
+  },
+  "requests": {"k6CompletedCreates": 196, "prometheusObservedCreatedDelta": 191, "errors": 0, "cacheHitDelta": 191, "cacheMissAbsentDelta": 0, "fixedSafeChecksDelta": 0},
+  "latency": {"k6P95Ms": 78.75, "k6P99Ms": 83.3, "serverP95Ms": 55.754, "serverP99Ms": 89.4743},
+  "resources": {
+    "applicationCpuAverageCores": 0.1107,
+    "applicationCpuMaxCores": 0.3362,
+    "applicationCpuThrottledPeriodsPercent": 1.55,
+    "applicationCpuThrottledPeriodsMax30sPercent": 10.17,
+    "postgresCpuAverageCores": 0.0077,
+    "postgresCpuMaxCores": 0.0111,
+    "tomcatBusyMax": 2,
+    "hikariActiveMaxObserved": 0,
+    "hikariPendingMax": 0
+  },
+  "errors": {"httpFailures": 0, "http5xxDelta": 0, "droppedIterations": 0, "hikariTimeoutDelta": 0, "postgresDeadlockDelta": 0, "podRestartDelta": 0},
+  "limitations": [
+    "The application time series first appeared after the run started. The first scrape already contained 5 creates, so Prometheus can prove only the following 191-create delta; k6 recorded all 196 completed creates.",
+    "A 5-second scrape can miss short-lived Hikari gauge peaks."
+  ]
+}

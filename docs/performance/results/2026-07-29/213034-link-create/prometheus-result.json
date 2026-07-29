@@ -1,0 +1,16 @@
+{
+  "capturedAt": "2026-07-29T21:38:29+09:00",
+  "source": "Prometheus HTTP API via user-managed local port forwarding",
+  "configuration": {"secretHash": "SHA-256", "cacheMode": "miss", "targetRps": 5, "fixedSafeDelay": "100ms"},
+  "queryContext": {"evaluationStart": "2026-07-29T21:30:35+09:00", "evaluationEnd": "2026-07-29T21:31:45+09:00", "histogramWindow": "70s", "cpuRateWindow": "30s", "rangeStep": "5s"},
+  "queries": {
+    "linkCreateP95": "1000 * histogram_quantile(0.95, sum by (le) (increase(srrrg_link_create_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",outcome=\"created\"}[70s])))",
+    "linkCreateP99": "1000 * histogram_quantile(0.99, sum by (le) (increase(srrrg_link_create_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",outcome=\"created\"}[70s])))",
+    "fixedSafeP95": "1000 * histogram_quantile(0.95, sum by (le) (increase(srrrg_url_risk_check_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",provider=\"fixed_safe\",outcome=\"safe\"}[70s])))",
+    "applicationCpu": "sum(rate(container_cpu_usage_seconds_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",container=~\"srrrg-.*\",image!=\"\"}[30s]))"
+  },
+  "requests": {"k6CompletedCreates": 195, "prometheusCreatedDelta": 195, "errors": 0, "cacheMissAbsentDelta": 195, "fixedSafeChecksDelta": 195},
+  "latency": {"k6P95Ms": 210.45, "k6P99Ms": 466.32, "serverP95Ms": 111.2557, "serverP99Ms": 111.7296, "fixedSafeP95Ms": 111.2557},
+  "resources": {"applicationCpuAverageCores": 0.0242, "applicationCpuMaxCores": 0.0657, "cpuThrottledPeriodsPercent": 0, "tomcatBusyMax": 2, "hikariPendingMax": 0, "postgresCpuMaxCores": 0.0167},
+  "errors": {"httpFailures": 0, "droppedIterations": 0, "hikariTimeoutDelta": 0, "postgresDeadlockDelta": 0, "podRestartDelta": 0}
+}

@@ -1,0 +1,85 @@
+{
+  "capturedAt": "2026-07-29T20:59:19+09:00",
+  "source": "Prometheus HTTP API via user-managed local port forwarding",
+  "configuration": {
+    "redirectRps": 500,
+    "cacheHitCreateRps": 4,
+    "cacheMissCreateRps": 1,
+    "duration": "2m",
+    "rampDuration": "10s",
+    "warmupRate": 10,
+    "warmupDuration": "30s",
+    "fixedSafeDelay": "100ms",
+    "fixedSafeCacheDuration": "15m"
+  },
+  "queryContext": {
+    "evaluationStart": "2026-07-29T20:55:20+09:00",
+    "evaluationEnd": "2026-07-29T20:57:30+09:00",
+    "histogramWindow": "130s",
+    "rateWindow": "30s",
+    "rangeStep": "5s",
+    "counterReducer": "maximum minus minimum from 20:54:35 through 20:57:40 KST"
+  },
+  "queries": {
+    "redirectP95": "1000 * histogram_quantile(0.95, sum by (le) (increase(srrrg_redirect_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"}[130s])))",
+    "redirectP99": "1000 * histogram_quantile(0.99, sum by (le) (increase(srrrg_redirect_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"}[130s])))",
+    "linkCreateP95": "1000 * histogram_quantile(0.95, sum by (le) (increase(srrrg_link_create_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"}[130s])))",
+    "linkCreateP99": "1000 * histogram_quantile(0.99, sum by (le) (increase(srrrg_link_create_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"}[130s])))",
+    "redirectRps": "sum(rate(srrrg_redirect_seconds_count{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"}[30s]))",
+    "applicationCpu": "sum(rate(container_cpu_usage_seconds_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",container=~\"srrrg-.*\",image!=\"\"}[30s]))",
+    "cpuThrottling": "100 * sum(increase(container_cpu_cfs_throttled_periods_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",container=~\"srrrg-.*\"}[130s])) / sum(increase(container_cpu_cfs_periods_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",container=~\"srrrg-.*\"}[130s]))",
+    "hikariPending": "sum(hikaricp_connections_pending{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"})",
+    "postgresCpu": "sum(rate(container_cpu_usage_seconds_total{namespace=\"postgres\",pod=~\"postgres-.*\",container=\"postgres\",image!=\"\"}[30s]))"
+  },
+  "requests": {
+    "httpByStatus": {"201": 607, "302": 22957, "500": 177},
+    "redirectByOutcome": {"redirected": 22957, "error": 173},
+    "linkCreateByOutcome": {"created": 607, "error": 3},
+    "cacheByResult": {"hit": 23461, "missAbsent": 129},
+    "fixedSafeChecks": 130
+  },
+  "latency": {
+    "k6RedirectP95Ms": 2390,
+    "k6RedirectP99Ms": 3190,
+    "serverRedirectP95Ms": 2365.5306,
+    "serverRedirectP99Ms": 3122.1519,
+    "k6LinkCreateHitP95Ms": 2390,
+    "k6LinkCreateHitP99Ms": 3170,
+    "k6LinkCreateMissP95Ms": 3230,
+    "k6LinkCreateMissP99Ms": 3490,
+    "serverLinkCreateP95Ms": 2551.6657,
+    "serverLinkCreateP99Ms": 3484.5667,
+    "fixedSafeP95Ms": 188.0167,
+    "clickWriteP95Ms": 940.6388,
+    "redirectWriteP95Ms": 854.3739
+  },
+  "resources": {
+    "redirectRpsAverage": 147.51,
+    "redirectRpsMax": 239.8,
+    "applicationCpuAverageCores": 0.6523,
+    "applicationCpuMax30sRateCores": 1.2337,
+    "applicationCpuThrottledPeriodsPercent": 98.46,
+    "applicationCpuThrottledPeriodsAverage30sPercent": 83.24,
+    "applicationCpuThrottledPeriodsMax30sPercent": 100,
+    "applicationMemoryMaxBytes": 454668288,
+    "tomcatBusyAverage": 182.78,
+    "tomcatBusyMax": 200,
+    "hikariActiveAverage": 9.15,
+    "hikariActiveMax": 10,
+    "hikariPendingAverage": 165.96,
+    "hikariPendingMax": 187,
+    "postgresCpuAverageCores": 0.1504,
+    "postgresCpuMaxCores": 0.3308,
+    "postgresConnectionsMax": 10,
+    "postgresCommitRateMax": 994.25
+  },
+  "errors": {
+    "k6HttpFailures": 180,
+    "k6HttpFailureRatePercent": 0.75,
+    "droppedIterations": 39681,
+    "hikariTimeoutDelta": 180,
+    "postgresDeadlockDelta": 0,
+    "postgresRollbackDelta": 0,
+    "podRestartDelta": 0
+  }
+}

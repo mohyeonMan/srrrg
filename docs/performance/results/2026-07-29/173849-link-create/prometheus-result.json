@@ -1,0 +1,40 @@
+{
+  "capturedAt": "2026-07-29T20:39:55+09:00",
+  "source": "Prometheus HTTP API via SSH tunnel",
+  "configuration": {"cacheMode": "hit", "targetRps": 15, "warmupRate": 1, "warmupDuration": "30s", "fixedSafeDelay": "100ms", "fixedSafeCacheDuration": "15m"},
+  "queryContext": {
+    "evaluationStart": "2026-07-29T17:38:50+09:00",
+    "evaluationEnd": "2026-07-29T17:39:55+09:00",
+    "histogramWindow": "65s",
+    "cpuRateWindow": "30s",
+    "rangeStep": "5s",
+    "counterReducer": "maximum minus minimum over the padded execution range"
+  },
+  "queries": {
+    "created": "sum(srrrg_link_create_seconds_count{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",outcome=\"created\"})",
+    "cache": "sum(srrrg_url_risk_cache_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",result=~\"hit|miss_absent\"})",
+    "linkCreateP95": "1000 * histogram_quantile(0.95, sum by (le) (increase(srrrg_link_create_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",outcome=\"created\"}[65s])))",
+    "linkCreateP99": "1000 * histogram_quantile(0.99, sum by (le) (increase(srrrg_link_create_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",outcome=\"created\"}[65s])))",
+    "applicationCpu": "sum(rate(container_cpu_usage_seconds_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",container=~\"srrrg-.*\",image!=\"\"}[30s]))",
+    "cpuThrottling": "100 * sum(increase(container_cpu_cfs_throttled_periods_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",container=~\"srrrg-.*\"}[65s])) / sum(increase(container_cpu_cfs_periods_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",container=~\"srrrg-.*\"}[65s]))",
+    "postgresCpu": "sum(rate(container_cpu_usage_seconds_total{namespace=\"postgres\",pod=~\"postgres-.*\",container=\"postgres\",image!=\"\"}[30s]))"
+  },
+  "requests": {"k6CompletedCreates": 270, "prometheusObservedCreatedDelta": 350, "errors": 0, "cacheHitDelta": 349, "cacheMissAbsentDelta": 1, "fixedSafeChecksDelta": 1},
+  "latency": {"k6P95Ms": 7900, "k6P99Ms": 8860, "serverP95Ms": 8671.2845, "serverP99Ms": 10000},
+  "resources": {
+    "applicationCpuAverageCores": 0.2025,
+    "applicationCpuMaxCores": 0.9601,
+    "applicationCpuThrottledPeriodsPercent": 53.93,
+    "applicationCpuThrottledPeriodsMax30sPercent": 96.11,
+    "postgresCpuAverageCores": 0.0089,
+    "postgresCpuMaxCores": 0.0159,
+    "tomcatBusyMax": 68,
+    "hikariActiveMaxObserved": 5,
+    "hikariPendingMax": 0
+  },
+  "errors": {"httpFailures": 0, "http5xxDelta": 0, "droppedIterations": 60, "hikariTimeoutDelta": 0, "postgresDeadlockDelta": 0, "podRestartDelta": 0},
+  "limitations": [
+    "The server completed 80 requests that k6 had already sent but did not count as completed before threshold abort.",
+    "Server p99 reached the configured 10-second histogram ceiling and is not an exact value above that boundary."
+  ]
+}

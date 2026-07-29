@@ -1,0 +1,28 @@
+{
+  "scenario": "link-create",
+  "startedAt": "2026-07-29T21:29:14+0900",
+  "finishedAt": "2026-07-29T21:30:19+0900",
+  "script": "/Users/jihoon/Desktop/workspace/personal/srrrg/scripts/performance/link-create.js",
+  "commitSha": "47485d598292b8bf93d21cfd514090447cec4c7b",
+  "workingTreeDirty": true,
+  "k6Executable": "/opt/homebrew/bin/k6",
+  "infrastructure": {
+    "commitSha": "662db60c983383295a2215536ae2dc7cd1ab542f",
+    "replicaCount": "1",
+    "application": {
+      "cpuRequest": "250m",
+      "cpuLimit": "750m",
+      "memoryRequest": "512Mi",
+      "memoryLimit": "1Gi"
+    },
+    "postgres": {
+      "cpuRequest": "500m",
+      "cpuLimit": "1500m",
+      "memoryRequest": "512Mi",
+      "memoryLimit": "2Gi"
+    },
+    "hikariMaximumPoolSize": "10"
+  },
+  "exitCode": 0,
+  "analysisStatus": "complete"
+}

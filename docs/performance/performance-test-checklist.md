@@ -131,9 +131,9 @@ PostgreSQL `max_connections=100`에서 exporter와 관리자 접속을 포함해
 - [x] Warm-cache redirect의 최대 지속 처리량을 찾는다. 단일 Pod 800 RPS를 2분 검증했고, 최대 VU를 300으로 올린 850 RPS 재시험에서도 Hikari pending 189와 지연 기준 초과가 발생했다.
 - [x] Cold-cache redirect를 실행한다.
 - [x] Concurrent cold-cache로 동일 URL의 중복 검사 수준을 확인한다. 단일 Pod 10·25·50 VU에서 중복 검사 배수는 각각 10·25·47배였다.
-- [x] Cache hit 및 miss 링크 생성을 분리해 실행한다. 단일 Pod에서 각 1·2·5 RPS를 검증했고 실패, dropped iteration, Hikari pending/timeout과 PostgreSQL deadlock은 0이었다.
-- [ ] Mixed workload를 실행한다.
-- [ ] Spike 테스트 후 지연과 connection이 정상 상태로 회복되는지 확인한다.
+- [x] Cache hit 및 miss 링크 생성을 분리해 실행한다. SHA-256 변경 후 단일 Pod에서 cache hit와 miss 모두 15 RPS까지 검증했고 오류, dropped iteration과 Hikari pending/timeout은 0이었다.
+- [x] Mixed workload를 실행한다. SHA-256 변경 후 redirect 500 RPS, hit 생성 4 RPS, miss 생성 1 RPS 조합에서 k6 redirect p95/p99 25.68/102.58ms, dropped iteration 0, 서버 p95/p99 4.28/21.53ms, Hikari pending 0으로 검증했다.
+- [x] 500→1,000→500 RPS Spike 테스트 후 지연과 connection이 정상 상태로 회복되는지 확인한다. 1,000 RPS에서는 최대 734 RPS, Tomcat busy 200, Hikari pending 189로 포화됐지만 다시 500 RPS로 낮춘 뒤 서버 p95/p99 2.98/4.46ms, Hikari pending 0으로 회복했다.
 - [ ] Soak 테스트에서 heap, RSS, GC, connection과 DB 크기의 장기 추세를 확인한다.
 - [ ] 같은 설정에서 replica 1과 2를 비교한다.
 
@@ -147,8 +147,8 @@ PostgreSQL `max_connections=100`에서 exporter와 관리자 접속을 포함해
 - [x] PostgreSQL connection, commit 처리량, lock wait와 deadlock을 기록한다.
 - [x] cache hit ratio와 URL 위험 검사 중복 호출 수를 기록한다.
 - [ ] Pod별 요청 분배와 replica 확장 효율을 기록한다.
-- [ ] 기준을 초과한 최초 부하 단계와 병목 원인을 기록한다.
-- [ ] 개선 전후 테스트는 동일한 설정과 데이터로 다시 실행한다.
+- [x] 기준을 초과한 최초 부하 단계와 병목 원인을 기록한다.
+- [x] 개선 전후 테스트는 동일한 설정과 데이터로 다시 실행한다. SHA-256 변경 후 hit 15 RPS와 miss 10 RPS가 통과했고 Mixed workload의 서버 CPU·Tomcat·Hikari 포화도 해소됐다.
 
 결과 판정의 기준 데이터는 Grafana 화면이 아니라 Prometheus API 조회값이다.
 Grafana는 지표 흐름과 이상 시점을 빠르게 찾는 보조 수단으로만 사용한다.

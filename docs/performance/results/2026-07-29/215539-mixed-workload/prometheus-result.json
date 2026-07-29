@@ -1,0 +1,66 @@
+{
+  "capturedAt": "2026-07-29T22:00:02+09:00",
+  "source": "Prometheus HTTP API via user-managed local port forwarding",
+  "configuration": {
+    "secretHash": "SHA-256",
+    "redirectRps": 500,
+    "cacheHitCreateRps": 4,
+    "cacheMissCreateRps": 1,
+    "duration": "2m",
+    "redirectPreAllocatedVUs": 500,
+    "redirectMaxVUs": 1000
+  },
+  "queryContext": {
+    "evaluationStart": "2026-07-29T21:56:19+09:00",
+    "evaluationEnd": "2026-07-29T21:58:19+09:00",
+    "histogramWindow": "120s",
+    "rateWindow": "30s",
+    "rangeStep": "5s"
+  },
+  "queries": {
+    "redirectP95": "1000 * histogram_quantile(0.95, sum by (le) (increase(srrrg_redirect_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"}[120s])))",
+    "redirectP99": "1000 * histogram_quantile(0.99, sum by (le) (increase(srrrg_redirect_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"}[120s])))",
+    "linkCreateP95": "1000 * histogram_quantile(0.95, sum by (le) (increase(srrrg_link_create_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"}[120s])))",
+    "linkCreateP99": "1000 * histogram_quantile(0.99, sum by (le) (increase(srrrg_link_create_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"}[120s])))",
+    "redirectRps": "sum(rate(srrrg_redirect_seconds_count{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"}[30s]))",
+    "applicationCpu": "sum(rate(container_cpu_usage_seconds_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",container=~\"srrrg-.*\",image!=\"\"}[30s]))"
+  },
+  "latency": {
+    "k6RedirectP95Ms": 25.68,
+    "k6RedirectP99Ms": 102.58,
+    "serverRedirectP95Ms": 4.281,
+    "serverRedirectP99Ms": 21.5273,
+    "k6LinkCreateHitP95Ms": 22.73,
+    "k6LinkCreateHitP99Ms": 81.26,
+    "k6LinkCreateMissP95Ms": 135.27,
+    "k6LinkCreateMissP99Ms": 199.43,
+    "serverLinkCreateP95Ms": 109.2563,
+    "serverLinkCreateP99Ms": 111.6683,
+    "redirectClientWaitingP95Ms": 25.48,
+    "redirectClientWaitingMaxMs": 459.43
+  },
+  "resources": {
+    "redirectRpsAverageIncludingRampBoundary": 436.68,
+    "redirectRpsMax": 500.04,
+    "redirectRpsLast": 499.96,
+    "applicationCpuAverageCores": 0.3751,
+    "applicationCpuMaxCores": 0.6746,
+    "cpuThrottledPeriodsPercent": 3.09,
+    "cpuThrottledPeriodsMax30sPercent": 13.73,
+    "tomcatBusyMax": 5,
+    "hikariActiveMax": 3,
+    "hikariPendingMax": 0,
+    "postgresCpuMaxCores": 0.4917,
+    "k6VusMaxUsed": 93,
+    "k6VusPreAllocatedMax": 560
+  },
+  "errors": {
+    "k6HttpFailures": 0,
+    "droppedIterations": 0,
+    "hikariTimeoutDelta": 0,
+    "podRestartDelta": 0
+  },
+  "limitations": [
+    "The higher VU ceiling is diagnostic headroom, not evidence that 1000 concurrent VUs are required; this run used at most 93 VUs."
+  ]
+}
