@@ -1,0 +1,279 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: C:\Users\qkrwl\Desktop\repo\my\srrrg\scripts\performance\warm-cache.js
+        output: -
+
+     scenarios: (100.00%) 2 scenarios, 240 max VUs, 2m50s max duration (incl. graceful stop):
+              * warmup: 10.00 iterations/s for 30s (maxVUs: 20-40, exec: warmup, gracefulStop: 5s)
+              * warm_cache: Up to 350.00 iterations/s for 2m10s over 2 stages (maxVUs: 70-200, exec: warmCache, startTime: 30s, gracefulStop: 10s)
+
+time="2026-07-29T12:35:59+09:00" level=info msg="test configuration: scenario=warm-cache, baseUrl=https://jhhomehub.gonetis.com/srrrg-dev, rates=350, stageDuration=2m, rampDuration=10s, dataLinks=20, warmupRate=10, warmupDuration=30s, preAllocatedVUs=70, maxVUs=200" source=console
+time="2026-07-29T12:36:00+09:00" level=info msg="test link created: code=GV1GN2, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/GV1GN2" source=console
+time="2026-07-29T12:36:00+09:00" level=info msg="test link created: code=2Pi6r8, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/2Pi6r8" source=console
+
+Run          [ 100% ] setup()
+warmup       [   0% ]
+warm_cache   [   0% ]
+time="2026-07-29T12:36:00+09:00" level=info msg="test link created: code=uQAbIO, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/uQAbIO" source=console
+time="2026-07-29T12:36:01+09:00" level=info msg="test link created: code=rkpf6Q, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/rkpf6Q" source=console
+time="2026-07-29T12:36:01+09:00" level=info msg="test link created: code=Frh0AG, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/Frh0AG" source=console
+time="2026-07-29T12:36:01+09:00" level=info msg="test link created: code=yEwTed, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/yEwTed" source=console
+time="2026-07-29T12:36:01+09:00" level=info msg="test link created: code=tO6cge, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/tO6cge" source=console
+
+Run          [ 100% ] setup()
+warmup       [   0% ]
+warm_cache   [   0% ]
+time="2026-07-29T12:36:01+09:00" level=info msg="test link created: code=mGmZc7, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/mGmZc7" source=console
+time="2026-07-29T12:36:01+09:00" level=info msg="test link created: code=QkrG4F, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/QkrG4F" source=console
+time="2026-07-29T12:36:02+09:00" level=info msg="test link created: code=othetJ, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/othetJ" source=console
+time="2026-07-29T12:36:02+09:00" level=info msg="test link created: code=kFoUzo, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/kFoUzo" source=console
+time="2026-07-29T12:36:02+09:00" level=info msg="test link created: code=SU7O00, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/SU7O00" source=console
+time="2026-07-29T12:36:02+09:00" level=info msg="test link created: code=tzkhRl, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/tzkhRl" source=console
+
+Run          [ 100% ] setup()
+warmup       [   0% ]
+warm_cache   [   0% ]
+time="2026-07-29T12:36:02+09:00" level=info msg="test link created: code=3upJDf, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/3upJDf" source=console
+time="2026-07-29T12:36:02+09:00" level=info msg="test link created: code=OvenhT, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/OvenhT" source=console
+time="2026-07-29T12:36:03+09:00" level=info msg="test link created: code=fjYZCE, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/fjYZCE" source=console
+time="2026-07-29T12:36:03+09:00" level=info msg="test link created: code=3Cr9S0, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/3Cr9S0" source=console
+time="2026-07-29T12:36:03+09:00" level=info msg="test link created: code=bG13ha, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/bG13ha" source=console
+time="2026-07-29T12:36:03+09:00" level=info msg="test link created: code=OeJGpz, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/OeJGpz" source=console
+
+Run          [ 100% ] setup()
+warmup       [   0% ]
+warm_cache   [   0% ]
+time="2026-07-29T12:36:03+09:00" level=info msg="test link created: code=H9Ftgh, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/H9Ftgh" source=console
+
+running (0m05.0s), 001/090 VUs, 8 complete and 0 interrupted iterations
+warmup       [   3% ] 01/20 VUs  00.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    29.2s     
+
+running (0m06.0s), 001/090 VUs, 18 complete and 0 interrupted iterations
+warmup       [   6% ] 01/20 VUs  01.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    28.2s     
+
+running (0m07.0s), 000/090 VUs, 29 complete and 0 interrupted iterations
+warmup       [   9% ] 00/20 VUs  02.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    27.2s     
+
+running (0m08.0s), 000/090 VUs, 39 complete and 0 interrupted iterations
+warmup       [  13% ] 00/20 VUs  03.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    26.2s     
+
+running (0m09.0s), 000/090 VUs, 49 complete and 0 interrupted iterations
+warmup       [  16% ] 00/20 VUs  04.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    25.2s     
+
+running (0m10.0s), 000/090 VUs, 59 complete and 0 interrupted iterations
+warmup       [  19% ] 00/20 VUs  05.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    24.2s     
+
+running (0m11.0s), 000/090 VUs, 69 complete and 0 interrupted iterations
+warmup       [  23% ] 00/20 VUs  06.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    23.2s     
+
+running (0m12.0s), 000/090 VUs, 79 complete and 0 interrupted iterations
+warmup       [  26% ] 00/20 VUs  07.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    22.2s     
+
+running (0m13.0s), 000/090 VUs, 89 complete and 0 interrupted iterations
+warmup       [  29% ] 00/20 VUs  08.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    21.2s     
+
+running (0m14.0s), 000/090 VUs, 99 complete and 0 interrupted iterations
+warmup       [  33% ] 00/20 VUs  09.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    20.2s     
+
+running (0m15.0s), 000/090 VUs, 109 complete and 0 interrupted iterations
+warmup       [  36% ] 00/20 VUs  10.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    19.2s     
+
+running (0m16.0s), 000/090 VUs, 119 complete and 0 interrupted iterations
+warmup       [  39% ] 00/20 VUs  11.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    18.2s     
+
+running (0m17.0s), 000/090 VUs, 129 complete and 0 interrupted iterations
+warmup       [  43% ] 00/20 VUs  12.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    17.2s     
+
+running (0m18.0s), 000/090 VUs, 139 complete and 0 interrupted iterations
+warmup       [  46% ] 00/20 VUs  13.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    16.2s     
+
+running (0m19.0s), 000/090 VUs, 149 complete and 0 interrupted iterations
+warmup       [  49% ] 00/20 VUs  14.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    15.2s     
+
+running (0m20.0s), 000/090 VUs, 159 complete and 0 interrupted iterations
+warmup       [  53% ] 00/20 VUs  15.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    14.2s     
+
+running (0m21.0s), 000/090 VUs, 169 complete and 0 interrupted iterations
+warmup       [  56% ] 00/20 VUs  16.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    13.2s     
+
+running (0m22.0s), 000/090 VUs, 179 complete and 0 interrupted iterations
+warmup       [  59% ] 00/20 VUs  17.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    12.2s     
+
+running (0m23.0s), 000/090 VUs, 189 complete and 0 interrupted iterations
+warmup       [  63% ] 00/20 VUs  18.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    11.2s     
+
+running (0m24.0s), 000/090 VUs, 199 complete and 0 interrupted iterations
+warmup       [  66% ] 00/20 VUs  19.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    10.2s     
+
+running (0m25.0s), 000/090 VUs, 209 complete and 0 interrupted iterations
+warmup       [  69% ] 00/20 VUs  20.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    09.2s     
+
+running (0m26.0s), 000/090 VUs, 219 complete and 0 interrupted iterations
+warmup       [  73% ] 00/20 VUs  21.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    08.2s     
+
+running (0m27.0s), 000/090 VUs, 229 complete and 0 interrupted iterations
+warmup       [  76% ] 00/20 VUs  22.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    07.2s     
+
+running (0m28.0s), 000/090 VUs, 239 complete and 0 interrupted iterations
+warmup       [  79% ] 00/20 VUs  23.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    06.2s     
+
+running (0m29.0s), 000/090 VUs, 249 complete and 0 interrupted iterations
+warmup       [  83% ] 00/20 VUs  24.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    05.2s     
+
+running (0m30.0s), 000/090 VUs, 259 complete and 0 interrupted iterations
+warmup       [  86% ] 00/20 VUs  25.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    04.2s     
+
+running (0m31.0s), 000/090 VUs, 269 complete and 0 interrupted iterations
+warmup       [  89% ] 00/20 VUs  26.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    03.2s     
+
+running (0m32.0s), 000/090 VUs, 279 complete and 0 interrupted iterations
+warmup       [  93% ] 00/20 VUs  27.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    02.2s     
+
+running (0m33.0s), 000/090 VUs, 289 complete and 0 interrupted iterations
+warmup       [  96% ] 00/20 VUs  28.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    01.2s     
+
+running (0m34.0s), 000/090 VUs, 299 complete and 0 interrupted iterations
+warmup       [  99% ] 00/20 VUs  29.8s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    00.2s     
+
+running (0m35.0s), 002/090 VUs, 319 complete and 0 interrupted iterations
+warmup     ✓ [ 100% ] 00/20 VUs    30s            10.00 iters/s
+warm_cache   [   1% ] 002/070 VUs  0m00.8s/2m10s  038.65 iters/s
+
+running (0m36.0s), 001/090 VUs, 375 complete and 0 interrupted iterations
+warmup     ✓ [ 100% ] 00/20 VUs    30s            10.00 iters/s
+warm_cache   [   1% ] 001/070 VUs  0m01.8s/2m10s  072.35 iters/s
+
+running (0m37.0s), 001/090 VUs, 464 complete and 0 interrupted iterations
+warmup     ✓ [ 100% ] 00/20 VUs    30s            10.00 iters/s
+warm_cache   [   2% ] 001/070 VUs  0m02.8s/2m10s  106.24 iters/s
+
+running (0m38.0s), 005/090 VUs, 584 complete and 0 interrupted iterations
+warmup     ✓ [ 100% ] 00/20 VUs    30s            10.00 iters/s
+warm_cache   [   3% ] 005/070 VUs  0m03.8s/2m10s  140.42 iters/s
+
+running (0m39.0s), 027/090 VUs, 719 complete and 0 interrupted iterations
+warmup     ✓ [ 100% ] 00/20 VUs    30s            10.00 iters/s
+warm_cache   [   4% ] 027/070 VUs  0m04.8s/2m10s  174.34 iters/s
+
+running (0m40.0s), 072/095 VUs, 860 complete and 0 interrupted iterations
+warmup     ✓ [ 100% ] 00/20 VUs    30s            10.00 iters/s
+warm_cache   [   4% ] 072/075 VUs  0m05.8s/2m10s  208.28 iters/s
+
+running (0m41.0s), 108/128 VUs, 1016 complete and 0 interrupted iterations
+warmup     ✓ [ 100% ] 00/20 VUs    30s            10.00 iters/s
+warm_cache   [   5% ] 108/108 VUs  0m06.8s/2m10s  242.38 iters/s
+
+running (0m42.0s), 145/165 VUs, 1202 complete and 0 interrupted iterations
+warmup     ✓ [ 100% ] 00/20 VUs    30s            10.00 iters/s
+warm_cache   [   6% ] 145/145 VUs  0m07.8s/2m10s  276.34 iters/s
+
+running (0m43.0s), 000/165 VUs, 1202 complete and 145 interrupted iterations
+warmup     ✓ [ 100% ] 00/20 VUs    30s            10.00 iters/s
+warm_cache ✗ [   6% ] 126/145 VUs  0m07.8s/2m10s  276.34 iters/s
+
+running (0m44.0s), 000/165 VUs, 1202 complete and 145 interrupted iterations
+warmup     ✓ [ 100% ] 00/20 VUs    30s            10.00 iters/s
+warm_cache ✗ [   6% ] 126/145 VUs  0m07.8s/2m10s  276.34 iters/s
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate==1' rate=100.00%
+
+    dropped_iterations
+    ✗ 'rate<1' rate=1.679717/s
+    ✗ 'count<10' count=75
+
+    http_req_duration{endpoint:redirect_warm_cache}
+    ✗ 'p(95)<100' p(95)=741.25ms
+    ✗ 'p(99)<250' p(99)=986.45ms
+
+    http_req_failed
+    ✓ 'rate<0.001' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 1302    29.159881/s
+    checks_succeeded...: 100.00% 1302 out of 1302
+    checks_failed......: 0.00%   0 out of 1302
+
+    ✓ setup link create returns 201
+    ✓ setup link has a valid code
+    ✓ setup link has a short URL
+    ✓ setup link has a secret key
+    ✓ redirect_warm_cache_warmup returns 302
+    ✓ redirect_warm_cache returns 302
+    ✓ test link cleanup returns 200
+
+    CUSTOM
+    redirect_client_blocked..............: avg=3.85ms   min=0s     med=0s       max=71.31ms p(90)=24.58ms  p(95)=28.9ms  
+    redirect_client_connecting...........: avg=1.23ms   min=0s     med=0s       max=43.7ms  p(90)=6.13ms   p(95)=8.95ms  
+    redirect_client_receiving............: avg=46.06µs  min=0s     med=0s       max=1.51ms  p(90)=0s       p(95)=508µs   
+    redirect_client_sending..............: avg=186.04µs min=0s     med=0s       max=5.3ms   p(90)=508.2µs  p(95)=531.1µs 
+    redirect_client_tls_handshaking......: avg=2.6ms    min=0s     med=0s       max=61.09ms p(90)=16.91ms  p(95)=19.55ms 
+    redirect_client_waiting..............: avg=242.61ms min=8.85ms med=156.42ms max=1.49s   p(90)=622.24ms p(95)=741.05ms
+
+    HTTP
+    http_req_duration....................: avg=185.81ms min=9.45ms med=33.11ms  max=1.49s   p(90)=572.54ms p(95)=686.31ms
+      { endpoint:redirect_warm_cache }...: avg=242.84ms min=9.45ms med=156.62ms max=1.49s   p(90)=622.75ms p(95)=741.25ms
+      { expected_response:true }.........: avg=185.81ms min=9.45ms med=33.11ms  max=1.49s   p(90)=572.54ms p(95)=686.31ms
+    http_req_failed......................: 0.00%  0 out of 1242
+    http_reqs............................: 1242   27.816108/s
+
+    EXECUTION
+    dropped_iterations...................: 75     1.679717/s
+    iteration_duration...................: avg=189.92ms min=9.45ms med=41.99ms  max=1.49s   p(90)=576.33ms p(95)=692.48ms
+    iterations...........................: 1202   26.920259/s
+    vus..................................: 145    min=0         max=145
+    vus_max..............................: 165    min=90        max=165
+
+    NETWORK
+    data_received........................: 1.2 MB 26 kB/s
+    data_sent............................: 362 kB 8.1 kB/s
+
+
+
+
+running (0m44.7s), 000/165 VUs, 1202 complete and 145 interrupted iterations
+warmup     ✓ [ 100% ] 00/20 VUs    30s            10.00 iters/s
+warm_cache ✗ [   6% ] 126/145 VUs  0m07.8s/2m10s  276.34 iters/s
+time="2026-07-29T12:36:44+09:00" level=error msg="thresholds on metrics 'dropped_iterations, http_req_duration{endpoint:redirect_warm_cache}' were crossed; at least one has abortOnFail enabled, stopping test prematurely"

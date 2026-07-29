@@ -1,0 +1,146 @@
+{
+  "capturedAt": "2026-07-29T11:42:16.1480812+09:00",
+  "source": {
+    "type": "Prometheus HTTP API",
+    "access": "SSH tunnel to the cluster-internal Prometheus service",
+    "grafanaUsedForResultValues": false
+  },
+  "queryContext": {
+    "testStartedAt": "2026-07-29T11:38:02.8280501+09:00",
+    "testFinishedAt": "2026-07-29T11:40:52.3302532+09:00",
+    "counterBaselineAt": "2026-07-29T11:37:55+09:00",
+    "counterFinalAt": "2026-07-29T11:41:00+09:00",
+    "steadyEvaluationAt": "2026-07-29T11:40:40+09:00",
+    "rateWindow": "30s",
+    "resourceWindow": "3m",
+    "resourceSubqueryStep": "5s"
+  },
+  "k6": {
+    "warmupTargetRps": 10,
+    "warmupDurationSeconds": 30,
+    "warmupIterations": 300,
+    "measuredTargetRps": 275,
+    "rampDurationSeconds": 10,
+    "measuredHoldDurationSeconds": 120,
+    "measuredIterations": 34425,
+    "totalRedirectIterations": 34725,
+    "checksSucceeded": 34825,
+    "checksFailed": 0,
+    "httpFailures": 0,
+    "droppedIterations": 0,
+    "redirectP95Ms": 12.84,
+    "redirectP99Ms": 20.02,
+    "maxVUsObserved": 9,
+    "exitCode": 0
+  },
+  "counterDeltas": {
+    "redirect": 34725,
+    "cache": {
+      "hit": 34725,
+      "missAbsent": 20,
+      "missStale": 0
+    },
+    "riskCheck": {
+      "provider": "fixed_safe",
+      "outcome": "safe",
+      "count": 20
+    },
+    "httpByRoute": [
+      {
+        "method": "POST",
+        "uri": "/api/links",
+        "status": "201",
+        "count": 20
+      },
+      {
+        "method": "GET",
+        "uri": "/{code:[0-9A-Za-z]{6}}",
+        "status": "302",
+        "count": 34725
+      },
+      {
+        "method": "GET",
+        "uri": "/{code:[0-9A-Za-z]{6}}",
+        "status": "500",
+        "count": 0
+      },
+      {
+        "method": "DELETE",
+        "uri": "/api/links/{code}",
+        "status": "200",
+        "count": 20
+      }
+    ],
+    "podRestarts": 0,
+    "hikariTimeouts": 0
+  },
+  "steady275Rps": {
+    "actualRps": 275,
+    "redirectP50Ms": 1.9808,
+    "redirectP95Ms": 2.4387,
+    "redirectP99Ms": 2.7891,
+    "clickWriteP95Ms": 1.1887,
+    "redirectWriteP95Ms": 0.9902,
+    "steadyCpuThrottleRatioPercent": 0,
+    "postgresCommitsPerSecond": 1103.9,
+    "postgresCacheHitPercent": 100
+  },
+  "applicationResources": {
+    "maxCpuCores": 0.3207,
+    "maxMemoryBytes": 509448192,
+    "maxMemoryMiB": 485.8477,
+    "maxHeapBytes": 158501520,
+    "maxHeapMiB": 151.1588,
+    "maxGcPauseAverageMs": 1.5,
+    "maxTomcatBusy": 3,
+    "maxHikariActive": 2,
+    "maxHikariPending": 0,
+    "cpuThrottledPeriods": 11,
+    "cpuPeriods": 1584,
+    "cpuThrottledPeriodsPercent": 0.6944,
+    "maxThirtySecondCpuThrottleRatioPercent": 8.4615
+  },
+  "postgres": {
+    "maxConnections": 10,
+    "commitDelta": 139283,
+    "rollbackDelta": 0,
+    "deadlockDelta": 0,
+    "tempBytesDelta": 0,
+    "maxCpuCores": 0.3057,
+    "maxMemoryBytes": 197324800,
+    "maxMemoryMiB": 188.1836,
+    "maxReadBytesPerSecond": 0,
+    "maxWriteBytesPerSecond": 16430694.4,
+    "maxWriteMiBPerSecond": 15.6695,
+    "maxLocksByMode": {
+      "accessExclusiveLock": 0,
+      "accessShareLock": 2,
+      "exclusiveLock": 0,
+      "rowExclusiveLock": 8,
+      "rowShareLock": 4,
+      "shareLock": 0,
+      "shareRowExclusiveLock": 0,
+      "shareUpdateExclusiveLock": 0,
+      "siReadLock": 0
+    }
+  },
+  "queries": {
+    "exactRedirectDelta": "sum(srrrg_redirect_seconds_count{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"} @ 1785292860) - sum(srrrg_redirect_seconds_count{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"} @ 1785292675)",
+    "exactCacheDelta": "sum by(result)(srrrg_url_risk_cache_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"} @ 1785292860) - sum by(result)(srrrg_url_risk_cache_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"} @ 1785292675)",
+    "exactHttpRouteDelta": "sum by(method,uri,status)(http_server_requests_seconds_count{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",uri!~\".*actuator.*\"} @ 1785292860) - sum by(method,uri,status)(http_server_requests_seconds_count{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",uri!~\".*actuator.*\"} @ 1785292675)",
+    "steadyRps": "sum(rate(http_server_requests_seconds_count{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",uri=~\".*code.*\"}[30s]))",
+    "steadyRedirectP95": "1000 * histogram_quantile(0.95, sum by(le)(rate(srrrg_redirect_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"}[30s])))",
+    "steadyRedirectP99": "1000 * histogram_quantile(0.99, sum by(le)(rate(srrrg_redirect_seconds_bucket{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"}[30s])))",
+    "maxApplicationCpu": "max_over_time((sum(rate(container_cpu_usage_seconds_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",container=~\"srrrg-.*\",image!=\"\"}[30s])))[3m:5s])",
+    "maxThrottleRatio": "100 * max_over_time((sum(rate(container_cpu_cfs_throttled_periods_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",container=~\"srrrg-.*\"}[30s])) / clamp_min(sum(rate(container_cpu_cfs_periods_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\",container=~\"srrrg-.*\"}[30s])), 1e-9))[3m:5s])",
+    "hikariTimeoutDelta": "sum(hikaricp_connections_timeout_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"} @ 1785292860) - sum(hikaricp_connections_timeout_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"} @ 1785292675)",
+    "podRestartDelta": "sum(kube_pod_container_status_restarts_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"} @ 1785292860) - sum(kube_pod_container_status_restarts_total{namespace=\"srrrg\",pod=~\"srrrg-dev-app.*\"} @ 1785292675)",
+    "postgresCommitDelta": "sum(pg_stat_database_xact_commit{namespace=\"postgres\",datname=\"srrrg-dev\"} @ 1785292860) - sum(pg_stat_database_xact_commit{namespace=\"postgres\",datname=\"srrrg-dev\"} @ 1785292675)",
+    "postgresDeadlockDelta": "sum(pg_stat_database_deadlocks{namespace=\"postgres\",datname=\"srrrg-dev\"} @ 1785292860) - sum(pg_stat_database_deadlocks{namespace=\"postgres\",datname=\"srrrg-dev\"} @ 1785292675)"
+  },
+  "limitations": [
+    "HikariCP와 Tomcat gauge는 5초 scrape 사이에 끝난 순간 최고치를 놓칠 수 있다.",
+    "CPU와 throttling 값은 30초 rate를 5초 간격으로 평가한 결과다.",
+    "PostgreSQL container filesystem I/O는 데이터베이스별 I/O가 아니라 컨테이너 전체 I/O다."
+  ]
+}

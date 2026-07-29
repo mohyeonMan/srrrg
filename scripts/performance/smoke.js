@@ -66,9 +66,7 @@ export function setup() {
     fail('link creation response did not match the expected contract');
   }
 
-  console.log(
-    `test link created: code=${body.code}, shortUrl=${body.shortUrl}, secretKey=${body.secretKey}`,
-  );
+  console.log(`test link created: code=${body.code}, shortUrl=${body.shortUrl}`);
 
   return {
     code: body.code,

@@ -10,18 +10,14 @@ const RAMP_DURATION = __ENV.WARM_RAMP_DURATION || '5s';
 const WARMUP_RATE = parsePositiveInteger(__ENV.WARMUP_RATE || '10', 'WARMUP_RATE');
 const WARMUP_DURATION = __ENV.WARMUP_DURATION || '30s';
 const DATA_LINKS = parsePositiveInteger(__ENV.WARM_DATA_LINKS || '20', 'WARM_DATA_LINKS');
-const SLOW_REQUEST_THRESHOLD_MS = parsePositiveInteger(
-  __ENV.WARM_SLOW_REQUEST_THRESHOLD_MS || '250',
-  'WARM_SLOW_REQUEST_THRESHOLD_MS',
-);
 const ORIGINAL_URL_BASE = __ENV.WARM_ORIGINAL_URL || 'https://example.com/srrrg-warm-cache';
 const MAX_RATE = Math.max(...RATES);
 const PRE_ALLOCATED_VUS = parsePositiveInteger(
-  __ENV.WARM_PRE_ALLOCATED_VUS || String(Math.max(20, MAX_RATE * 2)),
+  __ENV.WARM_PRE_ALLOCATED_VUS || String(Math.max(20, Math.ceil(MAX_RATE / 5))),
   'WARM_PRE_ALLOCATED_VUS',
 );
 const MAX_VUS = parsePositiveInteger(
-  __ENV.WARM_MAX_VUS || String(Math.max(PRE_ALLOCATED_VUS, MAX_RATE * 4)),
+  __ENV.WARM_MAX_VUS || String(Math.max(PRE_ALLOCATED_VUS, Math.min(200, MAX_RATE))),
   'WARM_MAX_VUS',
 );
 const WARMUP_PRE_ALLOCATED_VUS = Math.max(10, WARMUP_RATE * 2);
@@ -35,16 +31,11 @@ const redirectSending = new Trend('redirect_client_sending', true);
 const redirectWaiting = new Trend('redirect_client_waiting', true);
 const redirectReceiving = new Trend('redirect_client_receiving', true);
 
-// 첫 요청률은 바로 유지하고, 다음 요청률부터 짧게 증가시킨 뒤 일정 시간 유지함.
-const stages = RATES.flatMap((rate, index) => {
-  if (index === 0) {
-    return [{ target: rate, duration: STAGE_DURATION }];
-  }
-  return [
-    { target: rate, duration: RAMP_DURATION },
-    { target: rate, duration: STAGE_DURATION },
-  ];
-});
+// 워밍업 요청률에서 첫 측정 요청률로 이동할 때도 ramp를 적용함.
+const stages = RATES.flatMap((rate) => [
+  { target: rate, duration: RAMP_DURATION },
+  { target: rate, duration: STAGE_DURATION },
+]);
 
 export const options = {
   setupTimeout: '2m',
@@ -64,7 +55,7 @@ export const options = {
       executor: 'ramping-arrival-rate',
       exec: 'warmCache',
       startTime: WARMUP_DURATION,
-      startRate: RATES[0],
+      startRate: WARMUP_RATE,
       timeUnit: '1s',
       preAllocatedVUs: PRE_ALLOCATED_VUS,
       maxVUs: MAX_VUS,
@@ -73,10 +64,16 @@ export const options = {
     },
   },
   thresholds: {
-    checks: ['rate==1'],
-    http_req_failed: ['rate<0.001'],
-    'http_req_duration{endpoint:redirect_warm_cache}': ['p(95)<100', 'p(99)<250'],
-    dropped_iterations: ['count==0'],
+    checks: [{ threshold: 'rate==1', abortOnFail: true, delayAbortEval: '30s' }],
+    http_req_failed: [{ threshold: 'rate<0.001', abortOnFail: true, delayAbortEval: '30s' }],
+    'http_req_duration{endpoint:redirect_warm_cache}': [
+      { threshold: 'p(95)<100', abortOnFail: true, delayAbortEval: '1m' },
+      { threshold: 'p(99)<250', abortOnFail: true, delayAbortEval: '1m' },
+    ],
+    dropped_iterations: [
+      { threshold: 'rate<1', abortOnFail: true, delayAbortEval: '30s' },
+      'count<10',
+    ],
   },
 };
 
@@ -85,8 +82,7 @@ export function setup() {
       `test configuration: scenario=warm-cache, baseUrl=${BASE_URL}, rates=${RATES.join(',')}, ` +
       `stageDuration=${STAGE_DURATION}, rampDuration=${RAMP_DURATION}, dataLinks=${DATA_LINKS}, ` +
       `warmupRate=${WARMUP_RATE}, warmupDuration=${WARMUP_DURATION}, ` +
-      `preAllocatedVUs=${PRE_ALLOCATED_VUS}, maxVUs=${MAX_VUS}, ` +
-      `slowRequestThresholdMs=${SLOW_REQUEST_THRESHOLD_MS}`,
+      `preAllocatedVUs=${PRE_ALLOCATED_VUS}, maxVUs=${MAX_VUS}`,
   );
 
   const runId = `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
@@ -133,9 +129,7 @@ export function setup() {
       shortUrl: body.shortUrl,
       secretKey: body.secretKey,
     });
-    console.log(
-      `test link created: code=${body.code}, shortUrl=${body.shortUrl}, secretKey=${body.secretKey}`,
-    );
+    console.log(`test link created: code=${body.code}, shortUrl=${body.shortUrl}`);
   }
 
   return { links };
@@ -152,7 +146,6 @@ export function warmCache(data) {
 function requestRedirect(data, endpoint, recordMeasuredTimings) {
   // 전체 실행의 iteration 번호로 링크를 순환해 특정 row에 부하가 몰리지 않게 함.
   const link = data.links[exec.scenario.iterationInTest % data.links.length];
-  const startedAt = new Date().toISOString();
   const response = http.get(link.shortUrl, {
     redirects: 0,
     tags: { endpoint },
@@ -160,19 +153,6 @@ function requestRedirect(data, endpoint, recordMeasuredTimings) {
 
   if (recordMeasuredTimings) {
     recordRedirectTimings(response);
-  }
-
-  // 본 측정에서 기준보다 느린 요청만 세부 시간을 출력해 지연 위치를 추적함.
-  if (recordMeasuredTimings && response.timings.duration >= SLOW_REQUEST_THRESHOLD_MS) {
-    console.warn(
-      `slow redirect: startedAt=${startedAt}, code=${link.code}, status=${response.status}, ` +
-        `duration=${response.timings.duration}ms, blocked=${response.timings.blocked}ms, ` +
-        `connecting=${response.timings.connecting}ms, ` +
-        `tlsHandshaking=${response.timings.tls_handshaking}ms, ` +
-        `sending=${response.timings.sending}ms, waiting=${response.timings.waiting}ms, ` +
-        `receiving=${response.timings.receiving}ms, vu=${exec.vu.idInTest}, ` +
-        `iteration=${exec.scenario.iterationInTest}`,
-    );
   }
 
   check(response, {

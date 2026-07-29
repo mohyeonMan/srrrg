@@ -1,0 +1,35 @@
+{
+  "scenario": "warm-cache",
+  "startedAt": "2026-07-29T11:38:02.8280501+09:00",
+  "finishedAt": "2026-07-29T11:40:52.3302532+09:00",
+  "script": "C:\\Users\\qkrwl\\Desktop\\repo\\my\\srrrg\\scripts\\performance\\warm-cache.js",
+  "commitSha": "e7484af47a90658417d8c35b40f0a4ec28175158",
+  "workingTreeDirty": true,
+  "infraCommitSha": "40757b82baa97a336e897c12833c20697130a50b",
+  "infraWorkingTreeDirty": false,
+  "replicas": 1,
+  "podResources": {
+    "requests": {
+      "cpu": "100m",
+      "memory": "512Mi"
+    },
+    "limits": {
+      "cpu": "500m",
+      "memory": "1Gi"
+    }
+  },
+  "hikari": {
+    "maximumPoolSize": 10,
+    "minimumIdle": 10,
+    "connectionTimeoutMs": 2000,
+    "validationTimeoutMs": 1000
+  },
+  "urlRisk": {
+    "provider": "fixed-safe",
+    "delay": "100ms",
+    "cacheDuration": "15m"
+  },
+  "k6Executable": "C:\\Program Files\\k6\\k6.exe",
+  "exitCode": 0,
+  "analysisStatus": "complete"
+}

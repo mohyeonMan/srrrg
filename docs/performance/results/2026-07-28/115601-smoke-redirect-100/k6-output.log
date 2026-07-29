@@ -2,7 +2,7 @@ execution: local
 script: .\scripts\performance\smoke.js
 scenario: smoke, 1 VU, 1 shared iteration
 
-time="2026-07-28T11:56:01+09:00" level=info msg="test link created: code=SDc6zc, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/SDc6zc, secretKey=srrrg_sk_KXVVgQH2BgkSeBHaByLwNyG7sDN-uISB0e8WEhWvBAb"
+time="2026-07-28T11:56:01+09:00" level=info msg="test link created: code=SDc6zc, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/SDc6zc, secretKey=[REDACTED]"
 
 THRESHOLDS
 checks: rate==1, actual=100.00%, passed

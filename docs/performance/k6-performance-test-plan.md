@@ -201,13 +201,11 @@ HTTP 지연이 증가할 때 요청 처리 thread가 먼저 포화됐는지 확�
 - 현재 및 최대 connection 수
 - transaction 처리량
 - lock wait와 deadlock
-- query 및 transaction 지연
-- CPU 및 메모리 사용량
-- 디스크 I/O latency 및 사용량
 
-DB 전체 상태의 시계열은 postgres_exporter로 수집하고, SQL별 호출 수와 실행 시간은 `pg_stat_statements`로 확인한다.
+DB 전체 상태의 시계열은 postgres_exporter로 수집한다.
 `pg_stat_statements`는 `shared_preload_libraries`, `compute_query_id`와 `track_io_timing`을 명시하고 PostgreSQL을 재시작한 뒤
 각 대상 DB에 extension을 생성한다. 테스트마다 공유 통계를 초기화하기보다 테스트 전후 snapshot 차이를 비교한다.
+상위 SQL과 디스크 I/O는 지연 변곡점이나 DB 병목이 관측된 실행에서만 추가로 확인한다.
 
 ### 4.6 Histogram과 수집 주기
 
@@ -235,22 +233,7 @@ Prometheus의 집계 가능한 histogram을 사용하며 `/actuator/prometheus`�
 
 ## 5. 메트릭 확인 방법
 
-### 5.1 테스트 시작 전
-
-다음을 확인한 뒤 테스트를 시작한다.
-
-- 모든 테스트 대상 Pod가 Ready 상태인가?
-- 테스트 환경의 URL 위험 검사 provider가 `fixed-safe`인가?
-- 테스트에 사용할 delay와 cache duration이 의도한 값으로 설정됐는가?
-- 테스트 데이터와 Safe Browsing 캐시 상태가 시나리오 조건과 일치하는가?
-- 각 replica에서 요청 메트릭이 수집되는가?
-- 모든 커스텀 Timer의 histogram bucket이 노출되는가?
-- postgres_exporter와 `pg_stat_statements`가 준비됐는가?
-- Grafana 성능 테스트 대시보드에 전체 집계와 Pod별 지표가 표시되는가?
-- PostgreSQL과 애플리케이션의 초기 CPU 및 메모리 사용량이 안정됐는가?
-- 이전 테스트의 이벤트와 캐시가 이번 테스트 결과에 영향을 주지 않는가?
-
-### 5.2 테스트 중
+### 5.1 테스트 중
 
 k6 결과와 서버 메트릭의 시간을 맞춰 다음 관계를 확인한다.
 
@@ -258,11 +241,16 @@ k6 결과와 서버 메트릭의 시간을 맞춰 다음 관계를 확인한다.
 |---|---|
 | p95, p99 증가 | 리다이렉트·쓰기·생성 Timer, URL 위험 검사, DB connection 획득 시간 |
 | 요청 실패 증가 | HTTP status, 업무 outcome, 외부 API 오류, DB 저장 오류 |
-| 처리량 정체 | CPU throttling, connection pending, PostgreSQL I/O, 외부 API latency |
+| 처리량 정체 | Ingress 오류, CPU throttling, connection pending, PostgreSQL transaction 처리량 |
 | replica 간 처리량 차이 | Pod별 요청 수, CPU, readiness |
-| 시간에 따른 지연 증가 | heap, GC pause, connection 수, DB와 디스크 사용량 |
+| 시간에 따른 지연 증가 | heap, GC pause, connection 수 |
 
-### 5.3 테스트 종료 후
+### 5.2 테스트 종료 후
+
+모든 테스트는 종료 직후 실행 시작·종료 시각과 부하 단계 구간을 기준으로 Prometheus
+API를 직접 조회한다. Grafana 패널에 표시된 값을 결과 수치로 옮기지 않는다.
+Prometheus 원시 조회 결과를 실행 디렉터리의 `prometheus-result.json`에 저장하고,
+그 값을 근거로 `analysis.md`를 작성한다.
 
 평균값만 사용하지 않고 다음을 함께 기록한다.
 
@@ -271,15 +259,16 @@ k6 결과와 서버 메트릭의 시간을 맞춰 다음 관계를 확인한다.
 - 최대 VU
 - 요청 및 check 실패율
 - 결과별 요청 수
-- 최대 CPU 및 메모리
+- 관측 CPU와 메모리
 - 최대 active/pending DB connection
 - GC pause
 - URL 위험 검증 cache hit ratio
 - provider별 URL 위험 검사 수
 - Pod별 요청 분배
-- PostgreSQL 상위 SQL의 호출 수와 실행 시간 변화
 
-### 5.4 Grafana 대시보드
+지연 변곡점이나 DB 병목이 관측된 경우에만 PostgreSQL 상위 SQL과 I/O를 추가로 확인한다.
+
+### 5.3 Grafana 대시보드
 
 성능 테스트 전에 다음 패널을 포함한 전용 대시보드를 만든다.
 
@@ -295,6 +284,8 @@ k6 결과와 서버 메트릭의 시간을 맞춰 다음 관계를 확인한다.
 Pod별 패널은 요청 편중과 특정 Pod의 이상을 진단하기 위해 함께 유지한다.
 낮은 부하의 기본 검증에서 Grafana 전체 요청 수가 Pod별 요청 수 합계 및 k6 요청 수와 일치하는지 확인한 뒤 본 테스트를 실행한다.
 테스트 구간은 annotation 또는 실행 시각으로 식별하고 대시보드 JSON이나 provisioning 파일을 버전 관리한다.
+Grafana는 전체 흐름과 이상 시점 탐색에 사용하며 최종 수치와 판정은 동일 PromQL을
+Prometheus API에 직접 실행한 결과를 사용한다.
 
 ## 6. 성능 테스트용 URL 위험 검사 설정
 
@@ -392,7 +383,7 @@ delay는 외부 검사로 인해 요청 처리가 대기하는 시간을 재현�
 
 - 유효한 URL을 충분히 준비한다.
 - 캐시 hit 생성과 cache miss 생성을 별도 실행한다.
-- 생성된 링크와 secret key는 테스트 종료 후 정리할 수 있게 테스트 식별 정보를 별도로 관리한다.
+- 생성된 링크는 테스트 식별자로 구분하고, secret key는 결과에 남기지 않고 테스트 프로세스 안에서만 정리에 사용한다.
 
 주요 확인 항목:
 
@@ -505,23 +496,17 @@ Cold-cache와 링크 생성 지연은 URL 위험 검사 시간에 크게 영향�
 
 각 실행 결과에는 다음 정보를 남긴다.
 
-- 실행 일시와 commit SHA
-- 배포 환경
-- replica 수
-- Pod resource request와 limit
-- JVM 설정
-- PostgreSQL 설정
-- HikariCP 설정
-- Prometheus scrape interval과 timeout
-- k6 시나리오와 script 버전
-- VU 또는 arrival rate 단계
-- 테스트 데이터 수와 캐시 상태
+- 실행 일시와 애플리케이션·인프라 commit SHA
+- 배포 환경, replica 수와 Pod resource limit
+- HikariCP maximum pool size
+- URL 위험 검사 provider, delay와 cache duration
+- k6 시나리오, VU 또는 arrival rate 단계와 실행 시간
 - p50, p95, p99와 처리량
 - HTTP 및 업무 오류율
-- 최대 CPU, 메모리와 DB connection
+- 관측 CPU, 메모리와 DB connection
 - URL 위험 검증 cache hit ratio와 provider별 검사 수
-- PostgreSQL 상위 SQL의 호출 수와 실행 시간 변화
 - 사용한 Grafana 대시보드 버전 또는 링크
 - 이전 실행 대비 변화와 결론
 
 테스트 결과는 평균값 하나로 합치지 않고 시나리오와 부하 단계별로 구분해 기록한다.
+secret key와 인증 header는 로그나 결과 파일에 저장하지 않는다.

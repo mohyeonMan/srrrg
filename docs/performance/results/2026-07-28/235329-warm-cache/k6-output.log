@@ -15,38 +15,38 @@
               * warm_cache: Up to 80.00 iterations/s for 6m20s over 5 stages (maxVUs: 160-320, exec: warmCache, startTime: 30s, gracefulStop: 10s)
 
 time="2026-07-28T23:53:29+09:00" level=info msg="test configuration: scenario=warm-cache, baseUrl=https://jhhomehub.gonetis.com/srrrg-dev, rates=50,60,80, stageDuration=2m, rampDuration=10s, dataLinks=20, warmupRate=10, warmupDuration=30s, preAllocatedVUs=160, maxVUs=320, slowRequestThresholdMs=250" source=console
-time="2026-07-28T23:53:30+09:00" level=info msg="test link created: code=WFg1N5, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/WFg1N5, secretKey=srrrg_sk_gehNJ2S9CKUvD_pvc_Zh285IBgWDo7QQc9ZlXTvmhCh" source=console
-time="2026-07-28T23:53:30+09:00" level=info msg="test link created: code=vrHKk6, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/vrHKk6, secretKey=srrrg_sk__TaL_0oiiBlWA2oBgW1gSspEr4MZOy5plJkkrLfGPUI" source=console
-time="2026-07-28T23:53:30+09:00" level=info msg="test link created: code=kS2Kkw, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/kS2Kkw, secretKey=srrrg_sk_lEMTvNSHlsjODCfvXigstlPn_qrZ1TQ8A6t_cuhN3K5" source=console
-time="2026-07-28T23:53:30+09:00" level=info msg="test link created: code=k17kG5, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/k17kG5, secretKey=srrrg_sk_q7PY6XiZU5h9SP6tGAR70L-bqqc7mMkPAUAfsT75IFW" source=console
+time="2026-07-28T23:53:30+09:00" level=info msg="test link created: code=WFg1N5, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/WFg1N5, secretKey=[REDACTED]" source=console
+time="2026-07-28T23:53:30+09:00" level=info msg="test link created: code=vrHKk6, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/vrHKk6, secretKey=[REDACTED]" source=console
+time="2026-07-28T23:53:30+09:00" level=info msg="test link created: code=kS2Kkw, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/kS2Kkw, secretKey=[REDACTED]" source=console
+time="2026-07-28T23:53:30+09:00" level=info msg="test link created: code=k17kG5, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/k17kG5, secretKey=[REDACTED]" source=console
 
 Run          [ 100% ] setup()
 warmup       [   0% ]
 warm_cache   [   0% ]
-time="2026-07-28T23:53:30+09:00" level=info msg="test link created: code=hNOU6T, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/hNOU6T, secretKey=srrrg_sk_xbRaibwHvodvJlE9n2x3EvTljoXfhCzs8R9ikgCVY9g" source=console
-time="2026-07-28T23:53:31+09:00" level=info msg="test link created: code=jdI11Y, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/jdI11Y, secretKey=srrrg_sk_Eh4TwGLTEQlK84iBkCgY9WrV11E4cDSxVBuGJlIBquC" source=console
-time="2026-07-28T23:53:31+09:00" level=info msg="test link created: code=wURbKA, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/wURbKA, secretKey=srrrg_sk_akRWrXLcLwMsiRA-Kl4QSeJpFZDvZ-u5IH2InqmgDHT" source=console
-time="2026-07-28T23:53:31+09:00" level=info msg="test link created: code=yqk58n, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/yqk58n, secretKey=srrrg_sk_t5mzy7bMOHULPs6aWxezPZGXNdGYpnQuSWw2nn_e7BN" source=console
-time="2026-07-28T23:53:31+09:00" level=info msg="test link created: code=u1Fi9X, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/u1Fi9X, secretKey=srrrg_sk__VSkaTX9bTLECyttksH2TVlSPzaXVu6zYFZYt0_l71e" source=console
+time="2026-07-28T23:53:30+09:00" level=info msg="test link created: code=hNOU6T, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/hNOU6T, secretKey=[REDACTED]" source=console
+time="2026-07-28T23:53:31+09:00" level=info msg="test link created: code=jdI11Y, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/jdI11Y, secretKey=[REDACTED]" source=console
+time="2026-07-28T23:53:31+09:00" level=info msg="test link created: code=wURbKA, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/wURbKA, secretKey=[REDACTED]" source=console
+time="2026-07-28T23:53:31+09:00" level=info msg="test link created: code=yqk58n, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/yqk58n, secretKey=[REDACTED]" source=console
+time="2026-07-28T23:53:31+09:00" level=info msg="test link created: code=u1Fi9X, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/u1Fi9X, secretKey=[REDACTED]" source=console
 
 Run          [ 100% ] setup()
 warmup       [   0% ]
 warm_cache   [   0% ]
-time="2026-07-28T23:53:31+09:00" level=info msg="test link created: code=WfQVrJ, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/WfQVrJ, secretKey=srrrg_sk_mZRBfeK3FnNQS97vcbQdDVsoTdMoPBw5aWYQ90WmIh4" source=console
-time="2026-07-28T23:53:32+09:00" level=info msg="test link created: code=HDmhZR, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/HDmhZR, secretKey=srrrg_sk_XgKhm60aHHOziPdaNf4f-m3k8hMEMqfVkavSQh0hAJ0" source=console
-time="2026-07-28T23:53:32+09:00" level=info msg="test link created: code=vGaGJu, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/vGaGJu, secretKey=srrrg_sk_oXeSLMR_v_SG-MpUN0eaCyVs4b0R07SONSLadimKWQ5" source=console
-time="2026-07-28T23:53:32+09:00" level=info msg="test link created: code=gW6mcM, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/gW6mcM, secretKey=srrrg_sk_dZC_ywzK-W6pMROCalLfpgbIjmE59WYFzDm2yXCYQgW" source=console
-time="2026-07-28T23:53:32+09:00" level=info msg="test link created: code=24c2nt, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/24c2nt, secretKey=srrrg_sk_f70AQlmi5LlDQSRCSYK3c0y1tC7nJKbQhAft9dVbNU5" source=console
+time="2026-07-28T23:53:31+09:00" level=info msg="test link created: code=WfQVrJ, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/WfQVrJ, secretKey=[REDACTED]" source=console
+time="2026-07-28T23:53:32+09:00" level=info msg="test link created: code=HDmhZR, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/HDmhZR, secretKey=[REDACTED]" source=console
+time="2026-07-28T23:53:32+09:00" level=info msg="test link created: code=vGaGJu, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/vGaGJu, secretKey=[REDACTED]" source=console
+time="2026-07-28T23:53:32+09:00" level=info msg="test link created: code=gW6mcM, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/gW6mcM, secretKey=[REDACTED]" source=console
+time="2026-07-28T23:53:32+09:00" level=info msg="test link created: code=24c2nt, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/24c2nt, secretKey=[REDACTED]" source=console
 
 Run          [ 100% ] setup()
 warmup       [   0% ]
 warm_cache   [   0% ]
-time="2026-07-28T23:53:32+09:00" level=info msg="test link created: code=8so5Zc, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/8so5Zc, secretKey=srrrg_sk_Cdw8IzBFFOpf66LADH32AvB6zqlwe_m3moj98mUMwhN" source=console
-time="2026-07-28T23:53:33+09:00" level=info msg="test link created: code=cA2D7g, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/cA2D7g, secretKey=srrrg_sk_R9JVT1ETgONBA0l-vXGRY6hNddQrkyFn-UdquxLMyl4" source=console
-time="2026-07-28T23:53:33+09:00" level=info msg="test link created: code=FH1M16, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/FH1M16, secretKey=srrrg_sk_PinPKMSxn9CnemojI4jtk0Bwd5SY-Oyw4O1YJ7wfayt" source=console
-time="2026-07-28T23:53:33+09:00" level=info msg="test link created: code=nxalzZ, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/nxalzZ, secretKey=srrrg_sk_vOisTLmWiRrAC95IdxUg609aLxjB1hgVXecxYPgNC0P" source=console
-time="2026-07-28T23:53:33+09:00" level=info msg="test link created: code=ZUE9Zx, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/ZUE9Zx, secretKey=srrrg_sk_fDnPC7_sx_qHp20PeY0hnCnPbe0B97ZLep2YCJoP7Wn" source=console
-time="2026-07-28T23:53:33+09:00" level=info msg="test link created: code=GKQJSP, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/GKQJSP, secretKey=srrrg_sk_A8iSF-pIaBexEzz3gLl60ewRgQEsil-YvZ_OUSussCh" source=console
+time="2026-07-28T23:53:32+09:00" level=info msg="test link created: code=8so5Zc, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/8so5Zc, secretKey=[REDACTED]" source=console
+time="2026-07-28T23:53:33+09:00" level=info msg="test link created: code=cA2D7g, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/cA2D7g, secretKey=[REDACTED]" source=console
+time="2026-07-28T23:53:33+09:00" level=info msg="test link created: code=FH1M16, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/FH1M16, secretKey=[REDACTED]" source=console
+time="2026-07-28T23:53:33+09:00" level=info msg="test link created: code=nxalzZ, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/nxalzZ, secretKey=[REDACTED]" source=console
+time="2026-07-28T23:53:33+09:00" level=info msg="test link created: code=ZUE9Zx, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/ZUE9Zx, secretKey=[REDACTED]" source=console
+time="2026-07-28T23:53:33+09:00" level=info msg="test link created: code=GKQJSP, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/GKQJSP, secretKey=[REDACTED]" source=console
 
 running (0m04.0s), 001/180 VUs, 0 complete and 0 interrupted iterations
 warmup       [   0% ] 01/20 VUs  00.0s/30s  10.00 iters/s

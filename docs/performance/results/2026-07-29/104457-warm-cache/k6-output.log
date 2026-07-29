@@ -1,0 +1,65 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: C:\Users\qkrwl\Desktop\repo\my\srrrg\scripts\performance\warm-cache.js
+        output: -
+
+     scenarios: (100.00%) 2 scenarios, 2040 max VUs, 7m0s max duration (incl. graceful stop):
+              * warmup: 10.00 iterations/s for 30s (maxVUs: 20-40, exec: warmup, gracefulStop: 5s)
+              * warm_cache: Up to 500.00 iterations/s for 6m20s over 5 stages (maxVUs: 1000-2000, exec: warmCache, startTime: 30s, gracefulStop: 10s)
+
+time="2026-07-29T10:45:03+09:00" level=info msg="test configuration: scenario=warm-cache, baseUrl=https://jhhomehub.gonetis.com/srrrg-dev, rates=300,400,500, stageDuration=2m, rampDuration=10s, dataLinks=20, warmupRate=10, warmupDuration=30s, preAllocatedVUs=1000, maxVUs=2000, slowRequestThresholdMs=250" source=console
+time="2026-07-29T10:45:03+09:00" level=warning msg="Request Failed" error="Post \"https://jhhomehub.gonetis.com/srrrg-dev/api/links\": dial tcp 124.61.77.187:443: connectex: An attempt was made to access a socket in a way forbidden by its access permissions."
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✗ 'rate==1' rate=0.00%
+
+    dropped_iterations
+    ✓ 'count==0' count=0
+
+    http_req_duration{endpoint:redirect_warm_cache}
+    ✓ 'p(95)<100' p(95)=0s
+    ✓ 'p(99)<250' p(99)=0s
+
+    http_req_failed
+    ✗ 'rate<0.001' rate=100.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 1       5.919552/s
+    checks_succeeded...: 0.00%   0 out of 1
+    checks_failed......: 100.00% 1 out of 1
+
+    ✗ setup link create returns 201
+      ↳  0% — ✓ 0 / ✗ 1
+
+    HTTP
+    http_req_duration....................: avg=0s min=0s med=0s max=0s p(90)=0s p(95)=0s
+      { endpoint:redirect_warm_cache }...: avg=0s min=0s med=0s max=0s p(90)=0s p(95)=0s
+    http_req_failed......................: 100.00% 1 out of 1
+    http_reqs............................: 1       5.919552/s
+
+    EXECUTION
+    dropped_iterations...................: 0       0/s
+
+    NETWORK
+    data_received........................: 0 B     0 B/s
+    data_sent............................: 0 B     0 B/s
+
+
+
+
+Run          [ 100% ] setup()
+warmup       [   0% ]
+warm_cache   [   0% ]
+time="2026-07-29T10:45:03+09:00" level=error msg="GoError: setup link creation failed: index=0, status=0, body=null\n\tat go.k6.io/k6/v2/internal/js/modules/k6.(*K6).Fail-fm (native)\n\tat setup (file:///C:/Users/qkrwl/Desktop/repo/my/srrrg/scripts/performance/warm-cache.js:114:11(154))\n" hint="script exception" source=stacktrace

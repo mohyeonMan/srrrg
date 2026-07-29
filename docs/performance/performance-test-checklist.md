@@ -105,7 +105,9 @@ PostgreSQL `max_connections=100`에서 exporter와 관리자 접속을 포함해
 - [ ] Cold-cache redirect 시나리오를 작성한다.
 - [x] 시나리오별 arrival rate, 단계 시간과 테스트 데이터 수를 명시한다.
 - [x] p95, p99와 예상하지 않은 오류율에 대한 k6 threshold를 정의한다.
-- [x] 실행 일시, commit SHA, 환경 설정과 결과를 함께 저장한다.
+- [x] 실행 일시, 애플리케이션 commit SHA, 시나리오 설정과 결과를 함께 저장한다.
+- [ ] 인프라 commit SHA, replica 수, Pod resource limit과 HikariCP pool size를 결과에 기록한다.
+- [x] secret key와 인증 header를 로그 및 결과 파일에 기록하지 않는다.
 
 ## 10. 기본 검증
 
@@ -115,7 +117,8 @@ PostgreSQL `max_connections=100`에서 exporter와 관리자 접속을 포함해
 - [ ] 순수 애플리케이션 및 DB 성능 확인은 delay `0ms`로 시작한다.
 - [ ] VU 1로 Baseline을 실행한다.
 - [x] k6 요청 수와 Prometheus HTTP 요청 증가량이 일치하는지 확인한다.
-- [ ] Warm-cache에서 cache hit가, Cold-cache에서 cache miss가 의도대로 발생하는지 확인한다.
+- [x] Warm-cache에서 cache hit가 의도대로 발생하는지 확인한다.
+- [ ] Cold-cache에서 cache miss가 의도대로 발생하는지 확인한다.
 - [x] Grafana에서 p95, p99, 오류율과 자원 지표가 테스트 시간대에 표시되는지 확인한다.
 - [x] HikariCP와 PostgreSQL connection 수가 설정값과 일치하는지 확인한다.
 
@@ -123,6 +126,7 @@ PostgreSQL `max_connections=100`에서 exporter와 관리자 접속을 포함해
 
 - Warm-cache 단계별 테스트 실행 방법은
   [`warm-cache-test.md`](./warm-cache-test.md)를 참고한다.
+- [x] 단일 dev Pod의 Warm-cache redirect를 350 RPS까지 검증한다.
 - [ ] Warm-cache redirect의 최대 지속 처리량을 찾는다.
 - [ ] Cold-cache redirect를 실행한다.
 - [ ] Concurrent cold-cache로 동일 URL의 중복 검사 수준을 확인한다.
@@ -134,11 +138,21 @@ PostgreSQL `max_connections=100`에서 exporter와 관리자 접속을 포함해
 
 ## 12. 결과 판정 및 기록
 
+- [x] 모든 테스트 종료 후 동일한 실행 구간을 Prometheus API로 직접 조회한다.
+- [x] Prometheus 조회 원본을 `prometheus-result.json`에 저장한 뒤 판정한다.
 - [x] 부하 단계별 RPS, p50, p95, p99와 오류율을 기록한다.
-- [x] 최대 CPU, 메모리, CPU throttling과 GC pause를 기록한다.
+- [x] 관측한 CPU와 메모리, CPU throttling 및 GC pause 여부를 기록한다.
 - [x] HikariCP 최대 active 및 pending connection과 timeout 수를 기록한다.
-- [ ] PostgreSQL lock, I/O와 상위 SQL의 실행 시간 변화를 기록한다.
+- [x] PostgreSQL connection, commit 처리량, lock wait와 deadlock을 기록한다.
 - [x] cache hit ratio와 URL 위험 검사 중복 호출 수를 기록한다.
 - [ ] Pod별 요청 분배와 replica 확장 효율을 기록한다.
 - [ ] 기준을 초과한 최초 부하 단계와 병목 원인을 기록한다.
 - [ ] 개선 전후 테스트는 동일한 설정과 데이터로 다시 실행한다.
+
+결과 판정의 기준 데이터는 Grafana 화면이 아니라 Prometheus API 조회값이다.
+Grafana는 지표 흐름과 이상 시점을 빠르게 찾는 보조 수단으로만 사용한다.
+Prometheus 조회와 `analysis.md` 작성이 끝나기 전에는 해당 실행의 분석 상태를
+`complete`로 변경하지 않는다.
+
+지연 변곡점이나 DB 병목이 관측되면 해당 실행에 한해 `pg_stat_statements`의
+상위 SQL과 PostgreSQL I/O를 추가로 확인한다.

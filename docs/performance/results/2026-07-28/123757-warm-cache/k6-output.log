@@ -22,57 +22,57 @@ At C:\Users\qkrwl\Desktop\repo\my\srrrg\scripts\performance\run.ps1:39 char:5
     + FullyQualifiedErrorId : NativeCommandError
  
 time="2026-07-28T12:37:58+09:00" level=info msg="test link created: code=TvyMoD, shortUrl=https://jhhomehub.gonetis.com
-/srrrg-dev/TvyMoD, secretKey=srrrg_sk_X_cYKHRQM9eVSNme0U8_UxVjwUoMmFfBX1qP5IwU_wl" source=console
+/srrrg-dev/TvyMoD, secretKey=[REDACTED]" source=console
 time="2026-07-28T12:37:58+09:00" level=info msg="test link created: code=X8nC2a, shortUrl=https://jhhomehub.gonetis.com
-/srrrg-dev/X8nC2a, secretKey=srrrg_sk_XQyJHKtIiR5Hf_HEXrKUrPUxjU5en8HtXiuZwhGaxDc" source=console
+/srrrg-dev/X8nC2a, secretKey=[REDACTED]" source=console
 time="2026-07-28T12:37:58+09:00" level=info msg="test link created: code=c0lllF, shortUrl=https://jhhomehub.gonetis.com
-/srrrg-dev/c0lllF, secretKey=srrrg_sk_YspPEfgo9k86BgC-QG8hYhzW6_9hZizNmrj1GAJFWnm" source=console
+/srrrg-dev/c0lllF, secretKey=[REDACTED]" source=console
 time="2026-07-28T12:37:58+09:00" level=info msg="test link created: code=9RWE25, shortUrl=https://jhhomehub.gonetis.com
-/srrrg-dev/9RWE25, secretKey=srrrg_sk_z31__BaHLwWpwRsHi3x_j3RTCQH6cQ5lPy36PIsfXtj" source=console
+/srrrg-dev/9RWE25, secretKey=[REDACTED]" source=console
 
 Run          [ 100% ] setup()
 warm_cache   [   0% ]
 time="2026-07-28T12:37:59+09:00" level=info msg="test link created: code=I9jSix, shortUrl=https://jhhomehub.gonetis.com
-/srrrg-dev/I9jSix, secretKey=srrrg_sk_db7jv5S_pigVlPsdJsZv0XaJzNiG4VMi7GTZqju7lMH" source=console
+/srrrg-dev/I9jSix, secretKey=[REDACTED]" source=console
 time="2026-07-28T12:37:59+09:00" level=info msg="test link created: code=3mBcAM, shortUrl=https://jhhomehub.gonetis.com
-/srrrg-dev/3mBcAM, secretKey=srrrg_sk_bS64eV-muR3NkVYmVvwfWheCQk21Ey5UdF1ZgPXKVv7" source=console
+/srrrg-dev/3mBcAM, secretKey=[REDACTED]" source=console
 time="2026-07-28T12:37:59+09:00" level=info msg="test link created: code=yfs2ro, shortUrl=https://jhhomehub.gonetis.com
-/srrrg-dev/yfs2ro, secretKey=srrrg_sk_Wuw1tXzEZR8imbsPF4PqvvxqXiS-ZDivEugiYeuP6aO" source=console
+/srrrg-dev/yfs2ro, secretKey=[REDACTED]" source=console
 time="2026-07-28T12:37:59+09:00" level=info msg="test link created: code=KmKzv5, shortUrl=https://jhhomehub.gonetis.com
-/srrrg-dev/KmKzv5, secretKey=srrrg_sk_qtQWVJj5MuEGBbI2mGHBewTlLMTJCw40GwdSmk8GxTI" source=console
+/srrrg-dev/KmKzv5, secretKey=[REDACTED]" source=console
 time="2026-07-28T12:37:59+09:00" level=info msg="test link created: code=XTA2xr, shortUrl=https://jhhomehub.gonetis.com
-/srrrg-dev/XTA2xr, secretKey=srrrg_sk_JFjPaDm_BIlz9lP89ZtfOLcGcqipg94fQaUMwd8K34a" source=console
+/srrrg-dev/XTA2xr, secretKey=[REDACTED]" source=console
 
 Run          [ 100% ] setup()
 warm_cache   [   0% ]
 time="2026-07-28T12:38:00+09:00" level=info msg="test link created: code=xX7Tix, shortUrl=https://jhhomehub.gonetis.com
-/srrrg-dev/xX7Tix, secretKey=srrrg_sk_JG6R6N92LuHHG0DXhLM92O6uO0qMjU1X96ps2Q_BV26" source=console
+/srrrg-dev/xX7Tix, secretKey=[REDACTED]" source=console
 time="2026-07-28T12:38:00+09:00" level=info msg="test link created: code=a3NeeZ, shortUrl=https://jhhomehub.gonetis.com
-/srrrg-dev/a3NeeZ, secretKey=srrrg_sk_6Ed36KVBSk-3zGNvMVy-sjf3XBD2M1_9jbNF3zulYRl" source=console
+/srrrg-dev/a3NeeZ, secretKey=[REDACTED]" source=console
 time="2026-07-28T12:38:00+09:00" level=info msg="test link created: code=7gqKyn, shortUrl=https://jhhomehub.gonetis.com
-/srrrg-dev/7gqKyn, secretKey=srrrg_sk_YMOLoNbdyC6T9Ju7qoH4gf_NJBit3ANEF65qbAheaka" source=console
+/srrrg-dev/7gqKyn, secretKey=[REDACTED]" source=console
 time="2026-07-28T12:38:00+09:00" level=info msg="test link created: code=QDgmnv, shortUrl=https://jhhomehub.gonetis.com
-/srrrg-dev/QDgmnv, secretKey=srrrg_sk_NecPlUKwAZp4g_6RQmUndW0fSAaDQeN9Yag2Oq25Dce" source=console
+/srrrg-dev/QDgmnv, secretKey=[REDACTED]" source=console
 time="2026-07-28T12:38:00+09:00" level=info msg="test link created: code=pKAlgU, shortUrl=https://jhhomehub.gonetis.com
-/srrrg-dev/pKAlgU, secretKey=srrrg_sk_a0jofjR_v37EtTAzWDAUzxjHJ7hH8pLmOfYbDkHysa0" source=console
+/srrrg-dev/pKAlgU, secretKey=[REDACTED]" source=console
 
 Run          [ 100% ] setup()
 warm_cache   [   0% ]
 time="2026-07-28T12:38:01+09:00" level=info msg="test link created: code=pKhwRV, shortUrl=https://jhhomehub.gonetis.com
-/srrrg-dev/pKhwRV, secretKey=srrrg_sk_ik_3dMaISgNNTUhOYBxa5f1tacQbSmEhtNZOFAK9WxP" source=console
+/srrrg-dev/pKhwRV, secretKey=[REDACTED]" source=console
 time="2026-07-28T12:38:01+09:00" level=info msg="test link created: code=W1AH1Y, shortUrl=https://jhhomehub.gonetis.com
-/srrrg-dev/W1AH1Y, secretKey=srrrg_sk_qm7GKkDDiHSfA4PqeBUW3LKR-qqo6ytEFEZAC-LSaZT" source=console
+/srrrg-dev/W1AH1Y, secretKey=[REDACTED]" source=console
 time="2026-07-28T12:38:01+09:00" level=info msg="test link created: code=EZweuE, shortUrl=https://jhhomehub.gonetis.com
-/srrrg-dev/EZweuE, secretKey=srrrg_sk_0kUuGCDFaDw3OmGJzm3tBvFuOUNCgldwXARPILFOlt4" source=console
+/srrrg-dev/EZweuE, secretKey=[REDACTED]" source=console
 time="2026-07-28T12:38:01+09:00" level=info msg="test link created: code=jAFur4, shortUrl=https://jhhomehub.gonetis.com
-/srrrg-dev/jAFur4, secretKey=srrrg_sk_SZUgtpCb_MGiG6G079U9W6nJgl61ogef63jW5TIE_28" source=console
+/srrrg-dev/jAFur4, secretKey=[REDACTED]" source=console
 time="2026-07-28T12:38:01+09:00" level=info msg="test link created: code=KfQCQr, shortUrl=https://jhhomehub.gonetis.com
-/srrrg-dev/KfQCQr, secretKey=srrrg_sk_K7aI4SKcDZbyL31XTLKNyN4AgQKNcikKMN8uxx66J0E" source=console
+/srrrg-dev/KfQCQr, secretKey=[REDACTED]" source=console
 
 Run          [ 100% ] setup()
 warm_cache   [   0% ]
 time="2026-07-28T12:38:02+09:00" level=info msg="test link created: code=r9rr7T, shortUrl=https://jhhomehub.gonetis.com
-/srrrg-dev/r9rr7T, secretKey=srrrg_sk_d_fteQbdfsHZKY8Sbhf0bj1_ulHwLOWKaR8jTzcVQdK" source=console
+/srrrg-dev/r9rr7T, secretKey=[REDACTED]" source=console
 
 running (0m05.0s), 01/20 VUs, 17 complete and 0 interrupted iterations
 warm_cache   [   0% ] 01/20 VUs  0m00.9s/6m20s  20.00 iters/s

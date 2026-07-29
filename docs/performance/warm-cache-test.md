@@ -23,6 +23,7 @@ setup에서 서로 다른 원본 URL을 사용하는 링크를 생성해 위험 
 본 측정 전에 10 RPS로 30초 동안 redirect 경로를 워밍업한다. 워밍업 요청은
 `endpoint=redirect_warm_cache_warmup`으로 분리해 본 측정 p95와 p99 threshold에서
 제외하지만 check와 HTTP 실패율에는 포함한다.
+워밍업 요청률에서 첫 본 측정 요청률로 이동할 때도 설정한 ramp 시간을 적용한다.
 
 부하 구간에서는 링크를 순환 선택하고 redirect를 따라가지 않은 채 302 응답만 확인한다.
 teardown에서 생성한 링크를 삭제한다.
@@ -33,13 +34,16 @@ teardown에서 생성한 링크를 삭제한다.
 `miss_stale`과 risk check가 섞여 순수 warm-cache 결과가 아니게 된다.
 현재 dev 배포 매니페스트의 fixed-safe cache duration은 15분이다.
 
-arrival-rate 실행기의 기본 pre-allocated VU는 최대 RPS의 2배, 최대 VU는 4배다.
-load generator의 일시적인 네트워크 지연으로 dropped iteration이 발생하면
-`WARM_PRE_ALLOCATED_VUS`와 `WARM_MAX_VUS`로 더 크게 지정할 수 있다.
+arrival-rate 실행기의 기본 pre-allocated VU는 최대 RPS의 20%이며 최소 20개다.
+최대 VU는 목표 RPS 이내에서 200개로 제한한다. 기준을 지키기 위해 이보다 많은 VU가
+필요하면 동시 요청을 계속 쌓지 않고 dropped iteration으로 실패를 판정한다.
+필요하면 `WARM_PRE_ALLOCATED_VUS`와 `WARM_MAX_VUS`로 직접 지정할 수 있다.
 
-redirect가 기본 250ms 이상 걸리면 k6 로그에 요청 시각과 blocked, connection, TLS,
-sending, waiting, receiving 시간을 남긴다. 기준은 `WARM_SLOW_REQUEST_THRESHOLD_MS`로
-변경할 수 있으며 각 구간의 전체 분포도 k6 실행 요약에 표시된다.
+HTTP 실패, dropped iteration 또는 지연 기준 위반이 지속되면 상위 부하 단계로
+진행하지 않고 테스트를 중단한다.
+
+클라이언트의 blocked, connection, TLS, sending, waiting과 receiving 시간은
+요청별 로그를 남기지 않고 k6 실행 요약의 전체 분포로 확인한다.
 
 ## 실행
 
@@ -86,7 +90,8 @@ docs/performance/results/YYYY-MM-DD/HHmmss-warm-cache/
 ```
 
 실행 후 Prometheus 조회 결과는 `prometheus-result.json`, 지표 해설과 판정은
-`analysis.md`에 추가한다.
+`analysis.md`에 추가한다. k6 종료만으로 테스트를 완료 처리하지 않으며, 실행 시각과
+각 부하 단계의 절대 시간 구간으로 Prometheus API를 직접 조회한 뒤 판정한다.
 
 ## 확인 항목
 
@@ -97,6 +102,8 @@ docs/performance/results/YYYY-MM-DD/HHmmss-warm-cache/
 - PostgreSQL connection, transaction과 I/O
 - Pod CPU, throttling, 메모리와 Tomcat busy thread
 
-각 단계는 Grafana와 Prometheus에서 실행 시각을 기준으로 구분한다. 첫 실행이 안정적이면
+각 단계는 Prometheus에서 실행 시각을 기준으로 구분한다. Grafana는 전체 흐름이나
+이상 시점을 찾을 때만 보조로 사용하고, 최종 수치는 Prometheus API 조회값을 사용한다.
+첫 실행이 안정적이면
 동일한 링크 수와 단계 시간을 유지하면서 요청률을 점진적으로 높여 최초 기준 초과 지점을
 찾는다.

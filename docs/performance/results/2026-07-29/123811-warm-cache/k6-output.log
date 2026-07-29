@@ -1,0 +1,161 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: C:\Users\qkrwl\Desktop\repo\my\srrrg\scripts\performance\warm-cache.js
+        output: -
+
+     scenarios: (100.00%) 2 scenarios, 240 max VUs, 2m50s max duration (incl. graceful stop):
+              * warmup: 10.00 iterations/s for 30s (maxVUs: 20-40, exec: warmup, gracefulStop: 5s)
+              * warm_cache: Up to 350.00 iterations/s for 2m10s over 2 stages (maxVUs: 70-200, exec: warmCache, startTime: 30s, gracefulStop: 10s)
+
+time="2026-07-29T12:38:11+09:00" level=info msg="test configuration: scenario=warm-cache, baseUrl=https://jhhomehub.gonetis.com/srrrg-dev, rates=350, stageDuration=2m, rampDuration=10s, dataLinks=20, warmupRate=10, warmupDuration=30s, preAllocatedVUs=70, maxVUs=200" source=console
+time="2026-07-29T12:38:12+09:00" level=info msg="test link created: code=qkXbPV, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/qkXbPV" source=console
+time="2026-07-29T12:38:12+09:00" level=info msg="test link created: code=qlUWLo, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/qlUWLo" source=console
+time="2026-07-29T12:38:12+09:00" level=info msg="test link created: code=tQkQ2k, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/tQkQ2k" source=console
+time="2026-07-29T12:38:12+09:00" level=info msg="test link created: code=Ec13uI, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/Ec13uI" source=console
+
+Run          [ 100% ] setup()
+warmup       [   0% ]
+warm_cache   [   0% ]
+time="2026-07-29T12:38:13+09:00" level=info msg="test link created: code=oEoQHO, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/oEoQHO" source=console
+time="2026-07-29T12:38:13+09:00" level=info msg="test link created: code=vmSNd8, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/vmSNd8" source=console
+time="2026-07-29T12:38:13+09:00" level=info msg="test link created: code=GGFjTo, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/GGFjTo" source=console
+time="2026-07-29T12:38:13+09:00" level=info msg="test link created: code=uG0eJw, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/uG0eJw" source=console
+time="2026-07-29T12:38:13+09:00" level=info msg="test link created: code=fsPmmG, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/fsPmmG" source=console
+
+Run          [ 100% ] setup()
+warmup       [   0% ]
+warm_cache   [   0% ]
+time="2026-07-29T12:38:13+09:00" level=info msg="test link created: code=EK76rr, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/EK76rr" source=console
+time="2026-07-29T12:38:14+09:00" level=info msg="test link created: code=YK9uxu, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/YK9uxu" source=console
+time="2026-07-29T12:38:14+09:00" level=info msg="test link created: code=038B7l, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/038B7l" source=console
+time="2026-07-29T12:38:14+09:00" level=info msg="test link created: code=loS12D, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/loS12D" source=console
+time="2026-07-29T12:38:14+09:00" level=info msg="test link created: code=O75xWG, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/O75xWG" source=console
+
+Run          [ 100% ] setup()
+warmup       [   0% ]
+warm_cache   [   0% ]
+time="2026-07-29T12:38:14+09:00" level=info msg="test link created: code=DRme7o, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/DRme7o" source=console
+time="2026-07-29T12:38:15+09:00" level=info msg="test link created: code=4ud23R, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/4ud23R" source=console
+time="2026-07-29T12:38:15+09:00" level=info msg="test link created: code=T97qGh, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/T97qGh" source=console
+time="2026-07-29T12:38:15+09:00" level=info msg="test link created: code=foXGiE, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/foXGiE" source=console
+time="2026-07-29T12:38:15+09:00" level=info msg="test link created: code=riuLVQ, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/riuLVQ" source=console
+time="2026-07-29T12:38:15+09:00" level=info msg="test link created: code=IjFd9r, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/IjFd9r" source=console
+
+running (0m04.0s), 001/090 VUs, 0 complete and 0 interrupted iterations
+warmup       [   0% ] 01/20 VUs  00.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    30.0s     
+
+running (0m05.0s), 001/090 VUs, 10 complete and 0 interrupted iterations
+warmup       [   3% ] 01/20 VUs  01.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    29.0s     
+
+running (0m06.0s), 001/090 VUs, 20 complete and 0 interrupted iterations
+warmup       [   7% ] 01/20 VUs  02.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    28.0s     
+
+running (0m07.0s), 001/090 VUs, 30 complete and 0 interrupted iterations
+warmup       [  10% ] 01/20 VUs  03.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    27.0s     
+
+running (0m08.0s), 000/090 VUs, 40 complete and 0 interrupted iterations
+warmup       [  13% ] 00/20 VUs  04.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    26.0s     
+
+running (0m09.0s), 001/090 VUs, 50 complete and 0 interrupted iterations
+warmup       [  17% ] 01/20 VUs  05.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    25.0s     
+
+running (0m10.0s), 000/090 VUs, 60 complete and 0 interrupted iterations
+warmup       [  20% ] 00/20 VUs  06.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    24.0s     
+
+running (0m11.0s), 000/090 VUs, 70 complete and 0 interrupted iterations
+warmup       [  23% ] 00/20 VUs  07.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    23.0s     
+
+running (0m12.0s), 000/090 VUs, 80 complete and 0 interrupted iterations
+warmup       [  27% ] 00/20 VUs  08.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    22.0s     
+
+running (0m13.0s), 000/090 VUs, 90 complete and 0 interrupted iterations
+warmup       [  30% ] 00/20 VUs  09.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    21.0s     
+
+running (0m14.0s), 000/090 VUs, 100 complete and 0 interrupted iterations
+warmup       [  33% ] 00/20 VUs  10.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    20.0s     
+
+running (0m15.0s), 000/090 VUs, 110 complete and 0 interrupted iterations
+warmup       [  37% ] 00/20 VUs  11.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    19.0s     
+
+running (0m16.0s), 000/090 VUs, 120 complete and 0 interrupted iterations
+warmup       [  40% ] 00/20 VUs  12.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    18.0s     
+
+running (0m17.0s), 000/090 VUs, 130 complete and 0 interrupted iterations
+warmup       [  43% ] 00/20 VUs  13.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    17.0s     
+
+running (0m18.0s), 000/090 VUs, 140 complete and 0 interrupted iterations
+warmup       [  47% ] 00/20 VUs  14.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    16.0s     
+
+running (0m19.0s), 000/090 VUs, 150 complete and 0 interrupted iterations
+warmup       [  50% ] 00/20 VUs  15.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    15.0s     
+
+running (0m20.0s), 000/090 VUs, 160 complete and 0 interrupted iterations
+warmup       [  53% ] 00/20 VUs  16.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    14.0s     
+
+running (0m21.0s), 000/090 VUs, 170 complete and 0 interrupted iterations
+warmup       [  57% ] 00/20 VUs  17.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    13.0s     
+
+running (0m22.0s), 000/090 VUs, 180 complete and 0 interrupted iterations
+warmup       [  60% ] 00/20 VUs  18.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    12.0s     
+
+running (0m23.0s), 000/090 VUs, 190 complete and 0 interrupted iterations
+warmup       [  63% ] 00/20 VUs  19.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    11.0s     
+
+running (0m24.0s), 000/090 VUs, 200 complete and 0 interrupted iterations
+warmup       [  67% ] 00/20 VUs  20.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    10.0s     
+
+running (0m25.0s), 000/090 VUs, 210 complete and 0 interrupted iterations
+warmup       [  70% ] 00/20 VUs  21.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    09.0s     
+
+running (0m26.0s), 000/090 VUs, 220 complete and 0 interrupted iterations
+warmup       [  73% ] 00/20 VUs  22.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    08.0s     
+
+running (0m27.0s), 000/090 VUs, 230 complete and 0 interrupted iterations
+warmup       [  77% ] 00/20 VUs  23.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    07.0s     
+
+running (0m28.0s), 000/090 VUs, 240 complete and 0 interrupted iterations
+warmup       [  80% ] 00/20 VUs  24.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    06.0s     
+
+running (0m29.0s), 000/090 VUs, 250 complete and 0 interrupted iterations
+warmup       [  83% ] 00/20 VUs  25.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    05.0s     
+
+running (0m30.0s), 000/090 VUs, 260 complete and 0 interrupted iterations
+warmup       [  87% ] 00/20 VUs  26.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    04.0s     
+
+running (0m31.0s), 000/090 VUs, 270 complete and 0 interrupted iterations
+warmup       [  90% ] 00/20 VUs  27.0s/30s  10.00 iters/s
+warm_cache • [   0% ] waiting    03.0s     

@@ -1,0 +1,11 @@
+﻿{
+    "scenario":  "warm-cache",
+    "startedAt":  "2026-07-29T12:35:59.5294318+09:00",
+    "finishedAt":  "2026-07-29T12:36:44.6370401+09:00",
+    "script":  "C:\\Users\\qkrwl\\Desktop\\repo\\my\\srrrg\\scripts\\performance\\warm-cache.js",
+    "commitSha":  "e7484af47a90658417d8c35b40f0a4ec28175158",
+    "workingTreeDirty":  true,
+    "k6Executable":  "C:\\Program Files\\k6\\k6.exe",
+    "exitCode":  99,
+    "analysisStatus":  "pending"
+}
