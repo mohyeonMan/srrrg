@@ -1,0 +1,28 @@
+{
+  "scenario": "mixed-workload",
+  "startedAt": "2026-07-29T22:11:02+0900",
+  "finishedAt": "2026-07-29T22:41:45+0900",
+  "script": "/Users/jihoon/Desktop/workspace/personal/srrrg/scripts/performance/mixed-workload.js",
+  "commitSha": "beb5c5b75a5815124bef289cab2146b29ae4975f",
+  "workingTreeDirty": false,
+  "k6Executable": "/opt/homebrew/bin/k6",
+  "infrastructure": {
+    "commitSha": "",
+    "replicaCount": "",
+    "application": {
+      "cpuRequest": "",
+      "cpuLimit": "",
+      "memoryRequest": "",
+      "memoryLimit": ""
+    },
+    "postgres": {
+      "cpuRequest": "",
+      "cpuLimit": "",
+      "memoryRequest": "",
+      "memoryLimit": ""
+    },
+    "hikariMaximumPoolSize": ""
+  },
+  "exitCode": 99,
+  "analysisStatus": "complete"
+}

@@ -1,0 +1,106 @@
+{
+  "capturedAt": "2026-07-29T22:45:30+09:00",
+  "source": "Prometheus HTTP API via user-managed local port forwarding",
+  "configuration": {
+    "scenario": "mixed-workload-soak",
+    "redirectRps": 500,
+    "cacheHitCreateRps": 4,
+    "cacheMissCreateRps": 1,
+    "duration": "30m",
+    "redirectPreAllocatedVUs": 100,
+    "redirectMaxVUs": 500,
+    "applicationCpuLimitCores": 0.75
+  },
+  "queryContext": {
+    "evaluationStart": "2026-07-29T22:11:42+09:00",
+    "evaluationEnd": "2026-07-29T22:41:42+09:00",
+    "latencyWindow": "1m",
+    "rateWindow": "1m",
+    "rangeStep": "30s",
+    "samples": 61
+  },
+  "latency": {
+    "k6RedirectP95Ms": 455.27,
+    "k6RedirectP99Ms": 2420,
+    "k6LinkCreateHitP95Ms": 1530,
+    "k6LinkCreateHitP99Ms": 3570,
+    "k6LinkCreateMissP95Ms": 1820,
+    "k6LinkCreateMissP99Ms": 3920,
+    "serverRedirectP95AverageMs": 150.557,
+    "serverRedirectP95MaxMs": 2113.4652,
+    "serverRedirectP99AverageMs": 250.5794,
+    "serverRedirectP99MaxMs": 2800.3993,
+    "serverRedirectP95SamplesOver250Ms": 6,
+    "serverRedirectP95EndMs": 4.4118,
+    "serverRedirectP99EndMs": 60.398,
+    "serverLinkCreateP95MaxMs": 1594.2083,
+    "serverLinkCreateP95EndMs": 109.1015
+  },
+  "resources": {
+    "redirectRpsAverageIncludingRampAndSaturation": 468.62,
+    "redirectRpsMax": 502.67,
+    "redirectRpsEnd": 500,
+    "applicationCpuAverageCores": 0.4533,
+    "applicationCpuMaxCores": 0.9506,
+    "applicationCpuEndCores": 0.4506,
+    "cpuThrottledPeriodsAveragePercent": 11.53,
+    "cpuThrottledPeriodsMaxPercent": 100,
+    "cpuThrottledPeriodsEndPercent": 1.75,
+    "tomcatBusyMax": 200,
+    "tomcatBusyEnd": 3,
+    "hikariActiveMax": 10,
+    "hikariPendingMax": 189,
+    "hikariPendingEnd": 0,
+    "postgresCpuMaxCores": 0.4498
+  },
+  "memoryAndGc": {
+    "containerWorkingSetStartBytes": 460783616,
+    "containerWorkingSetMaxBytes": 528404480,
+    "containerWorkingSetEndBytes": 528138240,
+    "jvmHeapUsedStartBytes": 124179248,
+    "jvmHeapUsedMaxBytes": 165645624,
+    "jvmHeapUsedEndBytes": 165645624,
+    "jvmLiveDataStartBytes": 59309488,
+    "jvmLiveDataMaxBytes": 73018568,
+    "jvmLiveDataEndBytes": 57904624,
+    "gcPauseDeltaSeconds": 3.521,
+    "gcPauseCountDelta": 1273,
+    "jvmAllocatedBytesDelta": 68952730656
+  },
+  "database": {
+    "sizeStartBytes": 544390167,
+    "sizeEndBytes": 872381463,
+    "sizeDeltaBytes": 327991296,
+    "insertedRowsDelta": 1734194,
+    "commitsDelta": 3466936,
+    "rollbacksDelta": 0,
+    "timedCheckpointsDelta": 6,
+    "requestedCheckpointsDelta": 0,
+    "deadlocksDelta": 0
+  },
+  "saturationOnset": {
+    "firstConnectionBacklogAt": "2026-07-29T22:14:35+09:00",
+    "tomcatBusy": 37,
+    "hikariActive": 8,
+    "hikariPending": 28,
+    "transactionIdLockWaitObservedAt": "2026-07-29T22:14:40+09:00",
+    "idleInTransactionConnections": 6,
+    "walSyncAndWriteWaitObservedAt": "2026-07-29T22:14:50+09:00",
+    "normalClickWriteAverageMs": 0.92,
+    "normalRedirectWriteAverageMs": 0.84,
+    "degradedClickWriteAverageMs": 4.06,
+    "degradedRedirectWriteAverageMs": 2.18,
+    "diagnosis": "Synchronous event inserts and link counter updates amplified row-lock and WAL latency into Hikari, Tomcat, and CPU saturation."
+  },
+  "errors": {
+    "k6HttpFailures": 469,
+    "k6HttpFailureRatePercent": 0.05,
+    "droppedIterations": 37125,
+    "hikariTimeoutDelta": 468,
+    "podRestartDelta": 0
+  },
+  "limitations": [
+    "This is one 30-minute run; absence of retained-heap growth does not replace a longer repeated soak.",
+    "Prometheus identifies the first wait classes and saturation chain but not the individual transaction that initiated the first lock wait."
+  ]
+}
