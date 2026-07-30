@@ -1,0 +1,28 @@
+﻿{
+    "scenario":  "smoke",
+    "startedAt":  "2026-07-30T11:15:03.5208865+09:00",
+    "finishedAt":  "2026-07-30T11:15:05.4816860+09:00",
+    "script":  "C:\\Users\\qkrwl\\Desktop\\repo\\my\\srrrg\\scripts\\performance\\smoke.js",
+    "commitSha":  "9accb80501f72e904b8deed76e94606ed6d562ca",
+    "workingTreeDirty":  true,
+    "k6Executable":  "C:\\Program Files\\k6\\k6.exe",
+    "infrastructure":  {
+                           "commitSha":  null,
+                           "replicaCount":  null,
+                           "application":  {
+                                               "cpuRequest":  null,
+                                               "cpuLimit":  null,
+                                               "memoryRequest":  null,
+                                               "memoryLimit":  null
+                                           },
+                           "postgres":  {
+                                            "cpuRequest":  null,
+                                            "cpuLimit":  null,
+                                            "memoryRequest":  null,
+                                            "memoryLimit":  null
+                                        },
+                           "hikariMaximumPoolSize":  null
+                       },
+    "exitCode":  0,
+    "analysisStatus":  "complete"
+}

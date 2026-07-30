@@ -1,0 +1,22 @@
+{
+  "capturedAt": "2026-07-30T11:33:49+09:00",
+  "queryContext": {
+    "evaluationUnixTime": 1785378545,
+    "window": "170s",
+    "source": "Prometheus HTTP API via SSH"
+  },
+  "serverMetrics": {
+    "redirectP95Ms": 2.0186729049636805,
+    "redirectP99Ms": 2.4894477706185603,
+    "accessWriteP95Ms": 1.5575026044270834,
+    "accessWriteP99Ms": 1.740534283385417,
+    "http5xx": 0,
+    "hikariActiveMax": 2,
+    "hikariPendingMax": 0,
+    "hikariTimeoutIncrease": 0,
+    "tomcatBusyMax": 2,
+    "podRestartIncrease": 0,
+    "databaseRollbackIncrease": 0,
+    "databaseDeadlockIncrease": 0
+  }
+}

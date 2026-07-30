@@ -1,0 +1,18 @@
+{
+  "capturedAt": "2026-07-30T11:16:24.1527078+09:00",
+  "source": "https://jhhomehub.gonetis.com/srrrg-dev/actuator/prometheus",
+  "applicationMetrics": {
+    "linkCreateCreated": 1,
+    "riskCacheMissAbsent": 1,
+    "riskCheckFixedSafeSafe": 1,
+    "riskCacheHit": 20,
+    "redirectRedirected": 20,
+    "redirectWriteAccessSuccess": 20
+  },
+  "runtimeMetrics": {
+    "hikariActive": 0,
+    "hikariPending": 0,
+    "hikariTimeoutTotal": 0,
+    "tomcatErrorTotal": 0
+  }
+}

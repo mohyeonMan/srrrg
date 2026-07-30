@@ -1,0 +1,36 @@
+{
+  "capturedAt": "2026-07-30T12:10:52+09:00",
+  "queryContext": {
+    "evaluationUnixTime": 1785380852,
+    "window": "1860s",
+    "source": "Prometheus HTTP API via SSH"
+  },
+  "serverMetrics": {
+    "redirectP95Ms": 2.069120088035325,
+    "redirectP99Ms": 3.5478757453270853,
+    "accessWriteP95Ms": 1.5881863784794317,
+    "accessWriteP99Ms": 1.934567716926688,
+    "http5xx": 0,
+    "hikariActiveMax": 9,
+    "hikariPendingMax": 89,
+    "hikariPendingPositiveSamples": 1,
+    "hikariTimeoutIncrease": 0,
+    "tomcatBusyMax": 100,
+    "podRestartIncrease": 0,
+    "databaseRollbackIncrease": 0,
+    "databaseDeadlockIncrease": 0
+  },
+  "transientSpike": {
+    "observedAt": "2026-07-30T11:49:58+09:00",
+    "observedDurationSeconds": 5,
+    "redirectP95Max20sMs": 492.9094139391298,
+    "applicationCpuMaxCores": 0.8303539999999999,
+    "cpuThrottledPeriodsMaxPercent": 20.103092783505154,
+    "cpuThrottledPeriodsAveragePercent": 0.22968944942491398,
+    "gcPauseMax20sSeconds": 0.09333333333333312
+  },
+  "databaseAfterRun": {
+    "accessEventCountSinceDeployment": 1079266,
+    "databaseSizeBytes": 234404887
+  }
+}

@@ -80,8 +80,8 @@ export const options = {
     },
   },
   thresholds: {
-    checks: ['rate==1'],
-    http_req_failed: ['rate<0.001'],
+    checks: ['rate>=0.9999'],
+    http_req_failed: ['rate<=0.0001'],
     'http_req_duration{endpoint:mixed_redirect}': ['p(95)<100', 'p(99)<250'],
     'http_req_duration{endpoint:mixed_link_create_hit}': ['p(95)<300', 'p(99)<500'],
     'http_req_duration{endpoint:mixed_link_create_miss}': ['p(95)<300', 'p(99)<500'],

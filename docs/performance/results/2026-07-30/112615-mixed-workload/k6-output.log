@@ -1,0 +1,79 @@
+time="2026-07-30T11:26:16+09:00" level=info msg="test configuration: scenario=mixed-workload, baseUrl=https://jhhomehub.gonetis.com/srrrg-dev, redirectRate=500, hitCreateRate=4, missCreateRate=1, duration=2m, rampDuration=10s, warmupRate=10, warmupDuration=30s, dataLinks=20, redirectPreAllocatedVUs=500, redirectMaxVUs=1000, runId=1785378376052-571512" source=console
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate==1' rate=100.00%
+
+    dropped_iterations
+    ✓ 'count==0' count=0
+
+    http_req_duration{endpoint:mixed_link_create_hit}
+    ✓ 'p(95)<300' p(95)=15.7ms
+    ✓ 'p(99)<500' p(99)=26.61ms
+
+    http_req_duration{endpoint:mixed_link_create_miss}
+    ✓ 'p(95)<300' p(95)=115.59ms
+    ✓ 'p(99)<500' p(99)=121.53ms
+
+    http_req_duration{endpoint:mixed_redirect}
+    ✓ 'p(95)<100' p(95)=15.16ms
+    ✓ 'p(99)<250' p(99)=22.54ms
+
+    http_req_failed
+    ✓ 'rate<0.001' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 64730   396.364751/s
+    checks_succeeded...: 100.00% 64730 out of 64730
+    checks_failed......: 0.00%   0 out of 64730
+
+    ✓ mixed_setup_redirect_link returns 201
+    ✓ mixed_setup_redirect_link has a valid code
+    ✓ mixed_setup_redirect_link has a secret key
+    ✓ mixed_setup_hit_seed returns 201
+    ✓ mixed_setup_hit_seed has a valid code
+    ✓ mixed_setup_hit_seed has a secret key
+    ✓ mixed_redirect_warmup returns 302
+    ✓ mixed_redirect returns 302
+    ✓ mixed_link_create_hit returns 201
+    ✓ mixed_link_create_hit has a valid code
+    ✓ mixed_link_create_hit has a secret key
+    ✓ mixed_link_create_miss returns 201
+    ✓ mixed_link_create_miss has a valid code
+    ✓ mixed_link_create_miss has a secret key
+    ✓ mixed setup link cleanup returns 200
+
+    CUSTOM
+    mixed_redirect_client_blocked...........: avg=403.11µs min=0s       med=0s       max=131.87ms p(90)=0s       p(95)=0s      
+    mixed_redirect_client_connecting........: avg=105.82µs min=0s       med=0s       max=53.77ms  p(90)=0s       p(95)=0s      
+    mixed_redirect_client_receiving.........: avg=58.68µs  min=0s       med=0s       max=6.53ms   p(90)=0s       p(95)=524.5µs 
+    mixed_redirect_client_sending...........: avg=34.72µs  min=0s       med=0s       max=18.19ms  p(90)=0s       p(95)=341.2µs 
+    mixed_redirect_client_tls_handshaking...: avg=293.1µs  min=0s       med=0s       max=116.7ms  p(90)=0s       p(95)=0s      
+    mixed_redirect_client_waiting...........: avg=9.32ms   min=1.9ms    med=8.4ms    max=272.63ms p(90)=12.84ms  p(95)=15.06ms 
+
+    HTTP
+    http_req_duration.......................: avg=9.67ms   min=4.15ms   med=8.51ms   max=272.97ms p(90)=13.04ms  p(95)=15.42ms 
+      { endpoint:mixed_link_create_hit }....: avg=10.09ms  min=5.4ms    med=9.23ms   max=50.11ms  p(90)=13.66ms  p(95)=15.7ms  
+      { endpoint:mixed_link_create_miss }...: avg=110.87ms min=106.03ms med=110.25ms max=123.15ms p(90)=113.77ms p(95)=115.59ms
+      { endpoint:mixed_redirect }...........: avg=9.41ms   min=4.15ms   med=8.49ms   max=272.97ms p(90)=12.95ms  p(95)=15.16ms 
+      { expected_response:true }............: avg=9.67ms   min=4.15ms   med=8.51ms   max=272.97ms p(90)=13.04ms  p(95)=15.42ms 
+    http_req_failed.........................: 0.00%  0 out of 63486
+    http_reqs...............................: 63486  388.747297/s
+
+    EXECUTION
+    dropped_iterations......................: 0      0/s
+    iteration_duration......................: avg=10.15ms  min=4.15ms   med=8.59ms   max=272.97ms p(90)=13.3ms   p(95)=16.11ms 
+    iterations..............................: 63445  388.49624/s
+    vus.....................................: 6      min=0          max=12 
+    vus_max.................................: 560    min=560        max=560
+
+    NETWORK
+    data_received...........................: 8.1 MB 50 kB/s
+    data_sent...............................: 3.5 MB 21 kB/s
+
+
+
