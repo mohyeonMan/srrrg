@@ -36,8 +36,8 @@ public class Link {
 	@Column(name = "expires_at")
 	private Instant expiresAt;
 
-	@Column(name = "click_count", nullable = false)
-	private long clickCount;
+	@Column(name = "access_count", nullable = false)
+	private long accessCount;
 
 	@Column(name = "redirect_count", nullable = false)
 	private long redirectCount;
@@ -56,7 +56,7 @@ public class Link {
 		this.originalUrl = originalUrl;
 		this.secretKeyHash = secretKeyHash;
 		this.expiresAt = expiresAt;
-		this.clickCount = 0;
+		this.accessCount = 0;
 		this.redirectCount = 0;
 		this.deleted = false;
 	}

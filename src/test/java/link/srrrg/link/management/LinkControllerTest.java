@@ -70,7 +70,7 @@ class LinkControllerTest {
 					.header(SECRET_KEY_HEADER, "srrrg_sk_secret"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.code").value("aB3x9Q"))
-				.andExpect(jsonPath("$.statistics.clickCount").value(12))
+				.andExpect(jsonPath("$.statistics.accessCount").value(12))
 				.andExpect(jsonPath("$.statistics.redirectCount").value(8))
 				.andExpect(jsonPath("$.status").doesNotExist())
 				.andExpect(jsonPath("$.verifiedAt").doesNotExist())

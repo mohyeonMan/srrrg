@@ -12,11 +12,16 @@ public interface LinkRepository extends JpaRepository<Link, Long> {
 	Optional<Link> findByCode(String code);
 
 	@Modifying
-	@Query("update Link l set l.clickCount = l.clickCount + 1 where l.code = :code")
-	int incrementClickCountByCode(@Param("code") String code);
+	@Query("update Link l set l.accessCount = l.accessCount + 1 where l.code = :code")
+	int incrementAccessCountByCode(@Param("code") String code);
 
 	@Modifying
-	@Query("update Link l set l.redirectCount = l.redirectCount + 1 where l.code = :code")
-	int incrementRedirectCountByCode(@Param("code") String code);
+	@Query("""
+			update Link l
+			   set l.accessCount = l.accessCount + 1,
+			       l.redirectCount = l.redirectCount + 1
+			 where l.code = :code
+			""")
+	int incrementAccessAndRedirectCountsByCode(@Param("code") String code);
 
 }

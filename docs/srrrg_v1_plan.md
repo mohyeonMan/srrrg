@@ -89,8 +89,9 @@ GET /{code}
 1. code로 링크 조회
 2. 삭제 여부 확인
 3. 만료 여부 확인
-4. 클릭 수 증가
-5. originalUrl로 302 redirect
+4. URL 위험 검사
+5. 결과별 접근 이벤트와 누적 카운터를 한 트랜잭션으로 저장
+6. 안전한 경우에만 originalUrl로 302 redirect
 ```
 
 ---
@@ -111,7 +112,7 @@ X-Srrrg-Secret-Key: srrrg_sk_xxxxxxxxx
 - originalUrl
 - shortUrl
 - expiresAt
-- clickCount
+- accessCount
 - redirectCount
 - createdAt
 - updatedAt
@@ -330,7 +331,7 @@ CREATE TABLE links (
 
     expires_at TIMESTAMPTZ NULL,
 
-    click_count BIGINT NOT NULL DEFAULT 0,
+    access_count BIGINT NOT NULL DEFAULT 0,
     redirect_count BIGINT NOT NULL DEFAULT 0,
 
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
@@ -351,7 +352,7 @@ CREATE TABLE links (
 | original_url | 원본 URL |
 | secret_key_hash | 관리용 secret key의 해시값 |
 | expires_at | 링크 만료일 |
-| click_count | 클릭 수 |
+| access_count | 접근 수 |
 | redirect_count | 원본 URL로 실제 이동한 수 |
 | is_deleted | 삭제 여부 |
 | created_at | 생성일 |
@@ -446,7 +447,7 @@ Response:
   "shortUrl": "https://srrrg.link/aB3x9Q",
   "originalUrl": "https://example.com/very/long/url",
   "expiresAt": "2026-12-31T23:59:59+09:00",
-  "clickCount": 13,
+  "accessCount": 13,
   "redirectCount": 10,
   "createdAt": "2026-07-07T12:00:00+09:00",
   "updatedAt": "2026-07-07T12:00:00+09:00"
@@ -480,7 +481,7 @@ Response:
   "shortUrl": "https://srrrg.link/aB3x9Q",
   "originalUrl": "https://new-example.com",
   "expiresAt": "2027-01-31T23:59:59+09:00",
-  "clickCount": 13,
+  "accessCount": 13,
   "redirectCount": 10
 }
 ```
@@ -660,7 +661,7 @@ link.srrrg
 2. 링크 수정 API
 3. 링크 삭제 API
 4. 만료 처리
-5. 클릭 수 증가
+5. 접근 수 증가
 6. URL 검증 강화
 ```
 
@@ -687,8 +688,8 @@ v1 이후 검토할 수 있는 기능이다.
 ```text
 - 회원가입 / 로그인
 - 회원별 링크 목록
-- 클릭 통계
-- 일별 클릭 수
+- 접근 통계
+- 일별 접근 수
 - referer 통계
 - 국가/브라우저 통계
 - 커스텀 alias

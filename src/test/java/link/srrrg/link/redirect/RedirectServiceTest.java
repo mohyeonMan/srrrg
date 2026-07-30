@@ -7,7 +7,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
@@ -30,8 +29,8 @@ import link.srrrg.link.UnsafeUrlException;
 import link.srrrg.link.UrlRiskCheckFailedException;
 import link.srrrg.link.UrlValidator;
 import link.srrrg.link.access.ClientRequestInfo;
-import link.srrrg.link.access.LinkClickEventRecorder;
-import link.srrrg.link.access.LinkRedirectEventRecorder;
+import link.srrrg.link.access.LinkAccessEvent.Outcome;
+import link.srrrg.link.access.LinkAccessEventRecorder;
 import link.srrrg.link.risk.RiskVerdict;
 import link.srrrg.link.risk.UrlRiskAssessment;
 import link.srrrg.link.risk.UrlRiskVerificationService;
@@ -41,8 +40,7 @@ class RedirectServiceTest {
 	private final LinkRepository repository = mock(LinkRepository.class);
 	private final UrlValidator validator = mock(UrlValidator.class);
 	private final UrlRiskVerificationService riskVerificationService = mock(UrlRiskVerificationService.class);
-	private final LinkClickEventRecorder clickRecorder = mock(LinkClickEventRecorder.class);
-	private final LinkRedirectEventRecorder redirectRecorder = mock(LinkRedirectEventRecorder.class);
+	private final LinkAccessEventRecorder accessRecorder = mock(LinkAccessEventRecorder.class);
 	private final TransactionOperations transactions = new TransactionOperations() {
 		@Override
 		public <T> T execute(TransactionCallback<T> action) {
@@ -59,7 +57,7 @@ class RedirectServiceTest {
 		registry = new SimpleMeterRegistry();
 		metrics = new SrrrgMetrics(registry);
 		service = new RedirectService(repository, validator, riskVerificationService,
-				clickRecorder, redirectRecorder, transactions, metrics);
+				accessRecorder, transactions, metrics);
 	}
 
 	@Test
@@ -68,8 +66,7 @@ class RedirectServiceTest {
 			context.registerBean(LinkRepository.class, () -> repository);
 			context.registerBean(UrlValidator.class, () -> validator);
 			context.registerBean(UrlRiskVerificationService.class, () -> riskVerificationService);
-			context.registerBean(LinkClickEventRecorder.class, () -> clickRecorder);
-			context.registerBean(LinkRedirectEventRecorder.class, () -> redirectRecorder);
+			context.registerBean(LinkAccessEventRecorder.class, () -> accessRecorder);
 			context.registerBean(PlatformTransactionManager.class,
 					() -> mock(PlatformTransactionManager.class));
 			context.registerBean(SrrrgMetrics.class, () -> metrics);
@@ -85,46 +82,44 @@ class RedirectServiceTest {
 	void safeUrlRecordsRedirectAndReturnsOriginalUrl() {
 		Link link = availableLink("https://example.com/path?q=1");
 		when(riskVerificationService.verify(link.getOriginalUrl())).thenReturn(assessment(RiskVerdict.SAFE));
-		when(repository.incrementClickCountByCode("aB3x9Q")).thenReturn(1);
-		when(repository.incrementRedirectCountByCode("aB3x9Q")).thenReturn(1);
+		when(repository.incrementAccessAndRedirectCountsByCode("aB3x9Q")).thenReturn(1);
 
 		String redirectUrl = service.redirect("aB3x9Q", requestInfo);
 
 		assertThat(redirectUrl).isEqualTo("https://example.com/path?q=1");
-		verify(clickRecorder).record(link, requestInfo);
-		verify(redirectRecorder).record(link, requestInfo);
+		verify(accessRecorder).record(eq(link), any(Instant.class), eq(Outcome.REDIRECTED), eq(requestInfo));
+		verify(repository).incrementAccessAndRedirectCountsByCode("aB3x9Q");
 		assertTimerCount("srrrg.redirect", "outcome", "redirected", 1);
-		assertWriteTimerCount("click", "success", 1);
-		assertWriteTimerCount("redirect", "success", 1);
+		assertWriteTimerCount("success", 1);
 	}
 
 	@Test
-	void threatUrlRecordsClickButDoesNotRecordRedirect() {
-		availableLink("https://bad.example");
+	void threatUrlRecordsBlockedAccess() {
+		Link link = availableLink("https://bad.example");
 		when(riskVerificationService.verify("https://bad.example")).thenReturn(assessment(RiskVerdict.THREAT));
-		when(repository.incrementClickCountByCode("aB3x9Q")).thenReturn(1);
+		when(repository.incrementAccessCountByCode("aB3x9Q")).thenReturn(1);
 
 		assertThatThrownBy(() -> service.redirect("aB3x9Q", requestInfo))
 				.isInstanceOf(UnsafeUrlException.class);
-		verify(clickRecorder).record(any(Link.class), eq(requestInfo));
-		verifyNoInteractions(redirectRecorder);
-		verify(repository, never()).incrementRedirectCountByCode(any());
+		verify(accessRecorder).record(eq(link), any(Instant.class), eq(Outcome.BLOCKED), eq(requestInfo));
+		verify(repository, never()).incrementAccessAndRedirectCountsByCode(any());
 		assertTimerCount("srrrg.redirect", "outcome", "blocked", 1);
-		assertWriteTimerCount("click", "success", 1);
+		assertWriteTimerCount("success", 1);
 	}
 
 	@Test
-	void unknownUrlRecordsClickButDoesNotRecordRedirect() {
-		availableLink("https://example.com");
+	void unknownUrlRecordsFailedAccess() {
+		Link link = availableLink("https://example.com");
 		when(riskVerificationService.verify("https://example.com"))
 				.thenReturn(UrlRiskAssessment.unknown(Instant.now()));
-		when(repository.incrementClickCountByCode("aB3x9Q")).thenReturn(1);
+		when(repository.incrementAccessCountByCode("aB3x9Q")).thenReturn(1);
 
 		assertThatThrownBy(() -> service.redirect("aB3x9Q", requestInfo))
 				.isInstanceOf(UrlRiskCheckFailedException.class);
-		verify(clickRecorder).record(any(Link.class), eq(requestInfo));
-		verifyNoInteractions(redirectRecorder);
+		verify(accessRecorder).record(eq(link), any(Instant.class), eq(Outcome.CHECK_FAILED), eq(requestInfo));
+		verify(repository, never()).incrementAccessAndRedirectCountsByCode(any());
 		assertTimerCount("srrrg.redirect", "outcome", "check_failed", 1);
+		assertWriteTimerCount("success", 1);
 	}
 
 	@Test
@@ -148,14 +143,14 @@ class RedirectServiceTest {
 				.thenReturn(Optional.of(oldLink))
 				.thenReturn(Optional.of(newLink));
 		when(riskVerificationService.verify("https://old.example")).thenReturn(assessment(RiskVerdict.SAFE));
-		when(repository.incrementClickCountByCode("aB3x9Q")).thenReturn(1);
+		when(repository.incrementAccessCountByCode("aB3x9Q")).thenReturn(1);
 
 		assertThatThrownBy(() -> service.redirect("aB3x9Q", requestInfo))
 				.isInstanceOf(UrlRiskCheckFailedException.class);
-		verify(clickRecorder).record(oldLink, requestInfo);
-		verifyNoInteractions(redirectRecorder);
+		verify(accessRecorder).record(eq(newLink), any(Instant.class), eq(Outcome.URL_CHANGED), eq(requestInfo));
+		verify(repository, never()).incrementAccessAndRedirectCountsByCode(any());
 		assertTimerCount("srrrg.redirect", "outcome", "check_failed", 1);
-		assertWriteTimerCount("redirect", "error", 1);
+		assertWriteTimerCount("success", 1);
 	}
 
 	@Test
@@ -188,9 +183,9 @@ class RedirectServiceTest {
 		return new UrlRiskAssessment(verdict, verifiedAt, verifiedAt.plusSeconds(300));
 	}
 
-	private void assertWriteTimerCount(String type, String outcome, long count) {
+	private void assertWriteTimerCount(String outcome, long count) {
 		assertThat(registry.get("srrrg.redirect.write")
-				.tag("type", type)
+				.tag("type", "access")
 				.tag("outcome", outcome)
 				.timer()
 				.count()).isEqualTo(count);

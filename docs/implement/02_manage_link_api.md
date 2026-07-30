@@ -50,7 +50,7 @@
 - rate limit 구현
 - 물리 삭제
 
-상세 이벤트 데이터는 이미 저장하고 있지만 이번 화면에서는 누적 `clickCount`, `redirectCount`만 보여준다. 기간별 통계는 실제 화면 요구가 생길 때 별도 API로 추가한다.
+결과별 접근 이벤트는 저장하지만 이번 화면에서는 누적 `accessCount`, `redirectCount`만 보여준다. 기간별 통계는 실제 화면 요구가 생길 때 별도 API로 추가한다.
 
 ## 4. 화면 흐름
 
@@ -150,7 +150,7 @@ Accept: application/json
   "originalUrl": "https://example.com/very/long/url",
   "expiresAt": "2026-12-31T14:59:59Z",
   "statistics": {
-    "clickCount": 120,
+    "accessCount": 120,
     "redirectCount": 93
   },
   "createdAt": "2026-07-10T10:00:00Z",
@@ -158,7 +158,7 @@ Accept: application/json
 }
 ```
 
-`clickCount`는 단축 URL 진입 횟수이고 `redirectCount`는 원본 URL로 실제 이동한 횟수다. 신뢰되지 않은 링크의 확인 화면에서 사용자가 이동하지 않을 수 있으므로 두 값은 같지 않을 수 있다.
+`accessCount`는 사용 가능한 단축 URL의 진입 횟수이고 `redirectCount`는 위험 검사를 통과해 원본 URL 응답을 발행한 횟수다. 차단, 검사 실패 또는 검사 중 URL 변경이 발생하면 접근만 기록하므로 두 값은 같지 않을 수 있다.
 
 ## 7.2 링크 정보 수정
 
@@ -232,7 +232,8 @@ X-Srrrg-Secret-Key: srrrg_sk_xxxxxxxxx
 
 ## 9. 데이터베이스 변경
 
-현재 `links` 테이블의 `original_url`, `expires_at`, `is_deleted`, `click_count`, `redirect_count`를 그대로 사용하므로 새 migration은 필요하지 않다.
+누적 통계는 `links` 테이블의 `access_count`, `redirect_count`를 사용한다. 상세 기록은 결과를 포함한 `link_access_events` 한 테이블에 저장한다.
+접근 결과는 `REDIRECTED`, `BLOCKED`, `CHECK_FAILED`, `URL_CHANGED`로 구분하며, `REDIRECTED`인 경우에만 `redirect_count`도 함께 증가한다.
 
 ## 10. 파일 구성
 
@@ -336,7 +337,7 @@ src/main/java/link/srrrg/link
 
 - 기존 링크 생성 API가 계속 201을 반환
 - 사용 가능한 링크의 기존 리다이렉트 흐름 유지
-- 만료 및 삭제 링크는 클릭 및 리다이렉트 이벤트를 추가하지 않음
+- 최초 조회부터 만료 또는 삭제된 링크는 접근 이벤트를 추가하지 않음
 - 기존 redirect HTML 오류 화면 유지
 
 ### 수동 확인 시나리오

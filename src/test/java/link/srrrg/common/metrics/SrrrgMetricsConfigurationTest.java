@@ -27,7 +27,7 @@ class SrrrgMetricsConfigurationTest {
 		contextRunner.run(context -> {
 			SrrrgMetrics metrics = context.getBean(SrrrgMetrics.class);
 			metrics.recordRedirect(metrics.startTimer(), "redirected");
-			metrics.recordRedirectWrite(metrics.startTimer(), "click", "success");
+			metrics.recordRedirectWrite(metrics.startTimer(), "access", "success");
 			metrics.recordLinkCreate(metrics.startTimer(), "created");
 			metrics.recordUrlRiskCheck(metrics.startTimer(), "fixed_safe", "safe");
 			metrics.recordUrlRiskCache("hit");

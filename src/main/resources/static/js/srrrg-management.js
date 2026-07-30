@@ -161,7 +161,7 @@
 			shortUrl: 'https://srrrg.link/aB3x9Q',
 			originalUrl: 'https://example.com/campaign/summer-release?source=newsletter',
 			expiresAt: null,
-			statistics: {clickCount: 18420, redirectCount: 16972},
+			statistics: {accessCount: 18420, redirectCount: 16972},
 			createdAt: '2026-05-18T03:24:00Z',
 			updatedAt: '2026-07-19T11:42:00Z'
 		});

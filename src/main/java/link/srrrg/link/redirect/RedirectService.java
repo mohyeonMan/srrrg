@@ -18,8 +18,8 @@ import link.srrrg.link.UnsafeUrlException;
 import link.srrrg.link.UrlRiskCheckFailedException;
 import link.srrrg.link.UrlValidator;
 import link.srrrg.link.access.ClientRequestInfo;
-import link.srrrg.link.access.LinkClickEventRecorder;
-import link.srrrg.link.access.LinkRedirectEventRecorder;
+import link.srrrg.link.access.LinkAccessEvent.Outcome;
+import link.srrrg.link.access.LinkAccessEventRecorder;
 import link.srrrg.link.risk.RiskVerdict;
 import link.srrrg.link.risk.UrlRiskVerificationService;
 import lombok.extern.slf4j.Slf4j;
@@ -31,38 +31,35 @@ public class RedirectService {
 	private final LinkRepository linkRepository;
 	private final UrlValidator urlValidator;
 	private final UrlRiskVerificationService riskVerificationService;
-	private final LinkClickEventRecorder clickEventRecorder;
-	private final LinkRedirectEventRecorder redirectEventRecorder;
+	private final LinkAccessEventRecorder accessEventRecorder;
 	private final TransactionOperations transactions;
 	private final SrrrgMetrics metrics;
 
 	@Autowired
 	public RedirectService(LinkRepository linkRepository, UrlValidator urlValidator,
 			UrlRiskVerificationService riskVerificationService,
-			LinkClickEventRecorder clickEventRecorder,
-			LinkRedirectEventRecorder redirectEventRecorder,
+			LinkAccessEventRecorder accessEventRecorder,
 			PlatformTransactionManager transactionManager,
 			SrrrgMetrics metrics) {
-		this(linkRepository, urlValidator, riskVerificationService, clickEventRecorder,
-				redirectEventRecorder, new TransactionTemplate(transactionManager), metrics);
+		this(linkRepository, urlValidator, riskVerificationService, accessEventRecorder,
+				new TransactionTemplate(transactionManager), metrics);
 	}
 
 	RedirectService(LinkRepository linkRepository, UrlValidator urlValidator,
 			UrlRiskVerificationService riskVerificationService,
-			LinkClickEventRecorder clickEventRecorder,
-			LinkRedirectEventRecorder redirectEventRecorder,
+			LinkAccessEventRecorder accessEventRecorder,
 			TransactionOperations transactions,
 			SrrrgMetrics metrics) {
 		this.linkRepository = linkRepository;
 		this.urlValidator = urlValidator;
 		this.riskVerificationService = riskVerificationService;
-		this.clickEventRecorder = clickEventRecorder;
-		this.redirectEventRecorder = redirectEventRecorder;
+		this.accessEventRecorder = accessEventRecorder;
 		this.transactions = transactions;
 		this.metrics = metrics;
 	}
 
 	public String redirect(String code, ClientRequestInfo requestInfo) {
+		Instant accessedAt = Instant.now();
 		Timer.Sample sample = metrics.startTimer();
 		String outcome = "error";
 		long startedAt = System.nanoTime();
@@ -70,21 +67,22 @@ public class RedirectService {
 			Link initialLink = findAvailableLink(code);
 			String checkedUrl = initialLink.getOriginalUrl();
 			urlValidator.validate(checkedUrl);
-			recordClick(initialLink, requestInfo);
 
 			RiskVerdict verdict = riskVerificationService.verify(checkedUrl).verdict();
 			if (verdict == RiskVerdict.THREAT) {
+				recordAccess(initialLink, accessedAt, Outcome.BLOCKED, requestInfo);
 				log.warn("Redirect blocked by URL risk verification: code={}, elapsedMs={}",
 						code, elapsedMillis(startedAt));
 				throw new UnsafeUrlException();
 			}
 			if (verdict == RiskVerdict.UNKNOWN) {
+				recordAccess(initialLink, accessedAt, Outcome.CHECK_FAILED, requestInfo);
 				log.warn("Redirect unavailable after URL risk verification: code={}, elapsedMs={}",
 						code, elapsedMillis(startedAt));
 				throw new UrlRiskCheckFailedException();
 			}
 
-			String redirectUrl = completeRedirect(code, checkedUrl, requestInfo);
+			String redirectUrl = completeRedirect(code, checkedUrl, accessedAt, requestInfo);
 			log.info("Redirect issued: code={}, elapsedMs={}", code, elapsedMillis(startedAt));
 			outcome = "redirected";
 			return redirectUrl;
@@ -105,7 +103,8 @@ public class RedirectService {
 		}
 	}
 
-	private String completeRedirect(String code, String checkedUrl, ClientRequestInfo requestInfo) {
+	private String completeRedirect(String code, String checkedUrl, Instant accessedAt,
+			ClientRequestInfo requestInfo) {
 		Timer.Sample sample = metrics.startTimer();
 		String outcome = "error";
 		try {
@@ -113,45 +112,48 @@ public class RedirectService {
 				Link currentLink = findAvailableLink(code);
 				if (!checkedUrl.equals(currentLink.getOriginalUrl())) {
 					log.warn("Redirect verification invalidated: reason=URL_CHANGED, code={}", code);
-					throw new UrlRiskCheckFailedException();
+					accessEventRecorder.record(currentLink, accessedAt, Outcome.URL_CHANGED, requestInfo);
+					incrementAccessCount(code);
+					return null;
 				}
-				urlValidator.validate(currentLink.getOriginalUrl());
-				recordSuccessfulRedirect(currentLink, requestInfo);
+				accessEventRecorder.record(currentLink, accessedAt, Outcome.REDIRECTED, requestInfo);
+				int updates = linkRepository.incrementAccessAndRedirectCountsByCode(code);
+				if (updates != 1) {
+					log.warn("Access statistics update failed: code={}, updates={}", code, updates);
+					throw new LinkNotFoundException();
+				}
 				return currentLink.getOriginalUrl();
 			});
 			outcome = "success";
+			if (redirectUrl == null) {
+				throw new UrlRiskCheckFailedException();
+			}
 			return redirectUrl;
 		} finally {
-			metrics.recordRedirectWrite(sample, "redirect", outcome);
+			metrics.recordRedirectWrite(sample, "access", outcome);
 		}
 	}
 
-	private void recordSuccessfulRedirect(Link link, ClientRequestInfo requestInfo) {
-		redirectEventRecorder.record(link, requestInfo);
-
-		int redirectUpdates = linkRepository.incrementRedirectCountByCode(link.getCode());
-		if (redirectUpdates != 1) {
-			log.warn("Redirect statistics update failed: code={}, redirectUpdates={}",
-					link.getCode(), redirectUpdates);
-			throw new LinkNotFoundException();
-		}
-	}
-
-	private void recordClick(Link link, ClientRequestInfo requestInfo) {
+	private void recordAccess(Link link, Instant accessedAt, Outcome accessOutcome,
+			ClientRequestInfo requestInfo) {
 		Timer.Sample sample = metrics.startTimer();
 		String outcome = "error";
 		try {
 			transactions.executeWithoutResult(status -> {
-				clickEventRecorder.record(link, requestInfo);
-				int clickUpdates = linkRepository.incrementClickCountByCode(link.getCode());
-				if (clickUpdates != 1) {
-					log.warn("Click statistics update failed: code={}, clickUpdates={}", link.getCode(), clickUpdates);
-					throw new LinkNotFoundException();
-				}
+				accessEventRecorder.record(link, accessedAt, accessOutcome, requestInfo);
+				incrementAccessCount(link.getCode());
 			});
 			outcome = "success";
 		} finally {
-			metrics.recordRedirectWrite(sample, "click", outcome);
+			metrics.recordRedirectWrite(sample, "access", outcome);
+		}
+	}
+
+	private void incrementAccessCount(String code) {
+		int updates = linkRepository.incrementAccessCountByCode(code);
+		if (updates != 1) {
+			log.warn("Access statistics update failed: code={}, updates={}", code, updates);
+			throw new LinkNotFoundException();
 		}
 	}
 

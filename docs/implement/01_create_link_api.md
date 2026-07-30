@@ -31,7 +31,7 @@ secret key 원문은 생성 응답에서 한 번만 전달하고 DB에는 BCrypt
 - 생성 정책 단위 테스트
 - PostgreSQL 및 애플리케이션 Compose 실행 구성
 
-생성 이후의 리다이렉트, 클릭·이동 이벤트 기록, 신뢰 링크 처리는 이미 별도 코드로 구현되어 있다. 이 문서는 그 기능을 상세히 설명하지 않고 생성 API와 맞닿는 부분만 다룬다.
+생성 이후의 리다이렉트와 결과별 접근 이벤트 기록은 별도 코드로 구현되어 있다. 이 문서는 그 기능을 상세히 설명하지 않고 생성 API와 맞닿는 부분만 다룬다.
 
 ## 3. API 계약
 
@@ -182,7 +182,7 @@ DNS 조회, 접속 가능 여부 확인, URL 정규화는 하지 않는다. 따�
 생성된 링크의 초기값은 다음과 같다.
 
 ```text
-clickCount = 0
+accessCount = 0
 redirectCount = 0
 deleted = false
 trusted = false
@@ -229,7 +229,7 @@ src/main/java/link/srrrg
 | `originalUrl` | `original_url` | 요청 URL |
 | `secretKeyHash` | `secret_key_hash` | BCrypt 해시 |
 | `expiresAt` | `expires_at` | 요청값 또는 `null` |
-| `clickCount` | `click_count` | `0` |
+| `accessCount` | `access_count` | `0` |
 | `redirectCount` | `redirect_count` | `0` |
 | `deleted` | `is_deleted` | `false` |
 | `trusted` | `trusted` | `false` |
@@ -238,7 +238,7 @@ src/main/java/link/srrrg
 
 ### `LinkRepository`
 
-`JpaRepository<Link, Long>`를 상속한다. 생성 과정에서는 `existsByCode`와 `save`를 사용한다. `findByCode`와 클릭·이동 수 증가 query는 리다이렉트 및 이후 관리 기능에서 사용한다.
+`JpaRepository<Link, Long>`를 상속한다. 생성 과정에서는 `existsByCode`와 `save`를 사용한다. `findByCode`와 접근·이동 수 증가 query는 리다이렉트 및 이후 관리 기능에서 사용한다.
 
 ### `SecureRandomStringGenerator`
 
@@ -285,7 +285,7 @@ URL·만료 검증, code 생성과 중복 확인, secret key 생성, 엔티티 �
 
 운영 스키마는 Flyway가 관리하고 JPA는 `ddl-auto=validate`로 매핑을 검증한다. 이미 적용된 migration은 수정하지 않는다.
 
-현재 생성 API와 직접 관련된 `links` 컬럼은 V1에서 생성되고, 이후 `trusted`, `redirect_count`가 각각 V4와 V5에서 추가됐다.
+현재 생성 API와 직접 관련된 `links` 컬럼은 V1에서 생성되고, 이후 `trusted`, `redirect_count`, `access_count`가 각각 V4, V5, V10에서 정리됐다.
 
 외부 단축 URL의 기준 주소는 다음 설정을 사용한다.
 
@@ -377,7 +377,7 @@ curl -i -X POST http://localhost:8080/api/links \
 - short URL이 `http://localhost:8080/{code}` 형식
 - secret key가 `srrrg_sk_`로 시작
 - DB에는 secret key 원문이 아닌 BCrypt 해시만 존재
-- `click_count=0`, `redirect_count=0`
+- `access_count=0`, `redirect_count=0`
 - `is_deleted=false`, `trusted=false`
 - 단축 URL 접근 시 현재 리다이렉트 정책에 따라 처리
 

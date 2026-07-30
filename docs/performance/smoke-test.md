@@ -95,8 +95,7 @@ k6 결과에서 다음 조건을 만족해야 한다.
 | `srrrg.url.risk.check{provider="fixed_safe",outcome="safe"}` | 1 이상 |
 | `srrrg.url.risk.cache{result="hit"}` | 20 이상 |
 | `srrrg.redirect{outcome="redirected"}` | 20 |
-| `srrrg.redirect.write{type="click",outcome="success"}` | 20 |
-| `srrrg.redirect.write{type="redirect",outcome="success"}` | 20 |
+| `srrrg.redirect.write{type="access",outcome="success"}` | 20 |
 
 cache 관련 값은 동일한 URL이 이미 검증됐거나 구현 내부에서 추가 조회가 발생하면 예상보다
 커질 수 있다. 이 테스트에서는 정확한 전체 Counter 값보다 실행 전후 증가량과 요청 흐름의

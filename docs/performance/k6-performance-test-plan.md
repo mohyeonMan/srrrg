@@ -56,10 +56,9 @@ Prometheus가 모든 Pod의 bucket을 합산한 뒤 `histogram_quantile()`로 �
 측정 범위에는 다음 작업을 포함한다.
 
 - 링크 조회 및 사용 가능 여부 확인
-- 클릭 이벤트 기록
 - Safe Browsing 캐시 조회 및 필요 시 외부 검사
-- 리다이렉트 이벤트 기록
-- 클릭 및 리다이렉트 카운터 갱신
+- 결과별 접근 이벤트 기록
+- 접근 및 리다이렉트 카운터 갱신
 
 이 메트릭으로 리다이렉트 처리량, p50, p95, p99와 결과별 비율을 확인한다.
 
@@ -139,11 +138,11 @@ check ratio = URL 위험 검사 호출 수 / cache miss 수
 
 #### `srrrg.redirect.write`
 
-클릭 및 리다이렉트 쓰기 트랜잭션 전체 시간을 측정하는 Timer다.
+접근 이벤트와 카운터를 저장하는 단일 쓰기 트랜잭션 전체 시간을 측정하는 Timer다.
 
 | Label | 값 |
 |---|---|
-| `type` | `click`, `redirect` |
+| `type` | `access` |
 | `outcome` | `success`, `error` |
 
 측정 범위에는 이벤트 테이블 insert, 링크 counter update, flush와 transaction commit을 포함한다.
@@ -339,7 +338,7 @@ delay는 외부 검사로 인해 요청 처리가 대기하는 시간을 재현�
 
 - `srrrg.redirect`의 p95와 p99
 - 초당 리다이렉트 수
-- `srrrg.redirect.write`의 click 및 redirect 트랜잭션 시간
+- `srrrg.redirect.write`의 access 트랜잭션 시간
 - active 및 pending DB connection
 - PostgreSQL I/O
 - Pod CPU와 CPU throttling

@@ -35,7 +35,7 @@ public class SrrrgMetrics {
 
 	public void recordRedirectWrite(Timer.Sample sample, String type, String outcome) {
 		sample.stop(Timer.builder(REDIRECT_WRITE)
-				.description("Redirect event and counter write transaction time")
+				.description("Access event and counter write transaction time")
 				.tag("type", type)
 				.tag("outcome", outcome)
 				.register(registry));

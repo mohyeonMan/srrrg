@@ -11,7 +11,7 @@
 ## 2. 애플리케이션 메트릭 구현
 
 - [x] `srrrg.redirect`로 리다이렉트 전체 처리 시간과 outcome을 기록한다.
-- [x] `srrrg.redirect.write`로 click 및 redirect 트랜잭션 전체 시간을 기록한다.
+- [x] `srrrg.redirect.write`로 단일 access 트랜잭션 전체 시간을 기록한다.
 - [x] `srrrg.link.create`로 링크 생성 전체 처리 시간과 outcome을 기록한다.
 - [x] `srrrg.url.risk.cache`로 `hit`, `miss_absent`, `miss_stale`를 기록한다.
 - [x] `srrrg.url.risk.check`로 provider별 검사 시간과 outcome을 기록한다.

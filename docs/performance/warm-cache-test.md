@@ -117,7 +117,7 @@ docs/performance/results/YYYY-MM-DD/HHmmss-warm-cache/
 
 - 단계별 redirect p50, p95, p99와 HTTP 실패율
 - 실제 요청률과 목표 arrival rate, dropped iteration
-- `srrrg.redirect.write`의 click 및 redirect 지연
+- `srrrg.redirect.write`의 access 지연
 - HikariCP active, pending과 timeout
 - PostgreSQL connection, transaction과 I/O
 - Pod CPU, throttling, 메모리와 Tomcat busy thread

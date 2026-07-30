@@ -159,7 +159,7 @@ public class LinkManagementService {
 	private LinkManagementResponse toManagementResponse(Link link) {
 		return new LinkManagementResponse(link.getCode(), baseUrl + "/" + link.getCode(),
 				link.getOriginalUrl(), link.getExpiresAt(),
-				new LinkStatisticsSummary(link.getClickCount(), link.getRedirectCount()),
+				new LinkStatisticsSummary(link.getAccessCount(), link.getRedirectCount()),
 				link.getCreatedAt(), link.getUpdatedAt());
 	}
 

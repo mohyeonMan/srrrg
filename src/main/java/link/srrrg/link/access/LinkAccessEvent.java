@@ -4,13 +4,14 @@ import java.time.Instant;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import link.srrrg.link.Link;
 import lombok.AccessLevel;
@@ -18,10 +19,17 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "link_redirect_events")
+@Table(name = "link_access_events")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class LinkRedirectEvent {
+public class LinkAccessEvent {
+
+	public enum Outcome {
+		REDIRECTED,
+		BLOCKED,
+		CHECK_FAILED,
+		URL_CHANGED
+	}
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,8 +39,12 @@ public class LinkRedirectEvent {
 	@JoinColumn(name = "link_id", nullable = false)
 	private Link link;
 
-	@Column(name = "redirected_at", nullable = false)
-	private Instant redirectedAt;
+	@Column(name = "accessed_at", nullable = false)
+	private Instant accessedAt;
+
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 20)
+	private Outcome outcome;
 
 	@Column(name = "ip_address", length = 45)
 	private String ipAddress;
@@ -61,8 +73,11 @@ public class LinkRedirectEvent {
 	@Column(name = "is_bot", nullable = false)
 	private boolean bot;
 
-	private LinkRedirectEvent(Link link, ClientRequestInfo requestInfo, UserAgentInfo userAgentInfo) {
+	private LinkAccessEvent(Link link, Instant accessedAt, Outcome outcome,
+			ClientRequestInfo requestInfo, UserAgentInfo userAgentInfo) {
 		this.link = link;
+		this.accessedAt = accessedAt;
+		this.outcome = outcome;
 		this.ipAddress = requestInfo.ipAddress();
 		this.referer = requestInfo.referer();
 		this.userAgent = requestInfo.userAgent();
@@ -74,12 +89,8 @@ public class LinkRedirectEvent {
 		this.bot = userAgentInfo.bot();
 	}
 
-	public static LinkRedirectEvent create(Link link, ClientRequestInfo requestInfo, UserAgentInfo userAgentInfo) {
-		return new LinkRedirectEvent(link, requestInfo, userAgentInfo);
-	}
-
-	@PrePersist
-	void onCreate() {
-		redirectedAt = Instant.now();
+	public static LinkAccessEvent create(Link link, Instant accessedAt, Outcome outcome,
+			ClientRequestInfo requestInfo, UserAgentInfo userAgentInfo) {
+		return new LinkAccessEvent(link, accessedAt, outcome, requestInfo, userAgentInfo);
 	}
 }
