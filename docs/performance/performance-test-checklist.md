@@ -134,8 +134,8 @@ PostgreSQL `max_connections=100`에서 exporter와 관리자 접속을 포함해
 - [x] Cache hit 및 miss 링크 생성을 분리해 실행한다. SHA-256 변경 후 단일 Pod에서 cache hit와 miss 모두 15 RPS까지 검증했고 오류, dropped iteration과 Hikari pending/timeout은 0이었다.
 - [x] Mixed workload를 실행한다. SHA-256 변경 후 redirect 500 RPS, hit 생성 4 RPS, miss 생성 1 RPS 조합에서 k6 redirect p95/p99 25.68/102.58ms, dropped iteration 0, 서버 p95/p99 4.28/21.53ms, Hikari pending 0으로 검증했다.
 - [x] 500→1,000→500 RPS Spike 테스트 후 지연과 connection이 정상 상태로 회복되는지 확인한다. 1,000 RPS에서는 최대 734 RPS, Tomcat busy 200, Hikari pending 189로 포화됐지만 다시 500 RPS로 낮춘 뒤 서버 p95/p99 2.98/4.46ms, Hikari pending 0으로 회복했다.
-- [x] 30분 Soak 테스트에서 heap, RSS, GC, connection과 DB 크기의 추세를 확인한다. 일시 포화로 HTTP 실패 469건과 dropped iteration 37,125건이 발생했지만 종료 시 500 RPS와 Hikari pending 0으로 회복했다. GC 후 live data 증가는 없었고 DB 크기는 약 312.8MiB 증가했다.
-- [ ] 같은 설정에서 replica 1과 2를 비교한다.
+- [x] 30분 Soak 테스트에서 heap, RSS, GC, connection과 DB 크기의 추세를 확인한다. 변경 후 500 RPS에서 HTTP 실패와 dropped iteration은 0, redirect p95/p99는 18.97/51.94ms였다. 5초짜리 일시 포화 1회는 다음 scrape에서 회복됐다.
+- [x] 같은 설정에서 replica 1과 2를 비교한다. 워밍업 후 둘 다 500 RPS를 통과했고, replica 2의 요청 분배는 49.996%/50.004%였다. replica 2의 최대 지속 처리량은 1,850 RPS였고 1,875 RPS에서 p95 기준을 초과했다.
 
 ## 12. 결과 판정 및 기록
 
@@ -146,7 +146,7 @@ PostgreSQL `max_connections=100`에서 exporter와 관리자 접속을 포함해
 - [x] HikariCP 최대 active 및 pending connection과 timeout 수를 기록한다.
 - [x] PostgreSQL connection, commit 처리량, lock wait와 deadlock을 기록한다.
 - [x] cache hit ratio와 URL 위험 검사 중복 호출 수를 기록한다.
-- [ ] Pod별 요청 분배와 replica 확장 효율을 기록한다.
+- [x] Pod별 요청 분배와 replica 확장 효과를 기록한다. replica 2에서 Pod별 CPU 최대는 0.326/0.323 core였고 Hikari pending은 모두 0이었다.
 - [x] 기준을 초과한 최초 부하 단계와 병목 원인을 기록한다.
 - [x] 개선 전후 테스트는 동일한 설정과 데이터로 다시 실행한다. SHA-256 변경 후 hit 15 RPS와 miss 10 RPS가 통과했고 Mixed workload의 서버 CPU·Tomcat·Hikari 포화도 해소됐다.
 

@@ -1,0 +1,22 @@
+{
+  "capturedAt": "2026-07-30T13:10:00+09:00",
+  "evaluationUnixTime": 1785384569,
+  "window": "130s",
+  "replicaCount": 1,
+  "redirectP95Ms": 2.0120970585684246,
+  "redirectP99Ms": 2.543319111198733,
+  "requestsByPod": {
+    "srrrg-dev-app-58d8d9f575-kq474": 63268.4
+  },
+  "cpuMaxCoresByPod": {
+    "srrrg-dev-app-58d8d9f575-kq474": 0.45656145
+  },
+  "hikariPendingMaxByPod": {
+    "srrrg-dev-app-58d8d9f575-kq474": 0
+  },
+  "tomcatBusyMaxByPod": {
+    "srrrg-dev-app-58d8d9f575-kq474": 3
+  },
+  "hikariTimeoutIncrease": 0,
+  "postgresCpuMaxCores": 0.4571462
+}

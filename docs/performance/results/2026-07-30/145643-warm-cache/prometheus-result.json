@@ -1,0 +1,48 @@
+{
+  "capturedAt": "2026-07-30T15:04:39+09:00",
+  "source": "Prometheus HTTP API via SSH",
+  "success": {
+    "targetRps": 1850,
+    "evaluationUnixTime": 1785391202,
+    "window": "120s",
+    "achievedRps": 1850.0173913043477,
+    "redirectP95Ms": 2.73119950295858,
+    "redirectP99Ms": 5.316580044231522,
+    "accessWriteP95Ms": 1.9442111088294272,
+    "rpsByPod": {
+      "srrrg-dev-app-58d8d9f575-kq474": 925.0086956521739,
+      "srrrg-dev-app-58d8d9f575-fz2zm": 925.0086956521739
+    },
+    "hikariPendingMaxByPod": {
+      "srrrg-dev-app-58d8d9f575-kq474": 9,
+      "srrrg-dev-app-58d8d9f575-fz2zm": 0
+    },
+    "tomcatBusyMaxByPod": {
+      "srrrg-dev-app-58d8d9f575-kq474": 12,
+      "srrrg-dev-app-58d8d9f575-fz2zm": 6
+    },
+    "hikariTimeoutIncrease": 0
+  },
+  "failureBoundary": {
+    "targetRps": 1875,
+    "evaluationUnixTime": 1785391333,
+    "window": "20s",
+    "achievedRps": 1868.1333333333332,
+    "redirectP95Ms": 55.54190332499997,
+    "redirectP99Ms": 129.38689424022525,
+    "accessWriteP95Ms": 6.664883767096784,
+    "rpsByPod": {
+      "srrrg-dev-app-58d8d9f575-kq474": 931,
+      "srrrg-dev-app-58d8d9f575-fz2zm": 937.1333333333332
+    },
+    "hikariPendingMaxByPod": {
+      "srrrg-dev-app-58d8d9f575-kq474": 99,
+      "srrrg-dev-app-58d8d9f575-fz2zm": 0
+    },
+    "tomcatBusyMaxByPod": {
+      "srrrg-dev-app-58d8d9f575-kq474": 105,
+      "srrrg-dev-app-58d8d9f575-fz2zm": 7
+    },
+    "hikariTimeoutIncrease": 0
+  }
+}

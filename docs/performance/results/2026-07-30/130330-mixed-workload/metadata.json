@@ -1,0 +1,28 @@
+﻿{
+    "scenario":  "mixed-workload",
+    "startedAt":  "2026-07-30T13:03:30.9515882+09:00",
+    "finishedAt":  "2026-07-30T13:06:14.4121142+09:00",
+    "script":  "C:\\Users\\qkrwl\\Desktop\\repo\\my\\srrrg\\scripts\\performance\\mixed-workload.js",
+    "commitSha":  "469ca2cec30d7bef3fb7739adff0d628cd0f4880",
+    "workingTreeDirty":  true,
+    "k6Executable":  "C:\\Program Files\\k6\\k6.exe",
+    "infrastructure":  {
+                           "commitSha":  "c532e30fdd3d227e1b42606ee3f546d1ae133921",
+                           "replicaCount":  "2",
+                           "application":  {
+                                               "cpuRequest":  "250m",
+                                               "cpuLimit":  "750m",
+                                               "memoryRequest":  "512Mi",
+                                               "memoryLimit":  "1Gi"
+                                           },
+                           "postgres":  {
+                                            "cpuRequest":  null,
+                                            "cpuLimit":  null,
+                                            "memoryRequest":  null,
+                                            "memoryLimit":  null
+                                        },
+                           "hikariMaximumPoolSize":  "10"
+                       },
+    "exitCode":  0,
+    "analysisStatus":  "complete"
+}

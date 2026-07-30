@@ -1,0 +1,83 @@
+time="2026-07-30T15:00:32+09:00" level=info msg="test configuration: scenario=warm-cache, baseUrl=https://jhhomehub.gonetis.com/srrrg-dev, rates=1875, stageDuration=2m, rampDuration=15s, dataLinks=20, warmupRate=500, warmupDuration=1m, preAllocatedVUs=1000, maxVUs=2300" source=console
+time="2026-07-30T15:00:33+09:00" level=info msg="test link created: code=GlgTrP, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/GlgTrP" source=console
+time="2026-07-30T15:00:33+09:00" level=info msg="test link created: code=roSduU, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/roSduU" source=console
+time="2026-07-30T15:00:33+09:00" level=info msg="test link created: code=Hqo3Di, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/Hqo3Di" source=console
+time="2026-07-30T15:00:33+09:00" level=info msg="test link created: code=mkHagc, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/mkHagc" source=console
+time="2026-07-30T15:00:33+09:00" level=info msg="test link created: code=gg4fql, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/gg4fql" source=console
+time="2026-07-30T15:00:33+09:00" level=info msg="test link created: code=mrsZzK, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/mrsZzK" source=console
+time="2026-07-30T15:00:33+09:00" level=info msg="test link created: code=4j3ltx, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/4j3ltx" source=console
+time="2026-07-30T15:00:34+09:00" level=info msg="test link created: code=LZd5gG, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/LZd5gG" source=console
+time="2026-07-30T15:00:34+09:00" level=info msg="test link created: code=Rb0X5d, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/Rb0X5d" source=console
+time="2026-07-30T15:00:34+09:00" level=info msg="test link created: code=WtMiD9, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/WtMiD9" source=console
+time="2026-07-30T15:00:34+09:00" level=info msg="test link created: code=nGSuuU, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/nGSuuU" source=console
+time="2026-07-30T15:00:34+09:00" level=info msg="test link created: code=f1HKNe, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/f1HKNe" source=console
+time="2026-07-30T15:00:34+09:00" level=info msg="test link created: code=YCIB4r, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/YCIB4r" source=console
+time="2026-07-30T15:00:34+09:00" level=info msg="test link created: code=uJsyma, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/uJsyma" source=console
+time="2026-07-30T15:00:34+09:00" level=info msg="test link created: code=vjAPUO, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/vjAPUO" source=console
+time="2026-07-30T15:00:35+09:00" level=info msg="test link created: code=2rHOXp, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/2rHOXp" source=console
+time="2026-07-30T15:00:35+09:00" level=info msg="test link created: code=4svDZG, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/4svDZG" source=console
+time="2026-07-30T15:00:35+09:00" level=info msg="test link created: code=HR6q1B, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/HR6q1B" source=console
+time="2026-07-30T15:00:35+09:00" level=info msg="test link created: code=GTHGin, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/GTHGin" source=console
+time="2026-07-30T15:00:35+09:00" level=info msg="test link created: code=hVyBnj, shortUrl=https://jhhomehub.gonetis.com/srrrg-dev/hVyBnj" source=console
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate==1' rate=100.00%
+
+    dropped_iterations
+    ✓ 'rate<1' rate=0/s
+    ✓ 'count<10' count=0
+
+    http_req_duration{endpoint:redirect_warm_cache}
+    ✗ 'p(95)<100' p(95)=107.57ms
+    ✓ 'p(99)<250' p(99)=233.31ms
+
+    http_req_failed
+    ✓ 'rate<0.001' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 89258   891.58694/s
+    checks_succeeded...: 100.00% 89258 out of 89258
+    checks_failed......: 0.00%   0 out of 89258
+
+    ✓ setup link create returns 201
+    ✓ setup link has a valid code
+    ✓ setup link has a short URL
+    ✓ setup link has a secret key
+    ✓ redirect_warm_cache_warmup returns 302
+    ✓ redirect_warm_cache returns 302
+    ✓ test link cleanup returns 200
+
+    CUSTOM
+    redirect_client_blocked..............: avg=1.28ms   min=0s     med=0s      max=150.77ms p(90)=0s      p(95)=0s      
+    redirect_client_connecting...........: avg=486.73µs min=0s     med=0s      max=60.84ms  p(90)=0s      p(95)=0s      
+    redirect_client_receiving............: avg=25.22µs  min=0s     med=0s      max=8.11ms   p(90)=0s      p(95)=0s      
+    redirect_client_sending..............: avg=5.06µs   min=0s     med=0s      max=2.01ms   p(90)=0s      p(95)=0s      
+    redirect_client_tls_handshaking......: avg=791.48µs min=0s     med=0s      max=107.48ms p(90)=0s      p(95)=0s      
+    redirect_client_waiting..............: avg=24.17ms  min=3.65ms med=10.38ms max=745.1ms  p(90)=52.54ms p(95)=107.56ms
+
+    HTTP
+    http_req_duration....................: avg=19.56ms  min=3.65ms med=9.36ms  max=745.1ms  p(90)=34.47ms p(95)=77.68ms 
+      { endpoint:redirect_warm_cache }...: avg=24.2ms   min=3.65ms med=10.41ms max=745.1ms  p(90)=52.6ms  p(95)=107.57ms
+      { expected_response:true }.........: avg=19.56ms  min=3.65ms med=9.36ms  max=745.1ms  p(90)=34.47ms p(95)=77.68ms 
+    http_req_failed......................: 0.00%  0 out of 89198
+    http_reqs............................: 89198  890.987607/s
+
+    EXECUTION
+    dropped_iterations...................: 0      0/s
+    iteration_duration...................: avg=21.13ms  min=3.65ms med=9.41ms  max=1.1s     p(90)=44.53ms p(95)=94.73ms 
+    iterations...........................: 89158  890.588052/s
+    vus..................................: 194    min=0          max=194 
+    vus_max..............................: 2000   min=2000       max=2000
+
+    NETWORK
+    data_received........................: 19 MB  190 kB/s
+    data_sent............................: 7.1 MB 71 kB/s
+
+
+
+time="2026-07-30T15:02:13+09:00" level=error msg="thresholds on metrics 'http_req_duration{endpoint:redirect_warm_cache}' were crossed; at least one has abortOnFail enabled, stopping test prematurely"
