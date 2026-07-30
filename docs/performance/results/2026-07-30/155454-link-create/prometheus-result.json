@@ -1,0 +1,18 @@
+{
+  "capturedAt": "2026-07-30T16:51:00+09:00",
+  "source": "Prometheus HTTP API via SSH",
+  "targetRps": 2200,
+  "evaluationUnixTime": 1785394661,
+  "window": "120s",
+  "linkCreateP95Ms": 2.443491715302489,
+  "linkCreateP99Ms": 154.17052510892748,
+  "hikariPendingMaxByPod": {
+    "srrrg-dev-app-7974bf674b-r5whd": 162,
+    "srrrg-dev-app-7974bf674b-v9mrn": 0
+  },
+  "tomcatBusyMaxByPod": {
+    "srrrg-dev-app-7974bf674b-r5whd": 169,
+    "srrrg-dev-app-7974bf674b-v9mrn": 10
+  },
+  "hikariTimeoutIncrease": 0
+}

@@ -30,6 +30,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -File .\scripts\performance\run.ps1 -Scenario link-create
 ```
 
+고부하에서 k6 자체의 VU 부족을 방지하려면
+`LINK_CREATE_PRE_ALLOCATED_VUS`와 `LINK_CREATE_MAX_VUS`를 함께 지정한다.
+
 `LINK_CREATE_CACHE_MODE`를 `miss`로 바꿔 miss 시나리오를 실행한다. 각 RPS는 별도
 실행해 앞 단계의 실패가 다음 단계 결과에 섞이지 않게 한다. 스크립트가 출력한
 `runId`와 완전히 일치하는 테스트 URL만 종료 후 정리한다.

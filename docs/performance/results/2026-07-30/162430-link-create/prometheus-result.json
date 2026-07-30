@@ -1,0 +1,34 @@
+{
+  "capturedAt": "2026-07-30T16:51:00+09:00",
+  "source": "Prometheus HTTP API via SSH",
+  "targetRps": 1800,
+  "evaluationUnixTime": 1785396436,
+  "window": "120s",
+  "linkCreateP95Ms": 111.82268658235036,
+  "linkCreateP99Ms": 204.87590319866638,
+  "hikariPendingMaxByPod": {
+    "srrrg-dev-app-7974bf674b-r5whd": 11,
+    "srrrg-dev-app-7974bf674b-v9mrn": 87
+  },
+  "tomcatBusyMaxByPod": {
+    "srrrg-dev-app-7974bf674b-r5whd": 139,
+    "srrrg-dev-app-7974bf674b-v9mrn": 200
+  },
+  "hikariTimeoutIncrease": 0,
+  "failureBoundary": {
+    "targetRps": 1900,
+    "evaluationUnixTime": 1785397820,
+    "window": "60s",
+    "linkCreateP95Ms": 185.64679862463987,
+    "linkCreateP99Ms": 297.79944225114934,
+    "hikariPendingMaxByPod": {
+      "srrrg-dev-app-7974bf674b-r5whd": 101,
+      "srrrg-dev-app-7974bf674b-v9mrn": 73
+    },
+    "tomcatBusyMaxByPod": {
+      "srrrg-dev-app-7974bf674b-r5whd": 200,
+      "srrrg-dev-app-7974bf674b-v9mrn": 200
+    },
+    "hikariTimeoutIncrease": 0
+  }
+}

@@ -12,8 +12,15 @@ const WARMUP_DURATION = __ENV.WARMUP_DURATION || '30s';
 const ORIGINAL_URL_BASE =
   __ENV.LINK_CREATE_ORIGINAL_URL || 'https://example.com/srrrg-link-create';
 const MAX_RATE = Math.max(...RATES);
-const PRE_ALLOCATED_VUS = Math.max(20, Math.ceil(MAX_RATE / 2));
-const MAX_VUS = Math.max(PRE_ALLOCATED_VUS, Math.min(100, MAX_RATE * 10));
+const PRE_ALLOCATED_VUS = parsePositiveInteger(
+  __ENV.LINK_CREATE_PRE_ALLOCATED_VUS || String(Math.max(20, Math.ceil(MAX_RATE / 2))),
+  'LINK_CREATE_PRE_ALLOCATED_VUS',
+);
+const MAX_VUS = parsePositiveInteger(
+  __ENV.LINK_CREATE_MAX_VUS ||
+    String(Math.max(PRE_ALLOCATED_VUS, Math.min(100, MAX_RATE * 10))),
+  'LINK_CREATE_MAX_VUS',
+);
 
 if (!['hit', 'miss'].includes(CACHE_MODE)) {
   throw new Error(`LINK_CREATE_CACHE_MODE must be hit or miss: ${CACHE_MODE}`);

@@ -1,0 +1,53 @@
+time="2026-07-30T16:24:30+09:00" level=info msg="test configuration: scenario=link-create, cacheMode=miss, baseUrl=https://jhhomehub.gonetis.com/srrrg-dev, rates=1800, stageDuration=2m, rampDuration=15s, warmupRate=100, warmupDuration=30s, preAllocatedVUs=1500, maxVUs=2500, runId=1785396270951-336928" source=console
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate==1' rate=100.00%
+
+    dropped_iterations
+    ✓ 'rate<1' rate=0/s
+    ✓ 'count<10' count=0
+
+    http_req_duration{endpoint:link_create_cache_miss}
+    ✓ 'p(95)<300' p(95)=138.27ms
+    ✓ 'p(99)<500' p(99)=248.23ms
+
+    http_req_failed
+    ✓ 'rate<0.001' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 699618  4236.068993/s
+    checks_succeeded...: 100.00% 699618 out of 699618
+    checks_failed......: 0.00%   0 out of 699618
+
+    ✓ link_create_warmup returns 201
+    ✓ link_create_warmup has a valid code
+    ✓ link_create_warmup has a secret key
+    ✓ link_create_cache_miss returns 201
+    ✓ link_create_cache_miss has a valid code
+    ✓ link_create_cache_miss has a secret key
+
+    HTTP
+    http_req_duration.......................: avg=118.45ms min=105.05ms med=113.22ms max=559.75ms p(90)=124.41ms p(95)=137.94ms
+      { endpoint:link_create_cache_miss }...: avg=118.53ms min=105.05ms med=113.25ms max=559.75ms p(90)=124.48ms p(95)=138.27ms
+      { expected_response:true }............: avg=118.45ms min=105.05ms med=113.22ms max=559.75ms p(90)=124.41ms p(95)=137.94ms
+    http_req_failed.........................: 0.00%  0 out of 233206
+    http_reqs...............................: 233206 1412.022998/s
+
+    EXECUTION
+    dropped_iterations......................: 0      0/s
+    iteration_duration......................: avg=119.12ms min=105.05ms med=113.32ms max=560.76ms p(90)=125.16ms p(95)=141.6ms 
+    iterations..............................: 233206 1412.022998/s
+    vus.....................................: 203    min=11          max=413 
+    vus_max.................................: 1700   min=1700        max=1700
+
+    NETWORK
+    data_received...........................: 76 MB  460 kB/s
+    data_sent...............................: 56 MB  339 kB/s
+
+
+
