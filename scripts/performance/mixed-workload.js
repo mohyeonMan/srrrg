@@ -21,6 +21,14 @@ const REDIRECT_MAX_VUS = positiveInteger(
   __ENV.MIXED_REDIRECT_MAX_VUS || '200',
   'MIXED_REDIRECT_MAX_VUS',
 );
+const CREATE_PRE_ALLOCATED_VUS = positiveInteger(
+  __ENV.MIXED_CREATE_PRE_ALLOCATED_VUS || '20',
+  'MIXED_CREATE_PRE_ALLOCATED_VUS',
+);
+const CREATE_MAX_VUS = positiveInteger(
+  __ENV.MIXED_CREATE_MAX_VUS || '40',
+  'MIXED_CREATE_MAX_VUS',
+);
 
 const redirectBlocked = new Trend('mixed_redirect_client_blocked', true);
 const redirectConnecting = new Trend('mixed_redirect_client_connecting', true);
@@ -63,8 +71,8 @@ export const options = {
       rate: HIT_CREATE_RATE,
       duration: DURATION,
       timeUnit: '1s',
-      preAllocatedVUs: 20,
-      maxVUs: 40,
+      preAllocatedVUs: CREATE_PRE_ALLOCATED_VUS,
+      maxVUs: CREATE_MAX_VUS,
       gracefulStop: '10s',
     },
     link_create_miss: {
@@ -74,8 +82,8 @@ export const options = {
       rate: MISS_CREATE_RATE,
       duration: DURATION,
       timeUnit: '1s',
-      preAllocatedVUs: 20,
-      maxVUs: 40,
+      preAllocatedVUs: CREATE_PRE_ALLOCATED_VUS,
+      maxVUs: CREATE_MAX_VUS,
       gracefulStop: '10s',
     },
   },

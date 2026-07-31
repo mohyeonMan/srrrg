@@ -1,0 +1,34 @@
+time="2026-07-31T11:45:28+09:00" level=info msg="test configuration: scenario=baseline, baseUrl=https://jhhomehub.gonetis.com/srrrg-dev, duration=1m" source=console
+time="2026-07-31T11:45:28+09:00" level=warning msg="Request Failed" error="Post \"https://jhhomehub.gonetis.com/srrrg-dev/api/links\": dial tcp 124.61.77.187:443: connectex: An attempt was made to access a socket in a way forbidden by its access permissions."
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✗ 'rate==1' rate=0.00%
+
+    http_req_failed
+    ✗ 'rate==0' rate=100.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 1       8.51058/s
+    checks_succeeded...: 0.00%   0 out of 1
+    checks_failed......: 100.00% 1 out of 1
+
+    ✗ baseline_setup_seed returns 201
+      ↳  0% — ✓ 0 / ✗ 1
+
+    HTTP
+    http_req_duration...: avg=0s min=0s med=0s max=0s p(90)=0s p(95)=0s
+    http_req_failed.....: 100.00% 1 out of 1
+    http_reqs...........: 1       8.51058/s
+
+    NETWORK
+    data_received.......: 0 B     0 B/s
+    data_sent...........: 0 B     0 B/s
+
+
+
+time="2026-07-31T11:45:28+09:00" level=error msg="GoError: link creation failed: endpoint=baseline_setup_seed, status=0\n\tat go.k6.io/k6/v2/internal/js/modules/k6.(*K6).Fail-fm (native)\n\tat createLink (file:///C:/Users/qkrwl/Desktop/repo/my/srrrg/scripts/performance/baseline.js:84:9(50))\n\tat setup (file:///C:/Users/qkrwl/Desktop/repo/my/srrrg/scripts/performance/baseline.js:30:21(42))\n" hint="script exception" source=stacktrace

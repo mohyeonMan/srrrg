@@ -100,7 +100,7 @@ PostgreSQL `max_connections=100`에서 exporter와 관리자 접속을 포함해
 ## 9. k6 기본 스크립트 작성
 
 - [x] 테스트 데이터 생성 및 정리 도구를 작성한다.
-- [ ] Baseline 시나리오를 작성한다.
+- [x] Baseline 시나리오를 작성한다.
 - [x] Warm-cache redirect 시나리오를 작성한다.
 - [x] Cold-cache redirect 시나리오를 작성한다.
 - [x] 시나리오별 arrival rate, 단계 시간과 테스트 데이터 수를 명시한다.
@@ -115,7 +115,7 @@ PostgreSQL `max_connections=100`에서 exporter와 관리자 접속을 포함해
   [`smoke-test.md`](./smoke-test.md)를 참고한다.
 - [x] URL 위험 검사 provider를 `fixed-safe`로 설정한다.
 - [x] 순수 애플리케이션 및 DB 성능 확인은 delay `0ms`로 시작한다.
-- [ ] VU 1로 Baseline을 실행한다.
+- [x] VU 1로 Baseline을 실행한다.
 - [x] k6 요청 수와 Prometheus HTTP 요청 증가량이 일치하는지 확인한다.
 - [x] Warm-cache에서 cache hit가 의도대로 발생하는지 확인한다.
 - [x] Cold-cache에서 cache miss가 의도대로 발생하는지 확인한다.

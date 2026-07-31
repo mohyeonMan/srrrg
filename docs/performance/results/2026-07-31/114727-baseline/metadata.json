@@ -1,0 +1,28 @@
+﻿{
+    "scenario":  "baseline",
+    "startedAt":  "2026-07-31T11:47:27.0141441+09:00",
+    "finishedAt":  "2026-07-31T11:48:28.7913730+09:00",
+    "script":  "C:\\Users\\qkrwl\\Desktop\\repo\\my\\srrrg\\scripts\\performance\\baseline.js",
+    "commitSha":  "d2367eef4cb044d38e4e5c9f2388c679520d89b1",
+    "workingTreeDirty":  true,
+    "k6Executable":  "C:\\Program Files\\k6\\k6.exe",
+    "infrastructure":  {
+                           "commitSha":  null,
+                           "replicaCount":  null,
+                           "application":  {
+                                               "cpuRequest":  null,
+                                               "cpuLimit":  null,
+                                               "memoryRequest":  null,
+                                               "memoryLimit":  null
+                                           },
+                           "postgres":  {
+                                            "cpuRequest":  null,
+                                            "cpuLimit":  null,
+                                            "memoryRequest":  null,
+                                            "memoryLimit":  null
+                                        },
+                           "hikariMaximumPoolSize":  null
+                       },
+    "exitCode":  0,
+    "analysisStatus":  "pending"
+}
