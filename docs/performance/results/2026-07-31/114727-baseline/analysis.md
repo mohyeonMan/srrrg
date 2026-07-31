@@ -13,8 +13,18 @@
 
 전체 HTTP p95/p99는 24.18/32.42ms였고 HTTP 실패는 0건이었다.
 
-## 남은 분석
+## Prometheus
 
-현재 로컬에 클러스터 Prometheus 접근 경로가 없어 CPU, Hikari, PostgreSQL 지표와
-전체·Pod별 요청 수 정합성은 아직 조회하지 못했다. 해당 조회 전까지 metadata의
-`analysisStatus`는 `pending`으로 유지한다.
+서버 p50/p95/p99는 링크 생성 1.39/2.04/2.35ms, 관리 조회
+0.53/1.03/1.31ms, redirect 2.11/2.68/2.96ms였다. 서버 HTTP 증가량 4,690건은
+k6 요청 수와 일치했고 두 Pod가 각각 2,345건을 처리했다.
+
+Pod별 CPU 평균은 0.027/0.024 core, 최대는 0.076/0.063 core였다. Hikari
+active 최대는 1/0, pending은 모두 0, Tomcat busy 최대는 2/1이었다.
+PostgreSQL CPU 평균/최대는 0.031/0.092 core, connection 최대는 20이었다.
+HTTP 5xx, Hikari timeout, Pod restart, DB rollback과 deadlock은 모두 0이었다.
+
+## 판정
+
+현재 배포된 replica 2 환경의 낮은 부하 기준값으로 사용한다. 문서 계획의 replica 1
+기준선이 필요하면 replica 수만 1로 바꾼 뒤 같은 시나리오를 별도로 실행한다.

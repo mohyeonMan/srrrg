@@ -1,0 +1,84 @@
+{
+  "capturedAt": "2026-07-31T11:59:11+09:00",
+  "queryContext": {
+    "source": "Prometheus HTTP API via jh-home SSH tunnel",
+    "evaluationUnixTime": 1785466118,
+    "window": "80s"
+  },
+  "configuration": {
+    "vus": 1,
+    "duration": "1m",
+    "replicaCount": 2
+  },
+  "requestCounts": {
+    "k6HttpTotal": 4690,
+    "serverHttpTotal": 4690,
+    "linkCreate": 1173,
+    "managementGet": 1172,
+    "redirect": 1172,
+    "delete": 1173,
+    "byPod": {
+      "srrrg-dev-app-57d7c4bc47-55qxz": 2345,
+      "srrrg-dev-app-57d7c4bc47-d2hl6": 2345
+    }
+  },
+  "serverLatencyMs": {
+    "linkCreate": {
+      "p50": 1.3875,
+      "p95": 2.0428,
+      "p99": 2.3535
+    },
+    "managementGet": {
+      "p50": 0.5332,
+      "p95": 1.0250,
+      "p99": 1.3129
+    },
+    "redirect": {
+      "p50": 2.1145,
+      "p95": 2.6781,
+      "p99": 2.9556
+    },
+    "accessWriteP95": 1.7382
+  },
+  "application": {
+    "cpuCoresAverageByPod": {
+      "srrrg-dev-app-57d7c4bc47-55qxz": 0.0267,
+      "srrrg-dev-app-57d7c4bc47-d2hl6": 0.0241
+    },
+    "cpuCoresMaxByPod": {
+      "srrrg-dev-app-57d7c4bc47-55qxz": 0.0761,
+      "srrrg-dev-app-57d7c4bc47-d2hl6": 0.0628
+    },
+    "memoryWorkingSetMaxBytesByPod": {
+      "srrrg-dev-app-57d7c4bc47-55qxz": 477470720,
+      "srrrg-dev-app-57d7c4bc47-d2hl6": 470683648
+    },
+    "hikariActiveMaxByPod": {
+      "srrrg-dev-app-57d7c4bc47-55qxz": 1,
+      "srrrg-dev-app-57d7c4bc47-d2hl6": 0
+    },
+    "hikariPendingMaxByPod": {
+      "srrrg-dev-app-57d7c4bc47-55qxz": 0,
+      "srrrg-dev-app-57d7c4bc47-d2hl6": 0
+    },
+    "tomcatBusyMaxByPod": {
+      "srrrg-dev-app-57d7c4bc47-55qxz": 2,
+      "srrrg-dev-app-57d7c4bc47-d2hl6": 1
+    }
+  },
+  "postgres": {
+    "cpuCoresAverage": 0.0308,
+    "cpuCoresMax": 0.0918,
+    "connectionsMax": 20
+  },
+  "errors": {
+    "http5xx": 0,
+    "hikariTimeout": 0,
+    "podRestart": 0,
+    "databaseRollback": 0,
+    "databaseDeadlock": 0
+  },
+  "limitations": [
+    "The documented baseline plan specifies one replica, but this run measured the currently deployed two-replica environment."
+  ]
+}
