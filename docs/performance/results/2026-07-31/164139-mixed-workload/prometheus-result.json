@@ -1,0 +1,143 @@
+﻿{
+    "schemaVersion":  1,
+    "capturedAt":  "2026-07-31T17:13:37.8091924+09:00",
+    "scenario":  "mixed-workload",
+    "verdict":  "failure",
+    "queryContext":  {
+                         "source":  "Prometheus HTTP API via jh-home SSH tunnel",
+                         "startedAt":  "2026-07-31T16:41:39.4510590+09:00",
+                         "finishedAt":  "2026-07-31T17:12:24.5836768+09:00",
+                         "evaluationUnixTime":  1785485664,
+                         "window":  "32m"
+                     },
+    "configuration":  {
+                          "applicationCommitSha":  "bfd78f2",
+                          "infrastructureCommitSha":  "99f25200433d24dc7c74b3e1b0b04b3f8403bbc7",
+                          "replicaCount":  2,
+                          "applicationCpuRequest":  "250m",
+                          "applicationCpuLimit":  "750m",
+                          "applicationMemoryRequest":  "512Mi",
+                          "applicationMemoryLimit":  "1Gi",
+                          "postgresCpuRequest":  "500m",
+                          "postgresCpuLimit":  "1500m",
+                          "postgresMemoryRequest":  "512Mi",
+                          "postgresMemoryLimit":  "2Gi",
+                          "hikariMaximumPoolSize":  10,
+                          "fixedSafeDelay":  "100ms",
+                          "fixedSafeCacheDuration":  "15m"
+                      },
+    "load":  {
+                 "redirectRate":  "1200 RPS",
+                 "cacheHitCreateRate":  "400 RPS",
+                 "cacheMissCreateRate":  "150 RPS",
+                 "duration":  "30m",
+                 "redirectPreAllocatedVUs":  1200,
+                 "redirectMaxVUs":  2000,
+                 "createPreAllocatedVUs":  100,
+                 "createMaxVUs":  500
+             },
+    "requestCounts":  {
+                          "k6Total":  3156055,
+                          "serverTotal":  3152945.8825122993,
+                          "byPod":  {
+                                        "srrrg-dev-app-848bd968d-5rs8d":  1576472.1167614972,
+                                        "srrrg-dev-app-848bd968d-crpfg":  1576473.7657508021
+                                    }
+                      },
+    "latencyMs":  {
+                      "client":  {
+                                     "redirect":  {
+                                                      "p50":  10.19,
+                                                      "p95":  27.18,
+                                                      "p99":  234.42
+                                                  },
+                                     "linkCreateHit":  {
+                                                           "p50":  10.05,
+                                                           "p95":  26.1,
+                                                           "p99":  196.77
+                                                       },
+                                     "linkCreateMiss":  {
+                                                            "p50":  111.01,
+                                                            "p95":  129.07,
+                                                            "p99":  360.96
+                                                        }
+                                 },
+                      "server":  {
+                                     "redirect":  {
+                                                      "p50":  1.6660654770566217,
+                                                      "p95":  4.0197247991950862,
+                                                      "p99":  107.85628390294757
+                                                  },
+                                     "linkCreate":  {
+                                                        "p50":  1.3664701010613181,
+                                                        "p95":  110.29705210148238,
+                                                        "p99":  153.70237240078853
+                                                    },
+                                     "accessWrite":  {
+                                                         "p50":  1.2341215411365793,
+                                                         "p95":  2.0703923185646524,
+                                                         "p99":  8.24716256276368
+                                                     }
+                                 }
+                  },
+    "application":  {
+                        "cpuCoresAverageByPod":  {
+                                                     "srrrg-dev-app-848bd968d-5rs8d":  0.63280130658614686,
+                                                     "srrrg-dev-app-848bd968d-crpfg":  0.63306209632411348
+                                                 },
+                        "cpuCoresMaxByPod":  {
+                                                 "srrrg-dev-app-848bd968d-5rs8d":  0.8807018600000015,
+                                                 "srrrg-dev-app-848bd968d-crpfg":  0.9053536800000006
+                                             },
+                        "memoryWorkingSetMaxBytesByPod":  {
+                                                              "srrrg-dev-app-848bd968d-5rs8d":  502677504,
+                                                              "srrrg-dev-app-848bd968d-crpfg":  512966656
+                                                          },
+                        "cpuThrottlingMaxPercentByPod":  {
+                                                             "srrrg-dev-app-848bd968d-5rs8d":  32.775119617224888,
+                                                             "srrrg-dev-app-848bd968d-crpfg":  31.182795698924725
+                                                         },
+                        "tomcatBusyMaxByPod":  {
+                                                   "srrrg-dev-app-848bd968d-5rs8d":  200,
+                                                   "srrrg-dev-app-848bd968d-crpfg":  125
+                                               }
+                    },
+    "hikari":  {
+                   "activeMaxByPod":  {
+                                          "srrrg-dev-app-848bd968d-5rs8d":  10,
+                                          "srrrg-dev-app-848bd968d-crpfg":  10
+                                      },
+                   "pendingMaxByPod":  {
+                                           "srrrg-dev-app-848bd968d-5rs8d":  180,
+                                           "srrrg-dev-app-848bd968d-crpfg":  106
+                                       },
+                   "timeoutIncrease":  0
+               },
+    "postgres":  {
+                     "cpuCoresAverage":  0.83970851131930513,
+                     "cpuCoresMax":  1.1527826600000117,
+                     "connectionsMax":  20,
+                     "rollbackIncrease":  9.0478645161290316,
+                     "deadlockIncrease":  0
+                 },
+    "errors":  {
+                   "httpFailures":  2,
+                   "http5xx":  2,
+                   "droppedIterations":  320,
+                   "podRestarts":  0
+               },
+    "scenarioSpecific":  {
+                             "cache":  {
+                                           "hit":  2881138.9447058821,
+                                           "missAbsent":  270111.40520748665,
+                                           "missStale":  348.52066310160433
+                                       },
+                             "fixedSafeChecks":  270474.94849625672,
+                             "k6VusMax":  1574,
+                             "k6VusActiveMax":  1154
+                         },
+    "limitations":  [
+                        "Prometheus counter extrapolation can differ slightly from k6 totals.",
+                        "k6 host CPU and memory were not captured; dropped iteration cannot be assigned to host resources conclusively."
+                    ]
+}
