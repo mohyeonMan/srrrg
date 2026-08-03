@@ -26,10 +26,13 @@
 3. `docs/implement/01_create_link_api.md`
 4. `docs/implement/02_manage_link_api.md`
 5. 이 문서
+6. `docs/implement/05_implementation_checklist.md`
 
-UI 변경 시에는 `docs/design/v2/*`도 읽는다. 리다이렉트·링크 생성·통계 저장의 성능 특성을 바꾸면 관련 `docs/performance/*`와 분석이 완료된 결과 문서도 읽는다.
+UI 변경 시에는 `docs/design/v2/*`도 읽는다.
 
-문서를 읽은 뒤 실제 코드와 Flyway migration을 확인한다. 오래된 계획 문서와 현재 코드가 다르면 현재 동작을 테스트로 확인하고, 기존 계약을 임의로 과거 계획에 맞추지 않는다.
+`docs/performance/*`, k6 스크립트와 과거 성능 결과는 일반 기능 구현의 필수 읽기 자료가 아니다. 사용자가 성능 테스트나 성능 기준 변경을 명시적으로 요청한 경우에만 확인한다.
+
+문서를 읽은 뒤 실제 코드와 Flyway migration을 확인한다. 오래된 계획 문서와 현재 코드가 다르면 현재 동작을 테스트로 확인하고, 기존 계약을 임의로 과거 계획에 맞추지 않는다. 구현 전에는 체크리스트와 코드를 대조하고, 구현 후에는 테스트로 확인된 항목만 같은 변경에서 체크한다.
 
 ### 2.2 질문 게이트
 
@@ -55,6 +58,8 @@ UI 변경 시에는 `docs/design/v2/*`도 읽는다. 리다이렉트·링크 생
 - access JWT는 HttpOnly·Secure·SameSite=Lax cookie로 전달하며 기본 유효기간은 15분이다.
 - refresh token도 HttpOnly·Secure·SameSite=Lax cookie로 전달하며 기본 유효기간은 30일이다.
 - refresh token hash와 rotation 상태는 PostgreSQL에 저장한다.
+- access JWT는 HS256으로 서명한다. 256bit 이상의 key를 배포 secret으로 주입하고 `kid`로 현재 key와 이전 검증 key를 구분한다. 이전 key는 access token 최대 수명 이후 제거한다.
+- JWT `iss`는 `SRRRG_BASE_URL`, `aud`는 `srrrg-web`을 사용한다.
 - 로그아웃은 refresh token을 즉시 폐기한다. access JWT denylist는 만들지 않고 최대 15분의 잔여 수명을 허용한다.
 - 웹 JWT는 srrrg 웹 전용이다. 외부 API 인증에는 사용하지 않는다.
 - 로그인 웹 JSON endpoint는 `/api/web/**`, 외부 자동화 endpoint는 `/api/v1/**`로 분리한다.
@@ -67,6 +72,10 @@ UI 변경 시에는 `docs/design/v2/*`도 읽는다. 리다이렉트·링크 생
 - 같은 이메일이라는 이유로 자동 병합하지 않는다.
 - 동일한 verified email의 기존 사용자가 있으면 기존 로그인으로 본인 확인한 뒤 새 OAuth 계정을 연결한다.
 - 이메일이 같은 OAuth 계정을 무조건 별도 사용자로 생성하지 않는다.
+- verified email이 없으면 가입과 계정 연결을 차단한다.
+- 이메일은 앞뒤 공백을 제거하고 `Locale.ROOT` 기준 소문자로 저장한다. 공급자별 점이나 `+` 주소 규칙은 적용하지 않는다.
+- Google은 `openid`, `profile`, `email`, Kakao는 `profile_nickname`, `account_email`, GitHub는 `read:user`, `user:email` scope만 요청한다.
+- 공급자 access token과 refresh token은 로그인 완료 후 저장하지 않는다.
 
 ### 3.3 애플리케이션 구조
 
@@ -77,7 +86,7 @@ UI 변경 시에는 `docs/design/v2/*`도 읽는다. 리다이렉트·링크 생
 
 ### 3.4 프로젝트와 도메인
 
-- 첫 로그인 시 기본 개인 프로젝트를 만든다.
+- 프로젝트·멤버 단계 적용 후, 기본 개인 프로젝트가 없는 로그인 사용자에게 하나를 만든다.
 - 프로젝트는 OWNER, EDITOR, VIEWER 멤버를 가진다.
 - 미가입 사용자를 포함한 이메일 초대를 최초 범위에 포함한다.
 - 프로젝트는 여러 도메인을 가질 수 있고 primary domain은 하나다.
@@ -180,18 +189,18 @@ OAuth callback
 → (provider, provider_user_id) 조회
 → 기존 oauth_accounts가 있으면 user 확정
 → 없으면 verified email 확인
-→ 같은 email의 user가 없으면 신규 user와 기본 프로젝트 생성
+→ 같은 email의 user가 없으면 신규 user 생성
 → 같은 email의 user가 있으면 자동 로그인·자동 병합 금지
 → 기존 로그인 본인 확인 화면으로 이동
 → 확인 성공 후 oauth_accounts 연결
 → srrrg access JWT와 refresh token 발급
 ```
 
-Spring Security OAuth2 Client의 기본 HttpSession 기반 authorization request 저장소는 사용하지 않는다. OAuth `state`, PKCE verifier와 로그인 완료 후 돌아갈 경로는 변조할 수 없는 짧은 수명의 cookie 또는 DB 일회성 요청으로 보관한다. 선택 방식은 JWT 서명·암호화 정책과 함께 구현 전 질문 게이트에서 확정한다.
+Spring Security OAuth2 Client의 기본 HttpSession 기반 authorization request 저장소는 사용하지 않는다. OAuth `state`, S256 PKCE verifier와 로그인 완료 후 돌아갈 상대 경로는 10분 수명의 PostgreSQL 일회성 요청에 저장한다. 브라우저의 HttpOnly·Secure cookie에는 불투명 난수 원문만 전달하고 DB에는 해당 난수의 SHA-256 hash를 저장한다. 요청은 callback에서 한 번 사용한 뒤 삭제한다.
 
-사용자 생성, OAuth 계정 생성, 기본 프로젝트와 OWNER 멤버십 생성은 하나의 transaction으로 처리한다.
+OAuth·JWT 단계에서는 사용자와 OAuth 계정 생성을 하나의 transaction으로 처리한다. 프로젝트·멤버 단계 적용 후에는 기본 프로젝트가 없는 사용자에게 프로젝트와 OWNER 멤버십을 같은 transaction으로 생성한다.
 
-동일 이메일 충돌 중 새 OAuth 정보를 브라우저가 임의 변경할 수 없게 짧은 만료시간의 일회성 연결 요청을 DB에 저장한다. 원문 확인 token은 cookie 또는 URL로 전달하되 DB에는 hash만 저장한다. 기존 로그인 성공 후 현재 사용자와 연결 대상 이메일을 다시 확인하고 OAuth 계정을 연결한다.
+동일 이메일 충돌 중 새 OAuth 정보를 브라우저가 임의 변경할 수 없게 10분 수명의 일회성 연결 요청을 DB에 저장한다. 원문 확인 token은 HttpOnly·Secure cookie로 전달하고 DB에는 SHA-256 hash만 저장한다. 기존 로그인 성공 후 현재 사용자와 연결 대상 이메일을 다시 확인하고 OAuth 계정을 연결한다.
 
 ### 6.2 JWT와 refresh token
 
@@ -209,7 +218,7 @@ kid
 
 프로젝트 ID, 역할, 이메일과 API scope는 access JWT에 넣지 않는다. 변경 가능한 권한을 token 만료까지 고정하지 않기 위해서다.
 
-refresh token은 충분한 entropy의 opaque random token으로 발급한다. JWT로 만들 필요가 없다.
+refresh token은 `srrrg_rt_` 접두사와 URL-safe 난수 43자로 구성한 opaque random token으로 발급한다. JWT로 만들지 않고 SHA-256 hash만 저장한다.
 
 ```text
 refresh_tokens
@@ -226,8 +235,12 @@ refresh_tokens
 ### 6.3 cookie와 CSRF
 
 - token cookie에는 `HttpOnly`, `Secure`, `SameSite=Lax`를 적용한다.
+- access cookie 이름은 `srrrg_access`, refresh cookie 이름은 `srrrg_refresh`로 하고 host-only cookie로 발급한다.
+- access cookie path는 `/`, refresh cookie path는 `/api/web/auth`로 제한한다.
 - 운영 환경에서 HTTPS가 아니면 token을 발급하지 않는다.
 - 웹의 POST, PATCH, DELETE에는 CSRF token을 요구한다.
+- CSRF cookie와 header는 `XSRF-TOKEN`, `X-XSRF-TOKEN`을 사용한다.
+- 기존 익명 `/api/links/**`는 secret header를 브라우저가 자동 전송하지 않으므로 기존 계약을 보존하기 위해 CSRF 대상에서 제외한다.
 - 외부 `/api/v1` API key 요청은 cookie를 인증 수단으로 읽지 않는다.
 - access JWT를 localStorage나 URL에 저장하지 않는다.
 
@@ -235,6 +248,7 @@ refresh_tokens
 
 - 로그아웃은 현재 refresh token family를 폐기하고 cookie를 삭제한다.
 - 모든 기기 로그아웃은 사용자의 모든 refresh token family를 폐기한다.
+- `POST /api/web/auth/logout`은 현재 기기, `POST /api/web/auth/logout-all`은 모든 기기를 로그아웃한다. token 교체는 `POST /api/web/auth/refresh`를 사용한다.
 - 이미 발급된 access JWT는 최대 15분 동안 유효할 수 있다.
 - 즉시 access JWT 차단용 Redis·denylist는 초기 범위에서 제외한다.
 
@@ -273,7 +287,7 @@ srrrg_pk_<public-prefix>_<secret>
 
 - 원문은 생성 응답에서 한 번만 반환한다.
 - secret은 기존 `SecureRandomStringGenerator`로 생성한다.
-- 충분히 긴 임의 API key는 SHA-256 hash로 저장한다. 요청마다 BCrypt를 실행하지 않는다.
+- 충분히 긴 임의 API key는 SHA-256 hash로 저장한다. 요청마다 느린 비밀번호용 해시를 계산하지 않는다.
 - 목록에는 이름, public prefix, scope, 생성·최근 사용·만료·폐기 시각만 노출한다.
 - 기본 만료는 없고 OWNER가 만료일을 선택할 수 있다.
 - 교체는 새 key를 발급한 뒤 기존 key를 폐기하는 방식이다.
@@ -409,15 +423,9 @@ srrrg 웹
 
 ## 12. 단계별 구현 순서
 
-### 1단계: 기존 기능 회귀 보호
+모든 단계는 구현 전후에 기존 익명 생성·조회·수정·삭제·리다이렉트와 management 화면 회귀 테스트를 통과해야 한다. 새 보안 filter, migration, 라우팅이나 DTO 변경이 기존 계약을 바꾸면 해당 단계는 완료되지 않은 것으로 본다.
 
-- 익명 생성·조회·수정·삭제·리다이렉트 HTTP 계약 고정
-- 기존 management 화면 회귀 확인
-- 보안 filter 추가 전후 공개 경로 비교
-
-완료 조건: 로그인 의존성이 추가된 상태에서도 기존 자동 테스트와 익명 사용자 수동 시나리오가 동일하게 동작한다.
-
-### 2단계: OAuth와 JWT
+### 1단계: OAuth와 JWT
 
 - Spring Security OAuth2 Client 추가
 - `users`, `oauth_accounts`, `refresh_tokens`와 OAuth 연결 요청 migration
@@ -427,17 +435,17 @@ srrrg 웹
 
 완료 조건: 세 공급자로 하나의 내부 사용자에 로그인 수단을 연결할 수 있고, refresh 재사용과 로그아웃 정책이 통합 테스트로 검증된다.
 
-### 3단계: 프로젝트와 멤버
+### 2단계: 프로젝트와 멤버
 
 - `projects`, `project_members`, `project_invitations`
-- 첫 로그인 기본 프로젝트
+- 기본 프로젝트가 없는 로그인 사용자의 개인 프로젝트 생성
 - 역할별 권한
 - 초대 발송·수락·취소·재발송
 - 익명 링크 project 귀속
 
 완료 조건: 기존 익명 링크를 해치지 않고 로그인 사용자가 프로젝트와 멤버를 관리한다.
 
-### 4단계: API key와 공개 문서
+### 3단계: API key와 공개 문서
 
 - `project_api_keys`
 - API key filter와 scope
@@ -447,7 +455,7 @@ srrrg 웹
 
 완료 조건: 외부 요청은 JWT 없이 API key만으로 허용 범위의 프로젝트 작업을 수행하고 공개 문서와 실제 계약이 일치한다.
 
-### 5단계: 프로젝트 도메인
+### 4단계: 프로젝트 도메인
 
 - `project_domains`와 `links.domain_id`
 - domain별 code unique migration
@@ -457,7 +465,7 @@ srrrg 웹
 
 완료 조건: 기존 `srrrg.link/{code}` 익명 링크와 프로젝트 도메인 링크가 충돌 없이 함께 동작한다.
 
-### 6단계: 캠페인과 CSV
+### 5단계: 캠페인과 CSV
 
 - `campaigns`와 link의 캠페인·UTM 필드
 - 단일 링크와 캠페인 목록 분리
@@ -466,7 +474,7 @@ srrrg 웹
 
 완료 조건: UI, API와 CSV가 같은 링크 생성 규칙을 사용하며 재시도로 중복 링크가 생기지 않는다.
 
-### 7단계: 실제 통계
+### 6단계: 실제 통계
 
 - 기존 누적 통계를 관리 화면에 먼저 연결
 - link event를 link·campaign·project로 집계
@@ -475,10 +483,68 @@ srrrg 웹
 
 완료 조건: 샘플 통계를 제거하고 세 집계 범위의 합계가 일관된다.
 
-## 13. 테스트 원칙
+## 13. Codex 실행 모델 가이드
+
+모델 이름보다 역할을 우선한다. 구현 시점에 모델 구성이 바뀌면 아래 역할에 가장 가까운 현재 모델을 선택한다.
+
+- Sol: 여러 경계와 tradeoff를 함께 판단해야 하는 복잡한 작업
+- Terra: 명세가 확정된 일반 구현의 기본 모델
+- Luna: 완료 조건이 명확한 반복·변환·보조 작업
+
+한 모델만 사용한다면 Sol medium을 사용한다. 비용과 속도를 나누려면 Terra medium을 기본으로 두고 보안·도메인 단계만 Sol high로 올린다. Luna medium으로 전체 명세를 한 번에 구현하지 않는다.
+
+| 구현 단계 | 권장 모델·추론 | 이유 |
+|---|---|---|
+| OAuth와 JWT | Sol high | token rotation, CSRF와 계정 연결 보안을 함께 판단해야 함 |
+| 프로젝트·멤버·초대 | Terra medium | 권한표와 완료 조건이 확정된 일반 구현 |
+| API key·공개 문서 | Terra medium | 명세 기반 구현, 완료 후 Sol high 보안 리뷰 |
+| 프로젝트 도메인 | Sol high | Host 라우팅, DNS, TLS와 migration이 함께 변경됨 |
+| 캠페인·CSV | Terra medium | 고정 template과 DB worker 명세에 따른 구현 |
+| 실제 통계 | Terra medium | 기존 event 집계 중심, 성능 구조 변경 시 Sol high |
+
+### 13.1 단계 시작 전 모델 변경 요청
+
+Codex는 현재 task의 모델과 추론 단계를 직접 변경할 수 없으므로, 각 단계 시작 전에 사용자에게 변경을 요청한다. 현재 설정이 권장값인지 확인할 수 없을 때도 추측하지 않고 사용자에게 확인한다.
+
+```text
+다음 구현 단계는 "{단계명}"입니다.
+이 단계의 권장 설정은 "{모델} / {추론 단계}"입니다.
+입력창 아래 모델 선택기에서 해당 설정으로 변경한 뒤
+"변경 완료"라고 알려주세요. 확인 전에는 구현을 시작하지 않겠습니다.
+```
+
+예를 들어 OAuth와 JWT 단계에서는 다음처럼 요청한다.
+
+```text
+다음 구현 단계는 "OAuth와 JWT"입니다.
+권장 설정은 "Sol / 높음"입니다.
+모델 선택기에서 Sol과 높음으로 변경한 뒤 "변경 완료"라고 알려주세요.
+```
+
+사용자가 권장 모델로 변경하지 않겠다고 하면 임의로 진행하지 않는다. 현재 설정으로 계속 구현해도 되는지 명시적으로 확인받고 진행한다.
+
+실제 실행 시에는 `docs/implement/04_execution_prompt.md`의 프롬프트를 새 Codex task에 붙여 넣는다. 프롬프트는 다음 미완료 단계 판정, 모델 변경 확인, 질문 게이트와 한 단계 구현·검증까지만 수행하도록 제한한다.
+
+전체 계획을 한 번에 실행하지 않는다. 단계 하나마다 다음 순서를 지킨다.
+
+```text
+다음 단계와 권장 모델 안내
+→ 사용자 모델 변경 확인
+→ 관련 docs와 현재 코드 읽기
+→ 구현 전 질문 게이트
+→ 단계 하나 구현
+→ 해당 테스트와 기존 익명 링크 회귀 테스트
+→ 필요하면 Sol high 리뷰
+→ 다음 단계
+```
+
+Max나 Ultra는 기본값으로 사용하지 않는다. 하나의 단계 안에서도 독립적으로 나눌 수 있는 대규모 작업이 확인되거나, 단일 실행의 분석 깊이가 실제로 부족할 때만 사용한다.
+
+## 14. 테스트 원칙
 
 - 정책 분기는 작은 단위 테스트로 검증한다.
 - OAuth/JWT, 권한, migration, Host 라우팅과 API key는 HTTP·PostgreSQL 통합 테스트를 둔다.
+- PostgreSQL 통합 테스트는 Testcontainers를 사용해 CI와 로컬 Docker 환경에서 같은 migration을 검증한다.
 - 외부 DNS, 인증서와 메일 adapter만 경계에서 대체한다.
 - service와 repository를 계층별로 모두 mock하는 테스트는 만들지 않는다.
 - 각 단계마다 기존 익명 링크 회귀 테스트를 실행한다.
@@ -495,25 +561,22 @@ srrrg 웹
 - 미검증 도메인과 잘못된 Host 거절
 - 기존 익명 secret key와 프로젝트 API key의 권한 혼동 없음
 
-## 14. 구현 전 남은 질문
+## 15. 구현 전 남은 질문
 
 다음 값은 해당 단계 구현 전에 사용자에게 확인한다.
 
-1. JWT 서명 알고리즘, key 보관과 rotation 방식
-2. OAuth authorization request의 state·PKCE를 암호화 cookie와 DB 중 어디에 저장할지
-3. OAuth 공급자가 verified email을 주지 않을 때 가입을 차단할지, email 없는 계정을 허용할지
-4. 프로젝트 초대 메일 공급자, 발신 주소와 template 운영 방식
-5. 프로젝트 slug 형식, 전체 unique 여부와 예약어
-6. 플랫폼 서브도메인 생성 규칙
-7. API key·익명 링크·CSV의 실제 rate limit과 quota
-8. JSON batch와 CSV 최대 행 수
-9. 애플리케이션이 cert-manager resource를 직접 생성할지 별도 배포 controller가 조정할지
-10. 접근 이벤트와 IP·User-Agent 보관 및 익명화 기간
-11. 계정 삭제 시 개인 프로젝트와 공동 프로젝트의 소유권 이전 정책
+1. 프로젝트 초대 메일 공급자, 발신 주소와 template 운영 방식
+2. 프로젝트 slug 형식, 전체 unique 여부와 예약어
+3. 플랫폼 서브도메인 생성 규칙
+4. API key·익명 링크·CSV의 실제 rate limit과 quota
+5. JSON batch와 CSV 최대 행 수
+6. 애플리케이션이 cert-manager resource를 직접 생성할지 별도 배포 controller가 조정할지
+7. 접근 이벤트와 IP·User-Agent 보관 및 익명화 기간
+8. 계정 삭제 시 개인 프로젝트와 공동 프로젝트의 소유권 이전 정책
 
 이 목록 외의 부족한 결정도 구현자가 발견하면 질문 게이트에 추가한다. 답을 받기 전에 임시 기본값으로 코드를 작성하지 않는다.
 
-## 15. 의도적으로 제외한 것
+## 16. 의도적으로 제외한 것
 
 - Gradle 멀티모듈
 - 별도 인증 microservice

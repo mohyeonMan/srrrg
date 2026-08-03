@@ -76,7 +76,7 @@ link.srrrg
 - access JWT는 짧게 유지하고 HttpOnly·Secure cookie로 전달한다. refresh token도 cookie로 전달하되 hash와 폐기 상태는 DB에 저장하고 매 사용 시 교체한다.
 - 공급자가 반환한 이메일만으로 계정을 자동 병합하지 않는다. 동일한 이메일의 기존 사용자가 있으면 기존 로그인 방식으로 본인을 확인한 뒤 새 OAuth 계정을 연결한다.
 - 이메일 제공 동의 여부와 관계없이 공급자의 고유 subject로 사용자를 식별한다.
-- 첫 로그인 시 사용자가 바로 링크를 관리할 수 있도록 기본 개인 프로젝트 하나를 만든다.
+- 프로젝트·멤버 단계 적용 후, 기본 개인 프로젝트가 없는 로그인 사용자에게 하나를 만든다.
 - OAuth client secret은 환경 변수나 배포 secret으로 주입하고 DB와 저장소에 저장하지 않는다.
 
 사용자는 직접 링크를 소유하지 않고 프로젝트 멤버십을 통해 로그인 링크를 관리한다. 비로그인 링크는 기존처럼 사용자나 프로젝트 없이 존재할 수 있다.
@@ -170,7 +170,7 @@ created_at
 ```
 
 - `(provider, provider_user_id)`를 unique로 둔다.
-- 처음 보는 OAuth 계정의 verified email과 같은 사용자가 없으면 `users`, `oauth_accounts`, 기본 프로젝트와 OWNER 멤버십을 생성한다.
+- 처음 보는 OAuth 계정의 verified email과 같은 사용자가 없으면 OAuth·JWT 단계에서는 `users`와 `oauth_accounts`를 생성한다. 프로젝트·멤버 단계 적용 후에는 기본 프로젝트가 없는 사용자에게 프로젝트와 OWNER 멤버십도 생성한다.
 - 같은 verified email의 사용자가 있으면 새 사용자를 만들거나 자동 병합하지 않고 기존 로그인으로 본인 확인한 뒤 `oauth_accounts`만 연결한다.
 - 공급자 email은 계정을 찾는 힌트이며 로그인 식별자는 `(provider, provider_user_id)`다.
 - refresh token 원문은 저장하지 않고 rotation과 재사용 탐지에 필요한 최소 상태만 유지한다.
@@ -305,7 +305,7 @@ revoked_at nullable
 
 API key 원문은 생성 응답에서 한 번만 반환한다. 로그와 DB에는 원문을 저장하지 않는다.
 
-key는 `srrrg_pk_<public-prefix>_<secret>`처럼 로그에서 식별 가능한 공개 접두사와 충분히 긴 비밀값으로 구성한다. 난수 생성은 기존 `SecureRandomStringGenerator`를 재사용한다. API key는 충분한 entropy를 가진 임의값이므로 요청마다 느린 BCrypt 비교를 하지 않고 SHA-256 hash로 저장·조회한다.
+key는 `srrrg_pk_<public-prefix>_<secret>`처럼 로그에서 식별 가능한 공개 접두사와 충분히 긴 비밀값으로 구성한다. 난수 생성은 기존 `SecureRandomStringGenerator`를 재사용한다. API key는 충분한 entropy를 가진 임의값이므로 요청마다 느린 비밀번호용 해시를 계산하지 않고 SHA-256 hash로 저장·조회한다.
 
 초기 scope는 다음으로 제한한다.
 
@@ -662,7 +662,7 @@ SDK 자동 생성, GraphQL, 별도 API gateway와 다국어 문서 사이트는 
 ### 9.2 로그인
 
 - Google, Kakao, GitHub 로그인
-- 첫 로그인 시 기본 개인 프로젝트 생성
+- 프로젝트·멤버 단계 적용 후 기본 프로젝트가 없는 로그인 사용자의 개인 프로젝트 생성
 - 프로젝트 선택 및 생성
 - 프로젝트 overview에서 단일 링크와 캠페인 분리 표시
 - 프로젝트 멤버, 도메인, API key 설정
@@ -678,7 +678,9 @@ SDK 자동 생성, GraphQL, 별도 API gateway와 다국어 문서 사이트는 
 
 #### 구현 전 질문 게이트
 
-- 각 단계 구현을 시작하기 전에 `docs/conventions.md`, 이 설계 문서, `docs/implement/01_create_link_api.md`, `docs/implement/02_manage_link_api.md`와 새 구현 명세서를 처음부터 끝까지 읽는다. UI를 변경하면 `docs/design/v2/*`, 성능 경로를 변경하면 관련 `docs/performance/*`도 읽는다.
+- 각 단계 구현을 시작하기 전에 `docs/conventions.md`, 이 설계 문서, `docs/implement/01_create_link_api.md`, `docs/implement/02_manage_link_api.md`, 구현 명세서와 `docs/implement/05_implementation_checklist.md`를 처음부터 끝까지 읽는다. UI를 변경하면 `docs/design/v2/*`도 읽는다.
+- `docs/performance/*`, k6 스크립트와 과거 성능 결과는 일반 기능 구현의 필수 읽기 자료가 아니다. 사용자가 성능 테스트나 성능 기준 변경을 명시적으로 요청한 경우에만 확인한다.
+- 구현 전에는 체크리스트와 현재 코드를 대조하고, 구현 후에는 코드와 테스트로 검증된 항목만 같은 변경에서 `[x]`로 갱신한다.
 - 문서와 현재 코드가 다르거나 구현 중 명세에 없는 정책·보안·스키마·API 결정이 발견되면 코드를 작성하기 전에 사용자에게 질문한다. 가장 그럴듯한 기본값으로 임의 보완하지 않는다.
 - 각 단계 착수 직전에 남은 결정사항을 모아 사용자에게 한 차례 확인받은 뒤 구현한다.
 
@@ -691,22 +693,30 @@ SDK 자동 생성, GraphQL, 별도 API gateway와 다국어 문서 사이트는 
 - 처음부터 모든 공개 API를 만들지 않고 실제 관리 화면과 자동화에 필요한 endpoint부터 OpenAPI에 공개한다.
 - 보안 경계의 검증, 프로젝트 권한 검사, API key hash 저장과 기존 기능 회귀 테스트는 단순화를 이유로 생략하지 않는다.
 
-### 1단계: 로그인과 프로젝트 기반
+### 1단계: OAuth와 JWT
 
 - 기존 익명 생성·관리·리다이렉트 회귀 테스트 고정
 - Spring Security OAuth2 Client와 JWT 발급·검증 추가
 - Google, Kakao, GitHub 로그인과 callback 설정
-- `users`, `oauth_accounts`, `refresh_tokens`, `projects`, `project_members`, `project_invitations` 추가
-- 첫 로그인 시 기본 개인 프로젝트와 OWNER 멤버십 생성
+- `users`, `oauth_accounts`, `refresh_tokens`와 OAuth 일회성 요청 추가
+- access JWT cookie, refresh rotation, CSRF와 로그아웃 구현
+- 동일 verified email 충돌의 기존 로그인 확인 흐름 구현
+- 기존 비로그인 경로 허용 유지
+
+완료 기준: 세 공급자로 하나의 내부 사용자에 로그인 수단을 연결할 수 있고, refresh 재사용과 로그아웃 정책이 PostgreSQL 통합 테스트로 검증된다.
+
+### 2단계: 프로젝트·멤버·초대
+
+- `projects`, `project_members`, `project_invitations` 추가
+- 기본 개인 프로젝트가 없는 로그인 사용자에게 프로젝트와 OWNER 멤버십 생성
 - 이메일 초대, 만료·취소·재발송·수락 구현
-- 기존 비로그인 경로 허용과 프로젝트 경로 인증 분리
 - 프로젝트 CRUD와 역할별 권한 검사
 - 프로젝트 overview와 프로젝트 단일 링크 생성
 - 기존 익명 링크 호환 및 프로젝트 귀속
 
-완료 기준: 세 공급자로 로그인할 수 있고, 익명 링크는 로그인 없이 기존 secret key로 계속 관리되며, 로그인 사용자는 기본 프로젝트 안에서 링크를 관리할 수 있다.
+완료 기준: 기존 익명 링크를 해치지 않고 로그인 사용자가 프로젝트와 멤버를 관리한다.
 
-### 2단계: API key와 공개 API 문서
+### 3단계: API key와 공개 API 문서
 
 - `project_api_keys` 추가
 - API key 1회 표시, hash 저장, scope, 만료와 폐기
@@ -718,7 +728,7 @@ SDK 자동 생성, GraphQL, 별도 API gateway와 다국어 문서 사이트는 
 
 완료 기준: 프로젝트 API key로 허용된 작업만 수행할 수 있고, 사용자가 Swagger 원본 화면 없이 공개 문서에서 인증 방법과 실제 요청·응답을 확인할 수 있다.
 
-### 3단계: 프로젝트 도메인
+### 4단계: 프로젝트 도메인
 
 - `project_domains` 추가
 - 플랫폼 서브도메인 예약·중복 정책
@@ -729,7 +739,7 @@ SDK 자동 생성, GraphQL, 별도 API gateway와 다국어 문서 사이트는 
 
 완료 기준: 사용자가 CNAME 레코드 하나를 설정하면 검증과 인증서 발급을 거쳐 커스텀 도메인으로 링크를 열 수 있다.
 
-### 4단계: 캠페인과 개인화 링크
+### 5단계: 캠페인과 개인화 링크
 
 - `campaigns`와 링크의 프로젝트·캠페인·UTM 컬럼 추가
 - 캠페인 기본값을 적용한 링크 생성
@@ -741,7 +751,7 @@ SDK 자동 생성, GraphQL, 별도 API gateway와 다국어 문서 사이트는 
 
 완료 기준: 하나의 캠페인에서 서로 다른 UTM 또는 외부 식별자를 가진 링크를 안전하게 대량 생성하고 조회할 수 있다.
 
-### 5단계: 실제 통계
+### 6단계: 실제 통계
 
 - 누적 통계를 실제 관리 화면에 연결
 - 링크·캠페인·프로젝트 통계 조회 쿼리
@@ -751,7 +761,7 @@ SDK 자동 생성, GraphQL, 별도 API gateway와 다국어 문서 사이트는 
 
 완료 기준: 동일 이벤트를 링크·캠페인·프로젝트 범위에서 일관되게 집계하고, 관리 화면에 실제 데이터가 표시된다.
 
-### 6단계: 필요할 때만 확장
+### 필요할 때만 확장
 
 다음 항목은 실제 요구나 성능 문제가 생긴 뒤 추가한다.
 
@@ -797,10 +807,8 @@ SDK 자동 생성, GraphQL, 별도 API gateway와 다국어 문서 사이트는 
 4. 대량 생성 요청의 최대 링크 수
 5. 프로젝트·캠페인·UTM 변경 불가 정책의 UI 문구
 6. 접근 이벤트 보관 기간과 IP 개인정보 정책
-7. JWT 서명 key 형식과 rotation 방법
-8. OAuth 공급자가 verified email을 제공하지 않을 때의 가입 정책
-9. 프로젝트 초대 메일 발송 서비스와 발신 주소
-10. 애플리케이션에서 cert-manager 리소스를 생성할 권한과 배포 방식
+7. 프로젝트 초대 메일 발송 서비스와 발신 주소
+8. 애플리케이션에서 cert-manager 리소스를 생성할 권한과 배포 방식
 
 이 목록이 전부가 아니다. 구현자가 코드와 기존 문서를 읽으며 새로 발견한 미확정 사항도 구현 전에 질문해야 한다.
 
@@ -820,7 +828,7 @@ SDK 자동 생성, GraphQL, 별도 API gateway와 다국어 문서 사이트는 
 로그인
 → Google, Kakao, GitHub OAuth2
 → HttpOnly cookie의 자체 access JWT와 rotating refresh token
-→ 첫 로그인 시 기본 개인 프로젝트 생성
+→ 프로젝트·멤버 단계 적용 후 기본 프로젝트가 없는 로그인 사용자의 개인 프로젝트 생성
 
 외부 자동화
 → 프로젝트별 API key

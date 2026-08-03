@@ -372,10 +372,10 @@ DB에 저장하는 값: secretKey hash
 권장 방식:
 
 ```text
-BCrypt 또는 SHA-256 + salt
+충분한 entropy의 secret key를 SHA-256으로 해시
 ```
 
-MVP에서는 Spring Security의 BCryptPasswordEncoder 사용을 우선 검토한다.
+비밀번호가 아닌 충분히 긴 임의 secret이므로 SHA-256 해시와 상수 시간 비교를 사용한다.
 
 ---
 

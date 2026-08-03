@@ -22,7 +22,7 @@
 - `GET /api/links/{code}`로 링크 정보와 누적 통계를 조회한다.
 - `PATCH /api/links/{code}`로 원본 URL과 만료 시각을 부분 수정한다.
 - `DELETE /api/links/{code}`로 링크를 soft delete한다.
-- 모든 관리 API는 code 조회 후 `SecretKeyManager.matches`로 BCrypt 해시를 검증한다.
+- 모든 관리 API는 code 조회 후 `SecretKeyManager.matches`로 SHA-256 해시를 상수 시간 비교한다.
 - 메인 화면에 관리 조회, 수정, 삭제 UI가 연결되어 있다.
 - 서비스 정책 단위 테스트와 MockMvc HTTP 계약 테스트가 있다.
 
@@ -106,7 +106,7 @@ query string과 JSON body에는 secret key를 넣지 않는다. URL, 브라우�
 ```text
 1. 요청 헤더 존재 여부 확인
 2. code로 링크 조회
-3. 입력한 secret key와 secret_key_hash를 BCrypt로 비교
+3. 입력한 secret key의 SHA-256 해시와 secret_key_hash를 상수 시간 비교
 4. 인증 성공 후 링크 상태 확인
 5. 조회 또는 변경 수행
 ```
@@ -285,7 +285,7 @@ src/main/java/link/srrrg/link
 ### 2단계: 인증된 조회 API
 
 - 관리 응답 DTO 작성
-- code 조회 후 BCrypt 검증하는 공통 로직 작성
+- code 조회 후 SHA-256 해시를 검증하는 공통 로직 작성
 - `GET /api/links/{code}` 구현
 - JSON 400, 404, 410 오류 처리 추가
 

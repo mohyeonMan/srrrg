@@ -49,7 +49,7 @@
 | URL 최대 길이 | 2,048자 |
 | 허용 스킴 | `http`, `https` |
 | 단축 코드 | Base62 문자 6자리, 중복 시 재시도 |
-| secret key | 충분한 길이의 난수에 `srrrg_sk_` 접두사 사용, BCrypt 해시 저장 |
+| secret key | 충분한 길이의 난수에 `srrrg_sk_` 접두사 사용, SHA-256 해시 저장 |
 | 리다이렉트 | `302 Found` |
 | 없는 코드 | `404 Not Found` |
 | 삭제·만료 링크 | `410 Gone` |
@@ -96,7 +96,7 @@ src/main/java/link/srrrg
 - `id`: 내부 PK
 - `code`: `VARCHAR(6)`, unique index
 - `original_url`: URL 최대 길이에 맞춘 `VARCHAR(2048)`
-- `secret_key_hash`: BCrypt 해시
+- `secret_key_hash`: SHA-256 해시
 - `expires_at`: nullable `TIMESTAMPTZ`
 - `access_count`: 0부터 시작하는 `BIGINT`
 - `is_deleted`: soft delete 플래그
@@ -114,7 +114,7 @@ src/main/java/link/srrrg
 2. URL 스킴, 길이, 호스트 및 차단 대상 주소를 검증한다.
 3. 만료일이 입력됐다면 현재보다 미래인지 확인한다.
 4. 6자리 코드를 생성하고 DB unique 제약 충돌 시 제한된 횟수만 재시도한다.
-5. secret key 원문을 생성하고 BCrypt 해시만 저장한다.
+5. secret key 원문을 생성하고 SHA-256 해시만 저장한다.
 6. 저장 성공 후 secret key 원문을 포함한 응답을 반환한다.
 
 ### 리다이렉트
@@ -129,7 +129,7 @@ src/main/java/link/srrrg
 ### 조회·수정·삭제
 
 1. code로 링크를 조회한다.
-2. 전달받은 secret key와 저장된 BCrypt 해시를 비교한다.
+2. 전달받은 secret key의 SHA-256 해시와 저장된 해시를 상수 시간 비교한다.
 3. 인증 실패는 링크 존재 여부 노출을 줄이기 위해 공통 404 응답으로 처리한다.
 4. 조회는 현재 정보를 반환한다.
 5. 수정은 전달된 필드만 변경하고 URL 및 만료일 정책을 다시 검증한다.
@@ -153,7 +153,7 @@ PATCH와 DELETE도 같은 헤더를 사용하고 body에는 변경 데이터만 
 - Bean Validation
 - PostgreSQL Driver
 - Flyway PostgreSQL
-- Spring Security Crypto 모듈 또는 BCrypt를 제공하는 최소 의존성
+- JDK `MessageDigest`의 SHA-256과 상수 시간 비교
 - 테스트용 Testcontainers PostgreSQL
 
 전체 Spring Security 웹 필터 체인은 로그인이나 세션 인증이 없는 v1에는 도입하지 않는다.

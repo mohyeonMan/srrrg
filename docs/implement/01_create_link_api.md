@@ -11,7 +11,7 @@
 - 관리용 secret key 원문
 - 요청에서 지정한 만료 시각
 
-secret key 원문은 생성 응답에서 한 번만 전달하고 DB에는 BCrypt 해시만 저장한다. 이후 조회·수정·삭제는 `docs/implement/02_manage_link_api.md`의 `code + secret key` 인증 방식을 따른다.
+secret key 원문은 생성 응답에서 한 번만 전달하고 DB에는 SHA-256 해시만 저장한다. 이후 조회·수정·삭제는 `docs/implement/02_manage_link_api.md`의 `code + secret key` 인증 방식을 따른다.
 
 ## 2. 현재 구현 상태
 
@@ -21,7 +21,7 @@ secret key 원문은 생성 응답에서 한 번만 전달하고 DB에는 BCrypt
 - 암호학적으로 안전한 임의 문자열 생성기
 - Base62 문자 기반 6자리 code 생성
 - `srrrg_sk_` 접두사를 사용하는 secret key 생성
-- secret key BCrypt 해시 저장 및 비교
+- secret key SHA-256 해시 저장 및 상수 시간 비교
 - URL과 만료 시각 검증
 - code 중복 사전 확인과 최대 5회 재생성
 - `POST /api/links`
@@ -120,12 +120,12 @@ DB의 unique 제약이 동시 요청에서 발생하는 최종 충돌을 방어�
 문자 집합: 영문 대소문자, 숫자, -, _
 ```
 
-`SecretKeyManager`는 원문과 BCrypt 해시를 함께 생성한다.
+`SecretKeyManager`는 원문과 SHA-256 해시를 함께 생성한다. secret key가 충분한 entropy의 임의값이므로 느린 비밀번호 해시를 요청마다 계산하지 않는다.
 
 ```text
 API 응답: secret key 원문
-Link 엔티티: BCrypt 해시
-DB: BCrypt 해시
+Link 엔티티: SHA-256 해시
+DB: SHA-256 해시
 ```
 
 원문은 엔티티, DB, 애플리케이션 로그에 저장하지 않는다. 링크 관리 시에는 code로 링크를 찾은 뒤 `SecretKeyManager.matches`로 입력값과 저장된 해시를 비교한다.
@@ -172,7 +172,7 @@ DNS 조회, 접속 가능 여부 확인, URL 정규화는 하지 않는다. 따�
 1. originalUrl 정책 검증
 2. expiresAt 미래 시각 검증
 3. 중복되지 않은 6자리 code 생성
-4. secret key 원문과 BCrypt 해시 생성
+4. secret key 원문과 SHA-256 해시 생성
 5. Link 엔티티 생성
 6. LinkRepository.save
 7. base URL과 code로 shortUrl 생성
@@ -227,7 +227,7 @@ src/main/java/link/srrrg
 | `id` | `id` | DB 생성 |
 | `code` | `code` | 생성된 6자리 code |
 | `originalUrl` | `original_url` | 요청 URL |
-| `secretKeyHash` | `secret_key_hash` | BCrypt 해시 |
+| `secretKeyHash` | `secret_key_hash` | SHA-256 해시 |
 | `expiresAt` | `expires_at` | 요청값 또는 `null` |
 | `accessCount` | `access_count` | `0` |
 | `redirectCount` | `redirect_count` | `0` |
@@ -261,9 +261,9 @@ Base62 문자 집합과 길이 6이라는 정책을 소유하고 실제 문자 �
 
 - URL-safe 문자 집합으로 43자리 임의 문자열 생성
 - `srrrg_sk_` 접두사 추가
-- `BCryptPasswordEncoder`로 저장용 해시 생성
+- `MessageDigest`의 SHA-256으로 저장용 해시 생성
 - `GeneratedSecretKey` record에 원문과 해시를 담아 반환
-- `matches`로 관리 요청의 key 검증 지원
+- `MessageDigest.isEqual`로 관리 요청의 key를 상수 시간 비교
 
 ### `UrlValidator`
 
@@ -342,7 +342,7 @@ secret key는 다시 조회하거나 복구할 수 없으므로 생성 직후 �
 
 - `srrrg_sk_` 접두사
 - 해시에 원문이 포함되지 않음
-- 생성된 원문과 해시가 BCrypt 검증을 통과
+- 생성된 원문과 SHA-256 해시가 검증을 통과
 
 ### `UrlValidatorTest`
 
@@ -376,7 +376,7 @@ curl -i -X POST http://localhost:8080/api/links \
 - code가 6자리 Base62 형식
 - short URL이 `http://localhost:8080/{code}` 형식
 - secret key가 `srrrg_sk_`로 시작
-- DB에는 secret key 원문이 아닌 BCrypt 해시만 존재
+- DB에는 secret key 원문이 아닌 SHA-256 해시만 존재
 - `access_count=0`, `redirect_count=0`
 - `is_deleted=false`, `trusted=false`
 - 단축 URL 접근 시 현재 리다이렉트 정책에 따라 처리
@@ -403,7 +403,7 @@ curl -i -X POST http://localhost:8080/api/links \
 - 잘못된 URL과 과거 만료 시각을 거부한다.
 - 단축 코드는 6자리 Base62 문자열이다.
 - code 중복을 최대 5회까지 사전 확인한다.
-- secret key 원문은 생성 응답에만 포함하고 DB에는 BCrypt 해시를 저장한다.
+- secret key 원문은 생성 응답에만 포함하고 DB에는 SHA-256 해시를 저장한다.
 - 환경별 base URL로 short URL을 생성한다.
 - 메인 화면에서 생성 API를 호출하고 결과를 복사할 수 있다.
 - 생성 정책 단위 테스트가 존재한다.

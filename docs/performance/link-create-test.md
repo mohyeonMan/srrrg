@@ -2,7 +2,7 @@
 
 ## 목적
 
-링크 생성의 URL 위험 검증 cache hit와 miss를 분리해 외부 검사, BCrypt, DB insert
+링크 생성의 URL 위험 검증 cache hit와 miss를 분리해 외부 검사, SHA-256 해시, DB insert
 비용을 확인한다.
 
 ## 실행 조건
@@ -18,7 +18,7 @@
   후 별도 정리한다.
 - secret key는 결과에 기록하지 않는다.
 
-링크 생성은 BCrypt와 쓰기 트랜잭션을 포함하므로 redirect 워밍업 10 RPS를 그대로
+링크 생성은 SHA-256 해시와 쓰기 트랜잭션을 포함하므로 redirect 워밍업 10 RPS를 그대로
 사용하지 않는다.
 
 ## 실행
