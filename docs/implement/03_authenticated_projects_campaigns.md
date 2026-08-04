@@ -75,7 +75,7 @@ UI 변경 시에는 `docs/design/v2/*`도 읽는다.
 - 공급자가 반환한 미검증 이메일은 `provider_email`에 저장할 수 있지만 대표 이메일이나 계정 연결 기준으로 사용하지 않는다.
 - 이메일이 필요한 기능을 도입할 때 프로필 수정에서 이메일을 입력·검증받는다. 그전에는 해당 화면과 API를 미리 만들지 않는다.
 - 이메일은 앞뒤 공백을 제거하고 `Locale.ROOT` 기준 소문자로 저장한다. 공급자별 점이나 `+` 주소 규칙은 적용하지 않는다.
-- Google은 `openid`, `profile`, `email`, Kakao는 `profile_nickname`, `account_email`, GitHub는 `read:user`, `user:email` scope만 요청하되 이메일 제공을 가입 필수 동의로 취급하지 않는다.
+- Google은 `openid`, `profile`, `email`, Kakao는 비즈 앱 권한 없이 제공되는 `profile_nickname`, GitHub는 `read:user`, `user:email` scope만 요청하되 이메일 제공을 가입 필수 동의로 취급하지 않는다.
 - 공급자 access token과 refresh token은 로그인 완료 후 저장하지 않는다.
 
 ### 3.3 애플리케이션 구조

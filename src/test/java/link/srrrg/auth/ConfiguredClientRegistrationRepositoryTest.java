@@ -17,7 +17,7 @@ class ConfiguredClientRegistrationRepositoryTest {
 		ClientRegistration google = repository.findByRegistrationId("google");
 		ClientRegistration kakao = repository.findByRegistrationId("kakao");
 		assertThat(google.getScopes()).containsExactlyInAnyOrder("openid", "profile", "email");
-		assertThat(kakao.getScopes()).containsExactlyInAnyOrder("profile_nickname", "account_email");
+		assertThat(kakao.getScopes()).containsExactly("profile_nickname");
 		assertThat(google.getRedirectUri()).isEqualTo("https://srrrg.link/login/oauth2/code/{registrationId}");
 		assertThat(repository.findByRegistrationId("github")).isNull();
 	}
