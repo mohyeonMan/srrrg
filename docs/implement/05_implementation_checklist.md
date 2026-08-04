@@ -59,19 +59,19 @@
 
 ## 3단계: API key·공개 문서
 
-- [ ] `project_api_keys` migration과 모델
-- [ ] API key 원문 1회 표시와 SHA-256 hash 저장
-- [ ] scope·만료·폐기·최근 사용 시각
-- [ ] `/api/v1/**` API key 전용 인증
-- [ ] JWT cookie와 API key 인증 경로 분리
-- [ ] 타 프로젝트와 scope 밖 요청 차단
-- [ ] request ID와 신규 API 오류 형식
-- [ ] cursor pagination과 필요한 idempotency
-- [ ] 공개 OpenAPI group과 `/openapi.json`
-- [ ] srrrg 디자인의 `/docs/api`
-- [ ] 운영 Swagger UI 차단과 홈 링크 교체
+- [x] `project_api_keys` migration과 모델
+- [x] API key 원문 1회 표시와 SHA-256 hash 저장
+- [x] scope·만료·폐기·최근 사용 시각
+- [x] `/api/v1/**` API key 전용 인증
+- [x] JWT cookie와 API key 인증 경로 분리
+- [x] 타 프로젝트와 scope 밖 요청 차단
+- [x] request ID와 신규 API 오류 형식
+- [x] cursor pagination과 필요한 idempotency
+- [x] 공개 OpenAPI group과 `/openapi.json`
+- [x] srrrg 디자인의 `/docs/api`
+- [x] 운영 Swagger UI 차단과 홈 링크 교체
 - [ ] API key·공개 계약 통합 테스트
-- [ ] 기존 익명 링크 회귀 테스트
+- [x] 기존 익명 링크 회귀 테스트
 - [ ] 3단계 완료 조건 충족
 
 ## 4단계: 프로젝트 도메인

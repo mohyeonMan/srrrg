@@ -1,6 +1,7 @@
 package link.srrrg.auth;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -21,8 +22,12 @@ import link.srrrg.HomeController;
 import link.srrrg.link.management.LinkController;
 import link.srrrg.link.management.LinkManagementService;
 import link.srrrg.link.management.dto.CreateLinkResponse;
+import link.srrrg.project.ApiKeyService;
+import link.srrrg.project.ApiKeyScope;
+import link.srrrg.project.PublicProjectLinkController;
+import link.srrrg.link.LinkRepository;
 
-@WebMvcTest(controllers = {HomeController.class, LoginController.class, LinkController.class, AuthController.class})
+@WebMvcTest(controllers = {HomeController.class, LoginController.class, LinkController.class, AuthController.class, PublicProjectLinkController.class})
 @Import({SecurityConfiguration.class, JwtAuthenticationFilter.class, CsrfCookieFilter.class})
 class SecurityWebTest {
 
@@ -62,6 +67,12 @@ class SecurityWebTest {
 	@MockitoBean
 	LinkManagementService linkManagementService;
 
+	@MockitoBean
+	ApiKeyService apiKeyService;
+
+	@MockitoBean
+	LinkRepository linkRepository;
+
 	@Test
 	void rendersAccessibleLoginOptions() throws Exception {
 		mockMvc.perform(get("/login"))
@@ -90,5 +101,49 @@ class SecurityWebTest {
 				.andExpect(status().isForbidden())
 				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 				.andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+	}
+
+	@Test
+	void rejectsPublicApiWithoutApiKeyAndDoesNotUseJwtCookie() throws Exception {
+		mockMvc.perform(get("/api/v1/projects/7/links"))
+				.andExpect(status().isUnauthorized())
+				.andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+				.andExpect(jsonPath("$.code").value("API_KEY_INVALID"));
+	}
+
+	@Test
+	void allowsProjectLinksOnlyForMatchingKeyProjectAndScope() throws Exception {
+		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
+				.thenReturn(new ApiKeyService.ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_READ)));
+		when(linkRepository.findByProjectIdAndDeletedFalseOrderByIdDesc(eq(7L), any())).thenReturn(java.util.List.of());
+
+		mockMvc.perform(get("/api/v1/projects/7/links").header("Authorization", "Bearer srrrg_pk_prefix_secret"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.items").isArray())
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().exists("X-Request-Id"));
+	}
+
+	@Test
+	void rejectsAnotherProjectAndMissingScope() throws Exception {
+		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
+				.thenReturn(new ApiKeyService.ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.CAMPAIGNS_READ)));
+
+		mockMvc.perform(get("/api/v1/projects/8/links").header("Authorization", "Bearer srrrg_pk_prefix_secret"))
+				.andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("PROJECT_ACCESS_DENIED"));
+		mockMvc.perform(get("/api/v1/projects/7/links").header("Authorization", "Bearer srrrg_pk_prefix_secret"))
+				.andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("SCOPE_REQUIRED"));
+	}
+
+	@Test
+	void returnsCursorWhenMoreProjectLinksExist() throws Exception {
+		link.srrrg.link.Link first = org.mockito.Mockito.mock(link.srrrg.link.Link.class);
+		link.srrrg.link.Link second = org.mockito.Mockito.mock(link.srrrg.link.Link.class);
+		when(first.getId()).thenReturn(10L);
+		when(second.getId()).thenReturn(9L);
+		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
+				.thenReturn(new ApiKeyService.ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_READ)));
+		when(linkRepository.findByProjectIdAndDeletedFalseOrderByIdDesc(eq(7L), any())).thenReturn(java.util.List.of(first, second));
+
+		mockMvc.perform(get("/api/v1/projects/7/links").param("limit", "1").header("Authorization", "Bearer srrrg_pk_prefix_secret"))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.items.length()").value(1)).andExpect(jsonPath("$.nextCursor").value(10));
 	}
 }

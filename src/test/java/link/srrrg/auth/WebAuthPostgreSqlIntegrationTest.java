@@ -26,6 +26,9 @@ import link.srrrg.identity.OAuthIdentityService;
 import link.srrrg.identity.OAuthIdentityService.LoginResolution;
 import link.srrrg.identity.OAuthProvider;
 import link.srrrg.identity.OAuthAccountRepository;
+import link.srrrg.project.ApiKeyScope;
+import link.srrrg.project.ApiKeyService;
+import link.srrrg.project.ProjectMemberRepository;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -76,6 +79,12 @@ class WebAuthPostgreSqlIntegrationTest {
 
 	@Autowired
 	MockMvc mockMvc;
+
+	@Autowired
+	ApiKeyService apiKeyService;
+
+	@Autowired
+	ProjectMemberRepository projectMemberRepository;
 
 	@Test
 	void linksProviderOnlyAfterExistingAccountLogin() {
@@ -187,6 +196,25 @@ class WebAuthPostgreSqlIntegrationTest {
 		assertAuthorizationRedirect("kakao", "https://kauth.kakao.com/oauth/authorize");
 		assertAuthorizationRedirect("github", "https://github.com/login/oauth/authorize");
 		assertThat(authorizationRequestRepository.count()).isGreaterThanOrEqualTo(3);
+	}
+
+	@Test
+	void allowsOnlyMatchingProjectAndActiveApiKeyScope() throws Exception {
+		LoginResolution login = identityService.resolve(identity(OAuthProvider.GOOGLE, "api-key-user", "api-key@example.com"));
+		Long projectId = projectMemberRepository.findByIdUserId(login.user().getId()).getFirst().getProject().getId();
+		ApiKeyService.CreatedKey created = apiKeyService.create(login.user().getId(), projectId, "automation", java.util.Set.of(ApiKeyScope.LINKS_READ), null);
+
+		mockMvc.perform(get("/api/v1/projects/{projectId}/links", projectId)
+					.header("Authorization", "Bearer " + created.rawKey()))
+				.andExpect(status().isOk());
+		mockMvc.perform(get("/api/v1/projects/{projectId}/links", projectId + 1)
+					.header("Authorization", "Bearer " + created.rawKey()))
+				.andExpect(status().isForbidden())
+				.andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+		apiKeyService.revoke(login.user().getId(), projectId, created.key().getId());
+		mockMvc.perform(get("/api/v1/projects/{projectId}/links", projectId)
+					.header("Authorization", "Bearer " + created.rawKey()))
+				.andExpect(status().isUnauthorized());
 	}
 
 	private void assertAuthorizationRedirect(String provider, String authorizationUri) throws Exception {

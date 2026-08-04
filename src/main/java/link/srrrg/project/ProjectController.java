@@ -2,6 +2,7 @@ package link.srrrg.project;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +29,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ProjectController {
 	private final ProjectService projects;
+	private final ApiKeyService apiKeys;
 
 	@GetMapping("/projects") public List<ProjectResponse> myProjects(@AuthenticationPrincipal SrrrgPrincipal p) { return projects.myMemberships(p.userId()).stream().map(ProjectResponse::from).toList(); }
 	@PostMapping("/projects") public ResponseEntity<ProjectResponse> create(@AuthenticationPrincipal SrrrgPrincipal p, @Valid @RequestBody CreateProjectRequest request) { Project project = projects.create(p.userId(), request.name()); return ResponseEntity.status(HttpStatus.CREATED).body(new ProjectResponse(project.getId(), project.getName(), ProjectRole.OWNER)); }
@@ -40,13 +42,19 @@ public class ProjectController {
 	@PatchMapping("/projects/{projectId}/members/{memberId}") public ResponseEntity<Void> changeRole(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId, @PathVariable Long memberId, @Valid @RequestBody ChangeRoleRequest request) { projects.changeMemberRole(p.userId(), projectId, memberId, request.role()); return ResponseEntity.noContent().build(); }
 	@DeleteMapping("/projects/{projectId}/members/{memberId}") public ResponseEntity<Void> remove(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId, @PathVariable Long memberId) { projects.removeMember(p.userId(), projectId, memberId); return ResponseEntity.noContent().build(); }
 	@PostMapping("/projects/{projectId}/links/import") public ResponseEntity<Void> importLink(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId, @Valid @RequestBody ImportLinkRequest request) { projects.importAnonymousLink(p.userId(), projectId, request.code(), request.secretKey()); return ResponseEntity.noContent().build(); }
+	@GetMapping("/projects/{projectId}/api-keys") public List<ApiKeyResponse> apiKeys(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId) { return apiKeys.list(p.userId(), projectId).stream().map(ApiKeyResponse::from).toList(); }
+	@PostMapping("/projects/{projectId}/api-keys") public ResponseEntity<CreatedApiKeyResponse> createApiKey(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId, @Valid @RequestBody CreateApiKeyRequest request) { ApiKeyService.CreatedKey created = apiKeys.create(p.userId(), projectId, request.name(), request.scopes().stream().map(ApiKeyScope::fromValue).collect(java.util.stream.Collectors.toSet()), request.expiresAt()); return ResponseEntity.status(HttpStatus.CREATED).body(CreatedApiKeyResponse.from(created)); }
+	@DeleteMapping("/projects/{projectId}/api-keys/{keyId}") public ResponseEntity<Void> revokeApiKey(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId, @PathVariable Long keyId) { apiKeys.revoke(p.userId(), projectId, keyId); return ResponseEntity.noContent().build(); }
 
 	public record CreateProjectRequest(@NotBlank @Size(max = 100) String name) { }
 	public record InviteRequest(@Email @NotBlank @Size(max = 320) String email, @NotNull ProjectRole role) { }
 	public record ChangeRoleRequest(@NotNull ProjectRole role) { }
 	public record ImportLinkRequest(@NotBlank @Size(max = 6) String code, @NotBlank @Size(max = 100) String secretKey) { }
+	public record CreateApiKeyRequest(@NotBlank @Size(max = 100) String name, @NotNull Set<@NotBlank String> scopes, Instant expiresAt) { }
 	public record AcceptInvitationResponse(Long projectId, boolean alreadyMember) { }
 	public record ProjectResponse(Long id, String name, ProjectRole role) { static ProjectResponse from(ProjectMember member) { return new ProjectResponse(member.getProject().getId(), member.getProject().getName(), member.getRole()); } }
 	public record MemberResponse(Long userId, String displayName, ProjectRole role) { static MemberResponse from(ProjectMember member) { return new MemberResponse(member.getUser().getId(), member.getUser().getDisplayName(), member.getRole()); } }
 	public record InvitationResponse(Long id, String email, ProjectRole role, Instant expiresAt) { static InvitationResponse from(ProjectInvitation invitation) { return new InvitationResponse(invitation.getId(), invitation.getEmail(), invitation.getRole(), invitation.getExpiresAt()); } }
+	public record ApiKeyResponse(Long id, String name, String keyPrefix, Set<String> scopes, Instant createdAt, Instant lastUsedAt, Instant expiresAt, Instant revokedAt) { static ApiKeyResponse from(ProjectApiKey key) { return new ApiKeyResponse(key.getId(), key.getName(), key.getKeyPrefix(), key.getScopes().stream().map(ApiKeyScope::value).collect(java.util.stream.Collectors.toSet()), key.getCreatedAt(), key.getLastUsedAt(), key.getExpiresAt(), key.getRevokedAt()); } }
+	public record CreatedApiKeyResponse(Long id, String key, String keyPrefix, Set<String> scopes, Instant expiresAt) { static CreatedApiKeyResponse from(ApiKeyService.CreatedKey created) { ProjectApiKey key = created.key(); return new CreatedApiKeyResponse(key.getId(), created.rawKey(), key.getKeyPrefix(), key.getScopes().stream().map(ApiKeyScope::value).collect(java.util.stream.Collectors.toSet()), key.getExpiresAt()); } }
 }

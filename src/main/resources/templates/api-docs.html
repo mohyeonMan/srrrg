@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>srrrg API 문서</title>
+	<link rel="stylesheet" th:href="@{/css/srrrg.css}">
+	<script defer th:src="@{/js/srrrg-api-docs.js}"></script>
+</head>
+<body>
+<div th:replace="~{fragments/srrrg-layout :: header}"></div>
+<main class="page-shell">
+	<h1>srrrg API</h1>
+	<p>프로젝트 API key는 한 번만 표시됩니다. <code>Authorization: Bearer srrrg_pk_...</code> 헤더로 전달하세요.</p>
+	<p>현재 공개 API는 <code>links:read</code> scope의 프로젝트 링크 목록 조회를 지원합니다.</p>
+	<pre><code>curl -H "Authorization: Bearer srrrg_pk_..." https://srrrg.link/api/v1/projects/{projectId}/links</code></pre>
+	<p>모든 오류는 Problem Details 형식이며 <code>code</code>, <code>requestId</code>와 <code>X-Request-Id</code>를 포함합니다.</p>
+	<p>실제 요청·응답 계약은 <a th:href="@{/openapi.json}">OpenAPI JSON</a>과 아래 명세에서 확인할 수 있습니다.</p>
+	<section aria-labelledby="api-contract-title">
+		<h2 id="api-contract-title">API 명세</h2>
+		<div id="api-contract" aria-live="polite">명세를 불러오는 중입니다.</div>
+	</section>
+</main>
+<div th:replace="~{fragments/srrrg-layout :: footer}"></div>
+</body>
+</html>

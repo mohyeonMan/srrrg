@@ -33,6 +33,7 @@ class SecurityConfiguration {
 			OAuthLoginSuccessHandler successHandler,
 			OAuthLoginFailureHandler failureHandler,
 			JwtAuthenticationFilter jwtFilter,
+			ApiKeyAuthenticationFilter apiKeyFilter,
 			CsrfCookieFilter csrfCookieFilter) throws Exception {
 		CookieCsrfTokenRepository csrf = CookieCsrfTokenRepository.withHttpOnlyFalse();
 		csrf.setHeaderName("X-XSRF-TOKEN");
@@ -48,9 +49,10 @@ class SecurityConfiguration {
 				.httpBasic(AbstractHttpConfigurer::disable)
 				.csrf(configurer -> configurer
 						.csrfTokenRepository(csrf)
-						.ignoringRequestMatchers("/api/links/**"))
+						.ignoringRequestMatchers("/api/links/**", "/api/v1/**"))
 				.authorizeHttpRequests(authorize -> authorize
 						.requestMatchers("/api/web/auth/**", "/invitations/**").permitAll()
+						.requestMatchers("/api/v1/**").permitAll()
 						.requestMatchers("/api/web/**").authenticated()
 						.anyRequest().permitAll())
 				.oauth2Login(oauth -> oauth
@@ -70,6 +72,7 @@ class SecurityConfiguration {
 								writeError(response, HttpServletResponse.SC_FORBIDDEN,
 										"ACCESS_DENIED", "요청이 허용되지 않았습니다.")))
 				.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+				.addFilterAfter(apiKeyFilter, JwtAuthenticationFilter.class)
 				.addFilterAfter(csrfCookieFilter, CsrfFilter.class);
 
 		return http.build();

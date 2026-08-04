@@ -27,6 +27,10 @@ spring:
         jdbc:
           time_zone: UTC
 
+springdoc:
+  swagger-ui:
+    enabled: ${SRRRG_SWAGGER_UI_ENABLED:false}
+
 srrrg:
   base-url: ${SRRRG_BASE_URL:https://srrrg.link}
   trust-forwarded-headers: ${SRRRG_TRUST_FORWARDED_HEADERS:false}

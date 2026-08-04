@@ -25,6 +25,10 @@ class JwtAuthenticationFilter extends OncePerRequestFilter {
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
 			FilterChain filterChain) throws ServletException, IOException {
+		if (request.getRequestURI().startsWith("/api/v1/")) {
+			filterChain.doFilter(request, response);
+			return;
+		}
 		String token = cookie(request, WebTokenCookies.ACCESS_COOKIE);
 		if (token != null) {
 			try {
