@@ -30,6 +30,22 @@ spring:
 srrrg:
   base-url: ${SRRRG_BASE_URL:https://srrrg.link}
   trust-forwarded-headers: ${SRRRG_TRUST_FORWARDED_HEADERS:false}
+  auth:
+    jwt:
+      active-kid: ${SRRRG_JWT_ACTIVE_KID:}
+      active-key-base64: ${SRRRG_JWT_ACTIVE_KEY_BASE64:}
+      previous-kid: ${SRRRG_JWT_PREVIOUS_KID:}
+      previous-key-base64: ${SRRRG_JWT_PREVIOUS_KEY_BASE64:}
+  oauth:
+    google:
+      client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
+      client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET:}
+    kakao:
+      client-id: ${KAKAO_OAUTH_CLIENT_ID:}
+      client-secret: ${KAKAO_OAUTH_CLIENT_SECRET:}
+    github:
+      client-id: ${GITHUB_OAUTH_CLIENT_ID:}
+      client-secret: ${GITHUB_OAUTH_CLIENT_SECRET:}
   url-risk:
     provider: ${SRRRG_URL_RISK_PROVIDER:google}
     fixed-safe:

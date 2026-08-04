@@ -74,8 +74,9 @@ link.srrrg
 
 - 웹 로그인은 OAuth2 로그인 성공 후 srrrg가 발급한 자체 JWT를 사용하며 서버 세션은 사용하지 않는다.
 - access JWT는 짧게 유지하고 HttpOnly·Secure cookie로 전달한다. refresh token도 cookie로 전달하되 hash와 폐기 상태는 DB에 저장하고 매 사용 시 교체한다.
-- 공급자가 반환한 이메일만으로 계정을 자동 병합하지 않는다. 동일한 이메일의 기존 사용자가 있으면 기존 로그인 방식으로 본인을 확인한 뒤 새 OAuth 계정을 연결한다.
-- 이메일 제공 동의 여부와 관계없이 공급자의 고유 subject로 사용자를 식별한다.
+- 공급자가 반환한 이메일만으로 계정을 자동 병합하지 않는다. verified email과 동일한 기존 사용자가 있으면 기존 로그인 방식으로 본인을 확인한 뒤 새 OAuth 계정을 연결한다.
+- 이메일 제공 동의 여부와 관계없이 공급자의 고유 subject로 사용자를 식별하고 가입과 로그인을 허용한다.
+- 이메일이 필요한 기능을 도입할 때 프로필 수정에서 이메일을 입력·검증받는다. 해당 기능 전에는 프로필 수정 화면을 미리 만들지 않는다.
 - 프로젝트·멤버 단계 적용 후, 기본 개인 프로젝트가 없는 로그인 사용자에게 하나를 만든다.
 - OAuth client secret은 환경 변수나 배포 secret으로 주입하고 DB와 저장소에 저장하지 않는다.
 
@@ -170,9 +171,10 @@ created_at
 ```
 
 - `(provider, provider_user_id)`를 unique로 둔다.
-- 처음 보는 OAuth 계정의 verified email과 같은 사용자가 없으면 OAuth·JWT 단계에서는 `users`와 `oauth_accounts`를 생성한다. 프로젝트·멤버 단계 적용 후에는 기본 프로젝트가 없는 사용자에게 프로젝트와 OWNER 멤버십도 생성한다.
+- 처음 보는 OAuth 계정에 verified email이 없으면 `users.email`을 비워 둔 채 `users`와 `oauth_accounts`를 생성한다.
+- verified email이 있고 같은 이메일의 사용자가 없으면 해당 이메일을 대표 이메일로 저장하고 `users`와 `oauth_accounts`를 생성한다. 프로젝트·멤버 단계 적용 후에는 기본 프로젝트가 없는 사용자에게 프로젝트와 OWNER 멤버십도 생성한다.
 - 같은 verified email의 사용자가 있으면 새 사용자를 만들거나 자동 병합하지 않고 기존 로그인으로 본인 확인한 뒤 `oauth_accounts`만 연결한다.
-- 공급자 email은 계정을 찾는 힌트이며 로그인 식별자는 `(provider, provider_user_id)`다.
+- 공급자 email은 계정을 찾는 선택적 힌트이며 로그인 식별자는 `(provider, provider_user_id)`다. 미검증 이메일은 대표 이메일이나 계정 병합 기준으로 사용하지 않는다.
 - refresh token 원문은 저장하지 않고 rotation과 재사용 탐지에 필요한 최소 상태만 유지한다.
 - 공급자별 SDK나 별도 어댑터 계층을 만들지 않고 Spring Security OAuth2 Client 설정을 사용한다. Google과 GitHub는 기본 provider 설정을 활용하고 Kakao에 필요한 endpoint만 설정한다.
 
@@ -700,6 +702,7 @@ SDK 자동 생성, GraphQL, 별도 API gateway와 다국어 문서 사이트는 
 - Google, Kakao, GitHub 로그인과 callback 설정
 - `users`, `oauth_accounts`, `refresh_tokens`와 OAuth 일회성 요청 추가
 - access JWT cookie, refresh rotation, CSRF와 로그아웃 구현
+- 이메일 없는 최초 가입·로그인 허용
 - 동일 verified email 충돌의 기존 로그인 확인 흐름 구현
 - 기존 비로그인 경로 허용 유지
 
@@ -777,6 +780,7 @@ SDK 자동 생성, GraphQL, 별도 API gateway와 다국어 문서 사이트는 
 
 - 로그인하지 않은 상태에서 기존 홈·관리·익명 API·리다이렉트 동작 유지
 - Google, Kakao, GitHub의 `(provider, provider_user_id)` 식별과 중복 차단
+- 공급자가 이메일을 제공하지 않아도 가입·로그인 가능
 - 같은 이메일을 반환한 다른 공급자 계정의 자동 병합 금지
 - 기존 로그인 본인 확인 후 새 OAuth 계정 연결
 - access JWT 만료, refresh token rotation·재사용 탐지와 로그아웃 폐기

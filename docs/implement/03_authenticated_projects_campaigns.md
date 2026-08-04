@@ -71,10 +71,11 @@ UI 변경 시에는 `docs/design/v2/*`도 읽는다.
 - OAuth 계정 식별자는 이메일이 아니라 `UNIQUE(provider, provider_user_id)`다.
 - 같은 이메일이라는 이유로 자동 병합하지 않는다.
 - 동일한 verified email의 기존 사용자가 있으면 기존 로그인으로 본인 확인한 뒤 새 OAuth 계정을 연결한다.
-- 이메일이 같은 OAuth 계정을 무조건 별도 사용자로 생성하지 않는다.
-- verified email이 없으면 가입과 계정 연결을 차단한다.
+- verified email이 없으면 `users.email`을 비워 둔 신규 사용자를 만들고 가입과 로그인을 허용한다. 로그인된 사용자가 새 OAuth 수단을 직접 연결하는 경우에도 공급자 이메일은 필수가 아니다.
+- 공급자가 반환한 미검증 이메일은 `provider_email`에 저장할 수 있지만 대표 이메일이나 계정 연결 기준으로 사용하지 않는다.
+- 이메일이 필요한 기능을 도입할 때 프로필 수정에서 이메일을 입력·검증받는다. 그전에는 해당 화면과 API를 미리 만들지 않는다.
 - 이메일은 앞뒤 공백을 제거하고 `Locale.ROOT` 기준 소문자로 저장한다. 공급자별 점이나 `+` 주소 규칙은 적용하지 않는다.
-- Google은 `openid`, `profile`, `email`, Kakao는 `profile_nickname`, `account_email`, GitHub는 `read:user`, `user:email` scope만 요청한다.
+- Google은 `openid`, `profile`, `email`, Kakao는 `profile_nickname`, `account_email`, GitHub는 `read:user`, `user:email` scope만 요청하되 이메일 제공을 가입 필수 동의로 취급하지 않는다.
 - 공급자 access token과 refresh token은 로그인 완료 후 저장하지 않는다.
 
 ### 3.3 애플리케이션 구조
@@ -188,9 +189,9 @@ JWT 발급기, JPA repository와 단일 service는 구현이 하나인 동안 co
 OAuth callback
 → (provider, provider_user_id) 조회
 → 기존 oauth_accounts가 있으면 user 확정
-→ 없으면 verified email 확인
-→ 같은 email의 user가 없으면 신규 user 생성
-→ 같은 email의 user가 있으면 자동 로그인·자동 병합 금지
+→ 없고 verified email도 없으면 email이 null인 신규 user 생성
+→ verified email이 있고 같은 email의 user가 없으면 신규 user 생성
+→ verified email이 있고 같은 email의 user가 있으면 자동 로그인·자동 병합 금지
 → 기존 로그인 본인 확인 화면으로 이동
 → 확인 성공 후 oauth_accounts 연결
 → srrrg access JWT와 refresh token 발급
@@ -431,6 +432,7 @@ srrrg 웹
 - `users`, `oauth_accounts`, `refresh_tokens`와 OAuth 연결 요청 migration
 - Google, Kakao, GitHub callback
 - access JWT cookie, refresh rotation, CSRF와 로그아웃
+- 이메일 없는 최초 가입·로그인 허용
 - 동일 verified email 충돌의 기존 로그인 확인 흐름
 
 완료 조건: 세 공급자로 하나의 내부 사용자에 로그인 수단을 연결할 수 있고, refresh 재사용과 로그아웃 정책이 통합 테스트로 검증된다.
@@ -552,6 +554,7 @@ Max나 Ultra는 기본값으로 사용하지 않는다. 하나의 단계 안에�
 필수 보안 시나리오:
 
 - 다른 provider가 같은 이메일을 반환해도 자동 병합되지 않음
+- provider가 이메일을 반환하지 않아도 가입·로그인됨
 - 기존 로그인 확인 후에만 OAuth 계정 연결
 - 사용한 refresh token 재사용 시 family 폐기
 - JWT에 들어 있지 않은 최신 프로젝트 역할 적용

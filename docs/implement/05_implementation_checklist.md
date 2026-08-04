@@ -26,26 +26,27 @@
 
 ## 1단계: OAuth와 JWT
 
-- [ ] Spring Security OAuth2 Client 추가
-- [ ] `users` migration과 엔티티·저장소
-- [ ] `oauth_accounts` migration과 `UNIQUE(provider, provider_user_id)`
-- [ ] `refresh_tokens`와 OAuth 연결 요청 저장 구조
-- [ ] Google 로그인과 callback
-- [ ] Kakao 로그인과 callback
-- [ ] GitHub 로그인과 callback
-- [ ] 동일 verified email 충돌 시 기존 로그인 본인 확인
-- [ ] srrrg access JWT 발급·검증
-- [ ] HttpOnly·Secure cookie 적용
-- [ ] refresh token rotation과 재사용 탐지
-- [ ] CSRF 보호와 로그아웃
-- [ ] 기존 비로그인 경로 허용 회귀 검증
-- [ ] OAuth·JWT·refresh 통합 테스트
-- [ ] 1단계 완료 조건 충족
+- [x] Spring Security OAuth2 Client 추가
+- [x] `users` migration과 엔티티·저장소
+- [x] `oauth_accounts` migration과 `UNIQUE(provider, provider_user_id)`
+- [x] `refresh_tokens`와 OAuth 연결 요청 저장 구조
+- [x] Google 로그인과 callback
+- [x] Kakao 로그인과 callback
+- [x] GitHub 로그인과 callback
+- [x] 공급자 이메일 없는 최초 가입·로그인 허용
+- [x] 동일 verified email 충돌 시 기존 로그인 본인 확인
+- [x] srrrg access JWT 발급·검증
+- [x] HttpOnly·Secure cookie 적용
+- [x] refresh token rotation과 재사용 탐지
+- [x] CSRF 보호와 로그아웃
+- [x] 기존 비로그인 경로 허용 회귀 검증
+- [x] OAuth·JWT·refresh 통합 테스트
+- [x] 1단계 완료 조건 충족
 
 ## 2단계: 프로젝트·멤버·초대
 
 - [ ] `projects`, `project_members` migration과 모델
-- [ ] 첫 로그인 시 기본 개인 프로젝트와 OWNER 생성
+- [ ] 기본 프로젝트가 없는 로그인 사용자의 개인 프로젝트와 OWNER 생성
 - [ ] OWNER·EDITOR·VIEWER 권한 검사
 - [ ] 마지막 OWNER 제거·강등 차단
 - [ ] `project_invitations` migration과 token hash
