@@ -58,6 +58,22 @@ class ProjectServiceTest {
 	}
 
 	@Test
+	void opensProjectForMemberWhoAcceptsExistingInvitation() {
+		Project project = mock(Project.class);
+		ProjectInvitation invitation = mock(ProjectInvitation.class);
+		when(project.getId()).thenReturn(1L);
+		when(invitation.getProject()).thenReturn(project);
+		when(invitation.isUsable(any())).thenReturn(true);
+		when(invitations.findByTokenHash(InvitationTokenHash.sha256("token"))).thenReturn(Optional.of(invitation));
+		when(members.findByIdProjectIdAndIdUserId(1L, 2L)).thenReturn(Optional.of(mock(ProjectMember.class)));
+
+		ProjectService.AcceptedInvitation result = service.accept(2L, "token");
+
+		org.assertj.core.api.Assertions.assertThat(result).isEqualTo(new ProjectService.AcceptedInvitation(1L, true));
+		verify(members, never()).save(any());
+	}
+
+	@Test
 	void blocksViewerFromImportingAnonymousLink() {
 		ProjectMember viewer = mock(ProjectMember.class);
 		when(viewer.getRole()).thenReturn(ProjectRole.VIEWER);

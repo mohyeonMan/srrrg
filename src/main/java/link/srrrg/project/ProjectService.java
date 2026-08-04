@@ -85,13 +85,17 @@ public class ProjectService {
 	}
 
 	@Transactional
-	public void accept(Long userId, String rawToken) {
+	public AcceptedInvitation accept(Long userId, String rawToken) {
 		ProjectInvitation invitation = invitations.findByTokenHash(InvitationTokenHash.sha256(rawToken))
 				.orElseThrow(() -> new IllegalArgumentException("초대를 찾을 수 없습니다."));
+		Long projectId = invitation.getProject().getId();
 		if (!invitation.isUsable(Instant.now())) throw new IllegalStateException("사용할 수 없는 초대입니다.");
-		if (members.findByIdProjectIdAndIdUserId(invitation.getProject().getId(), userId).isPresent()) throw new IllegalStateException("이미 프로젝트 멤버입니다.");
+		if (members.findByIdProjectIdAndIdUserId(projectId, userId).isPresent()) {
+			return new AcceptedInvitation(projectId, true);
+		}
 		members.save(new ProjectMember(invitation.getProject(), user(userId), invitation.getRole()));
 		invitation.accept();
+		return new AcceptedInvitation(projectId, false);
 	}
 
 	@Transactional
@@ -127,4 +131,6 @@ public class ProjectService {
 	private String validName(String value) { if (value == null || value.trim().isEmpty() || value.trim().length() > 100) throw new IllegalArgumentException("프로젝트 이름은 1~100자로 입력하세요."); return value.trim(); }
 	private String validEmail(String value) { if (value == null || !value.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$") || value.length() > 320) throw new IllegalArgumentException("올바른 이메일을 입력하세요."); return value.trim().toLowerCase(java.util.Locale.ROOT); }
 	private ProjectInvitation invitation(Long id) { return invitations.findById(id).orElseThrow(() -> new IllegalArgumentException("초대를 찾을 수 없습니다.")); }
+
+	public record AcceptedInvitation(Long projectId, boolean alreadyMember) { }
 }
