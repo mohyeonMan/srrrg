@@ -45,16 +45,16 @@
 
 ## 2단계: 프로젝트·멤버·초대
 
-- [ ] `projects`, `project_members` migration과 모델
-- [ ] 기본 프로젝트가 없는 로그인 사용자의 개인 프로젝트와 OWNER 생성
-- [ ] OWNER·EDITOR·VIEWER 권한 검사
-- [ ] 마지막 OWNER 제거·강등 차단
+- [x] `projects`, `project_members` migration과 모델
+- [x] 기본 프로젝트가 없는 로그인 사용자의 개인 프로젝트와 OWNER 생성
+- [x] OWNER·EDITOR·VIEWER 권한 검사
+- [x] 마지막 OWNER 제거·강등 차단
 - [ ] `project_invitations` migration과 token hash
 - [ ] 이메일 초대 발송·수락·취소·재발송
 - [ ] `/api/web/**` 프로젝트·멤버 endpoint
-- [ ] 기존 익명 링크의 프로젝트 귀속과 secret key 폐기
+- [x] 기존 익명 링크의 프로젝트 귀속과 secret key 폐기
 - [ ] 타 프로젝트 접근 차단 통합 테스트
-- [ ] 기존 익명 링크 회귀 테스트
+- [x] 기존 익명 링크 회귀 테스트
 - [ ] 2단계 완료 조건 충족
 
 ## 3단계: API key·공개 문서

@@ -10,6 +10,10 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import link.srrrg.project.Project;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -30,8 +34,12 @@ public class Link {
 	@Column(name = "original_url", nullable = false, length = 2048)
 	private String originalUrl;
 
-	@Column(name = "secret_key_hash", nullable = false, length = 100)
+	@Column(name = "secret_key_hash", length = 100)
 	private String secretKeyHash;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "project_id")
+	private Project project;
 
 	@Column(name = "expires_at")
 	private Instant expiresAt;
@@ -93,6 +101,12 @@ public class Link {
 
 	public void delete() {
 		this.deleted = true;
+		this.updatedAt = Instant.now();
+	}
+
+	public void assignToProject(Project project) {
+		this.project = project;
+		this.secretKeyHash = null;
 		this.updatedAt = Instant.now();
 	}
 }

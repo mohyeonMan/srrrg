@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
+import link.srrrg.project.ProjectService;
 
 @Service
 @RequiredArgsConstructor
@@ -13,14 +14,19 @@ public class OAuthIdentityService {
 
 	private final UserRepository userRepository;
 	private final OAuthAccountRepository accountRepository;
+	private final ProjectService projectService;
 
 	@Transactional
 	public LoginResolution resolve(OAuthIdentity suppliedIdentity) {
 		OAuthIdentity identity = normalize(suppliedIdentity);
-		return accountRepository.findByProviderAndProviderUserId(
+		LoginResolution resolution = accountRepository.findByProviderAndProviderUserId(
 				identity.provider(), identity.providerUserId())
 				.map(account -> existingAccount(account, identity))
 				.orElseGet(() -> newAccount(identity));
+		if (!resolution.requiresLink()) {
+			projectService.ensurePersonalProject(resolution.user().getId());
+		}
+		return resolution;
 	}
 
 	@Transactional

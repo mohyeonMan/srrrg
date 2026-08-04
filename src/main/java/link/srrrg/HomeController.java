@@ -24,6 +24,11 @@ public class HomeController {
 		return "management";
 	}
 
+	@GetMapping("/projects")
+	public String projects() {
+		return "projects";
+	}
+
 	@GetMapping("/favicon.ico")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void favicon() {

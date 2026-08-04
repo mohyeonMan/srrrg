@@ -41,6 +41,12 @@ public class GlobalExceptionHandler {
 		return badRequest(exception.getMessage());
 	}
 
+	@ExceptionHandler(SecurityException.class)
+	public ResponseEntity<ApiErrorResponse> handleSecurity(SecurityException exception) {
+		return ResponseEntity.status(HttpStatus.FORBIDDEN)
+				.body(new ApiErrorResponse("PROJECT_ACCESS_DENIED", "프로젝트 접근 권한이 없습니다."));
+	}
+
 	@ExceptionHandler(MissingRequestHeaderException.class)
 	public ResponseEntity<ApiErrorResponse> handleMissingRequestHeader(MissingRequestHeaderException exception) {
 		return badRequest("관리용 secret key 헤더가 필요합니다.");

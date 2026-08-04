@@ -50,7 +50,7 @@ class SecurityConfiguration {
 						.csrfTokenRepository(csrf)
 						.ignoringRequestMatchers("/api/links/**"))
 				.authorizeHttpRequests(authorize -> authorize
-						.requestMatchers("/api/web/auth/**").permitAll()
+						.requestMatchers("/api/web/auth/**", "/invitations/**").permitAll()
 						.requestMatchers("/api/web/**").authenticated()
 						.anyRequest().permitAll())
 				.oauth2Login(oauth -> oauth
