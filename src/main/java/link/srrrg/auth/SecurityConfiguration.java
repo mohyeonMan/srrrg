@@ -12,7 +12,7 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestCustomizers;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.http.HttpServletResponse;
+import link.srrrg.project.ApiKeyService;
 
 @Configuration
 @EnableWebSecurity
@@ -35,8 +36,10 @@ class SecurityConfiguration {
 			ProviderOidcUserService oidcUserService,
 			OAuthLoginSuccessHandler successHandler,
 			OAuthLoginFailureHandler failureHandler,
-			JwtAuthenticationFilter jwtFilter,
-			ApiKeyAuthenticationFilter apiKeyFilter) throws Exception {
+			JwtService jwtService,
+			ApiKeyService apiKeyService) throws Exception {
+		JwtAuthenticationFilter jwtFilter = new JwtAuthenticationFilter(jwtService);
+		ApiKeyAuthenticationFilter apiKeyFilter = new ApiKeyAuthenticationFilter(apiKeyService);
 		CookieCsrfTokenRepository csrf = CookieCsrfTokenRepository.withHttpOnlyFalse();
 		csrf.setHeaderName("X-XSRF-TOKEN");
 		csrf.setCookieCustomizer(cookie -> cookie.secure(true).sameSite("Lax").path("/"));
@@ -78,7 +81,7 @@ class SecurityConfiguration {
 								writeError(response, HttpServletResponse.SC_FORBIDDEN,
 										"ACCESS_DENIED", "요청이 허용되지 않았습니다.");
 						}))
-				.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+				.addFilterBefore(jwtFilter, AuthorizationFilter.class)
 				.addFilterAfter(apiKeyFilter, JwtAuthenticationFilter.class)
 				.addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class);
 

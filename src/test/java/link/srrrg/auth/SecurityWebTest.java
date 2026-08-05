@@ -27,10 +27,12 @@ import link.srrrg.project.ApiKeyService;
 import link.srrrg.project.ApiKeyScope;
 import link.srrrg.project.PublicProjectLinkController;
 import link.srrrg.project.InvitationPageController;
+import link.srrrg.project.ProjectController;
+import link.srrrg.project.ProjectService;
 import link.srrrg.link.LinkRepository;
 
-@WebMvcTest(controllers = {HomeController.class, LoginController.class, LinkController.class, AuthController.class, PublicProjectLinkController.class, InvitationPageController.class})
-@Import({SecurityConfiguration.class, JwtAuthenticationFilter.class, CsrfCookieFilter.class})
+@WebMvcTest(controllers = {HomeController.class, LoginController.class, LinkController.class, AuthController.class, PublicProjectLinkController.class, InvitationPageController.class, ProjectController.class})
+@Import({SecurityConfiguration.class, CsrfCookieFilter.class})
 class SecurityWebTest {
 
 	@Autowired
@@ -71,6 +73,9 @@ class SecurityWebTest {
 
 	@MockitoBean
 	ApiKeyService apiKeyService;
+
+	@MockitoBean
+	ProjectService projectService;
 
 	@MockitoBean
 	LinkRepository linkRepository;
@@ -115,6 +120,20 @@ class SecurityWebTest {
 					.cookie(csrf)
 					.header("X-XSRF-TOKEN", csrf.getValue()))
 				.andExpect(status().isNoContent());
+	}
+
+	@Test
+	void doesNotRotateCsrfTokenForEveryJwtAuthenticatedRequest() throws Exception {
+		when(jwtService.verify("access-token")).thenReturn(1L);
+		when(projectService.myMemberships(1L)).thenReturn(java.util.List.of());
+
+		MvcResult result = mockMvc.perform(get("/api/web/projects")
+					.cookie(new jakarta.servlet.http.Cookie("srrrg_access", "access-token"))
+					.cookie(new jakarta.servlet.http.Cookie("XSRF-TOKEN", "csrf-token")))
+				.andReturn();
+		org.mockito.Mockito.verify(jwtService).verify("access-token");
+		org.junit.jupiter.api.Assertions.assertEquals(200, result.getResponse().getStatus());
+		org.junit.jupiter.api.Assertions.assertTrue(result.getResponse().getHeaders("Set-Cookie").isEmpty());
 	}
 
 	@Test

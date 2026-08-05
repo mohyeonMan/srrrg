@@ -5,8 +5,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import jakarta.servlet.FilterChain;
@@ -16,7 +16,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
-@Component
 @RequiredArgsConstructor
 class JwtAuthenticationFilter extends OncePerRequestFilter {
 
@@ -33,8 +32,9 @@ class JwtAuthenticationFilter extends OncePerRequestFilter {
 		if (token != null) {
 			try {
 				SrrrgPrincipal principal = new SrrrgPrincipal(jwtService.verify(token));
-				SecurityContextHolder.getContext().setAuthentication(
-						new UsernamePasswordAuthenticationToken(principal, token, List.of()));
+				SecurityContext context = SecurityContextHolder.createEmptyContext();
+				context.setAuthentication(new UsernamePasswordAuthenticationToken(principal, token, List.of()));
+				SecurityContextHolder.setContext(context);
 			} catch (IllegalArgumentException ignored) {
 				SecurityContextHolder.clearContext();
 			}
