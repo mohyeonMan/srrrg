@@ -53,10 +53,10 @@ class OAuthLoginSuccessHandler implements AuthenticationSuccessHandler {
 				returnPath = accountLinkService.complete(pendingToken, user);
 				DatabaseAuthorizationRequestRepository.addCookie(response, LINK_COOKIE, "", Duration.ZERO);
 			}
-			tokenCookies.write(response, sessionService.issue(user));
+			tokenCookies.write(request, response, sessionService.issue(user));
 			redirect(request, response, returnPath);
 		} catch (IllegalArgumentException | IllegalStateException exception) {
-			tokenCookies.clear(response);
+			tokenCookies.clear(request, response);
 			redirect(request, response, "/login?error=oauth");
 		} finally {
 			authorizedClientService.removeAuthorizedClient(

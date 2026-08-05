@@ -17,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 import link.srrrg.HomeController;
 import link.srrrg.link.management.LinkController;
@@ -25,9 +26,10 @@ import link.srrrg.link.management.dto.CreateLinkResponse;
 import link.srrrg.project.ApiKeyService;
 import link.srrrg.project.ApiKeyScope;
 import link.srrrg.project.PublicProjectLinkController;
+import link.srrrg.project.InvitationPageController;
 import link.srrrg.link.LinkRepository;
 
-@WebMvcTest(controllers = {HomeController.class, LoginController.class, LinkController.class, AuthController.class, PublicProjectLinkController.class})
+@WebMvcTest(controllers = {HomeController.class, LoginController.class, LinkController.class, AuthController.class, PublicProjectLinkController.class, InvitationPageController.class})
 @Import({SecurityConfiguration.class, JwtAuthenticationFilter.class, CsrfCookieFilter.class})
 class SecurityWebTest {
 
@@ -104,6 +106,18 @@ class SecurityWebTest {
 	}
 
 	@Test
+	void acceptsRawCookieCsrfTokenFromBrowserHeader() throws Exception {
+		MvcResult page = mockMvc.perform(get("/login")).andExpect(status().isOk()).andReturn();
+		jakarta.servlet.http.Cookie csrf = page.getResponse().getCookie("XSRF-TOKEN");
+		org.junit.jupiter.api.Assertions.assertNotNull(csrf);
+
+		mockMvc.perform(post("/api/web/auth/logout")
+					.cookie(csrf)
+					.header("X-XSRF-TOKEN", csrf.getValue()))
+				.andExpect(status().isNoContent());
+	}
+
+	@Test
 	void rejectsPublicApiWithoutApiKeyAndDoesNotUseJwtCookie() throws Exception {
 		mockMvc.perform(get("/api/v1/projects/7/links"))
 				.andExpect(status().isUnauthorized())
@@ -120,6 +134,28 @@ class SecurityWebTest {
 		mockMvc.perform(get("/api/v1/projects/7/links").header("Authorization", "Bearer srrrg_pk_prefix_secret"))
 				.andExpect(status().isOk()).andExpect(jsonPath("$.items").isArray())
 				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().exists("X-Request-Id"));
+	}
+
+	@Test
+	void appliesApiKeyFilterBehindContextPath() throws Exception {
+		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
+				.thenReturn(new ApiKeyService.ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_READ)));
+		when(linkRepository.findByProjectIdAndDeletedFalseOrderByIdDesc(eq(7L), any())).thenReturn(java.util.List.of());
+
+		mockMvc.perform(get("/srrrg-dev/api/v1/projects/7/links")
+					.contextPath("/srrrg-dev")
+					.servletPath("/api/v1/projects/7/links")
+					.header("Authorization", "Bearer srrrg_pk_prefix_secret"))
+				.andExpect(status().isOk());
+	}
+
+	@Test
+	void rendersInvitationPageWithContextPath() throws Exception {
+		mockMvc.perform(get("/srrrg-dev/invitations/token")
+					.contextPath("/srrrg-dev")
+					.servletPath("/invitations/token"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(org.hamcrest.Matchers.containsString("content=\"/srrrg-dev/\"")));
 	}
 
 	@Test

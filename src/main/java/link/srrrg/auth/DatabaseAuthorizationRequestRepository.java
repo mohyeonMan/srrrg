@@ -26,7 +26,7 @@ public class DatabaseAuthorizationRequestRepository
 		implements AuthorizationRequestRepository<OAuth2AuthorizationRequest> {
 
 	public static final String RETURN_PATH_ATTRIBUTE = DatabaseAuthorizationRequestRepository.class.getName() + ".returnPath";
-	private static final String COOKIE_NAME = "srrrg_oauth_request";
+	private static final String COOKIE_PREFIX = "srrrg_oauth_request_";
 	private static final String REGISTRATION_ID = "registration_id";
 	private static final String URL_SAFE = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 	private static final Duration LIFETIME = Duration.ofMinutes(10);
@@ -37,7 +37,7 @@ public class DatabaseAuthorizationRequestRepository
 	@Override
 	@Transactional(readOnly = true)
 	public OAuth2AuthorizationRequest loadAuthorizationRequest(HttpServletRequest request) {
-		String raw = cookieValue(request);
+		String raw = cookieValue(request, cookieName(request.getParameter("state")));
 		if (raw == null) {
 			return null;
 		}
@@ -52,7 +52,7 @@ public class DatabaseAuthorizationRequestRepository
 	public void saveAuthorizationRequest(OAuth2AuthorizationRequest authorizationRequest,
 			HttpServletRequest request, HttpServletResponse response) {
 		if (authorizationRequest == null) {
-			clearCookie(response);
+			clearCookie(request, response);
 			return;
 		}
 		repository.deleteExpired(Instant.now());
@@ -75,15 +75,16 @@ public class DatabaseAuthorizationRequestRepository
 				codeChallenge.toString(),
 				returnPath(request.getParameter("returnTo")),
 				Instant.now().plus(LIFETIME)));
-		addCookie(response, COOKIE_NAME, raw, LIFETIME);
+		addCookie(response, cookieName(authorizationRequest.getState()), raw, LIFETIME);
 	}
 
 	@Override
 	@Transactional
 	public OAuth2AuthorizationRequest removeAuthorizationRequest(HttpServletRequest request,
 			HttpServletResponse response) {
-		String raw = cookieValue(request);
-		clearCookie(response);
+		String cookieName = cookieName(request.getParameter("state"));
+		String raw = cookieValue(request, cookieName);
+		clearCookie(cookieName, response);
 		if (raw == null) {
 			return null;
 		}
@@ -116,12 +117,12 @@ public class DatabaseAuthorizationRequestRepository
 				.build();
 	}
 
-	private String cookieValue(HttpServletRequest request) {
-		if (request.getCookies() == null) {
+	private String cookieValue(HttpServletRequest request, String name) {
+		if (name == null || request.getCookies() == null) {
 			return null;
 		}
 		return Arrays.stream(request.getCookies())
-				.filter(cookie -> COOKIE_NAME.equals(cookie.getName()))
+				.filter(cookie -> name.equals(cookie.getName()))
 				.map(Cookie::getValue)
 				.findFirst()
 				.orElse(null);
@@ -142,8 +143,16 @@ public class DatabaseAuthorizationRequestRepository
 				? supplied : "/";
 	}
 
-	private void clearCookie(HttpServletResponse response) {
-		addCookie(response, COOKIE_NAME, "", Duration.ZERO);
+	private String cookieName(String state) {
+		return state == null ? null : COOKIE_PREFIX + TokenHash.sha256(state).substring(0, 16);
+	}
+
+	private void clearCookie(HttpServletRequest request, HttpServletResponse response) {
+		clearCookie(cookieName(request.getParameter("state")), response);
+	}
+
+	private void clearCookie(String name, HttpServletResponse response) {
+		if (name != null) addCookie(response, name, "", Duration.ZERO);
 	}
 
 	static void addCookie(HttpServletResponse response, String name, String value, Duration maxAge) {

@@ -23,9 +23,9 @@
 		</p>
 
 		<nav class="oauth-options" aria-label="소셜 로그인">
-			<a class="oauth-button" th:href="@{/oauth2/authorization/google}">Google로 계속</a>
-			<a class="oauth-button" th:href="@{/oauth2/authorization/kakao}">Kakao로 계속</a>
-			<a class="oauth-button" th:href="@{/oauth2/authorization/github}">GitHub로 계속</a>
+			<a class="oauth-button" th:href="@{/oauth2/authorization/google(returnTo=${returnTo})}">Google로 계속</a>
+			<a class="oauth-button" th:href="@{/oauth2/authorization/kakao(returnTo=${returnTo})}">Kakao로 계속</a>
+			<a class="oauth-button" th:href="@{/oauth2/authorization/github(returnTo=${returnTo})}">GitHub로 계속</a>
 		</nav>
 	</section>
 </main>

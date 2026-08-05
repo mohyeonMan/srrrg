@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import link.srrrg.common.ApiErrorResponse;
 import lombok.RequiredArgsConstructor;
@@ -24,14 +25,16 @@ public class AuthController {
 	@PostMapping("/refresh")
 	public ResponseEntity<Void> refresh(
 			@CookieValue(name = WebTokenCookies.REFRESH_COOKIE, required = false) String refreshToken,
+			HttpServletRequest request,
 			HttpServletResponse response) {
-		tokenCookies.write(response, sessionService.refresh(refreshToken));
+		tokenCookies.write(request, response, sessionService.refresh(refreshToken));
 		return ResponseEntity.noContent().build();
 	}
 
 	@PostMapping("/logout")
 	public ResponseEntity<Void> logout(
 			@CookieValue(name = WebTokenCookies.REFRESH_COOKIE, required = false) String refreshToken,
+			HttpServletRequest request,
 			HttpServletResponse response) {
 		if (refreshToken != null) {
 			try {
@@ -40,22 +43,23 @@ public class AuthController {
 				// 로그아웃은 token 상태와 무관하게 현재 브라우저 cookie를 제거한다.
 			}
 		}
-		tokenCookies.clear(response);
+		tokenCookies.clear(request, response);
 		return ResponseEntity.noContent().build();
 	}
 
 	@PostMapping("/logout-all")
 	public ResponseEntity<Void> logoutAll(
 			@CookieValue(name = WebTokenCookies.REFRESH_COOKIE, required = false) String refreshToken,
+			HttpServletRequest request,
 			HttpServletResponse response) {
 		refreshTokenService.logoutAll(refreshToken);
-		tokenCookies.clear(response);
+		tokenCookies.clear(request, response);
 		return ResponseEntity.noContent().build();
 	}
 
 	@ExceptionHandler({InvalidRefreshTokenException.class, RefreshTokenReuseException.class})
-	public ResponseEntity<ApiErrorResponse> invalidRefresh(HttpServletResponse response) {
-		tokenCookies.clear(response);
+	public ResponseEntity<ApiErrorResponse> invalidRefresh(HttpServletRequest request, HttpServletResponse response) {
+		tokenCookies.clear(request, response);
 		return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
 				.body(new ApiErrorResponse("INVALID_REFRESH_TOKEN", "refresh token이 유효하지 않습니다."));
 	}

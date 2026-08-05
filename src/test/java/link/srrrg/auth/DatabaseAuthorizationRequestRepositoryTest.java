@@ -50,6 +50,12 @@ class DatabaseAuthorizationRequestRepositoryTest {
 		assertThat(saved.getValue().getReturnPath()).isEqualTo("/");
 		assertThat(saved.getValue().getTokenHash()).doesNotContain("a".repeat(43));
 		assertThat(response.getHeaders("Set-Cookie").getFirst())
-				.contains("HttpOnly", "Secure", "SameSite=Lax");
+				.contains("srrrg_oauth_request_", "HttpOnly", "Secure", "SameSite=Lax");
+
+		MockHttpServletResponse secondResponse = new MockHttpServletResponse();
+		repository.saveAuthorizationRequest(
+				OAuth2AuthorizationRequest.from(authorization).state("another-state").build(), request, secondResponse);
+		assertThat(secondResponse.getHeaders("Set-Cookie").getFirst())
+				.isNotEqualTo(response.getHeaders("Set-Cookie").getFirst());
 	}
 }

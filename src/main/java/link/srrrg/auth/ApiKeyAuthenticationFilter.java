@@ -20,7 +20,7 @@ import link.srrrg.project.ApiKeyService;
 class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 	private final ApiKeyService keys;
 	ApiKeyAuthenticationFilter(ApiKeyService keys) { this.keys = keys; }
-	@Override protected boolean shouldNotFilter(HttpServletRequest request) { return !request.getRequestURI().startsWith("/api/v1/"); }
+	@Override protected boolean shouldNotFilter(HttpServletRequest request) { return !request.getRequestURI().startsWith(request.getContextPath() + "/api/v1/"); }
 	@Override protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
 			throws ServletException, IOException {
 		String authorization = request.getHeader("Authorization");

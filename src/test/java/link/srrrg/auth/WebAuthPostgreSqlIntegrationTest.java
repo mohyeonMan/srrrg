@@ -224,7 +224,7 @@ class WebAuthPostgreSqlIntegrationTest {
 				.andExpect(header().string("Location", org.hamcrest.Matchers.containsString("code_challenge=")))
 				.andExpect(header().string("Location", org.hamcrest.Matchers.containsString("code_challenge_method=S256")))
 				.andExpect(header().stringValues("Set-Cookie", org.hamcrest.Matchers.hasItem(
-						org.hamcrest.Matchers.containsString("srrrg_oauth_request="))));
+						org.hamcrest.Matchers.containsString("srrrg_oauth_request_"))));
 	}
 
 	private OAuthIdentity identity(OAuthProvider provider, String providerUserId, String email) {

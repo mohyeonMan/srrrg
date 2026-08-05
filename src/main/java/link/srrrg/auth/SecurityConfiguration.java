@@ -50,6 +50,7 @@ class SecurityConfiguration {
 				.formLogin(AbstractHttpConfigurer::disable)
 				.httpBasic(AbstractHttpConfigurer::disable)
 				.csrf(configurer -> configurer
+						.spa()
 						.csrfTokenRepository(csrf)
 						.ignoringRequestMatchers("/api/links/**", "/api/v1/**"))
 				.authorizeHttpRequests(authorize -> authorize
