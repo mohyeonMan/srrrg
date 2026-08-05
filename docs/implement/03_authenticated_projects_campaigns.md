@@ -8,7 +8,7 @@
 - srrrg 자체 JWT 기반 웹 인증
 - 프로젝트, 멤버와 이메일 초대
 - 프로젝트 API key와 공개 API 문서
-- 프로젝트 서브도메인과 커스텀 도메인
+- 프로젝트별 플랫폼 서브도메인
 - 캠페인, UTM과 개인화 링크
 - CSV 대량 import·export
 - 링크·캠페인·프로젝트 통계
@@ -90,12 +90,11 @@ UI 변경 시에는 `docs/design/v2/*`도 읽는다.
 - 프로젝트·멤버 단계 적용 후, 기본 개인 프로젝트가 없는 로그인 사용자에게 하나를 만든다.
 - 프로젝트는 OWNER, EDITOR, VIEWER 멤버를 가진다.
 - 미가입 사용자를 포함한 이메일 초대를 최초 범위에 포함한다.
-- 프로젝트는 여러 도메인을 가질 수 있고 primary domain은 하나다.
-- 링크는 플랫폼 서브도메인 또는 커스텀 도메인 하나만 선택한다.
-- 하나의 링크를 다른 도메인의 별칭으로 자동 제공하지 않는다.
+- 프로젝트마다 플랫폼 서브도메인 하나를 자동 생성한다.
+- 플랫폼 서브도메인은 wildcard DNS와 TLS 인증서를 공유한다.
 - 프로젝트 링크 code는 `UNIQUE(domain_id, code)`다.
 - 기존 익명 링크 code는 srrrg 기본 도메인 안에서 계속 unique다.
-- 초기 커스텀 도메인은 `go.example.com` 같은 서브도메인만 지원한다.
+- 커스텀 도메인, CNAME 검증, 도메인별 인증서와 동적 Ingress 생성은 이번 개발에서 제외한다.
 
 ### 3.5 외부 API와 CSV
 
@@ -164,7 +163,7 @@ link.srrrg
 - `auth`는 OAuth callback, JWT와 API key 요청 인증을 HTTP 경계의 내부 인증 주체로 변환한다.
 - `project`는 멤버십과 역할을 판단하며 JWT claim의 역할을 신뢰하지 않는다.
 - `link`는 링크 생성·수정·리다이렉트 규칙을 소유하고 OAuth·JWT 구현을 알지 않는다.
-- `domain`은 hostname 검증과 활성화 상태를 소유하고 링크 목적지나 UTM 규칙을 알지 않는다.
+- `domain`은 플랫폼 hostname 생성·예약어 검사와 Host 라우팅을 소유하고 링크 목적지나 UTM 규칙을 알지 않는다.
 - `campaign`은 캠페인 기본값과 CSV import를 소유하며 링크 생성은 `link`의 하나의 생성 유스케이스를 호출한다.
 - `statistics`는 기존 event와 link 관계를 읽기만 하며 다른 기능이 statistics에 의존하지 않는다.
 
@@ -174,8 +173,6 @@ link.srrrg
 
 구현 교체 가능성만을 이유로 모든 클래스에 interface를 만들지 않는다. 다음처럼 외부 시스템과 맞닿거나 이미 둘 이상의 구현이 필요한 경계만 허용한다.
 
-- DNS CNAME 조회
-- 커스텀 도메인 인증서 provision
 - 초대 메일 발송
 - 기존 `UrlRiskChecker`
 
@@ -261,7 +258,7 @@ refresh_tokens
 |---|---:|---:|---:|
 | 프로젝트 설정 | O | X | X |
 | 멤버·초대 관리 | O | X | X |
-| 도메인·API key 관리 | O | X | X |
+| API key 관리 | O | X | X |
 | 링크·캠페인 변경 | O | O | X |
 | 조회·통계 | O | O | O |
 
@@ -275,6 +272,7 @@ refresh_tokens
 - 재발송은 기존 token을 폐기하고 새 token을 발급한다.
 - 이미 멤버인 이메일에는 새 초대를 만들지 않는다.
 - 초대 수락 시 로그인하지 않았다면 OAuth 로그인 후 원래 초대 흐름으로 돌아온다.
+- 초대 이메일은 연락처이며 계정 식별자나 권한 검증 수단으로 사용하지 않는다. 로그인한 사용자는 이메일 유무·일치 여부와 관계없이 유효한 초대 token을 수락할 수 있다.
 
 메일 공급자별 구현은 하나의 메일 발송 경계 뒤에 둔다. 실제 공급자는 구현 전 질문 게이트에서 확정한다.
 
@@ -303,13 +301,13 @@ campaigns:write
 stats:read
 ```
 
-API key에서 `projectId`와 scope를 결정한다. 요청 경로의 프로젝트가 다르면 거절한다. API key로 프로젝트 생성, 멤버 관리, 초대, 도메인이나 다른 API key 관리를 허용하지 않는다.
+API key에서 `projectId`와 scope를 결정한다. 요청 경로의 프로젝트가 다르면 거절한다. API key로 프로젝트 생성, 멤버 관리, 초대, 플랫폼 서브도메인 변경이나 다른 API key 관리를 허용하지 않는다.
 
 ## 9. 프로젝트 도메인과 라우팅
 
 ### 9.1 링크 주소
 
-프로젝트 링크는 생성 시 `ACTIVE`인 domain 하나를 선택한다.
+프로젝트를 만들 때 플랫폼 domain 하나를 자동으로 할당하고, 프로젝트 링크는 그 domain을 사용한다.
 
 ```text
 project_id + domain_id + code
@@ -330,28 +328,16 @@ UNIQUE (domain_id, code) WHERE domain_id IS NOT NULL
 srrrg.link + code
 → 기존 익명 링크 조회
 
-acme.srrrg.link 또는 go.acme.com + code
+acme.srrrg.link + code
 → project_domains 조회
 → domain_id + code로 프로젝트 링크 조회
 ```
 
 Ingress가 전달하는 Host를 기준으로 하며 임의 `X-Forwarded-Host`를 신뢰하지 않는다. 신뢰할 proxy 범위와 forwarded header 처리는 배포 설정과 함께 검증한다.
 
-### 9.2 커스텀 도메인
+### 9.2 커스텀 도메인 제외
 
-```text
-사용자 입력: go.acme.com
-발급 CNAME: d7k29fx4.cname.srrrg.link
-사용자 설정: go.acme.com CNAME d7k29fx4.cname.srrrg.link
-```
-
-- 전용 CNAME 일치로 프로젝트 귀속과 DNS 제어권을 확인한다.
-- cert-manager와 Let's Encrypt HTTP-01로 `go.acme.com` 인증서를 발급한다.
-- 인증서가 적용된 뒤에만 `ACTIVE`로 전환한다.
-- CNAME 목적지 URL은 공개 링크 별칭으로 제공하지 않는다.
-- 초기에는 apex domain을 받지 않는다.
-
-DNS와 인증서 구현은 `domain` 기능 내부의 외부 adapter로 격리한다. cert-manager 대신 다른 관리형 서비스로 바뀌어도 `project_domains` 상태와 링크 라우팅 규칙은 변경하지 않는다.
+커스텀 도메인 등록, CNAME 검증, 도메인별 인증서 발급과 동적 Ingress 생성은 이번 개발 범위에 포함하지 않는다. 플랫폼 wildcard DNS·TLS로 프로젝트 서브도메인만 제공하며, 커스텀 도메인은 실제 수요와 운영 방식을 확인한 뒤 별도 단계로 설계한다.
 
 ## 10. 캠페인과 CSV
 
@@ -463,7 +449,7 @@ srrrg 웹
 - domain별 code unique migration
 - Host + code 리다이렉트 조회
 - 플랫폼 서브도메인
-- 전용 CNAME 검증과 인증서 provision
+- wildcard DNS·TLS 배포 검증
 
 완료 조건: 기존 `srrrg.link/{code}` 익명 링크와 프로젝트 도메인 링크가 충돌 없이 함께 동작한다.
 
@@ -487,67 +473,27 @@ srrrg 웹
 
 ## 13. Codex 실행 모델 가이드
 
-모델 이름보다 역할을 우선한다. 구현 시점에 모델 구성이 바뀌면 아래 역할에 가장 가까운 현재 모델을 선택한다.
+모든 구현 단계는 `Sol / 중간`으로 실행한다. 단계별 모델 추천, 모델 변경 요청과 설정 확인은 구현 게이트로 사용하지 않는다.
 
-- Sol: 여러 경계와 tradeoff를 함께 판단해야 하는 복잡한 작업
-- Terra: 명세가 확정된 일반 구현의 기본 모델
-- Luna: 완료 조건이 명확한 반복·변환·보조 작업
-
-한 모델만 사용한다면 Sol medium을 사용한다. 비용과 속도를 나누려면 Terra medium을 기본으로 두고 보안·도메인 단계만 Sol high로 올린다. Luna medium으로 전체 명세를 한 번에 구현하지 않는다.
-
-| 구현 단계 | 권장 모델·추론 | 이유 |
-|---|---|---|
-| OAuth와 JWT | Sol high | token rotation, CSRF와 계정 연결 보안을 함께 판단해야 함 |
-| 프로젝트·멤버·초대 | Terra medium | 권한표와 완료 조건이 확정된 일반 구현 |
-| API key·공개 문서 | Terra medium | 명세 기반 구현, 완료 후 Sol high 보안 리뷰 |
-| 프로젝트 도메인 | Sol high | Host 라우팅, DNS, TLS와 migration이 함께 변경됨 |
-| 캠페인·CSV | Terra medium | 고정 template과 DB worker 명세에 따른 구현 |
-| 실제 통계 | Terra medium | 기존 event 집계 중심, 성능 구조 변경 시 Sol high |
-
-### 13.1 단계 시작 전 모델 변경 요청
-
-Codex는 현재 task의 모델과 추론 단계를 직접 변경할 수 없으므로, 각 단계 시작 전에 사용자에게 변경을 요청한다. 현재 설정이 권장값인지 확인할 수 없을 때도 추측하지 않고 사용자에게 확인한다.
-
-```text
-다음 구현 단계는 "{단계명}"입니다.
-이 단계의 권장 설정은 "{모델} / {추론 단계}"입니다.
-입력창 아래 모델 선택기에서 해당 설정으로 변경한 뒤
-"변경 완료"라고 알려주세요. 확인 전에는 구현을 시작하지 않겠습니다.
-```
-
-예를 들어 OAuth와 JWT 단계에서는 다음처럼 요청한다.
-
-```text
-다음 구현 단계는 "OAuth와 JWT"입니다.
-권장 설정은 "Sol / 높음"입니다.
-모델 선택기에서 Sol과 높음으로 변경한 뒤 "변경 완료"라고 알려주세요.
-```
-
-사용자가 권장 모델로 변경하지 않겠다고 하면 임의로 진행하지 않는다. 현재 설정으로 계속 구현해도 되는지 명시적으로 확인받고 진행한다.
-
-실제 실행 시에는 `docs/implement/04_execution_prompt.md`의 프롬프트를 새 Codex task에 붙여 넣는다. 프롬프트는 다음 미완료 단계 판정, 모델 변경 확인, 질문 게이트와 한 단계 구현·검증까지만 수행하도록 제한한다.
+실제 실행 시에는 `docs/implement/04_execution_prompt.md`의 프롬프트를 새 Codex task에 붙여 넣는다. 프롬프트는 다음 미완료 단계 판정, 질문 게이트와 한 단계 구현·검증까지만 수행하도록 제한한다.
 
 전체 계획을 한 번에 실행하지 않는다. 단계 하나마다 다음 순서를 지킨다.
 
 ```text
-다음 단계와 권장 모델 안내
-→ 사용자 모델 변경 확인
+다음 단계 판정
 → 관련 docs와 현재 코드 읽기
 → 구현 전 질문 게이트
 → 단계 하나 구현
 → 해당 테스트와 기존 익명 링크 회귀 테스트
-→ 필요하면 Sol high 리뷰
 → 다음 단계
 ```
-
-Max나 Ultra는 기본값으로 사용하지 않는다. 하나의 단계 안에서도 독립적으로 나눌 수 있는 대규모 작업이 확인되거나, 단일 실행의 분석 깊이가 실제로 부족할 때만 사용한다.
 
 ## 14. 테스트 원칙
 
 - 정책 분기는 작은 단위 테스트로 검증한다.
 - OAuth/JWT, 권한, migration, Host 라우팅과 API key는 HTTP·PostgreSQL 통합 테스트를 둔다.
 - PostgreSQL 통합 테스트는 Testcontainers를 사용해 CI와 로컬 Docker 환경에서 같은 migration을 검증한다.
-- 외부 DNS, 인증서와 메일 adapter만 경계에서 대체한다.
+- 외부 메일 adapter만 경계에서 대체한다.
 - service와 repository를 계층별로 모두 mock하는 테스트는 만들지 않는다.
 - 각 단계마다 기존 익명 링크 회귀 테스트를 실행한다.
 
@@ -561,7 +507,7 @@ Max나 Ultra는 기본값으로 사용하지 않는다. 하나의 단계 안에�
 - 타 프로젝트 API key 거절
 - 폐기·만료 key 거절
 - 초대 token 원문과 API key 원문이 DB·로그에 없음
-- 미검증 도메인과 잘못된 Host 거절
+- 등록되지 않은 플랫폼 Host와 타 프로젝트 도메인 거절
 - 기존 익명 secret key와 프로젝트 API key의 권한 혼동 없음
 
 ## 15. 구현 전 남은 질문
@@ -573,9 +519,8 @@ Max나 Ultra는 기본값으로 사용하지 않는다. 하나의 단계 안에�
 3. 플랫폼 서브도메인 생성 규칙
 4. API key·익명 링크·CSV의 실제 rate limit과 quota
 5. JSON batch와 CSV 최대 행 수
-6. 애플리케이션이 cert-manager resource를 직접 생성할지 별도 배포 controller가 조정할지
-7. 접근 이벤트와 IP·User-Agent 보관 및 익명화 기간
-8. 계정 삭제 시 개인 프로젝트와 공동 프로젝트의 소유권 이전 정책
+6. 접근 이벤트와 IP·User-Agent 보관 및 익명화 기간
+7. 계정 삭제 시 개인 프로젝트와 공동 프로젝트의 소유권 이전 정책
 
 이 목록 외의 부족한 결정도 구현자가 발견하면 질문 게이트에 추가한다. 답을 받기 전에 임시 기본값으로 코드를 작성하지 않는다.
 
@@ -591,5 +536,7 @@ Max나 Ultra는 기본값으로 사용하지 않는다. 하나의 단계 안에�
 - 자유로운 CSV 컬럼 매핑과 Excel import
 - SDK 자동 생성
 - 통계용 별도 저장소와 사전 집계
+- 커스텀 도메인 등록과 CNAME 검증
+- 도메인별 인증서 발급과 동적 Ingress 생성
 
 실제 독립 배포, 처리 적체나 조회 성능 문제가 확인되면 `domain`, `campaign.importing`, `statistics` 경계를 우선 분리 후보로 검토한다.

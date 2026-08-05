@@ -1,8 +1,9 @@
 (() => {
 	const root = document.getElementById("api-contract");
 	if (!root) return;
+	const base = document.querySelector('meta[name="context-path"]')?.content.replace(/\/$/, "") || "";
 	const text = (tag, value) => { const element = document.createElement(tag); element.textContent = value; return element; };
-	fetch("/openapi.json")
+	fetch(`${base}/openapi.json`)
 		.then(response => response.ok ? response.json() : Promise.reject())
 		.then(spec => {
 			root.replaceChildren();

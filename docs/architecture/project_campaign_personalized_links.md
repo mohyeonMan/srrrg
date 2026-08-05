@@ -10,7 +10,7 @@
 - 로그인 사용자의 프로젝트별 단일 링크 관리
 - 프로젝트별 캠페인 생성
 - 캠페인 안에서 UTM과 외부 식별자가 다른 개인화 링크 대량 생성
-- 프로젝트별 서브도메인, 커스텀 도메인, API key 관리
+- 프로젝트별 플랫폼 서브도메인과 API key 관리
 - 링크·캠페인·프로젝트 단위 통계
 
 핵심 원칙은 단일 링크를 가짜 캠페인으로 만들지 않는 것이다. 캠페인은 실제로 여러 링크를 묶어 관리할 때만 생성하고, 단일 링크와 캠페인을 함께 보는 상위 단위는 프로젝트로 둔다.
@@ -53,15 +53,14 @@ link.srrrg
 ├── identity      사용자와 OAuth 계정 연결
 ├── auth          OAuth callback, JWT, 현재 요청 인증 주체
 ├── project       프로젝트, 멤버, 초대, API key
-├── domain        플랫폼·커스텀 도메인과 인증서 활성화
+├── domain        플랫폼 서브도메인과 Host 라우팅
 ├── campaign      캠페인, UTM, CSV import
 ├── statistics    링크·캠페인·프로젝트 통계 조회
 └── common        여러 기능이 실제로 공유하는 HTTP·설정 코드만
 ```
 
-- 도메인과 서비스 메서드가 Spring Security의 JWT 객체나 cert-manager 타입을 직접 받지 않게 한다.
+- 도메인과 서비스 메서드가 Spring Security의 JWT 객체를 직접 받지 않게 한다.
 - JWT와 API key 인증 결과는 작은 내부 인증 주체 값으로 변환하고, 프로젝트 권한은 최신 멤버십을 DB에서 확인한다.
-- DNS 조회와 인증서 발급처럼 외부 구현이 바뀔 가능성이 높은 경계만 교체 가능한 adapter로 둔다.
 - JPA repository, service, controller마다 일률적으로 interface를 만들지 않는다.
 - 기존 `link` 패키지를 먼저 이동하거나 다시 작성하지 않고 필요한 관계만 점진적으로 추가한다.
 - 순환 의존이 생기면 공통 패키지로 옮겨 숨기지 말고 호출 방향과 유스케이스 소유 기능을 다시 정한다.
@@ -90,7 +89,7 @@ link.srrrg
 
 - 프로젝트 단일 링크와 캠페인 목록
 - 참여 사용자와 역할
-- 기본 서브도메인 또는 커스텀 도메인
+- 기본 플랫폼 서브도메인
 - 자동화용 API key
 - 프로젝트 전체 통계
 
@@ -102,13 +101,14 @@ link.srrrg
 
 | 역할 | 권한 |
 |---|---|
-| `OWNER` | 프로젝트 설정, 멤버, 도메인, API key, 캠페인, 링크 관리 |
+| `OWNER` | 프로젝트 설정, 멤버, API key, 캠페인, 링크 관리 |
 | `EDITOR` | 캠페인과 링크 생성·수정·삭제 |
 | `VIEWER` | 프로젝트, 링크, 캠페인, 통계 조회 |
 
 프로젝트에는 최소 한 명의 `OWNER`가 남아 있어야 한다. 마지막 OWNER 탈퇴·강등은 차단한다.
 
 가입 여부와 관계없이 이메일로 프로젝트에 초대할 수 있다. 초대 token 원문은 이메일에서만 전달하고 DB에는 hash를 저장하며, 만료·취소·재발송·수락 상태를 관리한다.
+초대 이메일은 연락처일 뿐 계정 식별자나 권한 검증 수단이 아니다. 로그인한 사용자는 자신의 이메일 유무·일치 여부와 관계없이 유효한 초대 token을 수락할 수 있다.
 
 ### 3.4 캠페인
 
@@ -231,63 +231,17 @@ created_at
 id
 project_id
 hostname                lower-case 정규화된 전체 host
-kind                    PLATFORM_SUBDOMAIN, CUSTOM
-status                  PENDING, VERIFIED, CERT_ISSUING, ACTIVE, FAILED
-cname_target            nullable, CUSTOM 도메인에 발급한 전용 CNAME 목적지
-verified_at nullable
-primary_domain
 created_at
 ```
 
 - `hostname`은 전체 서비스에서 unique다.
-- 프로젝트당 primary domain은 하나만 허용한다.
-- 플랫폼 서브도메인과 커스텀 도메인을 같은 테이블에서 관리한다.
-- 커스텀 도메인에는 `<random>.cname.srrrg.link` 형식의 전용 CNAME 목적지를 발급한다.
-- CNAME 목적지는 공개 단축 URL이 아니라 DNS 연결과 프로젝트 귀속 검증에만 사용한다.
-- CNAME 확인과 TLS 인증서 발급이 모두 끝난 `ACTIVE` 도메인만 링크에 사용할 수 있다.
-- 프로젝트는 여러 도메인을 가질 수 있지만 primary domain은 하나만 둔다.
-- 링크 생성 시 플랫폼 서브도메인 또는 커스텀 도메인 하나를 선택하고 해당 도메인에서만 링크를 연다.
+- 프로젝트마다 플랫폼 서브도메인 하나를 자동 생성한다.
+- 플랫폼 서브도메인은 `*.srrrg.link` wildcard DNS와 TLS 인증서를 공유하며 프로젝트별 Kubernetes 리소스를 생성하지 않는다.
+- 플랫폼 서브도메인 형식과 예약어는 4단계 질문 게이트에서 확정한다.
 
-프로젝트 링크는 `(domain_id, code)` 조합으로 식별한다. 같은 code라도 도메인이 다르면 서로 다른 링크가 될 수 있으며, CNAME 목적지나 다른 프로젝트 도메인을 같은 링크의 별칭으로 제공하지 않는다.
+프로젝트 링크는 `(domain_id, code)` 조합으로 식별한다. 같은 code라도 플랫폼 서브도메인이 다르면 서로 다른 링크가 될 수 있다.
 
-#### 커스텀 도메인 등록과 활성화
-
-예를 들어 사용자가 `go.acme.com`을 등록하면 다음 순서로 처리한다.
-
-1. `project_domains`에 `PENDING` 상태로 저장한다.
-2. 추측하기 어려운 전용 CNAME 목적지 `d7k29fx4.cname.srrrg.link`를 발급한다.
-3. 사용자에게 아래 DNS 레코드 하나를 설정하도록 안내한다.
-
-   ```dns
-   go.acme.com CNAME d7k29fx4.cname.srrrg.link
-   ```
-
-4. srrrg가 `go.acme.com`의 CNAME을 조회하여 발급한 목적지와 정확히 일치하는지 확인한다.
-5. 일치하면 해당 사용자가 DNS를 제어할 수 있다고 판단하고 상태를 `VERIFIED`로 바꾼다.
-6. cert-manager가 Let's Encrypt에 `go.acme.com` 인증서를 요청하고 상태를 `CERT_ISSUING`으로 바꾼다.
-7. Let's Encrypt의 HTTP-01 검증과 인증서 적용이 끝나면 `ACTIVE`로 바꾼다.
-
-srrrg DNS에는 `*.cname.srrrg.link`가 서비스 Ingress를 가리키도록 미리 설정한다. 따라서 사용자 CNAME은 검증 후에도 그대로 트래픽 연결에 사용된다.
-
-```text
-go.acme.com
-→ d7k29fx4.cname.srrrg.link
-→ srrrg Ingress
-```
-
-CNAME은 브라우저 주소를 변경하는 리다이렉트가 아니다. 방문자가 `https://go.acme.com/summer`에 접속하면 주소와 HTTP Host는 계속 `go.acme.com`이며, `d7k29fx4.cname.srrrg.link/summer`를 공개 링크 별칭으로 제공하지 않는다.
-
-전용 CNAME 확인과 Let's Encrypt 확인의 목적은 다르다.
-
-```text
-전용 CNAME 확인
-→ 이 도메인을 현재 프로젝트에 연결한 사용자가 DNS를 제어하는지 확인
-
-Let's Encrypt HTTP-01 확인
-→ srrrg 서버가 이 도메인의 TLS 인증서를 받을 수 있는지 확인
-```
-
-사용자가 수행할 작업은 CNAME 레코드 하나를 설정하는 것뿐이다. DNS 전파가 늦으면 `PENDING` 상태에서 다시 확인할 수 있게 하고, 인증서 발급 실패 시 `FAILED` 상태와 실패 원인을 보여준다.
+커스텀 도메인 등록, CNAME 검증, 도메인별 인증서 발급과 동적 Ingress 생성은 이번 개발 범위에서 제외한다. 실제 수요가 생기면 관리형 edge와 도메인별 Ingress 방식의 운영 비용을 다시 비교해 별도 단계로 설계한다.
 
 ### 4.5 project_api_keys
 
@@ -501,11 +455,9 @@ DELETE /api/web/projects/{projectId}/members/{userId}
 
 ```text
 GET    /api/web/projects/{projectId}/domains
-POST   /api/web/projects/{projectId}/domains
-POST   /api/web/projects/{projectId}/domains/{domainId}/verify
-PATCH  /api/web/projects/{projectId}/domains/{domainId}
-DELETE /api/web/projects/{projectId}/domains/{domainId}
 ```
+
+플랫폼 서브도메인은 프로젝트 생성 시 자동 발급하므로 별도 등록·검증·수정·삭제 endpoint를 만들지 않는다.
 
 ### 7.3 프로젝트 API key
 
@@ -667,7 +619,7 @@ SDK 자동 생성, GraphQL, 별도 API gateway와 다국어 문서 사이트는 
 - 프로젝트·멤버 단계 적용 후 기본 프로젝트가 없는 로그인 사용자의 개인 프로젝트 생성
 - 프로젝트 선택 및 생성
 - 프로젝트 overview에서 단일 링크와 캠페인 분리 표시
-- 프로젝트 멤버, 도메인, API key 설정
+- 프로젝트 멤버, 플랫폼 서브도메인 확인, API key 설정
 - API key 원문 1회 표시, scope와 만료일 선택, 폐기
 - 캠페인 생성과 개인화 링크 대량 생성
 - 링크·캠페인·프로젝트 통계 전환
@@ -735,12 +687,11 @@ SDK 자동 생성, GraphQL, 별도 API gateway와 다국어 문서 사이트는 
 
 - `project_domains` 추가
 - 플랫폼 서브도메인 예약·중복 정책
-- 프로젝트별 전용 CNAME 발급과 DNS 일치 검증
-- cert-manager와 Let's Encrypt HTTP-01을 이용한 인증서 자동 발급
-- 프로젝트 primary domain으로 short URL 생성
-- k3s Ingress에 `ACTIVE` 커스텀 도메인 연결
+- wildcard DNS·TLS 아래에서 프로젝트별 플랫폼 서브도메인 생성
+- 플랫폼 서브도메인으로 short URL 생성
+- Host + code 기반 프로젝트 링크 라우팅
 
-완료 기준: 사용자가 CNAME 레코드 하나를 설정하면 검증과 인증서 발급을 거쳐 커스텀 도메인으로 링크를 열 수 있다.
+완료 기준: 프로젝트별 플랫폼 서브도메인에서 링크를 생성하고 열 수 있으며 기존 익명 링크와 충돌하지 않는다.
 
 ### 5단계: 캠페인과 개인화 링크
 
@@ -790,7 +741,7 @@ SDK 자동 생성, GraphQL, 별도 API gateway와 다국어 문서 사이트는 
 - OWNER, EDITOR, VIEWER 권한 행렬
 - 마지막 OWNER 제거 차단
 - 다른 프로젝트 리소스 접근 차단
-- 도메인 unique와 미검증 도메인 사용 차단
+- 플랫폼 서브도메인 unique와 타 프로젝트 도메인 사용 차단
 - API key 원문 미저장, hash 검증, scope, 만료, 폐기와 타 프로젝트 접근 차단
 - 운영 환경 Swagger UI 차단과 공개 OpenAPI의 내부 endpoint 제외
 - `/docs/api` 예제와 실제 OpenAPI 요청·응답 schema 일치
@@ -812,7 +763,6 @@ SDK 자동 생성, GraphQL, 별도 API gateway와 다국어 문서 사이트는 
 5. 프로젝트·캠페인·UTM 변경 불가 정책의 UI 문구
 6. 접근 이벤트 보관 기간과 IP 개인정보 정책
 7. 프로젝트 초대 메일 발송 서비스와 발신 주소
-8. 애플리케이션에서 cert-manager 리소스를 생성할 권한과 배포 방식
 
 이 목록이 전부가 아니다. 구현자가 코드와 기존 문서를 읽으며 새로 발견한 미확정 사항도 구현 전에 질문해야 한다.
 
@@ -852,6 +802,10 @@ SDK 자동 생성, GraphQL, 별도 API gateway와 다국어 문서 사이트는 
 
 통계
 → 기존 link_access_events를 link_id, campaign_id, project_id 범위로 집계
+
+커스텀 도메인
+→ 이번 개발 범위에서 제외
+→ 실제 수요가 생기면 관리형 edge 또는 도메인별 Ingress 방식으로 별도 설계
 ```
 
-이 구조는 기존 익명 링크를 유지하면서 로그인 기반 프로젝트 관리, 캠페인 대량 생성, 도메인과 API key, 단계별 통계 확장을 연결한다.
+이 구조는 기존 익명 링크를 유지하면서 로그인 기반 프로젝트 관리, 캠페인 대량 생성, 플랫폼 서브도메인과 API key, 단계별 통계 확장을 연결한다.

@@ -2,10 +2,16 @@ package link.srrrg.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.forwardedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.Test;
@@ -13,8 +19,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -28,7 +36,13 @@ import link.srrrg.identity.OAuthProvider;
 import link.srrrg.identity.OAuthAccountRepository;
 import link.srrrg.project.ApiKeyScope;
 import link.srrrg.project.ApiKeyService;
+import link.srrrg.project.InvitationEmailSender;
+import link.srrrg.project.ProjectInvitation;
+import link.srrrg.project.ProjectInvitationRepository;
+import link.srrrg.project.ProjectApiKeyRepository;
 import link.srrrg.project.ProjectMemberRepository;
+import link.srrrg.project.ProjectRole;
+import link.srrrg.project.ProjectService;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -85,6 +99,21 @@ class WebAuthPostgreSqlIntegrationTest {
 
 	@Autowired
 	ProjectMemberRepository projectMemberRepository;
+
+	@Autowired
+	ProjectInvitationRepository projectInvitationRepository;
+
+	@Autowired
+	ProjectService projectService;
+
+	@Autowired
+	ProjectApiKeyRepository projectApiKeyRepository;
+
+	@Autowired
+	JdbcTemplate jdbcTemplate;
+
+	@MockitoBean
+	InvitationEmailSender invitationEmailSender;
 
 	@Test
 	void linksProviderOnlyAfterExistingAccountLogin() {
@@ -203,18 +232,152 @@ class WebAuthPostgreSqlIntegrationTest {
 		LoginResolution login = identityService.resolve(identity(OAuthProvider.GOOGLE, "api-key-user", "api-key@example.com"));
 		Long projectId = projectMemberRepository.findByIdUserId(login.user().getId()).getFirst().getProject().getId();
 		ApiKeyService.CreatedKey created = apiKeyService.create(login.user().getId(), projectId, "automation", java.util.Set.of(ApiKeyScope.LINKS_READ), null);
+		assertThat(created.rawKey()).startsWith("srrrg_pk_" + created.key().getKeyPrefix() + "_");
+		assertThat(created.key().getKeyHash()).hasSize(64).isNotEqualTo(created.rawKey());
+		assertThat(created.key().getExpiresAt()).isNull();
 
 		mockMvc.perform(get("/api/v1/projects/{projectId}/links", projectId)
 					.header("Authorization", "Bearer " + created.rawKey()))
-				.andExpect(status().isOk());
+				.andExpect(status().isOk())
+				.andExpect(header().exists("X-Request-Id"));
+		assertThat(projectApiKeyRepository.findById(created.key().getId()).orElseThrow().getLastUsedAt()).isNotNull();
 		mockMvc.perform(get("/api/v1/projects/{projectId}/links", projectId + 1)
 					.header("Authorization", "Bearer " + created.rawKey()))
 				.andExpect(status().isForbidden())
 				.andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+		ApiKeyService.CreatedKey missingScope = apiKeyService.create(login.user().getId(), projectId, "campaigns", java.util.Set.of(ApiKeyScope.CAMPAIGNS_READ), null);
+		mockMvc.perform(get("/api/v1/projects/{projectId}/links", projectId)
+					.header("Authorization", "Bearer " + missingScope.rawKey()))
+				.andExpect(status().isForbidden());
+
+		jakarta.servlet.http.Cookie jwtCookie = new jakarta.servlet.http.Cookie(
+				"srrrg_access", sessionService.issue(login.user()).accessToken());
+		mockMvc.perform(get("/api/v1/projects/{projectId}/links", projectId).cookie(jwtCookie))
+				.andExpect(status().isUnauthorized());
+		mockMvc.perform(get("/api/web/projects").header("Authorization", "Bearer " + created.rawKey()))
+				.andExpect(status().isUnauthorized());
+
+		ApiKeyService.CreatedKey expired = apiKeyService.create(login.user().getId(), projectId, "expired", java.util.Set.of(ApiKeyScope.LINKS_READ), null);
+		jdbcTemplate.update("UPDATE project_api_keys SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 second' WHERE id = ?", expired.key().getId());
+		mockMvc.perform(get("/api/v1/projects/{projectId}/links", projectId)
+					.header("Authorization", "Bearer " + expired.rawKey()))
+				.andExpect(status().isUnauthorized());
+
 		apiKeyService.revoke(login.user().getId(), projectId, created.key().getId());
 		mockMvc.perform(get("/api/v1/projects/{projectId}/links", projectId)
 					.header("Authorization", "Bearer " + created.rawKey()))
 				.andExpect(status().isUnauthorized());
+	}
+
+	@Test
+	void returnsRawApiKeyOnlyOnCreation() throws Exception {
+		LoginResolution owner = identityService.resolve(identity(
+				OAuthProvider.GOOGLE, "api-key-web-owner", "api-key-web@example.com"));
+		Long projectId = projectMemberRepository.findByIdUserId(owner.user().getId()).getFirst().getProject().getId();
+		jakarta.servlet.http.Cookie cookie = new jakarta.servlet.http.Cookie(
+				"srrrg_access", sessionService.issue(owner.user()).accessToken());
+
+		mockMvc.perform(post("/api/web/projects/{projectId}/api-keys", projectId)
+					.with(csrf()).cookie(cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"name\":\"automation\",\"scopes\":[\"links:read\"]}"))
+				.andExpect(status().isCreated())
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.key", org.hamcrest.Matchers.startsWith("srrrg_pk_")));
+		mockMvc.perform(get("/api/web/projects/{projectId}/api-keys", projectId).cookie(cookie))
+				.andExpect(status().isOk())
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$[0].key").doesNotExist())
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$[0].keyHash").doesNotExist());
+	}
+
+	@Test
+	void exposesOnlyAnonymousAndApiKeyEndpointsInPublicOpenApi() throws Exception {
+		mockMvc.perform(get("/srrrg-dev/docs/api")
+					.contextPath("/srrrg-dev")
+					.servletPath("/docs/api"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(org.hamcrest.Matchers.containsString("content=\"/srrrg-dev/\"")));
+		mockMvc.perform(get("/openapi.json"))
+				.andExpect(status().isOk())
+				.andExpect(forwardedUrl("/v3/api-docs/public"));
+		mockMvc.perform(get("/v3/api-docs/public"))
+				.andExpect(status().isOk())
+				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.paths['/api/links']").exists())
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.paths['/api/v1/projects/{projectId}/links']").exists())
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.paths['/api/web/projects']").doesNotExist())
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.components.securitySchemes.projectApiKey").exists());
+	}
+
+	@Test
+	void completesInvitationFlowAndBlocksCrossProjectAccess() throws Exception {
+		LoginResolution owner = identityService.resolve(identity(OAuthProvider.GOOGLE, "project-owner", "owner@example.com"));
+		LoginResolution invitee = identityService.resolve(new OAuthIdentity(
+				OAuthProvider.KAKAO, "project-invitee", null, false, "Invitee"));
+		Long projectId = projectMemberRepository.findByIdUserId(owner.user().getId()).getFirst().getProject().getId();
+		jakarta.servlet.http.Cookie ownerCookie = new jakarta.servlet.http.Cookie(
+				"srrrg_access", sessionService.issue(owner.user()).accessToken());
+		jakarta.servlet.http.Cookie inviteeCookie = new jakarta.servlet.http.Cookie(
+				"srrrg_access", sessionService.issue(invitee.user()).accessToken());
+
+		mockMvc.perform(post("/api/web/projects/{projectId}/invitations", projectId)
+					.with(csrf()).cookie(ownerCookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"email\":\"contact@example.com\",\"role\":\"EDITOR\"}"))
+				.andExpect(status().isCreated());
+		ProjectInvitation invitation = projectInvitationRepository.findByProjectId(projectId).getFirst();
+		org.mockito.ArgumentCaptor<String> url = org.mockito.ArgumentCaptor.forClass(String.class);
+		verify(invitationEmailSender).send(eq("contact@example.com"), anyString(), url.capture());
+		String rawToken = url.getValue().substring(url.getValue().lastIndexOf('/') + 1);
+		assertThat(invitation.getTokenHash()).hasSize(64).isNotEqualTo(rawToken);
+
+		mockMvc.perform(post("/api/web/invitations/{token}/accept", rawToken)
+					.with(csrf()).cookie(inviteeCookie))
+				.andExpect(status().isOk());
+		assertThat(projectMemberRepository.findByIdProjectIdAndIdUserId(projectId, invitee.user().getId())
+				.orElseThrow().getRole()).isEqualTo(ProjectRole.EDITOR);
+
+		jakarta.servlet.http.Cookie outsiderCookie = new jakarta.servlet.http.Cookie(
+				"srrrg_access", sessionService.issue(identityService.resolve(identity(
+						OAuthProvider.GITHUB, "project-outsider", "outsider@example.com")).user()).accessToken());
+		mockMvc.perform(get("/api/web/projects/{projectId}/members", projectId).cookie(ownerCookie))
+				.andExpect(status().isOk());
+		mockMvc.perform(get("/api/web/projects/{projectId}/members", projectId).cookie(outsiderCookie))
+				.andExpect(status().isForbidden());
+
+		ProjectInvitation stored = projectInvitationRepository.findById(invitation.getId()).orElseThrow();
+		assertThat(stored.getAcceptedAt()).isNotNull();
+	}
+
+	@Test
+	void preventsDuplicateInvitationAndInvalidatesCancelledOrResentTokens() {
+		LoginResolution owner = identityService.resolve(identity(
+				OAuthProvider.GOOGLE, "invitation-owner", "invitation-owner@example.com"));
+		LoginResolution invitee = identityService.resolve(identity(
+				OAuthProvider.GITHUB, "invitation-target", "invitation-target@example.com"));
+		Long projectId = projectMemberRepository.findByIdUserId(owner.user().getId()).getFirst().getProject().getId();
+
+		ProjectInvitation first = projectService.invite(
+				owner.user().getId(), projectId, "resend@example.com", ProjectRole.VIEWER);
+		assertThatThrownBy(() -> projectService.invite(
+				owner.user().getId(), projectId, "RESEND@example.com", ProjectRole.EDITOR))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessage("이미 활성 상태인 초대가 있습니다.");
+		ProjectInvitation resent = projectService.resend(owner.user().getId(), first.getId());
+		ProjectInvitation cancelled = projectService.invite(
+				owner.user().getId(), projectId, "cancel@example.com", ProjectRole.VIEWER);
+		projectService.cancel(owner.user().getId(), cancelled.getId());
+
+		org.mockito.ArgumentCaptor<String> urls = org.mockito.ArgumentCaptor.forClass(String.class);
+		verify(invitationEmailSender, times(3)).send(anyString(), anyString(), urls.capture());
+		String firstToken = tokenFrom(urls.getAllValues().get(0));
+		String resentToken = tokenFrom(urls.getAllValues().get(1));
+		String cancelledToken = tokenFrom(urls.getAllValues().get(2));
+		assertThat(firstToken).isNotEqualTo(resentToken);
+		assertThatThrownBy(() -> projectService.accept(invitee.user().getId(), firstToken))
+				.isInstanceOf(IllegalStateException.class);
+		assertThatThrownBy(() -> projectService.accept(invitee.user().getId(), cancelledToken))
+				.isInstanceOf(IllegalStateException.class);
+		assertThat(projectService.accept(invitee.user().getId(), resentToken).projectId()).isEqualTo(projectId);
+		assertThat(projectInvitationRepository.findById(resent.getId()).orElseThrow().getAcceptedAt()).isNotNull();
 	}
 
 	private void assertAuthorizationRedirect(String provider, String authorizationUri) throws Exception {
@@ -229,5 +392,9 @@ class WebAuthPostgreSqlIntegrationTest {
 
 	private OAuthIdentity identity(OAuthProvider provider, String providerUserId, String email) {
 		return new OAuthIdentity(provider, providerUserId, email, true, "Test User");
+	}
+
+	private String tokenFrom(String invitationUrl) {
+		return invitationUrl.substring(invitationUrl.lastIndexOf('/') + 1);
 	}
 }

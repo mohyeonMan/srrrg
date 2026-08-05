@@ -49,13 +49,13 @@
 - [x] 기본 프로젝트가 없는 로그인 사용자의 개인 프로젝트와 OWNER 생성
 - [x] OWNER·EDITOR·VIEWER 권한 검사
 - [x] 마지막 OWNER 제거·강등 차단
-- [ ] `project_invitations` migration과 token hash
-- [ ] 이메일 초대 발송·수락·취소·재발송
-- [ ] `/api/web/**` 프로젝트·멤버 endpoint
+- [x] `project_invitations` migration과 token hash
+- [x] 이메일 초대 발송·수락·취소·재발송
+- [x] `/api/web/**` 프로젝트·멤버 endpoint
 - [x] 기존 익명 링크의 프로젝트 귀속과 secret key 폐기
-- [ ] 타 프로젝트 접근 차단 통합 테스트
+- [x] 타 프로젝트 접근 차단 통합 테스트
 - [x] 기존 익명 링크 회귀 테스트
-- [ ] 2단계 완료 조건 충족
+- [x] 2단계 완료 조건 충족
 
 ## 3단계: API key·공개 문서
 
@@ -70,24 +70,22 @@
 - [x] 공개 OpenAPI group과 `/openapi.json`
 - [x] srrrg 디자인의 `/docs/api`
 - [x] 운영 Swagger UI 차단과 홈 링크 교체
-- [ ] API key·공개 계약 통합 테스트
+- [x] API key·공개 계약 통합 테스트
 - [x] 기존 익명 링크 회귀 테스트
-- [ ] 3단계 완료 조건 충족
+- [x] 3단계 완료 조건 충족
 
 ## 4단계: 프로젝트 도메인
 
-- [ ] `project_domains` migration과 상태 모델
+- [ ] `project_domains` migration과 모델
 - [ ] `links.domain_id` 추가
 - [ ] 기존 전역 code unique 제약 제거 migration
 - [ ] 익명 `UNIQUE(code)` partial index
 - [ ] 프로젝트 `UNIQUE(domain_id, code)` partial index
 - [ ] 플랫폼 서브도메인 생성과 예약어 검사
-- [ ] 링크 생성 시 ACTIVE 도메인 하나 선택
+- [ ] 프로젝트 생성 시 플랫폼 서브도메인 자동 할당
+- [ ] wildcard DNS·TLS 배포 검증
 - [ ] Host + code 기반 리다이렉트 조회
-- [ ] 프로젝트별 전용 CNAME 발급과 일치 검증
-- [ ] cert-manager·Let's Encrypt 인증서 provision
-- [ ] 인증서 적용 후 ACTIVE 전환
-- [ ] 미검증 Host·도메인과 타 프로젝트 도메인 차단 테스트
+- [ ] 등록되지 않은 Host와 타 프로젝트 도메인 차단 테스트
 - [ ] 기존 `srrrg.link/{code}` 회귀 테스트
 - [ ] 4단계 완료 조건 충족
 

@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,7 +55,7 @@ public class ProjectService {
 	@Transactional(readOnly = true)
 	public List<ProjectMember> projectMembers(Long userId, Long projectId) { requireRole(userId, projectId, ProjectRole.VIEWER); return members.findByIdProjectId(projectId); }
 	@Transactional(readOnly = true)
-	public List<ProjectInvitation> projectInvitations(Long userId, Long projectId) { requireRole(userId, projectId, ProjectRole.OWNER); return invitations.findByProjectId(projectId); }
+	public List<ProjectInvitation> projectInvitations(Long userId, Long projectId) { requireRole(userId, projectId, ProjectRole.OWNER); return invitations.findByProjectIdAndCancelledAtIsNullAndAcceptedAtIsNull(projectId); }
 
 	@Transactional
 	public ProjectInvitation invite(Long userId, Long projectId, String email, ProjectRole role) {
@@ -62,9 +63,22 @@ public class ProjectService {
 		if (role == ProjectRole.OWNER) throw new IllegalArgumentException("초대 역할은 EDITOR 또는 VIEWER여야 합니다.");
 		String normalizedEmail = validEmail(email);
 		Project project = project(projectId);
+		users.findByEmail(normalizedEmail)
+				.filter(user -> members.findByIdProjectIdAndIdUserId(projectId, user.getId()).isPresent())
+				.ifPresent(user -> { throw new IllegalArgumentException("이미 프로젝트 멤버인 이메일입니다."); });
+		invitations.findByProjectIdAndEmailAndCancelledAtIsNullAndAcceptedAtIsNull(projectId, normalizedEmail)
+				.ifPresent(existing -> {
+					if (existing.isUsable(Instant.now())) throw new IllegalArgumentException("이미 활성 상태인 초대가 있습니다.");
+					existing.cancel();
+				});
 		String rawToken = random.generate(TOKEN_CHARS, 43);
-		ProjectInvitation invitation = invitations.save(ProjectInvitation.create(project, normalizedEmail, role,
-				InvitationTokenHash.sha256(rawToken), Instant.now().plus(Duration.ofDays(7))));
+		ProjectInvitation invitation;
+		try {
+			invitation = invitations.saveAndFlush(ProjectInvitation.create(project, normalizedEmail, role,
+					InvitationTokenHash.sha256(rawToken), Instant.now().plus(Duration.ofDays(7))));
+		} catch (DataIntegrityViolationException exception) {
+			throw new IllegalArgumentException("이미 활성 상태인 초대가 있습니다.", exception);
+		}
 		emailSender.send(normalizedEmail, project.getName(), baseUrl + "/invitations/" + rawToken);
 		return invitation;
 	}
@@ -73,6 +87,7 @@ public class ProjectService {
 	public ProjectInvitation resend(Long userId, Long invitationId) {
 		ProjectInvitation old = invitation(invitationId);
 		requireRole(userId, old.getProject().getId(), ProjectRole.OWNER);
+		if (old.getAcceptedAt() != null) throw new IllegalArgumentException("이미 수락된 초대입니다.");
 		old.cancel();
 		return invite(userId, old.getProject().getId(), old.getEmail(), old.getRole());
 	}
@@ -91,6 +106,7 @@ public class ProjectService {
 		Long projectId = invitation.getProject().getId();
 		if (!invitation.isUsable(Instant.now())) throw new IllegalStateException("사용할 수 없는 초대입니다.");
 		if (members.findByIdProjectIdAndIdUserId(projectId, userId).isPresent()) {
+			invitation.accept();
 			return new AcceptedInvitation(projectId, true);
 		}
 		members.save(new ProjectMember(invitation.getProject(), user(userId), invitation.getRole()));

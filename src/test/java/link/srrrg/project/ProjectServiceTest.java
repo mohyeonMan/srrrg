@@ -71,6 +71,45 @@ class ProjectServiceTest {
 
 		org.assertj.core.api.Assertions.assertThat(result).isEqualTo(new ProjectService.AcceptedInvitation(1L, true));
 		verify(members, never()).save(any());
+		verify(invitation).accept();
+	}
+
+	@Test
+	void blocksDuplicateActiveInvitation() {
+		ProjectMember owner = mock(ProjectMember.class);
+		Project project = mock(Project.class);
+		ProjectInvitation existing = mock(ProjectInvitation.class);
+		when(owner.getRole()).thenReturn(ProjectRole.OWNER);
+		when(projects.findById(1L)).thenReturn(Optional.of(project));
+		when(members.findByIdProjectIdAndIdUserId(1L, 2L)).thenReturn(Optional.of(owner));
+		when(invitations.findByProjectIdAndEmailAndCancelledAtIsNullAndAcceptedAtIsNull(1L, "invitee@example.com"))
+				.thenReturn(Optional.of(existing));
+		when(existing.isUsable(any())).thenReturn(true);
+
+		assertThatThrownBy(() -> service.invite(2L, 1L, "invitee@example.com", ProjectRole.EDITOR))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessage("이미 활성 상태인 초대가 있습니다.");
+		verify(invitations, never()).saveAndFlush(any());
+	}
+
+	@Test
+	void acceptsInvitationWithoutUsingEmailAsIdentity() {
+		Project project = mock(Project.class);
+		ProjectInvitation invitation = mock(ProjectInvitation.class);
+		User userWithoutEmail = mock(User.class);
+		when(project.getId()).thenReturn(1L);
+		when(invitation.getProject()).thenReturn(project);
+		when(invitation.getRole()).thenReturn(ProjectRole.VIEWER);
+		when(invitation.isUsable(any())).thenReturn(true);
+		when(invitations.findByTokenHash(InvitationTokenHash.sha256("token"))).thenReturn(Optional.of(invitation));
+		when(members.findByIdProjectIdAndIdUserId(1L, 2L)).thenReturn(Optional.empty());
+		when(users.findById(2L)).thenReturn(Optional.of(userWithoutEmail));
+		when(userWithoutEmail.getId()).thenReturn(2L);
+
+		service.accept(2L, "token");
+
+		verify(members).save(any(ProjectMember.class));
+		verify(invitation).accept();
 	}
 
 	@Test

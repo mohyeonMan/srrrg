@@ -14,10 +14,12 @@ class ApiDocumentationControllerTest {
 	void exposesStablePublicOpenApiAndBrandedDocumentation() throws Exception {
 		ApiDocumentationController controller = new ApiDocumentationController();
 		String page = new String(new ClassPathResource("templates/api-docs.html").getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+		String script = new String(new ClassPathResource("static/js/srrrg-api-docs.js").getInputStream().readAllBytes(), StandardCharsets.UTF_8);
 
 		assertThat(controller.documentation()).isEqualTo("api-docs");
 		assertThat(controller.openApi()).isEqualTo("forward:/v3/api-docs/public");
-		assertThat(page).contains("srrrg API", "/openapi.json", "Authorization: Bearer", "srrrg-api-docs.js");
+		assertThat(page).contains("srrrg API", "/openapi.json", "Authorization: Bearer", "srrrg-api-docs.js", "context-path");
+		assertThat(script).contains("`${base}/openapi.json`").doesNotContain("fetch(\"/openapi.json\")");
 		assertThat(new OpenApiConfig().publicOpenApi()).isNotNull();
 	}
 
