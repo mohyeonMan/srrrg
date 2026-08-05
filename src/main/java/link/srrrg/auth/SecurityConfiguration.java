@@ -16,12 +16,15 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.http.HttpServletResponse;
 
 @Configuration
 @EnableWebSecurity
 class SecurityConfiguration {
+	private static final Logger log = LoggerFactory.getLogger(SecurityConfiguration.class);
 
 	@Bean
 	SecurityFilterChain securityFilterChain(
@@ -65,12 +68,16 @@ class SecurityConfiguration {
 						.successHandler(successHandler)
 						.failureHandler(failureHandler))
 				.exceptionHandling(exceptions -> exceptions
-						.authenticationEntryPoint((request, response, exception) ->
+						.authenticationEntryPoint((request, response, exception) -> {
+							log.warn("Unauthenticated web request: method={}, reason={}", request.getMethod(), exception.getClass().getSimpleName());
 								writeError(response, HttpServletResponse.SC_UNAUTHORIZED,
-										"AUTHENTICATION_REQUIRED", "로그인이 필요합니다."))
-						.accessDeniedHandler((request, response, exception) ->
+										"AUTHENTICATION_REQUIRED", "로그인이 필요합니다.");
+						})
+						.accessDeniedHandler((request, response, exception) -> {
+							log.warn("Denied web request: method={}, reason={}", request.getMethod(), exception.getClass().getSimpleName());
 								writeError(response, HttpServletResponse.SC_FORBIDDEN,
-										"ACCESS_DENIED", "요청이 허용되지 않았습니다.")))
+										"ACCESS_DENIED", "요청이 허용되지 않았습니다.");
+						}))
 				.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
 				.addFilterAfter(apiKeyFilter, JwtAuthenticationFilter.class)
 				.addFilterAfter(csrfCookieFilter, CsrfFilter.class);
