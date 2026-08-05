@@ -36,8 +36,7 @@ class SecurityConfiguration {
 			OAuthLoginSuccessHandler successHandler,
 			OAuthLoginFailureHandler failureHandler,
 			JwtAuthenticationFilter jwtFilter,
-			ApiKeyAuthenticationFilter apiKeyFilter,
-			CsrfCookieFilter csrfCookieFilter) throws Exception {
+			ApiKeyAuthenticationFilter apiKeyFilter) throws Exception {
 		CookieCsrfTokenRepository csrf = CookieCsrfTokenRepository.withHttpOnlyFalse();
 		csrf.setHeaderName("X-XSRF-TOKEN");
 		csrf.setCookieCustomizer(cookie -> cookie.secure(true).sameSite("Lax").path("/"));
@@ -80,7 +79,7 @@ class SecurityConfiguration {
 						}))
 				.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
 				.addFilterAfter(apiKeyFilter, JwtAuthenticationFilter.class)
-				.addFilterAfter(csrfCookieFilter, CsrfFilter.class);
+				.addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class);
 
 		return http.build();
 	}
