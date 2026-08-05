@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>srrrg - 프로젝트</title><link rel="stylesheet" th:href="@{/css/srrrg.css}"><script defer th:src="@{/js/srrrg-projects.js}"></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="context-path" th:content="@{/}"><title>srrrg - 프로젝트</title><link rel="stylesheet" th:href="@{/css/srrrg.css}"><script defer th:src="@{/js/srrrg-projects.js}"></script></head>
 <body><div th:replace="~{fragments/srrrg-layout :: header}"></div><main class="management-shell" id="projects-app">
 <section class="management-gate"><p class="section-kicker">PROJECTS</p><h1>프로젝트와 멤버</h1><p>프로젝트별로 링크와 멤버를 관리합니다.</p>
 <form id="create-project-form"><label class="field"><span class="field-label">새 프로젝트 이름</span><input class="field-input" name="name" maxlength="100" required></label><button class="primary-button">프로젝트 만들기</button></form><p id="project-message" class="form-message" role="status"></p>
