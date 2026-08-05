@@ -16,6 +16,17 @@ spring:
       minimum-idle: ${SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE:10}
       connection-timeout: ${SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT:2000}
       validation-timeout: ${SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT:1000}
+  mail:
+    host: ${SPRING_MAIL_HOST:}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:true}
   flyway:
     enabled: true
   jpa:
@@ -33,6 +44,8 @@ springdoc:
 
 srrrg:
   base-url: ${SRRRG_BASE_URL:https://srrrg.link}
+  mail:
+    from: ${SRRRG_MAIL_FROM:}
   trust-forwarded-headers: ${SRRRG_TRUST_FORWARDED_HEADERS:false}
   auth:
     jwt:
