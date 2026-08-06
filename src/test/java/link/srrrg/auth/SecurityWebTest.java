@@ -3,6 +3,7 @@ package link.srrrg.auth;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -200,5 +201,52 @@ class SecurityWebTest {
 
 		mockMvc.perform(get("/api/v1/projects/7/links").param("limit", "1").header("Authorization", "Bearer srrrg_pk_prefix_secret"))
 				.andExpect(status().isOk()).andExpect(jsonPath("$.items.length()").value(1)).andExpect(jsonPath("$.nextCursor").value(10));
+	}
+
+	@Test
+	void claimsAnonymousLinkWithSecretHeader() throws Exception {
+		MvcResult page = mockMvc.perform(get("/login")).andExpect(status().isOk()).andReturn();
+		jakarta.servlet.http.Cookie csrf = page.getResponse().getCookie("XSRF-TOKEN");
+		org.junit.jupiter.api.Assertions.assertNotNull(csrf);
+		when(jwtService.verify("access-token")).thenReturn(1L);
+		jakarta.servlet.http.Cookie jwt = new jakarta.servlet.http.Cookie("srrrg_access", "access-token");
+
+		mockMvc.perform(post("/api/web/projects/7/links/aB3x9Q/claim")
+					.cookie(jwt, csrf).header("X-XSRF-TOKEN", csrf.getValue())
+					.header("X-Srrrg-Secret-Key", "srrrg_sk_secret"))
+				.andExpect(status().isNoContent());
+		verify(projectService).importAnonymousLink(1L, 7L, "aB3x9Q", "srrrg_sk_secret");
+	}
+
+	@Test
+	void createsProjectLinkWithApiKeyWithoutJwtFilter() throws Exception {
+		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
+				.thenReturn(new ApiKeyService.ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_WRITE)));
+		link.srrrg.link.Link link = org.mockito.Mockito.mock(link.srrrg.link.Link.class);
+		when(link.getCode()).thenReturn("aB3x9Q");
+		when(link.getOriginalUrl()).thenReturn("https://example.com");
+		when(projectService.createProjectLink(eq(1L), eq(7L), eq("retry-1"), any())).thenReturn(link);
+
+		mockMvc.perform(post("/api/v1/projects/7/links")
+					.header("Authorization", "Bearer srrrg_pk_prefix_secret")
+					.header("Idempotency-Key", "retry-1")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com\"}"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.code").value("aB3x9Q"));
+		verify(projectService).createProjectLink(eq(1L), eq(7L), eq("retry-1"), any());
+	}
+
+	@Test
+	void requiresLinksWriteScopeForProjectLinkCreation() throws Exception {
+		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
+				.thenReturn(new ApiKeyService.ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_READ)));
+
+		mockMvc.perform(post("/api/v1/projects/7/links")
+					.header("Authorization", "Bearer srrrg_pk_prefix_secret")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com\"}"))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.code").value("SCOPE_REQUIRED"));
 	}
 }

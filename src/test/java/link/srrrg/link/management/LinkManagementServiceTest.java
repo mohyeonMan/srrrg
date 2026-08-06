@@ -33,6 +33,8 @@ import link.srrrg.link.management.dto.UpdateLinkRequest;
 import link.srrrg.link.risk.RiskVerdict;
 import link.srrrg.link.risk.UrlRiskAssessment;
 import link.srrrg.link.risk.UrlRiskVerificationService;
+import link.srrrg.identity.User;
+import link.srrrg.project.Project;
 
 class LinkManagementServiceTest {
 
@@ -85,6 +87,64 @@ class LinkManagementServiceTest {
 				.tag("outcome", "collision")
 				.counter()
 				.count()).isEqualTo(1);
+	}
+
+	@Test
+	void createsProjectLinkWithoutSecret() {
+		Project project = mock(Project.class);
+		User user = mock(User.class);
+		when(riskVerificationService.verify(any())).thenReturn(assessment(RiskVerdict.SAFE));
+		when(codeGenerator.generate()).thenReturn("aB3x9Q");
+		when(repository.saveAndFlush(any(Link.class))).thenAnswer(call -> call.getArgument(0));
+
+		Link link = service.createForProject(new CreateLinkRequest("https://example.com", null), project, user);
+
+		assertThat(link.getProject()).isSameAs(project);
+		assertThat(link.getCreatedBy()).isSameAs(user);
+		assertThat(link.getSecretKeyHash()).isNull();
+	}
+
+	@Test
+	void returnsSameProjectLinkForSameIdempotencyRequest() {
+		Link existing = mock(Link.class);
+		when(existing.getIdempotencyRequestHash()).thenReturn("request-hash");
+		when(repository.findByIdempotencyApiKeyIdAndIdempotencyKey(3L, "retry-1"))
+				.thenReturn(Optional.of(existing));
+
+		Link link = service.createForProject(new CreateLinkRequest("https://example.com", null),
+				mock(Project.class), null, 3L, "retry-1", "request-hash");
+
+		assertThat(link).isSameAs(existing);
+		verify(validator, never()).validate(any());
+	}
+
+	@Test
+	void rejectsReusedIdempotencyKeyForDifferentRequest() {
+		Link existing = mock(Link.class);
+		when(existing.getIdempotencyRequestHash()).thenReturn("first-hash");
+		when(repository.findByIdempotencyApiKeyIdAndIdempotencyKey(3L, "retry-1"))
+				.thenReturn(Optional.of(existing));
+
+		assertThatThrownBy(() -> service.createForProject(new CreateLinkRequest("https://other.example", null),
+				mock(Project.class), null, 3L, "retry-1", "second-hash"))
+				.isInstanceOf(LinkManagementService.IdempotencyConflictException.class);
+	}
+
+	@Test
+	void resolvesConcurrentIdempotencyInsertToExistingLink() {
+		Link existing = mock(Link.class);
+		when(existing.getIdempotencyRequestHash()).thenReturn("request-hash");
+		when(repository.findByIdempotencyApiKeyIdAndIdempotencyKey(3L, "retry-1"))
+				.thenReturn(Optional.empty(), Optional.of(existing));
+		when(riskVerificationService.verify(any())).thenReturn(assessment(RiskVerdict.SAFE));
+		when(codeGenerator.generate()).thenReturn("aB3x9Q");
+		when(repository.saveAndFlush(any(Link.class))).thenThrow(new DataIntegrityViolationException("duplicate idempotency key"));
+
+		Link link = service.createForProject(new CreateLinkRequest("https://example.com", null),
+				mock(Project.class), null, 3L, "retry-1", "request-hash");
+
+		assertThat(link).isSameAs(existing);
+		verify(repository, times(1)).saveAndFlush(any());
 	}
 
 	@Test

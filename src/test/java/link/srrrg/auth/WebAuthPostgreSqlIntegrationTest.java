@@ -43,6 +43,8 @@ import link.srrrg.project.ProjectApiKeyRepository;
 import link.srrrg.project.ProjectMemberRepository;
 import link.srrrg.project.ProjectRole;
 import link.srrrg.project.ProjectService;
+import link.srrrg.link.management.LinkManagementService;
+import link.srrrg.link.management.dto.CreateLinkRequest;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -108,6 +110,9 @@ class WebAuthPostgreSqlIntegrationTest {
 
 	@Autowired
 	ProjectApiKeyRepository projectApiKeyRepository;
+
+	@Autowired
+	LinkManagementService linkManagementService;
 
 	@Autowired
 	JdbcTemplate jdbcTemplate;
@@ -378,6 +383,137 @@ class WebAuthPostgreSqlIntegrationTest {
 				.isInstanceOf(IllegalStateException.class);
 		assertThat(projectService.accept(invitee.user().getId(), resentToken).projectId()).isEqualTo(projectId);
 		assertThat(projectInvitationRepository.findById(resent.getId()).orElseThrow().getAcceptedAt()).isNotNull();
+	}
+
+	@Test
+	void managesProjectMetadataClaimsLinkAndSoftDeletesProject() throws Exception {
+		LoginResolution owner = identityService.resolve(identity(
+				OAuthProvider.GOOGLE, "project-metadata-owner", "metadata-owner@example.com"));
+		var membership = projectMemberRepository.findByIdUserId(owner.user().getId()).getFirst();
+		Long projectId = membership.getProject().getId();
+		String slug = membership.getProject().getSlug();
+		jakarta.servlet.http.Cookie cookie = new jakarta.servlet.http.Cookie(
+				"srrrg_access", sessionService.issue(owner.user()).accessToken());
+
+		assertThat(slug).matches("p-[a-z0-9]{8}");
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT created_by_user_id FROM projects WHERE id = ?", Long.class, projectId))
+				.isEqualTo(owner.user().getId());
+		mockMvc.perform(get("/api/web/projects/{projectId}", projectId).cookie(cookie))
+				.andExpect(status().isOk())
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.slug").value(slug));
+		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(
+					"/api/web/projects/{projectId}", projectId)
+					.with(csrf()).cookie(cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"name\":\"새 프로젝트 이름\"}"))
+				.andExpect(status().isOk())
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.name").value("새 프로젝트 이름"));
+		String webCode = com.jayway.jsonpath.JsonPath.read(mockMvc.perform(post("/api/web/projects/{projectId}/links", projectId)
+					.with(csrf()).cookie(cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/web-project\"}"))
+				.andExpect(status().isCreated())
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.secretKey").doesNotExist())
+				.andReturn().getResponse().getContentAsString(), "$.code");
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT created_by_user_id FROM links WHERE code = ?", Long.class, webCode))
+				.isEqualTo(owner.user().getId());
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT secret_key_hash IS NULL FROM links WHERE code = ?", Boolean.class, webCode)).isTrue();
+
+		var anonymous = linkManagementService.create(new CreateLinkRequest("https://example.com/project", null));
+		mockMvc.perform(post("/api/web/projects/{projectId}/links/{code}/claim", projectId, anonymous.code())
+					.with(csrf()).cookie(cookie).header("X-Srrrg-Secret-Key", anonymous.secretKey()))
+				.andExpect(status().isNoContent());
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT created_by_user_id FROM links WHERE code = ?", Long.class, anonymous.code()))
+				.isEqualTo(owner.user().getId());
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT secret_key_hash IS NULL FROM links WHERE code = ?", Boolean.class, anonymous.code())).isTrue();
+		mockMvc.perform(get("/api/web/projects/{projectId}/overview", projectId).cookie(cookie))
+				.andExpect(status().isOk())
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.standaloneLinks[0].code").value(anonymous.code()))
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.campaigns").isEmpty());
+		ApiKeyService.CreatedKey apiKey = apiKeyService.create(owner.user().getId(), projectId, "before archive",
+				java.util.Set.of(ApiKeyScope.LINKS_READ, ApiKeyScope.LINKS_WRITE), null);
+		String apiCode = com.jayway.jsonpath.JsonPath.read(mockMvc.perform(post("/api/v1/projects/{projectId}/links", projectId)
+					.header("Authorization", "Bearer " + apiKey.rawKey())
+					.header("Idempotency-Key", "project-create-1")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/api-project\"}"))
+				.andExpect(status().isCreated())
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.secretKey").doesNotExist())
+				.andReturn().getResponse().getContentAsString(), "$.code");
+		mockMvc.perform(post("/api/v1/projects/{projectId}/links", projectId)
+					.header("Authorization", "Bearer " + apiKey.rawKey())
+					.header("Idempotency-Key", "project-create-1")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/api-project\"}"))
+				.andExpect(status().isCreated())
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.code").value(apiCode));
+		mockMvc.perform(post("/api/v1/projects/{projectId}/links", projectId)
+					.header("Authorization", "Bearer " + apiKey.rawKey())
+					.header("Idempotency-Key", "project-create-1")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/different\"}"))
+				.andExpect(status().isConflict())
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.code").value("IDEMPOTENCY_CONFLICT"));
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT created_by_user_id IS NULL FROM links WHERE code = ?", Boolean.class, apiCode)).isTrue();
+
+		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete(
+					"/api/web/projects/{projectId}", projectId).with(csrf()).cookie(cookie))
+				.andExpect(status().isNoContent());
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT archived_at IS NOT NULL FROM projects WHERE id = ?", Boolean.class, projectId)).isTrue();
+		mockMvc.perform(get("/api/web/projects").cookie(cookie))
+				.andExpect(status().isOk())
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$").isEmpty());
+		mockMvc.perform(get("/api/v1/projects/{projectId}/links", projectId)
+					.header("Authorization", "Bearer " + apiKey.rawKey()))
+				.andExpect(status().isUnauthorized());
+		mockMvc.perform(get("/{code}", anonymous.code())).andExpect(status().isGone());
+	}
+
+	@Test
+	void allowsOnlyOneConcurrentAnonymousLinkClaim() throws Exception {
+		LoginResolution first = identityService.resolve(identity(
+				OAuthProvider.GOOGLE, "claim-first", "claim-first@example.com"));
+		LoginResolution second = identityService.resolve(identity(
+				OAuthProvider.GITHUB, "claim-second", "claim-second@example.com"));
+		Long firstProject = projectMemberRepository.findByIdUserId(first.user().getId()).getFirst().getProject().getId();
+		Long secondProject = projectMemberRepository.findByIdUserId(second.user().getId()).getFirst().getProject().getId();
+		var anonymous = linkManagementService.create(new CreateLinkRequest("https://example.com/concurrent-claim", null));
+		java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(2);
+		java.util.concurrent.CountDownLatch ready = new java.util.concurrent.CountDownLatch(2);
+		java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
+		try {
+			java.util.concurrent.Callable<Boolean> firstClaim = () -> claimAfterStart(
+					ready, start, first.user().getId(), firstProject, anonymous.code(), anonymous.secretKey());
+			java.util.concurrent.Callable<Boolean> secondClaim = () -> claimAfterStart(
+					ready, start, second.user().getId(), secondProject, anonymous.code(), anonymous.secretKey());
+			var firstResult = executor.submit(firstClaim);
+			var secondResult = executor.submit(secondClaim);
+			assertThat(ready.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+			start.countDown();
+			assertThat(java.util.List.of(firstResult.get(), secondResult.get()).stream().filter(Boolean::booleanValue).count())
+					.isEqualTo(1);
+			assertThat(jdbcTemplate.queryForObject("SELECT project_id FROM links WHERE code = ?", Long.class, anonymous.code()))
+					.isIn(firstProject, secondProject);
+		} finally {
+			executor.shutdownNow();
+		}
+	}
+
+	private boolean claimAfterStart(java.util.concurrent.CountDownLatch ready, java.util.concurrent.CountDownLatch start,
+			Long userId, Long projectId, String code, String secret) throws InterruptedException {
+		ready.countDown();
+		start.await();
+		try {
+			projectService.importAnonymousLink(userId, projectId, code, secret);
+			return true;
+		} catch (IllegalArgumentException exception) {
+			return false;
+		}
 	}
 
 	private void assertAuthorizationRedirect(String provider, String authorizationUri) throws Exception {

@@ -162,7 +162,7 @@ public class RedirectService {
 			log.info("Link lookup failed: reason=NOT_FOUND, code={}", code);
 			return new LinkNotFoundException();
 		});
-		boolean deleted = link.isDeleted();
+		boolean deleted = link.isDeleted() || link.getProject() != null && link.getProject().getArchivedAt() != null;
 		boolean expired = link.isExpiredAt(Instant.now());
 		if (deleted || expired) {
 			log.info("Link unavailable: code={}, deleted={}, expired={}", code, deleted, expired);

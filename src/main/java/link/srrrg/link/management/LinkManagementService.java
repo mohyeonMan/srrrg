@@ -27,6 +27,8 @@ import link.srrrg.link.management.dto.LinkStatisticsSummary;
 import link.srrrg.link.management.dto.UpdateLinkRequest;
 import link.srrrg.link.risk.RiskVerdict;
 import link.srrrg.link.risk.UrlRiskVerificationService;
+import link.srrrg.identity.User;
+import link.srrrg.project.Project;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -163,6 +165,21 @@ public class LinkManagementService {
 				link.getCreatedAt(), link.getUpdatedAt());
 	}
 
+	public Link createForProject(CreateLinkRequest request, Project project, User createdBy) {
+		return createForProject(request, project, createdBy, null, null, null);
+	}
+
+	public Link createForProject(CreateLinkRequest request, Project project, User createdBy,
+			Long apiKeyId, String idempotencyKey, String requestHash) {
+		Link existing = findIdempotentLink(apiKeyId, idempotencyKey, requestHash);
+		if (existing != null) return existing;
+		urlValidator.validate(request.originalUrl());
+		validateExpiration(request.expiresAt());
+		requireNoKnownThreat(request.originalUrl());
+		return saveProjectLinkWithUniqueCode(request.originalUrl(), request.expiresAt(), project, createdBy,
+				apiKeyId, idempotencyKey, requestHash);
+	}
+
 	private void validateUpdateRequest(UpdateLinkRequest request) {
 		if (request == null || !request.hasChanges()) {
 			throw new IllegalArgumentException("변경할 값을 하나 이상 입력해야 합니다.");
@@ -183,6 +200,38 @@ public class LinkManagementService {
 		metrics.recordLinkCodeGeneration("exhausted");
 		log.error("Link code generation exhausted: attempts={}", MAX_CODE_GENERATION_ATTEMPTS);
 		throw new IllegalStateException("단축 코드를 생성하지 못했습니다.");
+	}
+
+	private Link saveProjectLinkWithUniqueCode(String originalUrl, Instant expiresAt, Project project, User createdBy,
+			Long apiKeyId, String idempotencyKey, String requestHash) {
+		for (int attempt = 1; attempt <= MAX_CODE_GENERATION_ATTEMPTS; attempt++) {
+			String code = linkCodeGenerator.generate();
+			try {
+				return linkRepository.saveAndFlush(Link.createForProject(code, originalUrl, expiresAt, project, createdBy,
+						apiKeyId, idempotencyKey, requestHash));
+			} catch (DataIntegrityViolationException exception) {
+				Link existing = findIdempotentLink(apiKeyId, idempotencyKey, requestHash);
+				if (existing != null) return existing;
+				metrics.recordLinkCodeGeneration("collision");
+				log.debug("Generated project link code collision: attempt={}, code={}", attempt, code);
+			}
+		}
+		metrics.recordLinkCodeGeneration("exhausted");
+		throw new IllegalStateException("단축 코드를 생성하지 못했습니다.");
+	}
+
+	private Link findIdempotentLink(Long apiKeyId, String idempotencyKey, String requestHash) {
+		if (apiKeyId == null || idempotencyKey == null) return null;
+		return linkRepository.findByIdempotencyApiKeyIdAndIdempotencyKey(apiKeyId, idempotencyKey)
+				.map(link -> {
+					if (!requestHash.equals(link.getIdempotencyRequestHash())) throw new IdempotencyConflictException();
+					return link;
+				})
+				.orElse(null);
+	}
+
+	public static class IdempotencyConflictException extends RuntimeException {
+		public IdempotencyConflictException() { super("같은 Idempotency-Key를 다른 요청에 사용할 수 없습니다."); }
 	}
 
 	private void validateExpiration(Instant expiresAt) {

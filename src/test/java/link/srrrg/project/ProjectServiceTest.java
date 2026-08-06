@@ -4,12 +4,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
+import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import link.srrrg.common.util.SecureRandomStringGenerator;
 import link.srrrg.identity.User;
@@ -17,6 +20,7 @@ import link.srrrg.identity.UserRepository;
 import link.srrrg.link.Link;
 import link.srrrg.link.LinkRepository;
 import link.srrrg.link.SecretKeyManager;
+import link.srrrg.link.management.LinkManagementService;
 
 class ProjectServiceTest {
 	private final ProjectRepository projects = mock(ProjectRepository.class);
@@ -25,8 +29,9 @@ class ProjectServiceTest {
 	private final UserRepository users = mock(UserRepository.class);
 	private final LinkRepository links = mock(LinkRepository.class);
 	private final SecretKeyManager secretKeys = mock(SecretKeyManager.class);
+	private final LinkManagementService linkManagement = mock(LinkManagementService.class);
 	private final ProjectService service = new ProjectService(projects, members, invitations, users, links,
-			mock(SecureRandomStringGenerator.class), mock(InvitationEmailSender.class), secretKeys, "https://srrrg.link");
+			mock(SecureRandomStringGenerator.class), mock(InvitationEmailSender.class), secretKeys, linkManagement, "https://srrrg.link");
 
 	@Test
 	void createsPersonalProjectForUserWithoutMembership() {
@@ -47,7 +52,9 @@ class ProjectServiceTest {
 	@Test
 	void blocksDemotionOfLastOwner() {
 		ProjectMember owner = mock(ProjectMember.class);
+		Project project = mock(Project.class);
 		when(owner.getRole()).thenReturn(ProjectRole.OWNER);
+		when(owner.getProject()).thenReturn(project);
 		when(members.findByIdProjectIdAndIdUserId(1L, 2L)).thenReturn(Optional.of(owner));
 		when(members.lockByProjectAndUser(1L, 3L)).thenReturn(Optional.of(owner));
 		when(members.countByIdProjectIdAndRole(1L, ProjectRole.OWNER)).thenReturn(1L);
@@ -80,6 +87,7 @@ class ProjectServiceTest {
 		Project project = mock(Project.class);
 		ProjectInvitation existing = mock(ProjectInvitation.class);
 		when(owner.getRole()).thenReturn(ProjectRole.OWNER);
+		when(owner.getProject()).thenReturn(project);
 		when(projects.findById(1L)).thenReturn(Optional.of(project));
 		when(members.findByIdProjectIdAndIdUserId(1L, 2L)).thenReturn(Optional.of(owner));
 		when(invitations.findByProjectIdAndEmailAndCancelledAtIsNullAndAcceptedAtIsNull(1L, "invitee@example.com"))
@@ -115,12 +123,14 @@ class ProjectServiceTest {
 	@Test
 	void blocksViewerFromImportingAnonymousLink() {
 		ProjectMember viewer = mock(ProjectMember.class);
+		Project project = mock(Project.class);
 		when(viewer.getRole()).thenReturn(ProjectRole.VIEWER);
+		when(viewer.getProject()).thenReturn(project);
 		when(members.findByIdProjectIdAndIdUserId(1L, 2L)).thenReturn(Optional.of(viewer));
 
 		assertThatThrownBy(() -> service.importAnonymousLink(2L, 1L, "aB3x9Q", "secret"))
 				.isInstanceOf(SecurityException.class);
-		verify(links, never()).findByCode(any());
+		verify(links, never()).lockByCode(any());
 	}
 
 	@Test
@@ -128,16 +138,71 @@ class ProjectServiceTest {
 		ProjectMember editor = mock(ProjectMember.class);
 		Project project = mock(Project.class);
 		Link link = mock(Link.class);
+		User user = mock(User.class);
 		when(editor.getRole()).thenReturn(ProjectRole.EDITOR);
+		when(editor.getProject()).thenReturn(project);
 		when(members.findByIdProjectIdAndIdUserId(1L, 2L)).thenReturn(Optional.of(editor));
-		when(links.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
+		when(links.lockByCode("aB3x9Q")).thenReturn(Optional.of(link));
 		when(link.getProject()).thenReturn(null);
 		when(link.getSecretKeyHash()).thenReturn("hash");
 		when(secretKeys.matches("srrrg_sk_secret", "hash")).thenReturn(true);
 		when(projects.findById(1L)).thenReturn(Optional.of(project));
+		when(users.findById(2L)).thenReturn(Optional.of(user));
 
 		service.importAnonymousLink(2L, 1L, "aB3x9Q", "srrrg_sk_secret");
 
-		verify(link).assignToProject(project);
+		verify(link).assignToProject(project, user);
+		verify(links).lockByCode("aB3x9Q");
+	}
+
+	@Test
+	void rejectsReservedProjectSlug() {
+		when(members.countByIdUserIdAndRoleAndProjectArchivedAtIsNull(2L, ProjectRole.OWNER)).thenReturn(0L);
+		when(users.findById(2L)).thenReturn(Optional.of(mock(User.class)));
+
+		assertThatThrownBy(() -> service.create(2L, "관리", "admin"))
+				.isInstanceOf(IllegalArgumentException.class);
+		assertThatThrownBy(() -> service.create(2L, "DNS", "cname"))
+				.isInstanceOf(IllegalArgumentException.class);
+	}
+
+	@Test
+	void archivesProjectForOwner() {
+		Project project = mock(Project.class);
+		ProjectMember owner = mock(ProjectMember.class);
+		when(owner.getRole()).thenReturn(ProjectRole.OWNER);
+		when(owner.getProject()).thenReturn(project);
+		when(members.findByIdProjectIdAndIdUserId(1L, 2L)).thenReturn(Optional.of(owner));
+
+		service.archive(2L, 1L);
+
+		verify(project).archive();
+	}
+
+	@Test
+	void rejectsInvitationForArchivedProject() {
+		ProjectInvitation invitation = mock(ProjectInvitation.class);
+		Project project = mock(Project.class);
+		when(invitations.findByTokenHash(any())).thenReturn(Optional.of(invitation));
+		when(invitation.getProject()).thenReturn(project);
+		when(project.getId()).thenReturn(1L);
+		when(project.getArchivedAt()).thenReturn(Instant.now());
+
+		assertThatThrownBy(() -> service.accept(2L, "token"))
+				.isInstanceOf(IllegalStateException.class);
+		verify(members, never()).save(any());
+		verify(invitation, never()).accept();
+	}
+
+	@Test
+	void reportsSlugConstraintRaceAsInvalidRequest() {
+		when(members.countByIdUserIdAndRoleAndProjectArchivedAtIsNull(2L, ProjectRole.OWNER)).thenReturn(0L);
+		when(users.findById(2L)).thenReturn(Optional.of(mock(User.class)));
+		when(projects.saveAndFlush(any())).thenThrow(new DataIntegrityViolationException("duplicate slug"));
+
+		assertThatThrownBy(() -> service.create(2L, "프로젝트", "available"))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessage("이미 사용 중인 프로젝트 slug입니다.");
+		verify(projects, times(1)).saveAndFlush(any());
 	}
 }

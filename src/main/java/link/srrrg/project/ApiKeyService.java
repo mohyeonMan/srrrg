@@ -53,7 +53,7 @@ public class ApiKeyService {
 	@Transactional
 	public ApiKeyPrincipal authenticate(String raw) {
 		ProjectApiKey key = keys.findByKeyHash(hash(raw)).orElseThrow(ApiKeyUnauthorizedException::new);
-		if (!key.isUsableAt(Instant.now())) throw new ApiKeyUnauthorizedException();
+		if (!key.isUsableAt(Instant.now()) || key.getProject().getArchivedAt() != null) throw new ApiKeyUnauthorizedException();
 		key.recordUse();
 		return new ApiKeyPrincipal(key.getId(), key.getProject().getId(), Set.copyOf(key.getScopes()));
 	}

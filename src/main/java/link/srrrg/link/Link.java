@@ -14,6 +14,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import link.srrrg.project.Project;
+import link.srrrg.identity.User;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -40,6 +41,17 @@ public class Link {
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "project_id")
 	private Project project;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "created_by_user_id")
+	private User createdBy;
+
+	@Column(name = "idempotency_api_key_id")
+	private Long idempotencyApiKeyId;
+	@Column(name = "idempotency_key", length = 100)
+	private String idempotencyKey;
+	@Column(name = "idempotency_request_hash", length = 64)
+	private String idempotencyRequestHash;
 
 	@Column(name = "expires_at")
 	private Instant expiresAt;
@@ -73,6 +85,17 @@ public class Link {
 		return new Link(code, originalUrl, secretKeyHash, expiresAt);
 	}
 
+	public static Link createForProject(String code, String originalUrl, Instant expiresAt,
+			Project project, User createdBy, Long apiKeyId, String idempotencyKey, String requestHash) {
+		Link link = new Link(code, originalUrl, null, expiresAt);
+		link.project = project;
+		link.createdBy = createdBy;
+		link.idempotencyApiKeyId = apiKeyId;
+		link.idempotencyKey = idempotencyKey;
+		link.idempotencyRequestHash = requestHash;
+		return link;
+	}
+
 	@PrePersist
 	void onCreate() {
 		Instant now = Instant.now();
@@ -104,8 +127,9 @@ public class Link {
 		this.updatedAt = Instant.now();
 	}
 
-	public void assignToProject(Project project) {
+	public void assignToProject(Project project, User createdBy) {
 		this.project = project;
+		this.createdBy = createdBy;
 		this.secretKeyHash = null;
 		this.updatedAt = Instant.now();
 	}

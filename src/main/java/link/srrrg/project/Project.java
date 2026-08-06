@@ -7,9 +7,13 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import link.srrrg.identity.User;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -25,13 +29,29 @@ public class Project {
 	@Column(nullable = false, length = 100)
 	private String name;
 
+	@Column(nullable = false, unique = true, length = 63)
+	private String slug;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "created_by_user_id")
+	private User createdBy;
+
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
 	@Column(name = "updated_at", nullable = false)
 	private Instant updatedAt;
+	@Column(name = "archived_at")
+	private Instant archivedAt;
 
-	private Project(String name) { this.name = name; }
-	public static Project create(String name) { return new Project(name); }
+	private Project(String name, String slug, User createdBy) {
+		this.name = name;
+		this.slug = slug;
+		this.createdBy = createdBy;
+	}
+	public static Project create(String name, String slug, User createdBy) { return new Project(name, slug, createdBy); }
+
+	public void rename(String name) { this.name = name; }
+	public void archive() { this.archivedAt = Instant.now(); }
 
 	@PrePersist void onCreate() { createdAt = updatedAt = Instant.now(); }
 	@PreUpdate void onUpdate() { updatedAt = Instant.now(); }

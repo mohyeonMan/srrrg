@@ -192,6 +192,12 @@ archived_at nullable
 
 `slug`는 프로젝트 소유권을 판단하는 값이 아니며 모든 요청에서 멤버십을 별도로 확인한다.
 
+- slug는 lower-case DNS label 형식의 3~63자이며 전체 프로젝트에서 unique다.
+- 생성 요청에서 생략하면 `p-`와 영문 소문자·숫자 난수 8자리로 생성하고 이후 변경하지 않는다.
+- `actuator`, `admin`, `api`, `app`, `auth`, `cdn`, `cname`, `dev`, `docs`, `help`, `login`, `mail`, `manage`, `oauth`, `oauth2`, `openapi`, `static`, `status`, `support`, `www`는 예약한다.
+- 프로젝트 삭제는 `archived_at`을 기록하는 soft delete다. 보관된 프로젝트는 목록과 관리 API에서 제외하고 소속 링크와 API key를 사용할 수 없게 한다.
+- 기존 프로젝트와 링크의 `created_by_user_id`는 복원하지 않고 nullable로 둔다. 신규 생성과 익명 링크 귀속부터 현재 사용자를 저장한다.
+
 ### 4.3 project_members
 
 ```text
@@ -237,7 +243,7 @@ created_at
 - `hostname`은 전체 서비스에서 unique다.
 - 프로젝트마다 플랫폼 서브도메인 하나를 자동 생성한다.
 - 플랫폼 서브도메인은 `*.srrrg.link` wildcard DNS와 TLS 인증서를 공유하며 프로젝트별 Kubernetes 리소스를 생성하지 않는다.
-- 플랫폼 서브도메인 형식과 예약어는 4단계 질문 게이트에서 확정한다.
+- 플랫폼 서브도메인은 `{project.slug}.srrrg.link` 형식이며 project slug 예약어 정책을 함께 사용한다.
 
 프로젝트 링크는 `(domain_id, code)` 조합으로 식별한다. 같은 code라도 플랫폼 서브도메인이 다르면 서로 다른 링크가 될 수 있다.
 
@@ -301,6 +307,9 @@ project_id nullable
 domain_id nullable
 campaign_id nullable
 created_by_user_id nullable
+idempotency_api_key_id nullable
+idempotency_key nullable
+idempotency_request_hash nullable
 external_id nullable
 utm_source nullable
 utm_medium nullable
@@ -327,6 +336,8 @@ utm_content nullable
 - `project_id`, `domain_id`, `campaign_id`에 목록·라우팅·집계용 인덱스를 추가한다.
 
 기존 익명 링크는 `project_id`, `domain_id`, `campaign_id`, `created_by_user_id`가 모두 null인 상태로 유지한다.
+
+`idempotency_*` 컬럼은 API key 기반 단일 링크 생성 재시도에만 사용한다. `(idempotency_api_key_id, idempotency_key)`는 값이 있을 때 unique이며 요청 본문 원문 대신 SHA-256 hash를 저장한다.
 
 ### 4.8 기존 link_access_events
 
@@ -429,7 +440,9 @@ POST   /api/web/projects
 GET    /api/web/projects
 GET    /api/web/projects/{projectId}
 PATCH  /api/web/projects/{projectId}
+DELETE /api/web/projects/{projectId}
 GET    /api/web/projects/{projectId}/overview
+POST   /api/web/projects/{projectId}/links
 
 GET    /api/web/projects/{projectId}/members
 POST   /api/web/projects/{projectId}/invitations
@@ -493,12 +506,17 @@ DELETE /api/links/{code}
 프로젝트와 캠페인 링크 API를 추가한다.
 
 ```text
+POST   /api/web/projects/{projectId}/links
 POST   /api/v1/projects/{projectId}/links
 GET    /api/v1/projects/{projectId}/links
 POST   /api/v1/campaigns/{campaignId}/links
 POST   /api/v1/campaigns/{campaignId}/links/batch
 GET    /api/v1/campaigns/{campaignId}/links
 ```
+
+웹 endpoint는 JWT와 최신 프로젝트 역할을 검사하고, 공개 endpoint는 API key의 프로젝트와 `links:write` scope를 검사한다. 두 경로는 같은 링크 생성 service를 사용하며 프로젝트 링크에는 secret key를 발급하지 않는다. 4단계 도메인 migration 전에는 기존 전역 code와 `srrrg.link/{code}` 리다이렉트를 사용하고, 프로젝트 도메인 적용 시 `domain_id`와 도메인별 code 제약으로 전환한다.
+
+공개 생성 endpoint는 선택적 `Idempotency-Key`를 받는다. 같은 API key와 idempotency key로 같은 요청을 재시도하면 기존 링크를 반환하고, 다른 요청 본문에 재사용하면 `409 IDEMPOTENCY_CONFLICT`로 거절한다.
 
 대량 생성은 페이지 크기와 별개로 요청당 최대 개수를 둔다. 정확한 제한은 성능 측정 후 설정으로 조정하며, 부분 성공 대신 요청 단위 성공·실패를 기본으로 한다.
 
@@ -756,13 +774,10 @@ SDK 자동 생성, GraphQL, 별도 API gateway와 다국어 문서 사이트는 
 
 다음 항목은 코드 작성 전에 확정해야 한다.
 
-1. 프로젝트 slug의 전체 unique 여부
-2. 플랫폼 서브도메인 형식과 예약어
-3. API key 기본 만료 기간과 프로젝트별 rate limit
-4. 대량 생성 요청의 최대 링크 수
-5. 프로젝트·캠페인·UTM 변경 불가 정책의 UI 문구
-6. 접근 이벤트 보관 기간과 IP 개인정보 정책
-7. 프로젝트 초대 메일 발송 서비스와 발신 주소
+1. API key와 프로젝트별 rate limit
+2. 대량 생성 요청의 최대 링크 수
+3. 프로젝트·캠페인·UTM 변경 불가 정책의 UI 문구
+4. 접근 이벤트 보관 기간과 IP 개인정보 정책
 
 이 목록이 전부가 아니다. 구현자가 코드와 기존 문서를 읽으며 새로 발견한 미확정 사항도 구현 전에 질문해야 한다.
 

@@ -52,7 +52,11 @@
 - [x] `project_invitations` migration과 token hash
 - [x] 이메일 초대 발송·수락·취소·재발송
 - [x] `/api/web/**` 프로젝트·멤버 endpoint
+- [x] 프로젝트 slug·생성자·soft delete metadata migration과 모델
+- [x] 프로젝트 상세·이름 수정·soft delete·overview endpoint
+- [x] JWT 기반 프로젝트 단일 링크 생성과 생성자 기록
 - [x] 기존 익명 링크의 프로젝트 귀속과 secret key 폐기
+- [x] `POST /api/web/projects/{projectId}/links/{code}/claim`과 `X-Srrrg-Secret-Key` 계약
 - [x] 타 프로젝트 접근 차단 통합 테스트
 - [x] 기존 익명 링크 회귀 테스트
 - [x] 2단계 완료 조건 충족
@@ -65,6 +69,8 @@
 - [x] `/api/v1/**` API key 전용 인증
 - [x] JWT cookie와 API key 인증 경로 분리
 - [x] 타 프로젝트와 scope 밖 요청 차단
+- [x] `links:write` API key 기반 프로젝트 링크 생성
+- [x] API key 링크 생성 `Idempotency-Key` 재시도·충돌 처리
 - [x] request ID와 신규 API 오류 형식
 - [x] cursor pagination과 필요한 idempotency
 - [x] 공개 OpenAPI group과 `/openapi.json`

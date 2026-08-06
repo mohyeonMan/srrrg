@@ -90,7 +90,12 @@ UI 변경 시에는 `docs/design/v2/*`도 읽는다.
 - 프로젝트·멤버 단계 적용 후, 기본 개인 프로젝트가 없는 로그인 사용자에게 하나를 만든다.
 - 프로젝트는 OWNER, EDITOR, VIEWER 멤버를 가진다.
 - 미가입 사용자를 포함한 이메일 초대를 최초 범위에 포함한다.
+- 프로젝트 slug는 lower-case DNS label 3~63자, 전체 unique, 생성 후 변경 불가로 둔다. 생략 시 `p-`와 영문 소문자·숫자 난수 8자리로 생성한다.
+- `actuator`, `admin`, `api`, `app`, `auth`, `cdn`, `cname`, `dev`, `docs`, `help`, `login`, `mail`, `manage`, `oauth`, `oauth2`, `openapi`, `static`, `status`, `support`, `www` slug를 예약한다.
+- 프로젝트 삭제는 `archived_at` 기반 soft delete로 처리하고 보관된 프로젝트의 링크와 API key 사용을 차단한다.
+- 기존 프로젝트와 링크의 `created_by_user_id`는 nullable로 두고 신규 생성과 익명 링크 귀속부터 기록한다.
 - 프로젝트마다 플랫폼 서브도메인 하나를 자동 생성한다.
+- 플랫폼 서브도메인은 `{project.slug}.srrrg.link` 형식이다.
 - 플랫폼 서브도메인은 wildcard DNS와 TLS 인증서를 공유한다.
 - 프로젝트 링크 code는 `UNIQUE(domain_id, code)`다.
 - 기존 익명 링크 code는 srrrg 기본 도메인 안에서 계속 unique다.
@@ -392,6 +397,8 @@ srrrg 웹
 - 새 API는 cursor pagination, request ID, idempotency와 안정적인 오류 code를 제공한다.
 - 기존 익명 오류 응답은 호환성을 위해 유지하고 새 API부터 Problem Details를 적용한다.
 
+프로젝트 단일 링크 생성은 JWT용 `POST /api/web/projects/{projectId}/links`와 API key용 `POST /api/v1/projects/{projectId}/links`가 같은 생성 service를 호출한다. API key 경로에는 `links:write` scope가 필요하며 선택적 `Idempotency-Key`의 동일 요청 재시도는 같은 링크를 반환한다. 프로젝트 도메인 단계 전에는 기존 전역 code와 기본 리다이렉트 경로를 사용한다.
+
 ### 11.3 문서
 
 현재 springdoc, `OpenApiConfig`와 controller annotation을 OpenAPI 생성의 원천으로 유지한다.
@@ -514,13 +521,10 @@ srrrg 웹
 
 다음 값은 해당 단계 구현 전에 사용자에게 확인한다.
 
-1. 프로젝트 초대 메일 공급자, 발신 주소와 template 운영 방식
-2. 프로젝트 slug 형식, 전체 unique 여부와 예약어
-3. 플랫폼 서브도메인 생성 규칙
-4. API key·익명 링크·CSV의 실제 rate limit과 quota
-5. JSON batch와 CSV 최대 행 수
-6. 접근 이벤트와 IP·User-Agent 보관 및 익명화 기간
-7. 계정 삭제 시 개인 프로젝트와 공동 프로젝트의 소유권 이전 정책
+1. API key·익명 링크·CSV의 실제 rate limit과 quota
+2. JSON batch와 CSV 최대 행 수
+3. 접근 이벤트와 IP·User-Agent 보관 및 익명화 기간
+4. 계정 삭제 시 개인 프로젝트와 공동 프로젝트의 소유권 이전 정책
 
 이 목록 외의 부족한 결정도 구현자가 발견하면 질문 게이트에 추가한다. 답을 받기 전에 임시 기본값으로 코드를 작성하지 않는다.
 

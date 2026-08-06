@@ -66,7 +66,8 @@
   document.querySelector('#import-form').onsubmit = async event => {
     event.preventDefault();
     const data = new FormData(event.target);
-    const response = await request(`${base}/api/web/projects/${selected.id}/links/import`, {method:'POST', body:JSON.stringify({code:data.get('code'), secretKey:data.get('secretKey')})});
+    const code = data.get('code');
+    const response = await request(`${base}/api/web/projects/${selected.id}/links/${encodeURIComponent(code)}/claim`, {method:'POST', headers:{'X-Srrrg-Secret-Key':data.get('secretKey')}});
     message.textContent = response.ok ? '링크를 프로젝트로 편입했습니다. secret key는 더 이상 사용할 수 없습니다.' : '링크를 확인할 수 없습니다.';
   };
   load();
