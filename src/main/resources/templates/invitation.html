@@ -1,2 +1,86 @@
 <!doctype html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="context-path" th:content="@{/}"><title>srrrg - 프로젝트 초대</title><link rel="stylesheet" th:href="@{/css/srrrg.css}"></head><body><main class="management-shell"><section class="management-gate"><h1>프로젝트 초대</h1><p>로그인한 계정으로 이 프로젝트 초대에 응합니다.</p><button id="accept" class="primary-button">초대 수락</button><p id="message" class="form-message" role="status"></p><p>로그인이 필요하면 <a th:href="@{'/oauth2/authorization/google?returnTo=/invitations/' + ${token}}">Google</a>, <a th:href="@{'/oauth2/authorization/kakao?returnTo=/invitations/' + ${token}}">Kakao</a>, <a th:href="@{'/oauth2/authorization/github?returnTo=/invitations/' + ${token}}">GitHub</a>로 로그인하세요.</p></section></main><script th:inline="javascript">const t=/*[[${token}]]*/'';const base=document.querySelector('meta[name="context-path"]').content.replace(/\/$/,'');document.querySelector('#accept').onclick=async()=>{const c=decodeURIComponent(document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]+)/)?.[1]||'');const r=await fetch(`${base}/api/web/invitations/${encodeURIComponent(t)}/accept`,{method:'POST',headers:{'X-XSRF-TOKEN':c}});if(r.ok)location.href=`${base}/projects`;else document.querySelector('#message').textContent='로그인 후 다시 시도하거나 초대 상태를 확인하세요.';};</script></body></html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="context-path" th:content="@{/}">
+	<title>srrrg - 프로젝트 초대</title>
+	<link rel="stylesheet" th:href="@{/css/srrrg.css}">
+	<script defer th:src="@{/js/srrrg-invitation.js}"></script>
+</head>
+<body>
+<div th:replace="~{fragments/srrrg-layout :: header}"></div>
+
+<main
+		id="invitation-app"
+		class="invitation-shell"
+		th:attr="data-token=${token},data-available=${invitation.available}"
+>
+	<section class="invitation-card surface-panel" aria-labelledby="invitation-title">
+		<header class="invitation-heading">
+			<span class="section-eyebrow">프로젝트 초대</span>
+			<th:block th:if="${invitation.available}">
+				<h1 id="invitation-title"><span th:text="${invitation.projectName}">프로젝트</span>에 초대받았습니다</h1>
+				<p>초대 내용을 확인하고 현재 로그인한 계정으로 참여하세요.</p>
+			</th:block>
+			<th:block th:unless="${invitation.available}">
+				<h1 id="invitation-title">사용할 수 없는 초대입니다</h1>
+				<p>초대가 만료·취소·수락되었거나 주소가 올바르지 않습니다.</p>
+			</th:block>
+		</header>
+
+		<div class="invitation-facts" th:if="${invitation.available}">
+			<div>
+				<span>프로젝트</span>
+				<strong th:text="${invitation.projectName}">프로젝트 이름</strong>
+			</div>
+			<div>
+				<span>권한</span>
+				<strong th:text="${invitation.role.name() == 'EDITOR' ? '링크 편집 가능' : '조회 전용'}">조회 전용</strong>
+			</div>
+			<div>
+				<span>유효 기한</span>
+				<strong><time id="invitation-expires-at" th:attr="datetime=${invitation.expiresAt}" th:text="${invitation.expiresAt}"></time></strong>
+			</div>
+		</div>
+
+		<p class="invitation-account-note" th:if="${invitation.available}">
+			초대받은 이메일과 계정 이메일을 비교하지 않습니다. 이 링크를 열어 로그인한 계정이 프로젝트에 참여하므로 초대 링크를 다른 사람에게 전달하지 마세요.
+		</p>
+
+		<div id="invitation-login" class="invitation-login" th:if="${invitation.available}" th:hidden="${authenticated}">
+			<div>
+				<h2>먼저 로그인하세요</h2>
+				<p>로그인 후 이 초대 화면으로 돌아옵니다.</p>
+			</div>
+			<nav class="oauth-options" aria-label="초대 수락을 위한 소셜 로그인">
+				<a class="oauth-button" th:href="@{/oauth2/authorization/google(returnTo=${returnTo})}">Google로 계속</a>
+				<a class="oauth-button" th:href="@{/oauth2/authorization/kakao(returnTo=${returnTo})}">Kakao로 계속</a>
+				<a class="oauth-button" th:href="@{/oauth2/authorization/github(returnTo=${returnTo})}">GitHub로 계속</a>
+			</nav>
+		</div>
+
+		<div id="invitation-actions" class="invitation-actions-panel" th:if="${invitation.available}" th:hidden="${!authenticated}">
+			<button id="accept-invitation" class="primary-button" type="button">초대 수락</button>
+			<a class="secondary-button" th:href="@{/projects}">내 프로젝트로 돌아가기</a>
+		</div>
+
+		<section id="invitation-result" class="invitation-result" aria-labelledby="invitation-result-title" hidden>
+			<span class="status-badge success">참여 완료</span>
+			<h2 id="invitation-result-title" tabindex="-1">프로젝트에 참여했습니다</h2>
+			<p id="invitation-result-description">프로젝트 목록에서 바로 확인할 수 있습니다.</p>
+			<a id="open-invited-project" class="primary-button" th:href="@{/projects}">프로젝트 열기</a>
+		</section>
+
+		<p id="invitation-message" class="form-message" role="status" aria-live="polite"></p>
+
+		<div class="invitation-unavailable-actions" th:unless="${invitation.available}">
+			<a class="primary-button" th:href="@{/projects}">내 프로젝트 보기</a>
+			<a class="secondary-button" th:href="@{/}">홈으로 돌아가기</a>
+		</div>
+	</section>
+</main>
+
+<div th:replace="~{fragments/srrrg-layout :: footer}"></div>
+</body>
+</html>

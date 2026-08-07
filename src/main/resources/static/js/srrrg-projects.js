@@ -7,6 +7,7 @@
 	const byId = (id) => document.getElementById(id);
 	const projectMessage = byId('project-message');
 	const linkMessage = byId('link-create-message');
+	const inviteMessage = byId('invite-message');
 	const originalUrlInput = byId('project-original-url');
 	const expiresAtInput = byId('project-expires-at');
 	const createLinkButton = byId('create-project-link-button');
@@ -126,8 +127,7 @@
 		byId('link-create-panel').hidden = !canEdit;
 		byId('import-section').hidden = !canEdit;
 		byId('project-settings-section').hidden = role !== 'OWNER';
-		byId('invite-form').hidden = role !== 'OWNER';
-		byId('invitation-list').hidden = role !== 'OWNER';
+		byId('invitation-management').hidden = role !== 'OWNER';
 	}
 
 	async function loadProjectData() {
@@ -193,7 +193,7 @@
 	function renderMembers(members) {
 		const rows = members.map((member) => {
 			const row = element('div', 'member-row');
-			row.append(element('span', '', member.displayName || '이름 없음'), element('span', 'status-badge', member.role));
+			row.append(element('span', '', member.displayName || '이름 없음'), element('span', 'status-badge', roleLabel(member.role)));
 			return row;
 		});
 		replaceChildren(byId('member-list'), rows);
@@ -207,9 +207,15 @@
 	}
 
 	function renderInvitations(invitations) {
+		byId('invitation-count').textContent = String(invitations.length);
 		const rows = invitations.map((invitation) => {
 			const row = element('div', 'invitation-row');
-			row.append(element('span', '', `${invitation.email} · ${invitation.role}`));
+			const details = element('div', 'invitation-details');
+			const expired = new Date(invitation.expiresAt).getTime() <= Date.now();
+			details.append(
+				element('strong', '', invitation.email),
+				element('span', '', `${roleLabel(invitation.role)} · ${expired ? `${formatDate(invitation.expiresAt)} 만료` : `${formatDate(invitation.expiresAt)}까지`}`)
+			);
 			const actions = element('div', 'invitation-actions');
 			const cancel = element('button', 'text-button', '취소');
 			cancel.type = 'button';
@@ -218,7 +224,7 @@
 			resend.type = 'button';
 			resend.addEventListener('click', () => updateInvitation(invitation.id, 'POST', '초대 메일을 다시 보냈습니다.'));
 			actions.append(cancel, resend);
-			row.append(actions);
+			row.append(details, actions);
 			return row;
 		});
 		replaceChildren(byId('invitation-list'), rows.length ? rows : [element('p', 'help-text', '대기 중인 초대가 없습니다.')]);
@@ -226,13 +232,21 @@
 
 	async function updateInvitation(id, method, successMessage) {
 		const suffix = method === 'POST' ? '/resend' : '';
-		const response = await request(`${base}/api/web/invitations/${id}${suffix}`, { method });
-		if (!response.ok) {
-			setMessage(projectMessage, (await body(response)).message || '초대를 변경할 수 없습니다.', true);
-			return;
+		try {
+			const response = await request(`${base}/api/web/invitations/${id}${suffix}`, { method });
+			if (!response.ok) {
+				setMessage(inviteMessage, (await body(response)).message || '초대를 변경할 수 없습니다.', true);
+				return;
+			}
+			setMessage(inviteMessage, successMessage);
+			await loadInvitations();
+		} catch (_) {
+			setMessage(inviteMessage, '서버에 연결할 수 없습니다. 잠시 후 다시 시도하세요.', true);
 		}
-		setMessage(projectMessage, successMessage);
-		await loadInvitations();
+	}
+
+	function roleLabel(role) {
+		return role === 'EDITOR' ? '링크 편집 가능' : role === 'VIEWER' ? '조회 전용' : '소유자';
 	}
 
 	function validateLinkForm() {
@@ -422,14 +436,23 @@
 	byId('invite-form').addEventListener('submit', async (event) => {
 		event.preventDefault();
 		if (!state.selected) return;
+		const submit = byId('invite-submit-button');
 		const data = new FormData(event.target);
-		const response = await request(`${base}/api/web/projects/${state.selected.id}/invitations`, {
-			method: 'POST', body: JSON.stringify({ email: data.get('email'), role: data.get('role') })
-		});
-		if (!response.ok) return setMessage(projectMessage, (await body(response)).message || '초대 메일을 보낼 수 없습니다.', true);
-		event.target.reset();
-		setMessage(projectMessage, '초대 메일을 보냈습니다.');
-		await loadInvitations();
+		submit.disabled = true;
+		setMessage(inviteMessage, '초대 메일을 보내고 있습니다.');
+		try {
+			const response = await request(`${base}/api/web/projects/${state.selected.id}/invitations`, {
+				method: 'POST', body: JSON.stringify({ email: data.get('email'), role: data.get('role') })
+			});
+			if (!response.ok) return setMessage(inviteMessage, (await body(response)).message || '초대 메일을 보낼 수 없습니다.', true);
+			event.target.reset();
+			setMessage(inviteMessage, '초대 메일을 보냈습니다.');
+			await loadInvitations();
+		} catch (_) {
+			setMessage(inviteMessage, '서버에 연결할 수 없습니다. 잠시 후 다시 시도하세요.', true);
+		} finally {
+			submit.disabled = false;
+		}
 	});
 
 	byId('import-form').addEventListener('submit', async (event) => {
@@ -449,5 +472,5 @@
 	});
 
 	selectExpiration('none');
-	loadProjects();
+	loadProjects(new URLSearchParams(location.search).get('projectId'));
 })();

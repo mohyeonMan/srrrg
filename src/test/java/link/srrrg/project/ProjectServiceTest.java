@@ -1,5 +1,6 @@
 package link.srrrg.project;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -160,6 +161,34 @@ class ProjectServiceTest {
 		verify(link).assignToProject(project, domain, user);
 		verify(links).lockAnonymousByCode("aB3x9Q");
 		verify(links).flush();
+	}
+
+	@Test
+	void previewsUsableInvitationWithoutExposingRecipientEmail() {
+		Project project = mock(Project.class);
+		ProjectInvitation invitation = mock(ProjectInvitation.class);
+		Instant expiresAt = Instant.parse("2026-08-08T00:00:00Z");
+		when(invitations.findByTokenHash(InvitationTokenHash.sha256("token"))).thenReturn(Optional.of(invitation));
+		when(invitation.getProject()).thenReturn(project);
+		when(project.getName()).thenReturn("초대 프로젝트");
+		when(invitation.getRole()).thenReturn(ProjectRole.EDITOR);
+		when(invitation.getExpiresAt()).thenReturn(expiresAt);
+		when(invitation.isUsable(any())).thenReturn(true);
+
+		assertThat(service.invitationPreview("token")).isEqualTo(
+				new ProjectService.InvitationPreview(true, "초대 프로젝트", ProjectRole.EDITOR, expiresAt));
+	}
+
+	@Test
+	void hidesExpiredInvitationDetails() {
+		Project project = mock(Project.class);
+		ProjectInvitation invitation = mock(ProjectInvitation.class);
+		when(invitations.findByTokenHash(InvitationTokenHash.sha256("token"))).thenReturn(Optional.of(invitation));
+		when(invitation.getProject()).thenReturn(project);
+		when(invitation.isUsable(any())).thenReturn(false);
+
+		assertThat(service.invitationPreview("token")).isEqualTo(
+				new ProjectService.InvitationPreview(false, null, null, null));
 	}
 
 	@Test

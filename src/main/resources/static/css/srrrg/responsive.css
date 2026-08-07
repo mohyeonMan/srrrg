@@ -52,6 +52,10 @@
 }
 
 @media (max-width: 520px) {
+	.srrrg-tagline {
+		display: none;
+	}
+
 	.page-shell,
 	.decision-shell {
 		width: calc(100% - 20px);
@@ -161,10 +165,6 @@
 
 	.srrrg-logo {
 		font-size: 28px;
-	}
-
-	.srrrg-tagline {
-		display: none;
 	}
 
 	.srrrg-footer span:last-child {

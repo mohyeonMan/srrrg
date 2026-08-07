@@ -290,6 +290,29 @@
 	gap: var(--space-3);
 }
 
+.invitation-management {
+	display: grid;
+	gap: var(--space-3);
+	padding-top: var(--space-2);
+	border-top: 1px solid var(--color-border);
+}
+
+.project-admin-section .invitation-help {
+	font-size: 13px;
+	line-height: 1.6;
+}
+
+.invitation-list-heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.invitation-list-heading h4 {
+	margin: 0;
+	font-size: 14px;
+}
+
 .member-row,
 .invitation-row {
 	display: flex;
@@ -304,6 +327,23 @@
 .invitation-actions {
 	display: flex;
 	gap: var(--space-2);
+	flex: 0 0 auto;
+}
+
+.invitation-details {
+	display: grid;
+	gap: 3px;
+	min-width: 0;
+}
+
+.invitation-details strong,
+.invitation-details span {
+	overflow-wrap: anywhere;
+}
+
+.invitation-details span {
+	color: var(--color-text-subtle);
+	font-size: 12px;
 }
 
 .text-button {
@@ -358,5 +398,10 @@
 
 	.project-link-meta {
 		text-align: left;
+	}
+
+	.invitation-row {
+		align-items: flex-start;
+		flex-direction: column;
 	}
 }

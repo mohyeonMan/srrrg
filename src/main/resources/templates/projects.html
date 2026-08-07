@@ -128,14 +128,19 @@
 						</section>
 
 						<section class="project-admin-section" aria-labelledby="member-list-title">
-							<h3 id="member-list-title">멤버</h3>
+							<h3 id="member-list-title">멤버 및 초대</h3>
 							<div id="member-list" class="member-list"></div>
-							<form id="invite-form" class="project-inline-form" novalidate>
-								<label class="field" for="invite-email"><span class="field-label">초대할 이메일</span><input id="invite-email" class="field-input" name="email" type="email" maxlength="320" required></label>
-								<label class="field" for="invite-role"><span class="field-label">역할</span><select id="invite-role" class="field-input" name="role"><option value="EDITOR">EDITOR</option><option value="VIEWER">VIEWER</option></select></label>
-								<button class="secondary-button" type="submit">초대 보내기</button>
-							</form>
-							<div id="invitation-list" class="invitation-list"></div>
+							<div id="invitation-management" class="invitation-management">
+								<p class="invitation-help">이메일로 초대 링크를 보냅니다. 링크를 열어 로그인한 계정이 참여하므로 링크가 전달되지 않도록 안내하세요.</p>
+								<form id="invite-form" class="project-inline-form">
+									<label class="field" for="invite-email"><span class="field-label">초대할 이메일</span><input id="invite-email" class="field-input" name="email" type="email" maxlength="320" autocomplete="email" aria-describedby="invite-message" required></label>
+									<label class="field" for="invite-role"><span class="field-label">권한</span><select id="invite-role" class="field-input" name="role"><option value="EDITOR">링크 편집 가능</option><option value="VIEWER">조회 전용</option></select></label>
+									<button id="invite-submit-button" class="secondary-button" type="submit">초대 보내기</button>
+								</form>
+								<p id="invite-message" class="form-message" role="status" aria-live="polite"></p>
+								<div class="invitation-list-heading"><h4>수락 대기</h4><span id="invitation-count" class="status-badge">0</span></div>
+								<div id="invitation-list" class="invitation-list"></div>
+							</div>
 						</section>
 
 						<section id="import-section" class="project-admin-section" aria-labelledby="import-title">

@@ -29,6 +29,7 @@ import link.srrrg.project.ApiKeyScope;
 import link.srrrg.project.PublicProjectLinkController;
 import link.srrrg.project.InvitationPageController;
 import link.srrrg.project.ProjectController;
+import link.srrrg.project.ProjectRole;
 import link.srrrg.project.ProjectService;
 import link.srrrg.link.LinkRepository;
 
@@ -171,11 +172,16 @@ class SecurityWebTest {
 
 	@Test
 	void rendersInvitationPageWithContextPath() throws Exception {
+		when(projectService.invitationPreview("token")).thenReturn(new ProjectService.InvitationPreview(
+				true, "초대 프로젝트", ProjectRole.EDITOR, java.time.Instant.parse("2026-08-08T00:00:00Z")));
+
 		mockMvc.perform(get("/srrrg-dev/invitations/token")
 					.contextPath("/srrrg-dev")
 					.servletPath("/invitations/token"))
 				.andExpect(status().isOk())
-				.andExpect(content().string(org.hamcrest.Matchers.containsString("content=\"/srrrg-dev/\"")));
+				.andExpect(content().string(org.hamcrest.Matchers.containsString("content=\"/srrrg-dev/\"")))
+				.andExpect(content().string(org.hamcrest.Matchers.containsString("<span>초대 프로젝트</span>에 초대받았습니다")))
+				.andExpect(content().string(org.hamcrest.Matchers.containsString("Google로 계속")));
 	}
 
 	@Test

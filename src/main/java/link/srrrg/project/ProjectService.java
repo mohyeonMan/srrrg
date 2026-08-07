@@ -153,6 +153,15 @@ public class ProjectService {
 		return new AcceptedInvitation(projectId, false);
 	}
 
+	@Transactional(readOnly = true)
+	public InvitationPreview invitationPreview(String rawToken) {
+		return invitations.findByTokenHash(InvitationTokenHash.sha256(rawToken))
+				.filter(invitation -> invitation.getProject().getArchivedAt() == null && invitation.isUsable(Instant.now()))
+				.map(invitation -> new InvitationPreview(
+						true, invitation.getProject().getName(), invitation.getRole(), invitation.getExpiresAt()))
+				.orElseGet(() -> new InvitationPreview(false, null, null, null));
+	}
+
 	@Transactional
 	public void changeMemberRole(Long actorId, Long projectId, Long memberId, ProjectRole role) {
 		requireRole(actorId, projectId, ProjectRole.OWNER);
@@ -223,4 +232,5 @@ public class ProjectService {
 	private ProjectInvitation invitation(Long id) { return invitations.findById(id).orElseThrow(() -> new IllegalArgumentException("초대를 찾을 수 없습니다.")); }
 
 	public record AcceptedInvitation(Long projectId, boolean alreadyMember) { }
+	public record InvitationPreview(boolean available, String projectName, ProjectRole role, Instant expiresAt) { }
 }
