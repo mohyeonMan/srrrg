@@ -18,6 +18,20 @@ services:
       retries: 10
       start_period: 5s
 
+  redis:
+    image: redis:7.2-alpine
+    container_name: srrrg-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "no"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
   app:
     image: eclipse-temurin:21-jdk
     container_name: srrrg-app
@@ -51,6 +65,10 @@ services:
       SRRRG_URL_RISK_PROVIDER: ${SRRRG_URL_RISK_PROVIDER:-google}
       SRRRG_URL_RISK_FIXED_SAFE_DELAY: ${SRRRG_URL_RISK_FIXED_SAFE_DELAY:-0ms}
       SRRRG_URL_RISK_FIXED_SAFE_CACHE_DURATION: ${SRRRG_URL_RISK_FIXED_SAFE_CACHE_DURATION:-5m}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ${SPRING_DATA_REDIS_PASSWORD:-}
+      SRRRG_RATE_LIMIT_KEY_PREFIX: ${SRRRG_RATE_LIMIT_KEY_PREFIX:-srrrg:local:}
     ports:
       - "${APP_PORT:-8080}:8080"
     volumes:
@@ -58,6 +76,8 @@ services:
       - gradle-cache:/root/.gradle
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
 volumes:

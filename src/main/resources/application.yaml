@@ -27,6 +27,13 @@ spring:
           auth: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:true}
           starttls:
             enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:true}
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${SPRING_DATA_REDIS_PASSWORD:}
+      connect-timeout: ${SPRING_DATA_REDIS_CONNECT_TIMEOUT:300ms}
+      timeout: ${SPRING_DATA_REDIS_TIMEOUT:300ms}
   flyway:
     enabled: true
     placeholders:
@@ -49,6 +56,8 @@ srrrg:
   mail:
     from: ${SRRRG_MAIL_FROM:}
   trust-forwarded-headers: ${SRRRG_TRUST_FORWARDED_HEADERS:false}
+  rate-limit:
+    key-prefix: ${SRRRG_RATE_LIMIT_KEY_PREFIX:srrrg:dev:}
   auth:
     jwt:
       active-kid: ${SRRRG_JWT_ACTIVE_KID:}

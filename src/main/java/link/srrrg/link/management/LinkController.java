@@ -16,7 +16,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import link.srrrg.common.ratelimit.RateLimitService;
+import link.srrrg.link.access.ClientRequestInfoResolver;
 import link.srrrg.link.management.dto.CreateLinkRequest;
 import link.srrrg.link.management.dto.CreateLinkResponse;
 import link.srrrg.link.management.dto.DeleteLinkResponse;
@@ -32,15 +35,19 @@ public class LinkController {
 	private static final String SECRET_KEY_HEADER = "X-Srrrg-Secret-Key";
 
 	private final LinkManagementService linkService;
+	private final RateLimitService rateLimitService;
+	private final ClientRequestInfoResolver requestInfoResolver;
 
 	@PostMapping
 	@Operation(summary = "단축 링크 생성", description = "원본 URL을 등록하고 단축 URL과 관리용 secret key를 발급합니다.")
 	@ApiResponses({
 			@ApiResponse(responseCode = "201", description = "생성 성공"),
 			@ApiResponse(responseCode = "400", description = "잘못된 URL, 만료 시각 또는 위협 URL"),
+			@ApiResponse(responseCode = "429", description = "요청 한도 초과"),
 			@ApiResponse(responseCode = "503", description = "URL 안전 검사 불가")
 	})
-	public ResponseEntity<CreateLinkResponse> create(@Valid @RequestBody CreateLinkRequest request) {
+	public ResponseEntity<CreateLinkResponse> create(@Valid @RequestBody CreateLinkRequest request, HttpServletRequest servletRequest) {
+		rateLimitService.checkAnonymousLinkCreation(requestInfoResolver.resolve(servletRequest).ipAddress());
 		return ResponseEntity.status(HttpStatus.CREATED).body(linkService.create(request));
 	}
 

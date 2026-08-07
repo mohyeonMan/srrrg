@@ -8,6 +8,11 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import link.srrrg.campaign.BatchIdempotencyConflictException;
+import link.srrrg.campaign.importing.ActiveImportConflictException;
+import link.srrrg.campaign.importing.CampaignImportIdempotencyConflictException;
+import link.srrrg.common.ratelimit.RateLimitExceededException;
+import link.srrrg.link.ExternalIdConflictException;
 import link.srrrg.link.LinkGoneException;
 import link.srrrg.link.LinkCodeConflictException;
 import link.srrrg.link.LinkNotFoundException;
@@ -92,6 +97,38 @@ public class GlobalExceptionHandler {
 		log.warn("API request unavailable: code={}", URL_CHECK_FAILED);
 		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
 				.body(new ApiErrorResponse(URL_CHECK_FAILED, exception.getMessage()));
+	}
+
+	@ExceptionHandler(ExternalIdConflictException.class)
+	public ResponseEntity<ApiErrorResponse> handleExternalIdConflict(ExternalIdConflictException exception) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+				.body(new ApiErrorResponse("EXTERNAL_ID_CONFLICT", exception.getMessage()));
+	}
+
+	@ExceptionHandler(BatchIdempotencyConflictException.class)
+	public ResponseEntity<ApiErrorResponse> handleBatchIdempotencyConflict(BatchIdempotencyConflictException exception) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+				.body(new ApiErrorResponse("IDEMPOTENCY_CONFLICT", exception.getMessage()));
+	}
+
+	@ExceptionHandler(CampaignImportIdempotencyConflictException.class)
+	public ResponseEntity<ApiErrorResponse> handleImportIdempotencyConflict(CampaignImportIdempotencyConflictException exception) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+				.body(new ApiErrorResponse("IDEMPOTENCY_CONFLICT", exception.getMessage()));
+	}
+
+	@ExceptionHandler(ActiveImportConflictException.class)
+	public ResponseEntity<ApiErrorResponse> handleActiveImportConflict(ActiveImportConflictException exception) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+				.body(new ApiErrorResponse("IMPORT_IN_PROGRESS", exception.getMessage()));
+	}
+
+	@ExceptionHandler(RateLimitExceededException.class)
+	public ResponseEntity<ApiErrorResponse> handleRateLimitExceeded(RateLimitExceededException exception) {
+		log.warn("API request rate limited: retryAfterSeconds={}", exception.getRetryAfterSeconds());
+		return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+				.header("Retry-After", String.valueOf(exception.getRetryAfterSeconds()))
+				.body(new ApiErrorResponse("RATE_LIMIT_EXCEEDED", exception.getMessage()));
 	}
 
 	@ExceptionHandler(Exception.class)

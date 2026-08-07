@@ -1,0 +1,95 @@
+package link.srrrg.campaign;
+
+import java.time.Instant;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import link.srrrg.identity.User;
+import link.srrrg.project.Project;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Table(name = "campaigns")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Campaign {
+	@Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Long id;
+
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "project_id", nullable = false)
+	private Project project;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "utm_template_id")
+	private UtmTemplate utmTemplate;
+
+	@Column(nullable = false, length = 100)
+	private String name;
+
+	@Column(length = 500)
+	private String description;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "created_by_user_id")
+	private User createdBy;
+
+	@Column(name = "created_at", nullable = false)
+	private Instant createdAt;
+	@Column(name = "updated_at", nullable = false)
+	private Instant updatedAt;
+	@Column(name = "archived_at")
+	private Instant archivedAt;
+
+	private Campaign(Project project, String name, String description, User createdBy) {
+		this.project = project;
+		this.name = name;
+		this.description = description;
+		this.createdBy = createdBy;
+	}
+
+	public static Campaign create(Project project, String name, String description, User createdBy) {
+		return new Campaign(project, name, description, createdBy);
+	}
+
+	public void rename(String name) {
+		this.name = name;
+	}
+
+	public void changeDescription(String description) {
+		this.description = description;
+	}
+
+	public void selectTemplate(UtmTemplate utmTemplate) {
+		this.utmTemplate = utmTemplate;
+	}
+
+	public void archive() {
+		this.archivedAt = Instant.now();
+	}
+
+	public boolean isArchived() {
+		return archivedAt != null;
+	}
+
+	@PrePersist
+	void onCreate() {
+		createdAt = updatedAt = Instant.now();
+	}
+
+	@PreUpdate
+	void onUpdate() {
+		updatedAt = Instant.now();
+	}
+}

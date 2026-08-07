@@ -1,6 +1,8 @@
 package link.srrrg.link.management;
 
 import java.time.Instant;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -8,13 +10,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import io.micrometer.core.instrument.Timer;
+import link.srrrg.campaign.Campaign;
+import link.srrrg.campaign.UtmTemplate;
+import link.srrrg.campaign.UtmTemplateField;
 import link.srrrg.common.metrics.SrrrgMetrics;
 import link.srrrg.domain.ProjectDomain;
+import link.srrrg.link.DestinationUrlMerger;
+import link.srrrg.link.ExternalIdConflictException;
 import link.srrrg.link.Link;
 import link.srrrg.link.LinkCodeGenerator;
 import link.srrrg.link.LinkGoneException;
 import link.srrrg.link.LinkNotFoundException;
 import link.srrrg.link.LinkRepository;
+import link.srrrg.link.LinkUtmValue;
+import link.srrrg.link.LinkUtmValueRepository;
 import link.srrrg.link.SecretKeyManager;
 import link.srrrg.link.SecretKeyManager.GeneratedSecretKey;
 import link.srrrg.link.UnsafeUrlException;
@@ -39,6 +48,7 @@ public class LinkManagementService {
 	private static final int MAX_CODE_GENERATION_ATTEMPTS = 5;
 
 	private final LinkRepository linkRepository;
+	private final LinkUtmValueRepository linkUtmValueRepository;
 	private final LinkCodeGenerator linkCodeGenerator;
 	private final SecretKeyManager secretKeyManager;
 	private final UrlValidator urlValidator;
@@ -46,12 +56,14 @@ public class LinkManagementService {
 	private final SrrrgMetrics metrics;
 	private final String baseUrl;
 
-	public LinkManagementService(LinkRepository linkRepository, LinkCodeGenerator linkCodeGenerator,
+	public LinkManagementService(LinkRepository linkRepository, LinkUtmValueRepository linkUtmValueRepository,
+			LinkCodeGenerator linkCodeGenerator,
 			SecretKeyManager secretKeyManager, UrlValidator urlValidator,
 			UrlRiskVerificationService riskVerificationService,
 			SrrrgMetrics metrics,
 			@Value("${srrrg.base-url}") String baseUrl) {
 		this.linkRepository = linkRepository;
+		this.linkUtmValueRepository = linkUtmValueRepository;
 		this.linkCodeGenerator = linkCodeGenerator;
 		this.secretKeyManager = secretKeyManager;
 		this.urlValidator = urlValidator;
@@ -181,6 +193,31 @@ public class LinkManagementService {
 				apiKeyId, idempotencyKey, requestHash);
 	}
 
+	/**
+	 * campaign 링크 생성 유스케이스. UI 단일 생성, JSON batch, CSV worker가 모두 이 메서드를 호출한다.
+	 * resolvedUtmValues는 이미 요청값과 캠페인 기본값을 해석한 최종 필드별 값이다.
+	 */
+	public Link createForCampaign(String originalUrl, Instant expiresAt, Project project, ProjectDomain domain, User createdBy,
+			Long apiKeyId, String idempotencyKey, String requestHash,
+			Campaign campaign, UtmTemplate utmTemplate, String externalId,
+			Map<UtmTemplateField, String> resolvedUtmValues) {
+		Link existing = findIdempotentLink(apiKeyId, idempotencyKey, requestHash);
+		if (existing != null) return existing;
+		Map<String, String> utmByName = resolvedUtmValues.entrySet().stream()
+				.collect(Collectors.toMap(entry -> entry.getKey().getName(), Map.Entry::getValue));
+		String mergedUrl = DestinationUrlMerger.merge(originalUrl, utmByName);
+		urlValidator.validate(mergedUrl);
+		validateExpiration(expiresAt);
+		requireNoKnownThreat(mergedUrl);
+		Link link = saveCampaignLinkWithUniqueCode(originalUrl, expiresAt, project, domain, createdBy,
+				apiKeyId, idempotencyKey, requestHash, campaign, utmTemplate, externalId);
+		Long templateId = utmTemplate == null ? null : utmTemplate.getId();
+		for (Map.Entry<UtmTemplateField, String> entry : resolvedUtmValues.entrySet()) {
+			linkUtmValueRepository.save(LinkUtmValue.create(link, entry.getKey(), templateId, entry.getValue()));
+		}
+		return link;
+	}
+
 	private void validateUpdateRequest(UpdateLinkRequest request) {
 		if (request == null || !request.hasChanges()) {
 			throw new IllegalArgumentException("변경할 값을 하나 이상 입력해야 합니다.");
@@ -219,6 +256,33 @@ public class LinkManagementService {
 		}
 		metrics.recordLinkCodeGeneration("exhausted");
 		throw new IllegalStateException("단축 코드를 생성하지 못했습니다.");
+	}
+
+	private Link saveCampaignLinkWithUniqueCode(String originalUrl, Instant expiresAt, Project project, ProjectDomain domain, User createdBy,
+			Long apiKeyId, String idempotencyKey, String requestHash, Campaign campaign, UtmTemplate utmTemplate, String externalId) {
+		for (int attempt = 1; attempt <= MAX_CODE_GENERATION_ATTEMPTS; attempt++) {
+			String code = linkCodeGenerator.generate();
+			try {
+				return linkRepository.saveAndFlush(Link.createForCampaign(code, originalUrl, expiresAt, project, domain, createdBy,
+						apiKeyId, idempotencyKey, requestHash, campaign, utmTemplate, externalId));
+			} catch (DataIntegrityViolationException exception) {
+				if (isExternalIdConflict(exception)) {
+					throw new ExternalIdConflictException();
+				}
+				Link existing = findIdempotentLink(apiKeyId, idempotencyKey, requestHash);
+				if (existing != null) return existing;
+				metrics.recordLinkCodeGeneration("collision");
+				log.debug("Generated campaign link code collision: attempt={}, code={}", attempt, code);
+			}
+		}
+		metrics.recordLinkCodeGeneration("exhausted");
+		throw new IllegalStateException("단축 코드를 생성하지 못했습니다.");
+	}
+
+	private boolean isExternalIdConflict(DataIntegrityViolationException exception) {
+		Throwable cause = exception.getMostSpecificCause();
+		return cause != null && cause.getMessage() != null
+				&& cause.getMessage().contains("uq_links_campaign_external_id");
 	}
 
 	private Link findIdempotentLink(Long apiKeyId, String idempotencyKey, String requestHash) {

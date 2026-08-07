@@ -97,21 +97,23 @@
 
 ## 5단계: 캠페인·CSV
 
-- [ ] `campaigns` migration과 모델
-- [ ] link의 `campaign_id`, `external_id`, UTM 컬럼
-- [ ] 프로젝트 단일 링크와 캠페인 목록 분리
-- [ ] 캠페인 기본 목적지·UTM 복사
-- [ ] 캠페인 내 `external_id` unique 제약
-- [ ] 기존 query·fragment를 보존하는 UTM 병합
-- [ ] JSON batch와 idempotency
-- [ ] UTF-8 고정 template CSV upload
-- [ ] PostgreSQL 기반 비동기 import와 중복 실행 방지
-- [ ] import 진행 상태와 행별 오류 CSV
-- [ ] 필터된 링크 CSV export
-- [ ] UI·API·CSV가 같은 링크 생성 유스케이스 사용
-- [ ] 캠페인·CSV 통합 테스트
-- [ ] 기존 익명 링크 회귀 테스트
+- [x] `campaigns` migration과 모델
+- [x] link의 `campaign_id`, `external_id`, UTM 컬럼
+- [x] 프로젝트 단일 링크와 캠페인 목록 분리
+- [ ] 캠페인 기본 목적지·UTM 복사 (UTM 기본값 복사만 구현, "기본 목적지 URL" 개념은 없음 — 하단 참고)
+- [x] 캠페인 내 `external_id` unique 제약
+- [x] 기존 query·fragment를 보존하는 UTM 병합
+- [x] JSON batch와 idempotency
+- [x] UTF-8 고정 template CSV upload
+- [x] PostgreSQL 기반 비동기 import와 중복 실행 방지
+- [x] import 진행 상태와 행별 오류 CSV
+- [x] 필터된 링크 CSV export
+- [x] UI·API·CSV가 같은 링크 생성 유스케이스 사용
+- [x] 캠페인·CSV 통합 테스트
+- [x] 기존 익명 링크 회귀 테스트
 - [ ] 5단계 완료 조건 충족
+
+> **문서-코드 불일치 알림**: "캠페인 기본 목적지·UTM 복사" 항목은 목적지 URL 자체의 캠페인 기본값을 가리키는 것으로 보이나, `docs/architecture/campaign_utm_templates.md` 기준 확정된 설계에는 캠페인 단위 "기본 목적지 URL"이 없다 — 캠페인은 UTM 템플릿과 필드별 기본값만 가지고, 목적지 URL은 링크 생성 시(UI/API/JSON batch/CSV 각 행) 매번 지정한다. 이 차이를 추측해서 체크하지 않고 알린다. 이 항목의 의도가 실제로 "UTM 기본값 복사"만이라면 체크 가능하지만, 목적지 URL 기본값이 필요하다면 별도 결정이 필요하다.
 
 ## 6단계: 실제 통계
 

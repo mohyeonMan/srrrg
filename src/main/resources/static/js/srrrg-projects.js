@@ -128,6 +128,8 @@
 		byId('import-section').hidden = !canEdit;
 		byId('project-settings-section').hidden = role !== 'OWNER';
 		byId('invitation-management').hidden = role !== 'OWNER';
+		byId('campaign-section').hidden = false;
+		byId('create-campaign-form').hidden = !canEdit;
 	}
 
 	async function loadProjectData() {
@@ -146,7 +148,11 @@
 			byId('project-domain').textContent = state.domain || '연결된 도메인이 없습니다.';
 			byId('copy-project-domain').disabled = !state.domain;
 		}
-		if (overviewResponse.ok) renderLinks((await overviewResponse.json()).standaloneLinks || []);
+		if (overviewResponse.ok) {
+			const overview = await overviewResponse.json();
+			renderLinks(overview.standaloneLinks || []);
+			renderCampaigns(overview.campaigns || []);
+		}
 		if (membersResponse.ok) renderMembers(await membersResponse.json());
 		if (state.selected.role === 'OWNER') await loadInvitations(projectId);
 	}
@@ -188,6 +194,26 @@
 			return row;
 		});
 		replaceChildren(byId('project-link-list'), rows);
+	}
+
+	function renderCampaigns(campaigns) {
+		byId('campaign-count').textContent = String(campaigns.length);
+		if (!campaigns.length) {
+			replaceChildren(byId('campaign-list'), [element('p', 'project-empty-list', '아직 만든 캠페인이 없습니다.')]);
+			return;
+		}
+		const rows = campaigns.map((campaign) => {
+			const row = element('article', 'project-link-item');
+			const main = element('div', 'project-link-main');
+			const link = element('a', 'project-link-short-url', campaign.name);
+			link.href = `${base}/campaigns?projectId=${state.selected.id}&campaignId=${campaign.id}`;
+			main.append(link, element('p', 'project-link-original', campaign.description || '설명 없음'));
+			const meta = element('div', 'project-link-meta');
+			meta.append(element('span', '', campaign.utmTemplateName ? `템플릿 · ${campaign.utmTemplateName}` : 'UTM 템플릿 없음'));
+			row.append(main, meta);
+			return row;
+		});
+		replaceChildren(byId('campaign-list'), rows);
 	}
 
 	function renderMembers(members) {
@@ -410,6 +436,19 @@
 		event.target.reset();
 		setMessage(projectMessage, '프로젝트를 만들었습니다.');
 		await loadProjects(responseBody.id);
+	});
+
+	byId('create-campaign-form').addEventListener('submit', async (event) => {
+		event.preventDefault();
+		if (!state.selected) return;
+		const name = new FormData(event.target).get('name')?.trim();
+		if (!name) return setMessage(byId('campaign-message'), '캠페인 이름을 입력하세요.', true);
+		const response = await request(`${base}/api/web/projects/${state.selected.id}/campaigns`, { method: 'POST', body: JSON.stringify({ name }) });
+		const responseBody = await body(response);
+		if (!response.ok) return setMessage(byId('campaign-message'), responseBody.message || '캠페인을 만들 수 없습니다.', true);
+		event.target.reset();
+		setMessage(byId('campaign-message'), '캠페인을 만들었습니다.');
+		location.href = `${base}/campaigns?projectId=${state.selected.id}&campaignId=${responseBody.id}`;
 	});
 
 	byId('rename-project-form').addEventListener('submit', async (event) => {

@@ -27,6 +27,7 @@ import link.srrrg.domain.ProjectDomainService.HostRoute;
 import link.srrrg.link.Link;
 import link.srrrg.link.LinkGoneException;
 import link.srrrg.link.LinkRepository;
+import link.srrrg.link.LinkUtmValueRepository;
 import link.srrrg.link.UnsafeUrlException;
 import link.srrrg.link.UrlRiskCheckFailedException;
 import link.srrrg.link.UrlValidator;
@@ -40,6 +41,7 @@ import link.srrrg.link.risk.UrlRiskVerificationService;
 class RedirectServiceTest {
 
 	private final LinkRepository repository = mock(LinkRepository.class);
+	private final LinkUtmValueRepository linkUtmValueRepository = mock(LinkUtmValueRepository.class);
 	private final UrlValidator validator = mock(UrlValidator.class);
 	private final UrlRiskVerificationService riskVerificationService = mock(UrlRiskVerificationService.class);
 	private final LinkAccessEventRecorder accessRecorder = mock(LinkAccessEventRecorder.class);
@@ -59,7 +61,7 @@ class RedirectServiceTest {
 	void setUp() {
 		registry = new SimpleMeterRegistry();
 		metrics = new SrrrgMetrics(registry);
-		service = new RedirectService(repository, validator, riskVerificationService,
+		service = new RedirectService(repository, linkUtmValueRepository, validator, riskVerificationService,
 				accessRecorder, transactions, metrics, domains);
 		when(domains.resolve("srrrg.link")).thenReturn(Optional.of(new HostRoute(null)));
 	}
@@ -68,6 +70,7 @@ class RedirectServiceTest {
 	void springSelectsThePlatformTransactionManagerConstructor() {
 		try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
 			context.registerBean(LinkRepository.class, () -> repository);
+			context.registerBean(LinkUtmValueRepository.class, () -> linkUtmValueRepository);
 			context.registerBean(UrlValidator.class, () -> validator);
 			context.registerBean(UrlRiskVerificationService.class, () -> riskVerificationService);
 			context.registerBean(LinkAccessEventRecorder.class, () -> accessRecorder);

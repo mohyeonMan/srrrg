@@ -10,6 +10,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import link.srrrg.common.ratelimit.RateLimitService;
 import link.srrrg.common.util.SecureRandomStringGenerator;
 import link.srrrg.domain.ProjectDomain;
 import link.srrrg.domain.ProjectDomainService;
@@ -36,13 +37,16 @@ public class ProjectService {
 	private final SecretKeyManager secretKeys;
 	private final LinkManagementService linkManagement;
 	private final ProjectDomainService domains;
+	private final RateLimitService rateLimitService;
 	private final String baseUrl;
 
 	public ProjectService(ProjectRepository projects, ProjectMemberRepository members, ProjectInvitationRepository invitations,
 			UserRepository users, LinkRepository links, SecureRandomStringGenerator random, InvitationEmailSender emailSender, SecretKeyManager secretKeys,
-			LinkManagementService linkManagement, ProjectDomainService domains, @Value("${srrrg.base-url}") String baseUrl) {
+			LinkManagementService linkManagement, ProjectDomainService domains, RateLimitService rateLimitService,
+			@Value("${srrrg.base-url}") String baseUrl) {
 		this.projects = projects; this.members = members; this.invitations = invitations; this.users = users; this.links = links;
-		this.random = random; this.emailSender = emailSender; this.secretKeys = secretKeys; this.linkManagement = linkManagement; this.domains = domains; this.baseUrl = baseUrl;
+		this.random = random; this.emailSender = emailSender; this.secretKeys = secretKeys; this.linkManagement = linkManagement; this.domains = domains;
+		this.rateLimitService = rateLimitService; this.baseUrl = baseUrl;
 	}
 
 	@Transactional
@@ -75,7 +79,7 @@ public class ProjectService {
 	@Transactional(readOnly = true)
 	public ProjectMember detail(Long userId, Long projectId) { return requireRole(userId, projectId, ProjectRole.VIEWER); }
 	@Transactional(readOnly = true)
-	public List<Link> projectLinks(Long userId, Long projectId) { requireRole(userId, projectId, ProjectRole.VIEWER); return links.findByProjectIdAndDeletedFalseOrderByIdDesc(projectId); }
+	public List<Link> projectLinks(Long userId, Long projectId) { requireRole(userId, projectId, ProjectRole.VIEWER); return links.findByProjectIdAndCampaignIsNullAndDeletedFalseOrderByIdDesc(projectId); }
 	@Transactional(readOnly = true)
 	public List<ProjectMember> projectMembers(Long userId, Long projectId) { requireRole(userId, projectId, ProjectRole.VIEWER); return members.findByIdProjectId(projectId); }
 	@Transactional(readOnly = true)
@@ -197,6 +201,7 @@ public class ProjectService {
 	}
 
 	public Link createProjectLink(Long apiKeyId, Long projectId, String idempotencyKey, CreateLinkRequest request) {
+		rateLimitService.checkApiKeyWrite(apiKeyId);
 		String normalizedKey = validIdempotencyKey(idempotencyKey);
 		String requestHash = normalizedKey == null ? null : InvitationTokenHash.sha256(
 				String.valueOf(request.originalUrl()) + "\n" + String.valueOf(request.expiresAt()));

@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="context-path" th:content="@{/}">
+	<title>srrrg - 캠페인</title>
+	<link rel="stylesheet" th:href="@{/css/srrrg.css}">
+	<script defer th:src="@{/js/srrrg-campaigns.js}"></script>
+</head>
+<body>
+<div th:replace="~{fragments/srrrg-layout :: header}"></div>
+
+<main class="page-shell" id="campaigns-app">
+	<p class="section-kicker">CAMPAIGNS</p>
+	<div class="campaign-heading-row">
+		<h1 id="campaign-name">캠페인</h1>
+		<a id="back-to-project" class="secondary-button" href="#">프로젝트로 돌아가기</a>
+	</div>
+	<p id="campaign-description" class="campaign-description"></p>
+	<p id="campaigns-message" class="form-message" role="status" aria-live="polite"></p>
+
+	<div id="campaign-picker-panel" class="surface-panel campaign-card">
+		<h2>캠페인 선택</h2>
+		<label class="field" for="campaign-picker"><span class="field-label">이 프로젝트의 캠페인</span>
+			<select id="campaign-picker" class="field-input"></select>
+		</label>
+	</div>
+
+	<div id="campaign-body" hidden>
+		<section class="surface-panel campaign-card" aria-labelledby="template-title">
+			<h2 id="template-title">UTM 템플릿</h2>
+			<p>템플릿을 바꾸면 기존 링크의 UTM은 그대로 유지되고 새 링크와 새 CSV 양식부터 새 템플릿을 사용합니다.</p>
+			<div class="campaign-inline-row">
+				<label class="field" for="template-picker"><span class="field-label">사용할 템플릿</span>
+					<select id="template-picker" class="field-input">
+						<option value="">템플릿 없음</option>
+					</select>
+				</label>
+				<button id="reload-templates-button" class="secondary-button" type="button">새로고침</button>
+			</div>
+			<form id="create-template-form" class="project-inline-form" novalidate>
+				<label class="field" for="new-template-name"><span class="field-label">새 템플릿 이름</span>
+					<input id="new-template-name" class="field-input" name="name" maxlength="100" required>
+				</label>
+				<button class="secondary-button" type="submit">템플릿 만들기</button>
+			</form>
+
+			<div id="template-fields-panel" hidden>
+				<h3>활성 필드 (최대 10개)</h3>
+				<div id="template-field-list" class="template-field-list"></div>
+				<form id="add-field-form" class="project-inline-form" novalidate>
+					<label class="field" for="new-field-name"><span class="field-label">필드 이름 (예: utm_source)</span>
+						<input id="new-field-name" class="field-input" name="name" maxlength="50" pattern="[a-z][a-z0-9_]{1,49}" required>
+					</label>
+					<button class="secondary-button" type="submit">필드 추가</button>
+				</form>
+			</div>
+			<p id="template-message" class="form-message" role="status" aria-live="polite"></p>
+		</section>
+
+		<section id="defaults-panel" class="surface-panel campaign-card" aria-labelledby="defaults-title" hidden>
+			<h2 id="defaults-title">캠페인 기본값</h2>
+			<p>기본값 변경은 이후에 만드는 링크에만 적용됩니다.</p>
+			<form id="defaults-form" class="template-field-list"></form>
+			<button id="save-defaults-button" class="secondary-button" type="button">기본값 저장</button>
+			<p id="defaults-message" class="form-message" role="status" aria-live="polite"></p>
+		</section>
+
+		<section class="surface-panel campaign-card" aria-labelledby="create-link-title">
+			<h2 id="create-link-title">개인화 링크 만들기</h2>
+			<form id="create-campaign-link-form" class="form-grid" novalidate>
+				<label class="field" for="campaign-original-url"><span class="field-label">원본 URL</span>
+					<input id="campaign-original-url" class="field-input" name="originalUrl" type="url" maxlength="2048" required>
+				</label>
+				<label class="field" for="campaign-external-id"><span class="field-label">external_id (선택, 이메일·이름·전화번호 금지)</span>
+					<input id="campaign-external-id" class="field-input" name="externalId" maxlength="100" autocomplete="off">
+				</label>
+				<div id="campaign-utm-inputs" class="template-field-list"></div>
+				<div class="project-form-actions">
+					<p id="create-campaign-link-message" class="form-message" role="status" aria-live="polite"></p>
+					<button id="create-campaign-link-button" class="primary-button" type="submit">링크 만들기</button>
+				</div>
+			</form>
+		</section>
+
+		<section class="surface-panel campaign-card" aria-labelledby="campaign-links-title">
+			<div class="project-card-heading">
+				<h2 id="campaign-links-title">캠페인 링크</h2>
+				<span id="campaign-link-count" class="status-badge">0</span>
+			</div>
+			<div id="campaign-link-list" class="project-link-list"></div>
+			<button id="load-more-links-button" class="secondary-button" type="button" hidden>더 보기</button>
+		</section>
+
+		<section class="surface-panel campaign-card" aria-labelledby="csv-title">
+			<h2 id="csv-title">CSV 대량 생성</h2>
+			<p><a id="download-template-link" href="#">현재 캠페인용 CSV 양식 다운로드</a></p>
+			<form id="csv-upload-form" class="project-inline-form" novalidate>
+				<label class="field" for="csv-file"><span class="field-label">CSV 파일 (UTF-8, 최대 10,000행·10MB)</span>
+					<input id="csv-file" class="field-input" name="file" type="file" accept=".csv,text/csv" required>
+				</label>
+				<label class="field" for="csv-idempotency-key"><span class="field-label">Idempotency-Key</span>
+					<input id="csv-idempotency-key" class="field-input" name="idempotencyKey" maxlength="100" required>
+				</label>
+				<button class="secondary-button" type="submit">업로드</button>
+			</form>
+			<div id="import-status-panel" hidden>
+				<p id="import-status-text"></p>
+				<a id="download-errors-link" href="#" hidden>오류 CSV 다운로드</a>
+			</div>
+			<p id="csv-message" class="form-message" role="status" aria-live="polite"></p>
+		</section>
+
+		<section class="surface-panel campaign-card" aria-labelledby="export-title">
+			<h2 id="export-title">링크 내보내기</h2>
+			<div class="campaign-inline-row">
+				<label class="field" for="export-created-from"><span class="field-label">시작일</span>
+					<input id="export-created-from" class="field-input" type="datetime-local">
+				</label>
+				<label class="field" for="export-created-to"><span class="field-label">종료일</span>
+					<input id="export-created-to" class="field-input" type="datetime-local">
+				</label>
+				<label class="field" for="export-external-id"><span class="field-label">external_id 검색</span>
+					<input id="export-external-id" class="field-input" maxlength="100">
+				</label>
+			</div>
+			<button id="export-links-button" class="secondary-button" type="button">CSV 다운로드</button>
+		</section>
+
+		<button id="archive-campaign-button" class="danger-button" type="button">캠페인 삭제</button>
+	</div>
+</main>
+
+<div th:replace="~{fragments/srrrg-layout :: footer}"></div>
+</body>
+</html>

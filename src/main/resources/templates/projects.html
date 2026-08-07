@@ -115,6 +115,23 @@
 					<div id="project-link-list" class="project-link-list"></div>
 				</section>
 
+				<section id="campaign-section" class="project-card surface-panel" aria-labelledby="campaign-list-title" hidden>
+					<div class="project-card-heading">
+						<div>
+							<p class="section-kicker">CAMPAIGNS</p>
+							<h2 id="campaign-list-title">캠페인</h2>
+							<p>UTM과 external_id가 다른 개인화 링크를 캠페인으로 묶어 관리합니다.</p>
+						</div>
+						<span id="campaign-count" class="status-badge">0</span>
+					</div>
+					<div id="campaign-list" class="project-link-list"></div>
+					<form id="create-campaign-form" class="project-inline-form" novalidate>
+						<label class="field" for="new-campaign-name"><span class="field-label">새 캠페인 이름</span><input id="new-campaign-name" class="field-input" name="name" maxlength="100" required></label>
+						<button class="secondary-button" type="submit">캠페인 만들기</button>
+					</form>
+					<p id="campaign-message" class="form-message" role="status" aria-live="polite"></p>
+				</section>
+
 				<details class="project-admin surface-panel">
 					<summary>프로젝트 관리</summary>
 					<div class="project-admin-content">

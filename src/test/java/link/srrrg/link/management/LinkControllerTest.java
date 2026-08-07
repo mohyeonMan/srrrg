@@ -22,8 +22,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import link.srrrg.common.GlobalExceptionHandler;
+import link.srrrg.common.ratelimit.RateLimitService;
 import link.srrrg.link.LinkGoneException;
 import link.srrrg.link.LinkNotFoundException;
+import link.srrrg.link.access.ClientRequestInfo;
+import link.srrrg.link.access.ClientRequestInfoResolver;
 import link.srrrg.link.management.dto.CreateLinkResponse;
 import link.srrrg.link.management.dto.DeleteLinkResponse;
 import link.srrrg.link.management.dto.LinkManagementResponse;
@@ -35,11 +38,14 @@ class LinkControllerTest {
 	private static final String SECRET_KEY_HEADER = "X-Srrrg-Secret-Key";
 
 	private final LinkManagementService linkService = mock(LinkManagementService.class);
+	private final RateLimitService rateLimitService = mock(RateLimitService.class);
+	private final ClientRequestInfoResolver requestInfoResolver = mock(ClientRequestInfoResolver.class);
 	private MockMvc mockMvc;
 
 	@BeforeEach
 	void setUp() {
-		mockMvc = MockMvcBuilders.standaloneSetup(new LinkController(linkService))
+		when(requestInfoResolver.resolve(any())).thenReturn(new ClientRequestInfo("127.0.0.1", null, null));
+		mockMvc = MockMvcBuilders.standaloneSetup(new LinkController(linkService, rateLimitService, requestInfoResolver))
 				.setControllerAdvice(new GlobalExceptionHandler())
 				.build();
 	}

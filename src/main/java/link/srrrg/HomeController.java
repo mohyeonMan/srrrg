@@ -29,6 +29,11 @@ public class HomeController {
 		return "projects";
 	}
 
+	@GetMapping("/campaigns")
+	public String campaigns() {
+		return "campaigns";
+	}
+
 	@GetMapping("/favicon.ico")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void favicon() {

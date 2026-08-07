@@ -21,6 +21,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import link.srrrg.HomeController;
+import link.srrrg.campaign.CampaignService;
+import link.srrrg.common.ratelimit.RateLimitService;
+import link.srrrg.link.access.ClientRequestInfo;
+import link.srrrg.link.access.ClientRequestInfoResolver;
 import link.srrrg.link.management.LinkController;
 import link.srrrg.link.management.LinkManagementService;
 import link.srrrg.link.management.dto.CreateLinkResponse;
@@ -82,6 +86,15 @@ class SecurityWebTest {
 	@MockitoBean
 	LinkRepository linkRepository;
 
+	@MockitoBean
+	RateLimitService rateLimitService;
+
+	@MockitoBean
+	ClientRequestInfoResolver requestInfoResolver;
+
+	@MockitoBean
+	CampaignService campaignService;
+
 	@Test
 	void rendersAccessibleLoginOptions() throws Exception {
 		mockMvc.perform(get("/login"))
@@ -94,6 +107,7 @@ class SecurityWebTest {
 
 	@Test
 	void preservesAnonymousLinkPostWithoutCsrf() throws Exception {
+		when(requestInfoResolver.resolve(any())).thenReturn(new ClientRequestInfo("127.0.0.1", null, null));
 		when(linkManagementService.create(any())).thenReturn(new CreateLinkResponse(
 				"aB3x9Q", "https://srrrg.link/aB3x9Q", "srrrg_sk_secret", null));
 
@@ -150,7 +164,7 @@ class SecurityWebTest {
 	void allowsProjectLinksOnlyForMatchingKeyProjectAndScope() throws Exception {
 		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
 				.thenReturn(new ApiKeyService.ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_READ)));
-		when(linkRepository.findByProjectIdAndDeletedFalseOrderByIdDesc(eq(7L), any())).thenReturn(java.util.List.of());
+		when(linkRepository.findByProjectIdAndCampaignIsNullAndDeletedFalseOrderByIdDesc(eq(7L), any())).thenReturn(java.util.List.of());
 
 		mockMvc.perform(get("/api/v1/projects/7/links").header("Authorization", "Bearer srrrg_pk_prefix_secret"))
 				.andExpect(status().isOk()).andExpect(jsonPath("$.items").isArray())
@@ -161,7 +175,7 @@ class SecurityWebTest {
 	void appliesApiKeyFilterBehindContextPath() throws Exception {
 		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
 				.thenReturn(new ApiKeyService.ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_READ)));
-		when(linkRepository.findByProjectIdAndDeletedFalseOrderByIdDesc(eq(7L), any())).thenReturn(java.util.List.of());
+		when(linkRepository.findByProjectIdAndCampaignIsNullAndDeletedFalseOrderByIdDesc(eq(7L), any())).thenReturn(java.util.List.of());
 
 		mockMvc.perform(get("/srrrg-dev/api/v1/projects/7/links")
 					.contextPath("/srrrg-dev")
@@ -203,7 +217,7 @@ class SecurityWebTest {
 		when(second.getId()).thenReturn(9L);
 		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
 				.thenReturn(new ApiKeyService.ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_READ)));
-		when(linkRepository.findByProjectIdAndDeletedFalseOrderByIdDesc(eq(7L), any())).thenReturn(java.util.List.of(first, second));
+		when(linkRepository.findByProjectIdAndCampaignIsNullAndDeletedFalseOrderByIdDesc(eq(7L), any())).thenReturn(java.util.List.of(first, second));
 
 		mockMvc.perform(get("/api/v1/projects/7/links").param("limit", "1").header("Authorization", "Bearer srrrg_pk_prefix_secret"))
 				.andExpect(status().isOk()).andExpect(jsonPath("$.items.length()").value(1)).andExpect(jsonPath("$.nextCursor").value(10));

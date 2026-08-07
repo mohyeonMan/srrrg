@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import jakarta.servlet.http.HttpServletResponse;
+import link.srrrg.common.ratelimit.RateLimitService;
 import link.srrrg.project.ApiKeyService;
 
 @Configuration
@@ -37,9 +38,10 @@ class SecurityConfiguration {
 			OAuthLoginSuccessHandler successHandler,
 			OAuthLoginFailureHandler failureHandler,
 			JwtService jwtService,
-			ApiKeyService apiKeyService) throws Exception {
+			ApiKeyService apiKeyService,
+			RateLimitService rateLimitService) throws Exception {
 		JwtAuthenticationFilter jwtFilter = new JwtAuthenticationFilter(jwtService);
-		ApiKeyAuthenticationFilter apiKeyFilter = new ApiKeyAuthenticationFilter(apiKeyService);
+		ApiKeyAuthenticationFilter apiKeyFilter = new ApiKeyAuthenticationFilter(apiKeyService, rateLimitService);
 		CookieCsrfTokenRepository csrf = CookieCsrfTokenRepository.withHttpOnlyFalse();
 		csrf.setHeaderName("X-XSRF-TOKEN");
 		csrf.setCookieCustomizer(cookie -> cookie.secure(true).sameSite("Lax").path("/"));

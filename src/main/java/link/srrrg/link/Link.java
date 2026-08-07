@@ -13,6 +13,8 @@ import jakarta.persistence.Table;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import link.srrrg.campaign.Campaign;
+import link.srrrg.campaign.UtmTemplate;
 import link.srrrg.domain.ProjectDomain;
 import link.srrrg.project.Project;
 import link.srrrg.identity.User;
@@ -58,6 +60,17 @@ public class Link {
 	@Column(name = "idempotency_request_hash", length = 64)
 	private String idempotencyRequestHash;
 
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "campaign_id")
+	private Campaign campaign;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "utm_template_id")
+	private UtmTemplate utmTemplate;
+
+	@Column(name = "external_id", length = 100)
+	private String externalId;
+
 	@Column(name = "expires_at")
 	private Instant expiresAt;
 
@@ -92,6 +105,13 @@ public class Link {
 
 	public static Link createForProject(String code, String originalUrl, Instant expiresAt,
 			Project project, ProjectDomain domain, User createdBy, Long apiKeyId, String idempotencyKey, String requestHash) {
+		return createForCampaign(code, originalUrl, expiresAt, project, domain, createdBy, apiKeyId, idempotencyKey, requestHash,
+				null, null, null);
+	}
+
+	public static Link createForCampaign(String code, String originalUrl, Instant expiresAt,
+			Project project, ProjectDomain domain, User createdBy, Long apiKeyId, String idempotencyKey, String requestHash,
+			Campaign campaign, UtmTemplate utmTemplate, String externalId) {
 		Link link = new Link(code, originalUrl, null, expiresAt);
 		link.project = project;
 		link.domain = domain;
@@ -99,6 +119,9 @@ public class Link {
 		link.idempotencyApiKeyId = apiKeyId;
 		link.idempotencyKey = idempotencyKey;
 		link.idempotencyRequestHash = requestHash;
+		link.campaign = campaign;
+		link.utmTemplate = utmTemplate;
+		link.externalId = externalId;
 		return link;
 	}
 

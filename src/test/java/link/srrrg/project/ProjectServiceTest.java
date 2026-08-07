@@ -15,6 +15,7 @@ import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import link.srrrg.common.ratelimit.RateLimitService;
 import link.srrrg.common.util.SecureRandomStringGenerator;
 import link.srrrg.domain.ProjectDomain;
 import link.srrrg.domain.ProjectDomainService;
@@ -34,8 +35,10 @@ class ProjectServiceTest {
 	private final SecretKeyManager secretKeys = mock(SecretKeyManager.class);
 	private final LinkManagementService linkManagement = mock(LinkManagementService.class);
 	private final ProjectDomainService domains = mock(ProjectDomainService.class);
+	private final RateLimitService rateLimitService = mock(RateLimitService.class);
 	private final ProjectService service = new ProjectService(projects, members, invitations, users, links,
-			mock(SecureRandomStringGenerator.class), mock(InvitationEmailSender.class), secretKeys, linkManagement, domains, "https://srrrg.link");
+			mock(SecureRandomStringGenerator.class), mock(InvitationEmailSender.class), secretKeys, linkManagement, domains,
+			rateLimitService, "https://srrrg.link");
 
 	@Test
 	void createsPersonalProjectForUserWithoutMembership() {

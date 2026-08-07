@@ -33,6 +33,8 @@ dependencies {
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3'
 	implementation 'io.micrometer:micrometer-registry-prometheus'
 	implementation 'com.google.protobuf:protobuf-java:4.35.0'
+	implementation 'org.apache.commons:commons-csv:1.12.0'
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	runtimeOnly 'org.postgresql:postgresql'

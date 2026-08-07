@@ -24,6 +24,7 @@ import link.srrrg.link.LinkCodeGenerator;
 import link.srrrg.link.LinkGoneException;
 import link.srrrg.link.LinkNotFoundException;
 import link.srrrg.link.LinkRepository;
+import link.srrrg.link.LinkUtmValueRepository;
 import link.srrrg.link.SecretKeyManager;
 import link.srrrg.link.SecretKeyManager.GeneratedSecretKey;
 import link.srrrg.link.UnsafeUrlException;
@@ -40,6 +41,7 @@ import link.srrrg.project.Project;
 class LinkManagementServiceTest {
 
 	private final LinkRepository repository = mock(LinkRepository.class);
+	private final LinkUtmValueRepository linkUtmValueRepository = mock(LinkUtmValueRepository.class);
 	private final LinkCodeGenerator codeGenerator = mock(LinkCodeGenerator.class);
 	private final SecretKeyManager secretKeyManager = mock(SecretKeyManager.class);
 	private final UrlValidator validator = mock(UrlValidator.class);
@@ -50,7 +52,7 @@ class LinkManagementServiceTest {
 	@BeforeEach
 	void setUp() {
 		registry = new SimpleMeterRegistry();
-		service = new LinkManagementService(repository, codeGenerator, secretKeyManager, validator,
+		service = new LinkManagementService(repository, linkUtmValueRepository, codeGenerator, secretKeyManager, validator,
 				riskVerificationService, new SrrrgMetrics(registry), "https://srrrg.link/");
 	}
 

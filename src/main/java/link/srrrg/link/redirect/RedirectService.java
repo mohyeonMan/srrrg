@@ -1,6 +1,9 @@
 package link.srrrg.link.redirect;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -12,10 +15,13 @@ import io.micrometer.core.instrument.Timer;
 import link.srrrg.common.metrics.SrrrgMetrics;
 import link.srrrg.domain.ProjectDomainService;
 import link.srrrg.domain.ProjectDomainService.HostRoute;
+import link.srrrg.link.DestinationUrlMerger;
 import link.srrrg.link.Link;
 import link.srrrg.link.LinkGoneException;
 import link.srrrg.link.LinkNotFoundException;
 import link.srrrg.link.LinkRepository;
+import link.srrrg.link.LinkUtmValue;
+import link.srrrg.link.LinkUtmValueRepository;
 import link.srrrg.link.UnsafeUrlException;
 import link.srrrg.link.UrlRiskCheckFailedException;
 import link.srrrg.link.UrlValidator;
@@ -31,6 +37,7 @@ import lombok.extern.slf4j.Slf4j;
 public class RedirectService {
 
 	private final LinkRepository linkRepository;
+	private final LinkUtmValueRepository linkUtmValueRepository;
 	private final UrlValidator urlValidator;
 	private final UrlRiskVerificationService riskVerificationService;
 	private final LinkAccessEventRecorder accessEventRecorder;
@@ -39,21 +46,22 @@ public class RedirectService {
 	private final ProjectDomainService domains;
 
 	@Autowired
-	public RedirectService(LinkRepository linkRepository, UrlValidator urlValidator,
+	public RedirectService(LinkRepository linkRepository, LinkUtmValueRepository linkUtmValueRepository, UrlValidator urlValidator,
 			UrlRiskVerificationService riskVerificationService,
 			LinkAccessEventRecorder accessEventRecorder,
 			PlatformTransactionManager transactionManager,
 			SrrrgMetrics metrics, ProjectDomainService domains) {
-		this(linkRepository, urlValidator, riskVerificationService, accessEventRecorder,
+		this(linkRepository, linkUtmValueRepository, urlValidator, riskVerificationService, accessEventRecorder,
 				new TransactionTemplate(transactionManager), metrics, domains);
 	}
 
-	RedirectService(LinkRepository linkRepository, UrlValidator urlValidator,
+	RedirectService(LinkRepository linkRepository, LinkUtmValueRepository linkUtmValueRepository, UrlValidator urlValidator,
 			UrlRiskVerificationService riskVerificationService,
 			LinkAccessEventRecorder accessEventRecorder,
 			TransactionOperations transactions,
 			SrrrgMetrics metrics, ProjectDomainService domains) {
 		this.linkRepository = linkRepository;
+		this.linkUtmValueRepository = linkUtmValueRepository;
 		this.urlValidator = urlValidator;
 		this.riskVerificationService = riskVerificationService;
 		this.accessEventRecorder = accessEventRecorder;
@@ -70,7 +78,9 @@ public class RedirectService {
 		try {
 			HostRoute route = domains.resolve(host).orElseThrow(LinkNotFoundException::new);
 			Link initialLink = findAvailableLink(route, code);
-			String checkedUrl = initialLink.getOriginalUrl();
+			String rawUrl = initialLink.getOriginalUrl();
+			Map<String, String> utmValues = utmValuesFor(initialLink.getId());
+			String checkedUrl = DestinationUrlMerger.merge(rawUrl, utmValues);
 			urlValidator.validate(checkedUrl);
 
 			RiskVerdict verdict = riskVerificationService.verify(checkedUrl).verdict();
@@ -87,7 +97,7 @@ public class RedirectService {
 				throw new UrlRiskCheckFailedException();
 			}
 
-			String redirectUrl = completeRedirect(route, code, checkedUrl, accessedAt, requestInfo);
+			String redirectUrl = completeRedirect(route, code, rawUrl, checkedUrl, utmValues, accessedAt, requestInfo);
 			log.info("Redirect issued: code={}, elapsedMs={}", code, elapsedMillis(startedAt));
 			outcome = "redirected";
 			return redirectUrl;
@@ -108,14 +118,14 @@ public class RedirectService {
 		}
 	}
 
-	private String completeRedirect(HostRoute route, String code, String checkedUrl, Instant accessedAt,
-			ClientRequestInfo requestInfo) {
+	private String completeRedirect(HostRoute route, String code, String checkedRawUrl, String checkedMergedUrl,
+			Map<String, String> utmValues, Instant accessedAt, ClientRequestInfo requestInfo) {
 		Timer.Sample sample = metrics.startTimer();
 		String outcome = "error";
 		try {
 			String redirectUrl = transactions.execute(status -> {
 				Link currentLink = findAvailableLink(route, code);
-				if (!checkedUrl.equals(currentLink.getOriginalUrl())) {
+				if (!checkedRawUrl.equals(currentLink.getOriginalUrl())) {
 					log.warn("Redirect verification invalidated: reason=URL_CHANGED, code={}", code);
 					accessEventRecorder.record(currentLink, accessedAt, Outcome.URL_CHANGED, requestInfo);
 					incrementAccessCount(currentLink.getId());
@@ -127,7 +137,7 @@ public class RedirectService {
 					log.warn("Access statistics update failed: code={}, updates={}", code, updates);
 					throw new LinkNotFoundException();
 				}
-				return currentLink.getOriginalUrl();
+				return checkedMergedUrl;
 			});
 			outcome = "success";
 			if (redirectUrl == null) {
@@ -137,6 +147,14 @@ public class RedirectService {
 		} finally {
 			metrics.recordRedirectWrite(sample, "access", outcome);
 		}
+	}
+
+	private Map<String, String> utmValuesFor(Long linkId) {
+		List<LinkUtmValue> values = linkUtmValueRepository.findByLinkId(linkId);
+		if (values.isEmpty()) {
+			return Map.of();
+		}
+		return values.stream().collect(Collectors.toMap(value -> value.getField().getName(), LinkUtmValue::getValue));
 	}
 
 	private void recordAccess(Link link, Instant accessedAt, Outcome accessOutcome,

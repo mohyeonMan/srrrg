@@ -13,11 +13,17 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import link.srrrg.common.ratelimit.RateLimitExceededException;
+import link.srrrg.common.ratelimit.RateLimitService;
 import link.srrrg.project.ApiKeyService;
 
 class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 	private final ApiKeyService keys;
-	ApiKeyAuthenticationFilter(ApiKeyService keys) { this.keys = keys; }
+	private final RateLimitService rateLimitService;
+	ApiKeyAuthenticationFilter(ApiKeyService keys, RateLimitService rateLimitService) {
+		this.keys = keys;
+		this.rateLimitService = rateLimitService;
+	}
 	@Override protected boolean shouldNotFilter(HttpServletRequest request) { return !request.getRequestURI().startsWith(request.getContextPath() + "/api/v1/"); }
 	@Override protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
 			throws ServletException, IOException {
@@ -27,6 +33,15 @@ class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 		}
 		try {
 			ApiKeyService.ApiKeyPrincipal principal = keys.authenticate(authorization.substring("Bearer ".length()));
+			if ("GET".equalsIgnoreCase(request.getMethod())) {
+				try {
+					rateLimitService.checkApiKeyRead(principal.keyId());
+				} catch (RateLimitExceededException exception) {
+					response.setHeader("Retry-After", String.valueOf(exception.getRetryAfterSeconds()));
+					ApiProblemWriter.write(response, 429, "RATE_LIMIT_EXCEEDED", exception.getMessage());
+					return;
+				}
+			}
 			response.setHeader("X-Request-Id", UUID.randomUUID().toString());
 			request.setAttribute("srrrg.apiKeyPrincipal", principal);
 			SecurityContext context = SecurityContextHolder.createEmptyContext();
