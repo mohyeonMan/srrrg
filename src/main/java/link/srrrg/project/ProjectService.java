@@ -4,7 +4,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -12,9 +11,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import link.srrrg.common.util.SecureRandomStringGenerator;
+import link.srrrg.domain.ProjectDomain;
+import link.srrrg.domain.ProjectDomainService;
 import link.srrrg.identity.User;
 import link.srrrg.identity.UserRepository;
 import link.srrrg.link.Link;
+import link.srrrg.link.LinkCodeConflictException;
 import link.srrrg.link.LinkRepository;
 import link.srrrg.link.SecretKeyManager;
 import link.srrrg.link.management.LinkManagementService;
@@ -24,9 +26,6 @@ import link.srrrg.link.management.dto.CreateLinkRequest;
 public class ProjectService {
 	private static final String TOKEN_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 	private static final String SLUG_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
-	private static final Set<String> RESERVED_SLUGS = Set.of(
-			"actuator", "admin", "api", "app", "auth", "cdn", "cname", "dev", "docs", "help",
-			"login", "mail", "manage", "oauth", "oauth2", "openapi", "static", "status", "support", "www");
 	private final ProjectRepository projects;
 	private final ProjectMemberRepository members;
 	private final ProjectInvitationRepository invitations;
@@ -36,13 +35,14 @@ public class ProjectService {
 	private final InvitationEmailSender emailSender;
 	private final SecretKeyManager secretKeys;
 	private final LinkManagementService linkManagement;
+	private final ProjectDomainService domains;
 	private final String baseUrl;
 
 	public ProjectService(ProjectRepository projects, ProjectMemberRepository members, ProjectInvitationRepository invitations,
 			UserRepository users, LinkRepository links, SecureRandomStringGenerator random, InvitationEmailSender emailSender, SecretKeyManager secretKeys,
-			LinkManagementService linkManagement, @Value("${srrrg.base-url}") String baseUrl) {
+			LinkManagementService linkManagement, ProjectDomainService domains, @Value("${srrrg.base-url}") String baseUrl) {
 		this.projects = projects; this.members = members; this.invitations = invitations; this.users = users; this.links = links;
-		this.random = random; this.emailSender = emailSender; this.secretKeys = secretKeys; this.linkManagement = linkManagement; this.baseUrl = baseUrl;
+		this.random = random; this.emailSender = emailSender; this.secretKeys = secretKeys; this.linkManagement = linkManagement; this.domains = domains; this.baseUrl = baseUrl;
 	}
 
 	@Transactional
@@ -65,6 +65,7 @@ public class ProjectService {
 		} catch (DataIntegrityViolationException exception) {
 			throw new IllegalArgumentException("이미 사용 중인 프로젝트 slug입니다.", exception);
 		}
+		domains.create(project);
 		members.save(new ProjectMember(project, user, ProjectRole.OWNER));
 		return project;
 	}
@@ -79,6 +80,8 @@ public class ProjectService {
 	public List<ProjectMember> projectMembers(Long userId, Long projectId) { requireRole(userId, projectId, ProjectRole.VIEWER); return members.findByIdProjectId(projectId); }
 	@Transactional(readOnly = true)
 	public List<ProjectInvitation> projectInvitations(Long userId, Long projectId) { requireRole(userId, projectId, ProjectRole.OWNER); return invitations.findByProjectIdAndCancelledAtIsNullAndAcceptedAtIsNull(projectId); }
+	@Transactional(readOnly = true)
+	public ProjectDomain projectDomain(Long userId, Long projectId) { requireRole(userId, projectId, ProjectRole.VIEWER); return domains.get(projectId); }
 
 	@Transactional
 	public Project rename(Long userId, Long projectId, String name) {
@@ -169,21 +172,26 @@ public class ProjectService {
 	@Transactional
 	public void importAnonymousLink(Long userId, Long projectId, String code, String secret) {
 		requireRole(userId, projectId, ProjectRole.EDITOR);
-		Link link = links.lockByCode(code).orElseThrow(() -> new IllegalArgumentException("링크를 찾을 수 없습니다."));
+		Link link = links.lockAnonymousByCode(code).orElseThrow(() -> new IllegalArgumentException("링크를 찾을 수 없습니다."));
 		if (link.getProject() != null || link.getSecretKeyHash() == null || !secretKeys.matches(secret, link.getSecretKeyHash())) throw new IllegalArgumentException("링크를 찾을 수 없습니다.");
-		link.assignToProject(project(projectId), user(userId));
+		link.assignToProject(project(projectId), domains.get(projectId), user(userId));
+		try {
+			links.flush();
+		} catch (DataIntegrityViolationException exception) {
+			throw new LinkCodeConflictException();
+		}
 	}
 
 	public Link createProjectLink(Long userId, Long projectId, CreateLinkRequest request) {
 		ProjectMember membership = requireRole(userId, projectId, ProjectRole.EDITOR);
-		return linkManagement.createForProject(request, membership.getProject(), membership.getUser());
+		return linkManagement.createForProject(request, membership.getProject(), domains.get(projectId), membership.getUser());
 	}
 
 	public Link createProjectLink(Long apiKeyId, Long projectId, String idempotencyKey, CreateLinkRequest request) {
 		String normalizedKey = validIdempotencyKey(idempotencyKey);
 		String requestHash = normalizedKey == null ? null : InvitationTokenHash.sha256(
 				String.valueOf(request.originalUrl()) + "\n" + String.valueOf(request.expiresAt()));
-		return linkManagement.createForProject(request, project(projectId), null,
+		return linkManagement.createForProject(request, project(projectId), domains.get(projectId), null,
 				normalizedKey == null ? null : apiKeyId, normalizedKey, requestHash);
 	}
 
@@ -207,7 +215,7 @@ public class ProjectService {
 		}
 		String normalized = requested.trim().toLowerCase(Locale.ROOT);
 		if (normalized.length() < 3 || normalized.length() > 63 || !normalized.matches("[a-z0-9](?:[a-z0-9-]*[a-z0-9])")
-				|| RESERVED_SLUGS.contains(normalized)) throw new IllegalArgumentException("프로젝트 slug가 올바르지 않습니다.");
+				|| domains.isReservedSlug(normalized)) throw new IllegalArgumentException("프로젝트 slug가 올바르지 않습니다.");
 		if (projects.existsBySlug(normalized)) throw new IllegalArgumentException("이미 사용 중인 프로젝트 slug입니다.");
 		return normalized;
 	}

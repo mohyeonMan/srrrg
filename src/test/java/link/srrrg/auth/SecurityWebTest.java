@@ -219,6 +219,20 @@ class SecurityWebTest {
 	}
 
 	@Test
+	void returnsProjectPlatformDomainToJwtMember() throws Exception {
+		when(jwtService.verify("access-token")).thenReturn(1L);
+		link.srrrg.domain.ProjectDomain domain = org.mockito.Mockito.mock(link.srrrg.domain.ProjectDomain.class);
+		when(domain.getId()).thenReturn(3L);
+		when(domain.getHostname()).thenReturn("acme.dev.srrrg.link");
+		when(projectService.projectDomain(1L, 7L)).thenReturn(domain);
+
+		mockMvc.perform(get("/api/web/projects/7/domains")
+				.cookie(new jakarta.servlet.http.Cookie("srrrg_access", "access-token")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].hostname").value("acme.dev.srrrg.link"));
+	}
+
+	@Test
 	void createsProjectLinkWithApiKeyWithoutJwtFilter() throws Exception {
 		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
 				.thenReturn(new ApiKeyService.ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_WRITE)));

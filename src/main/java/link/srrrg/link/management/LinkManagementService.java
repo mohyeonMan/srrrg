@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import io.micrometer.core.instrument.Timer;
 import link.srrrg.common.metrics.SrrrgMetrics;
+import link.srrrg.domain.ProjectDomain;
 import link.srrrg.link.Link;
 import link.srrrg.link.LinkCodeGenerator;
 import link.srrrg.link.LinkGoneException;
@@ -143,7 +144,7 @@ public class LinkManagementService {
 	}
 
 	private Link findManagedLink(String code, String secretKey) {
-		Link link = linkRepository.findByCode(code).orElseThrow(() -> {
+		Link link = linkRepository.findByCodeAndProjectIsNull(code).orElseThrow(() -> {
 			log.info("Managed link lookup failed: reason=NOT_FOUND, code={}", code);
 			return new LinkNotFoundException();
 		});
@@ -165,18 +166,18 @@ public class LinkManagementService {
 				link.getCreatedAt(), link.getUpdatedAt());
 	}
 
-	public Link createForProject(CreateLinkRequest request, Project project, User createdBy) {
-		return createForProject(request, project, createdBy, null, null, null);
+	public Link createForProject(CreateLinkRequest request, Project project, ProjectDomain domain, User createdBy) {
+		return createForProject(request, project, domain, createdBy, null, null, null);
 	}
 
-	public Link createForProject(CreateLinkRequest request, Project project, User createdBy,
+	public Link createForProject(CreateLinkRequest request, Project project, ProjectDomain domain, User createdBy,
 			Long apiKeyId, String idempotencyKey, String requestHash) {
 		Link existing = findIdempotentLink(apiKeyId, idempotencyKey, requestHash);
 		if (existing != null) return existing;
 		urlValidator.validate(request.originalUrl());
 		validateExpiration(request.expiresAt());
 		requireNoKnownThreat(request.originalUrl());
-		return saveProjectLinkWithUniqueCode(request.originalUrl(), request.expiresAt(), project, createdBy,
+		return saveProjectLinkWithUniqueCode(request.originalUrl(), request.expiresAt(), project, domain, createdBy,
 				apiKeyId, idempotencyKey, requestHash);
 	}
 
@@ -202,12 +203,12 @@ public class LinkManagementService {
 		throw new IllegalStateException("단축 코드를 생성하지 못했습니다.");
 	}
 
-	private Link saveProjectLinkWithUniqueCode(String originalUrl, Instant expiresAt, Project project, User createdBy,
+	private Link saveProjectLinkWithUniqueCode(String originalUrl, Instant expiresAt, Project project, ProjectDomain domain, User createdBy,
 			Long apiKeyId, String idempotencyKey, String requestHash) {
 		for (int attempt = 1; attempt <= MAX_CODE_GENERATION_ATTEMPTS; attempt++) {
 			String code = linkCodeGenerator.generate();
 			try {
-				return linkRepository.saveAndFlush(Link.createForProject(code, originalUrl, expiresAt, project, createdBy,
+				return linkRepository.saveAndFlush(Link.createForProject(code, originalUrl, expiresAt, project, domain, createdBy,
 						apiKeyId, idempotencyKey, requestHash));
 			} catch (DataIntegrityViolationException exception) {
 				Link existing = findIdempotentLink(apiKeyId, idempotencyKey, requestHash);

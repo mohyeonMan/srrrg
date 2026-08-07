@@ -15,6 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import link.srrrg.common.util.SecureRandomStringGenerator;
+import link.srrrg.domain.ProjectDomain;
+import link.srrrg.domain.ProjectDomainService;
 import link.srrrg.identity.User;
 import link.srrrg.identity.UserRepository;
 import link.srrrg.link.Link;
@@ -30,8 +32,9 @@ class ProjectServiceTest {
 	private final LinkRepository links = mock(LinkRepository.class);
 	private final SecretKeyManager secretKeys = mock(SecretKeyManager.class);
 	private final LinkManagementService linkManagement = mock(LinkManagementService.class);
+	private final ProjectDomainService domains = mock(ProjectDomainService.class);
 	private final ProjectService service = new ProjectService(projects, members, invitations, users, links,
-			mock(SecureRandomStringGenerator.class), mock(InvitationEmailSender.class), secretKeys, linkManagement, "https://srrrg.link");
+			mock(SecureRandomStringGenerator.class), mock(InvitationEmailSender.class), secretKeys, linkManagement, domains, "https://srrrg.link");
 
 	@Test
 	void createsPersonalProjectForUserWithoutMembership() {
@@ -46,6 +49,7 @@ class ProjectServiceTest {
 
 		service.ensurePersonalProject(2L);
 
+		verify(domains).create(project);
 		verify(members).save(any(ProjectMember.class));
 	}
 
@@ -130,7 +134,7 @@ class ProjectServiceTest {
 
 		assertThatThrownBy(() -> service.importAnonymousLink(2L, 1L, "aB3x9Q", "secret"))
 				.isInstanceOf(SecurityException.class);
-		verify(links, never()).lockByCode(any());
+		verify(links, never()).lockAnonymousByCode(any());
 	}
 
 	@Test
@@ -138,27 +142,55 @@ class ProjectServiceTest {
 		ProjectMember editor = mock(ProjectMember.class);
 		Project project = mock(Project.class);
 		Link link = mock(Link.class);
+		ProjectDomain domain = mock(ProjectDomain.class);
 		User user = mock(User.class);
 		when(editor.getRole()).thenReturn(ProjectRole.EDITOR);
 		when(editor.getProject()).thenReturn(project);
 		when(members.findByIdProjectIdAndIdUserId(1L, 2L)).thenReturn(Optional.of(editor));
-		when(links.lockByCode("aB3x9Q")).thenReturn(Optional.of(link));
+		when(links.lockAnonymousByCode("aB3x9Q")).thenReturn(Optional.of(link));
 		when(link.getProject()).thenReturn(null);
 		when(link.getSecretKeyHash()).thenReturn("hash");
 		when(secretKeys.matches("srrrg_sk_secret", "hash")).thenReturn(true);
 		when(projects.findById(1L)).thenReturn(Optional.of(project));
+		when(domains.get(1L)).thenReturn(domain);
 		when(users.findById(2L)).thenReturn(Optional.of(user));
 
 		service.importAnonymousLink(2L, 1L, "aB3x9Q", "srrrg_sk_secret");
 
-		verify(link).assignToProject(project, user);
-		verify(links).lockByCode("aB3x9Q");
+		verify(link).assignToProject(project, domain, user);
+		verify(links).lockAnonymousByCode("aB3x9Q");
+		verify(links).flush();
+	}
+
+	@Test
+	void rejectsClaimWhenTargetDomainAlreadyHasTheCode() {
+		ProjectMember editor = mock(ProjectMember.class);
+		Project project = mock(Project.class);
+		ProjectDomain domain = mock(ProjectDomain.class);
+		Link link = mock(Link.class);
+		User user = mock(User.class);
+		when(editor.getRole()).thenReturn(ProjectRole.EDITOR);
+		when(editor.getProject()).thenReturn(project);
+		when(members.findByIdProjectIdAndIdUserId(1L, 2L)).thenReturn(Optional.of(editor));
+		when(links.lockAnonymousByCode("aB3x9Q")).thenReturn(Optional.of(link));
+		when(link.getSecretKeyHash()).thenReturn("hash");
+		when(secretKeys.matches("secret", "hash")).thenReturn(true);
+		when(projects.findById(1L)).thenReturn(Optional.of(project));
+		when(domains.get(1L)).thenReturn(domain);
+		when(users.findById(2L)).thenReturn(Optional.of(user));
+		org.mockito.Mockito.doThrow(new DataIntegrityViolationException("duplicate code"))
+				.when(links).flush();
+
+		assertThatThrownBy(() -> service.importAnonymousLink(2L, 1L, "aB3x9Q", "secret"))
+				.isInstanceOf(link.srrrg.link.LinkCodeConflictException.class);
 	}
 
 	@Test
 	void rejectsReservedProjectSlug() {
 		when(members.countByIdUserIdAndRoleAndProjectArchivedAtIsNull(2L, ProjectRole.OWNER)).thenReturn(0L);
 		when(users.findById(2L)).thenReturn(Optional.of(mock(User.class)));
+		when(domains.isReservedSlug("admin")).thenReturn(true);
+		when(domains.isReservedSlug("cname")).thenReturn(true);
 
 		assertThatThrownBy(() -> service.create(2L, "관리", "admin"))
 				.isInstanceOf(IllegalArgumentException.class);

@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
@@ -35,19 +36,31 @@ class RedirectControllerTest {
 
 	@Test
 	void safeUrlRedirectsDirectlyToTheOriginalUrl() throws Exception {
-		when(service.redirect(eq("aB3x9Q"), any())).thenReturn("https://example.com/path?q=1");
+		when(service.redirect(eq("srrrg.link"), eq("aB3x9Q"), any())).thenReturn("https://example.com/path?q=1");
 
-		mvc.perform(get("/aB3x9Q"))
+		mvc.perform(get("/aB3x9Q").header("Host", "srrrg.link"))
 				.andExpect(status().isFound())
 				.andExpect(header().string("Cache-Control", "no-store"))
 				.andExpect(header().string("Location", "https://example.com/path?q=1"));
 	}
 
 	@Test
-	void threatUrlReturnsForbiddenPage() throws Exception {
-		when(service.redirect(eq("aB3x9Q"), any())).thenThrow(new UnsafeUrlException());
+	void usesHostHeaderInsteadOfForwardedHost() throws Exception {
+		when(service.redirect(eq("srrrg.link"), eq("aB3x9Q"), any())).thenReturn("https://example.com");
 
-		mvc.perform(get("/aB3x9Q"))
+		mvc.perform(get("/aB3x9Q")
+				.header("Host", "srrrg.link")
+				.header("X-Forwarded-Host", "attacker.example"))
+				.andExpect(status().isFound());
+
+		verify(service).redirect(eq("srrrg.link"), eq("aB3x9Q"), any());
+	}
+
+	@Test
+	void threatUrlReturnsForbiddenPage() throws Exception {
+		when(service.redirect(eq("srrrg.link"), eq("aB3x9Q"), any())).thenThrow(new UnsafeUrlException());
+
+		mvc.perform(get("/aB3x9Q").header("Host", "srrrg.link"))
 				.andExpect(status().isForbidden())
 				.andExpect(view().name("redirect-error"))
 					.andExpect(model().attribute("status", 403))
@@ -58,9 +71,9 @@ class RedirectControllerTest {
 
 	@Test
 	void failedVerificationReturnsRetryableServiceUnavailablePage() throws Exception {
-		when(service.redirect(eq("aB3x9Q"), any())).thenThrow(new UrlRiskCheckFailedException());
+		when(service.redirect(eq("srrrg.link"), eq("aB3x9Q"), any())).thenThrow(new UrlRiskCheckFailedException());
 
-		mvc.perform(get("/aB3x9Q"))
+		mvc.perform(get("/aB3x9Q").header("Host", "srrrg.link"))
 				.andExpect(status().isServiceUnavailable())
 				.andExpect(header().string("Retry-After", "30"))
 				.andExpect(view().name("redirect-error"))
@@ -71,10 +84,10 @@ class RedirectControllerTest {
 
 	@Test
 	void expiredLinkReturnsDistinctGonePage() throws Exception {
-		when(service.redirect(eq("aB3x9Q"), any()))
+		when(service.redirect(eq("srrrg.link"), eq("aB3x9Q"), any()))
 				.thenThrow(new LinkGoneException(LinkGoneException.Reason.EXPIRED));
 
-		mvc.perform(get("/aB3x9Q"))
+		mvc.perform(get("/aB3x9Q").header("Host", "srrrg.link"))
 				.andExpect(status().isGone())
 				.andExpect(view().name("redirect-error"))
 				.andExpect(model().attribute("title", "만료된 링크입니다"))

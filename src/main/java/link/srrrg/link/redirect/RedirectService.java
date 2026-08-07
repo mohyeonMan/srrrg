@@ -10,6 +10,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import io.micrometer.core.instrument.Timer;
 import link.srrrg.common.metrics.SrrrgMetrics;
+import link.srrrg.domain.ProjectDomainService;
+import link.srrrg.domain.ProjectDomainService.HostRoute;
 import link.srrrg.link.Link;
 import link.srrrg.link.LinkGoneException;
 import link.srrrg.link.LinkNotFoundException;
@@ -34,37 +36,40 @@ public class RedirectService {
 	private final LinkAccessEventRecorder accessEventRecorder;
 	private final TransactionOperations transactions;
 	private final SrrrgMetrics metrics;
+	private final ProjectDomainService domains;
 
 	@Autowired
 	public RedirectService(LinkRepository linkRepository, UrlValidator urlValidator,
 			UrlRiskVerificationService riskVerificationService,
 			LinkAccessEventRecorder accessEventRecorder,
 			PlatformTransactionManager transactionManager,
-			SrrrgMetrics metrics) {
+			SrrrgMetrics metrics, ProjectDomainService domains) {
 		this(linkRepository, urlValidator, riskVerificationService, accessEventRecorder,
-				new TransactionTemplate(transactionManager), metrics);
+				new TransactionTemplate(transactionManager), metrics, domains);
 	}
 
 	RedirectService(LinkRepository linkRepository, UrlValidator urlValidator,
 			UrlRiskVerificationService riskVerificationService,
 			LinkAccessEventRecorder accessEventRecorder,
 			TransactionOperations transactions,
-			SrrrgMetrics metrics) {
+			SrrrgMetrics metrics, ProjectDomainService domains) {
 		this.linkRepository = linkRepository;
 		this.urlValidator = urlValidator;
 		this.riskVerificationService = riskVerificationService;
 		this.accessEventRecorder = accessEventRecorder;
 		this.transactions = transactions;
 		this.metrics = metrics;
+		this.domains = domains;
 	}
 
-	public String redirect(String code, ClientRequestInfo requestInfo) {
+	public String redirect(String host, String code, ClientRequestInfo requestInfo) {
 		Instant accessedAt = Instant.now();
 		Timer.Sample sample = metrics.startTimer();
 		String outcome = "error";
 		long startedAt = System.nanoTime();
 		try {
-			Link initialLink = findAvailableLink(code);
+			HostRoute route = domains.resolve(host).orElseThrow(LinkNotFoundException::new);
+			Link initialLink = findAvailableLink(route, code);
 			String checkedUrl = initialLink.getOriginalUrl();
 			urlValidator.validate(checkedUrl);
 
@@ -82,7 +87,7 @@ public class RedirectService {
 				throw new UrlRiskCheckFailedException();
 			}
 
-			String redirectUrl = completeRedirect(code, checkedUrl, accessedAt, requestInfo);
+			String redirectUrl = completeRedirect(route, code, checkedUrl, accessedAt, requestInfo);
 			log.info("Redirect issued: code={}, elapsedMs={}", code, elapsedMillis(startedAt));
 			outcome = "redirected";
 			return redirectUrl;
@@ -103,21 +108,21 @@ public class RedirectService {
 		}
 	}
 
-	private String completeRedirect(String code, String checkedUrl, Instant accessedAt,
+	private String completeRedirect(HostRoute route, String code, String checkedUrl, Instant accessedAt,
 			ClientRequestInfo requestInfo) {
 		Timer.Sample sample = metrics.startTimer();
 		String outcome = "error";
 		try {
 			String redirectUrl = transactions.execute(status -> {
-				Link currentLink = findAvailableLink(code);
+				Link currentLink = findAvailableLink(route, code);
 				if (!checkedUrl.equals(currentLink.getOriginalUrl())) {
 					log.warn("Redirect verification invalidated: reason=URL_CHANGED, code={}", code);
 					accessEventRecorder.record(currentLink, accessedAt, Outcome.URL_CHANGED, requestInfo);
-					incrementAccessCount(code);
+					incrementAccessCount(currentLink.getId());
 					return null;
 				}
 				accessEventRecorder.record(currentLink, accessedAt, Outcome.REDIRECTED, requestInfo);
-				int updates = linkRepository.incrementAccessAndRedirectCountsByCode(code);
+				int updates = linkRepository.incrementAccessAndRedirectCountsById(currentLink.getId());
 				if (updates != 1) {
 					log.warn("Access statistics update failed: code={}, updates={}", code, updates);
 					throw new LinkNotFoundException();
@@ -141,7 +146,7 @@ public class RedirectService {
 		try {
 			transactions.executeWithoutResult(status -> {
 				accessEventRecorder.record(link, accessedAt, accessOutcome, requestInfo);
-				incrementAccessCount(link.getCode());
+				incrementAccessCount(link.getId());
 			});
 			outcome = "success";
 		} finally {
@@ -149,16 +154,18 @@ public class RedirectService {
 		}
 	}
 
-	private void incrementAccessCount(String code) {
-		int updates = linkRepository.incrementAccessCountByCode(code);
+	private void incrementAccessCount(Long linkId) {
+		int updates = linkRepository.incrementAccessCountById(linkId);
 		if (updates != 1) {
-			log.warn("Access statistics update failed: code={}, updates={}", code, updates);
+			log.warn("Access statistics update failed: linkId={}, updates={}", linkId, updates);
 			throw new LinkNotFoundException();
 		}
 	}
 
-	private Link findAvailableLink(String code) {
-		Link link = linkRepository.findByCode(code).orElseThrow(() -> {
+	private Link findAvailableLink(HostRoute route, String code) {
+		Link link = (route.isBaseDomain()
+				? linkRepository.findByCodeAndProjectIsNull(code)
+				: linkRepository.findByDomainIdAndCode(route.domainId(), code)).orElseThrow(() -> {
 			log.info("Link lookup failed: reason=NOT_FOUND, code={}", code);
 			return new LinkNotFoundException();
 		});

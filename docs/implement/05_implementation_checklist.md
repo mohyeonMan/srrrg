@@ -82,18 +82,18 @@
 
 ## 4단계: 프로젝트 도메인
 
-- [ ] `project_domains` migration과 모델
-- [ ] `links.domain_id` 추가
-- [ ] 기존 전역 code unique 제약 제거 migration
-- [ ] 익명 `UNIQUE(code)` partial index
-- [ ] 프로젝트 `UNIQUE(domain_id, code)` partial index
-- [ ] 플랫폼 서브도메인 생성과 예약어 검사
-- [ ] 프로젝트 생성 시 플랫폼 서브도메인 자동 할당
-- [ ] wildcard DNS·TLS 배포 검증
-- [ ] Host + code 기반 리다이렉트 조회
-- [ ] 등록되지 않은 Host와 타 프로젝트 도메인 차단 테스트
-- [ ] 기존 `srrrg.link/{code}` 회귀 테스트
-- [ ] 4단계 완료 조건 충족
+- [x] `project_domains` migration과 모델
+- [x] `links.domain_id` 추가
+- [x] 기존 전역 code unique 제약 제거 migration
+- [x] 익명 `UNIQUE(code)` partial index
+- [x] 프로젝트 `UNIQUE(domain_id, code)` partial index
+- [x] 플랫폼 서브도메인 생성과 예약어 검사
+- [x] 프로젝트 생성 시 플랫폼 서브도메인 자동 할당
+- [x] wildcard DNS·TLS 배포 검증
+- [x] Host + code 기반 리다이렉트 조회
+- [x] 등록되지 않은 Host와 타 프로젝트 도메인 차단 테스트
+- [x] 기존 `srrrg.link/{code}` 회귀 테스트
+- [x] 4단계 완료 조건 충족
 
 ## 5단계: 캠페인·CSV
 

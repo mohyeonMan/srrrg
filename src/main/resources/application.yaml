@@ -29,6 +29,8 @@ spring:
             enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:true}
   flyway:
     enabled: true
+    placeholders:
+      platformBaseUrl: ${SRRRG_BASE_URL:http://localhost:8080}
   jpa:
     open-in-view: false
     hibernate:
@@ -43,7 +45,7 @@ springdoc:
     enabled: ${SRRRG_SWAGGER_UI_ENABLED:false}
 
 srrrg:
-  base-url: ${SRRRG_BASE_URL:https://srrrg.link}
+  base-url: ${SRRRG_BASE_URL:http://localhost:8080}
   mail:
     from: ${SRRRG_MAIL_FROM:}
   trust-forwarded-headers: ${SRRRG_TRUST_FORWARDED_HEADERS:false}

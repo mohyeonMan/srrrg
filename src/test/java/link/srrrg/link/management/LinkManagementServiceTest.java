@@ -18,6 +18,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import link.srrrg.common.metrics.SrrrgMetrics;
+import link.srrrg.domain.ProjectDomain;
 import link.srrrg.link.Link;
 import link.srrrg.link.LinkCodeGenerator;
 import link.srrrg.link.LinkGoneException;
@@ -92,14 +93,16 @@ class LinkManagementServiceTest {
 	@Test
 	void createsProjectLinkWithoutSecret() {
 		Project project = mock(Project.class);
+		ProjectDomain domain = mock(ProjectDomain.class);
 		User user = mock(User.class);
 		when(riskVerificationService.verify(any())).thenReturn(assessment(RiskVerdict.SAFE));
 		when(codeGenerator.generate()).thenReturn("aB3x9Q");
 		when(repository.saveAndFlush(any(Link.class))).thenAnswer(call -> call.getArgument(0));
 
-		Link link = service.createForProject(new CreateLinkRequest("https://example.com", null), project, user);
+		Link link = service.createForProject(new CreateLinkRequest("https://example.com", null), project, domain, user);
 
 		assertThat(link.getProject()).isSameAs(project);
+		assertThat(link.getDomain()).isSameAs(domain);
 		assertThat(link.getCreatedBy()).isSameAs(user);
 		assertThat(link.getSecretKeyHash()).isNull();
 	}
@@ -112,7 +115,7 @@ class LinkManagementServiceTest {
 				.thenReturn(Optional.of(existing));
 
 		Link link = service.createForProject(new CreateLinkRequest("https://example.com", null),
-				mock(Project.class), null, 3L, "retry-1", "request-hash");
+				mock(Project.class), mock(ProjectDomain.class), null, 3L, "retry-1", "request-hash");
 
 		assertThat(link).isSameAs(existing);
 		verify(validator, never()).validate(any());
@@ -126,7 +129,7 @@ class LinkManagementServiceTest {
 				.thenReturn(Optional.of(existing));
 
 		assertThatThrownBy(() -> service.createForProject(new CreateLinkRequest("https://other.example", null),
-				mock(Project.class), null, 3L, "retry-1", "second-hash"))
+				mock(Project.class), mock(ProjectDomain.class), null, 3L, "retry-1", "second-hash"))
 				.isInstanceOf(LinkManagementService.IdempotencyConflictException.class);
 	}
 
@@ -141,7 +144,7 @@ class LinkManagementServiceTest {
 		when(repository.saveAndFlush(any(Link.class))).thenThrow(new DataIntegrityViolationException("duplicate idempotency key"));
 
 		Link link = service.createForProject(new CreateLinkRequest("https://example.com", null),
-				mock(Project.class), null, 3L, "retry-1", "request-hash");
+				mock(Project.class), mock(ProjectDomain.class), null, 3L, "retry-1", "request-hash");
 
 		assertThat(link).isSameAs(existing);
 		verify(repository, times(1)).saveAndFlush(any());
@@ -243,7 +246,7 @@ class LinkManagementServiceTest {
 
 	@Test
 	void rejectsMissingManagedLink() {
-		when(repository.findByCode("aB3x9Q")).thenReturn(Optional.empty());
+		when(repository.findByCodeAndProjectIsNull("aB3x9Q")).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.getManagedLink("aB3x9Q", "secret"))
 				.isInstanceOf(LinkNotFoundException.class);
@@ -262,7 +265,7 @@ class LinkManagementServiceTest {
 		Link link = link(url);
 		when(link.getSecretKeyHash()).thenReturn("hash");
 		when(secretKeyManager.matches("secret", "hash")).thenReturn(true);
-		when(repository.findByCode("aB3x9Q")).thenReturn(Optional.of(link));
+		when(repository.findByCodeAndProjectIsNull("aB3x9Q")).thenReturn(Optional.of(link));
 		return link;
 	}
 

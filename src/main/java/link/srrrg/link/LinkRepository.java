@@ -18,27 +18,29 @@ import jakarta.persistence.LockModeType;
 public interface LinkRepository extends JpaRepository<Link, Long> {
 
 	@EntityGraph(attributePaths = "project")
-	Optional<Link> findByCode(String code);
+	Optional<Link> findByCodeAndProjectIsNull(String code);
+	@EntityGraph(attributePaths = "project")
+	Optional<Link> findByDomainIdAndCode(Long domainId, String code);
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@EntityGraph(attributePaths = "project")
-	@Query("select l from Link l where l.code = :code")
-	Optional<Link> lockByCode(@Param("code") String code);
+	@Query("select l from Link l where l.code = :code and l.project is null")
+	Optional<Link> lockAnonymousByCode(@Param("code") String code);
 	Optional<Link> findByIdempotencyApiKeyIdAndIdempotencyKey(Long apiKeyId, String idempotencyKey);
 	List<Link> findByProjectIdAndDeletedFalseOrderByIdDesc(Long projectId);
 	List<Link> findByProjectIdAndDeletedFalseOrderByIdDesc(Long projectId, Pageable pageable);
 	List<Link> findByProjectIdAndDeletedFalseAndIdLessThanOrderByIdDesc(Long projectId, Long id, Pageable pageable);
 
 	@Modifying
-	@Query("update Link l set l.accessCount = l.accessCount + 1 where l.code = :code")
-	int incrementAccessCountByCode(@Param("code") String code);
+	@Query("update Link l set l.accessCount = l.accessCount + 1 where l.id = :id")
+	int incrementAccessCountById(@Param("id") Long id);
 
 	@Modifying
 	@Query("""
 			update Link l
 			   set l.accessCount = l.accessCount + 1,
 			       l.redirectCount = l.redirectCount + 1
-			 where l.code = :code
+			 where l.id = :id
 			""")
-	int incrementAccessAndRedirectCountsByCode(@Param("code") String code);
+	int incrementAccessAndRedirectCountsById(@Param("id") Long id);
 
 }

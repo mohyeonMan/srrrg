@@ -13,6 +13,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import link.srrrg.domain.ProjectDomain;
 import link.srrrg.project.Project;
 import link.srrrg.identity.User;
 import lombok.AccessLevel;
@@ -29,7 +30,7 @@ public class Link {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	@Column(nullable = false, unique = true, length = 6)
+	@Column(nullable = false, length = 6)
 	private String code;
 
 	@Column(name = "original_url", nullable = false, length = 2048)
@@ -41,6 +42,10 @@ public class Link {
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "project_id")
 	private Project project;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "domain_id")
+	private ProjectDomain domain;
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "created_by_user_id")
@@ -86,9 +91,10 @@ public class Link {
 	}
 
 	public static Link createForProject(String code, String originalUrl, Instant expiresAt,
-			Project project, User createdBy, Long apiKeyId, String idempotencyKey, String requestHash) {
+			Project project, ProjectDomain domain, User createdBy, Long apiKeyId, String idempotencyKey, String requestHash) {
 		Link link = new Link(code, originalUrl, null, expiresAt);
 		link.project = project;
+		link.domain = domain;
 		link.createdBy = createdBy;
 		link.idempotencyApiKeyId = apiKeyId;
 		link.idempotencyKey = idempotencyKey;
@@ -127,8 +133,9 @@ public class Link {
 		this.updatedAt = Instant.now();
 	}
 
-	public void assignToProject(Project project, User createdBy) {
+	public void assignToProject(Project project, ProjectDomain domain, User createdBy) {
 		this.project = project;
+		this.domain = domain;
 		this.createdBy = createdBy;
 		this.secretKeyHash = null;
 		this.updatedAt = Instant.now();

@@ -392,6 +392,7 @@ class WebAuthPostgreSqlIntegrationTest {
 		var membership = projectMemberRepository.findByIdUserId(owner.user().getId()).getFirst();
 		Long projectId = membership.getProject().getId();
 		String slug = membership.getProject().getSlug();
+		String projectHost = slug + ".srrrg.link";
 		jakarta.servlet.http.Cookie cookie = new jakarta.servlet.http.Cookie(
 				"srrrg_access", sessionService.issue(owner.user()).accessToken());
 
@@ -399,9 +400,17 @@ class WebAuthPostgreSqlIntegrationTest {
 		assertThat(jdbcTemplate.queryForObject(
 				"SELECT created_by_user_id FROM projects WHERE id = ?", Long.class, projectId))
 				.isEqualTo(owner.user().getId());
+		Long domainId = jdbcTemplate.queryForObject(
+				"SELECT id FROM project_domains WHERE project_id = ?", Long.class, projectId);
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT hostname FROM project_domains WHERE id = ?", String.class, domainId))
+				.isEqualTo(projectHost);
 		mockMvc.perform(get("/api/web/projects/{projectId}", projectId).cookie(cookie))
 				.andExpect(status().isOk())
 				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.slug").value(slug));
+		mockMvc.perform(get("/api/web/projects/{projectId}/domains", projectId).cookie(cookie))
+				.andExpect(status().isOk())
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$[0].hostname").value(projectHost));
 		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(
 					"/api/web/projects/{projectId}", projectId)
 					.with(csrf()).cookie(cookie).contentType(MediaType.APPLICATION_JSON)
@@ -419,6 +428,39 @@ class WebAuthPostgreSqlIntegrationTest {
 				.isEqualTo(owner.user().getId());
 		assertThat(jdbcTemplate.queryForObject(
 				"SELECT secret_key_hash IS NULL FROM links WHERE code = ?", Boolean.class, webCode)).isTrue();
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT domain_id FROM links WHERE code = ?", Long.class, webCode)).isEqualTo(domainId);
+		mockMvc.perform(get("/{code}", webCode)
+					.header("Host", projectHost)
+					.header("X-Forwarded-Host", "attacker.example"))
+				.andExpect(status().isFound())
+				.andExpect(header().string("Location", "https://example.com/web-project"));
+		mockMvc.perform(get("/{code}", webCode).header("Host", "srrrg.link"))
+				.andExpect(status().isNotFound());
+		mockMvc.perform(get("/{code}", webCode).header("Host", "unregistered.srrrg.link"))
+				.andExpect(status().isNotFound());
+		LoginResolution otherOwner = identityService.resolve(identity(
+				OAuthProvider.GITHUB, "project-domain-other", "domain-other@example.com"));
+		Long otherProjectId = projectMemberRepository.findByIdUserId(otherOwner.user().getId()).getFirst().getProject().getId();
+		Long otherDomainId = jdbcTemplate.queryForObject(
+				"SELECT id FROM project_domains WHERE project_id = ?", Long.class, otherProjectId);
+		String otherHost = jdbcTemplate.queryForObject(
+				"SELECT hostname FROM project_domains WHERE id = ?", String.class, otherDomainId);
+		jdbcTemplate.update("""
+				INSERT INTO links (code, original_url, project_id, domain_id)
+				VALUES (?, 'https://example.com/other-project', ?, ?)
+				""", webCode, otherProjectId, otherDomainId);
+		mockMvc.perform(get("/{code}", webCode).header("Host", otherHost))
+				.andExpect(status().isFound())
+				.andExpect(header().string("Location", "https://example.com/other-project"));
+		mockMvc.perform(get("/{code}", webCode).header("Host", projectHost))
+				.andExpect(status().isFound())
+				.andExpect(header().string("Location", "https://example.com/web-project"));
+		assertThatThrownBy(() -> jdbcTemplate.update("""
+				INSERT INTO links (code, original_url, project_id, domain_id)
+				VALUES ('BadMap', 'https://example.com', ?, ?)
+				""", projectId, otherDomainId))
+				.isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
 
 		var anonymous = linkManagementService.create(new CreateLinkRequest("https://example.com/project", null));
 		mockMvc.perform(post("/api/web/projects/{projectId}/links/{code}/claim", projectId, anonymous.code())
@@ -429,6 +471,17 @@ class WebAuthPostgreSqlIntegrationTest {
 				.isEqualTo(owner.user().getId());
 		assertThat(jdbcTemplate.queryForObject(
 				"SELECT secret_key_hash IS NULL FROM links WHERE code = ?", Boolean.class, anonymous.code())).isTrue();
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT domain_id FROM links WHERE code = ?", Long.class, anonymous.code())).isEqualTo(domainId);
+		var conflictingAnonymous = linkManagementService.create(
+				new CreateLinkRequest("https://example.com/conflicting-claim", null));
+		jdbcTemplate.update("UPDATE links SET code = ? WHERE code = ? AND project_id IS NULL", webCode, conflictingAnonymous.code());
+		mockMvc.perform(post("/api/web/projects/{projectId}/links/{code}/claim", projectId, webCode)
+					.with(csrf()).cookie(cookie).header("X-Srrrg-Secret-Key", conflictingAnonymous.secretKey()))
+				.andExpect(status().isConflict())
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.code").value("LINK_CODE_CONFLICT"));
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT project_id IS NULL FROM links WHERE code = ? AND project_id IS NULL", Boolean.class, webCode)).isTrue();
 		mockMvc.perform(get("/api/web/projects/{projectId}/overview", projectId).cookie(cookie))
 				.andExpect(status().isOk())
 				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.standaloneLinks[0].code").value(anonymous.code()))
@@ -471,7 +524,7 @@ class WebAuthPostgreSqlIntegrationTest {
 		mockMvc.perform(get("/api/v1/projects/{projectId}/links", projectId)
 					.header("Authorization", "Bearer " + apiKey.rawKey()))
 				.andExpect(status().isUnauthorized());
-		mockMvc.perform(get("/{code}", anonymous.code())).andExpect(status().isGone());
+		mockMvc.perform(get("/{code}", anonymous.code()).header("Host", projectHost)).andExpect(status().isGone());
 	}
 
 	@Test

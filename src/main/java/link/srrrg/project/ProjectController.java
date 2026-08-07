@@ -22,6 +22,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import link.srrrg.auth.SrrrgPrincipal;
+import link.srrrg.domain.ProjectDomain;
 import link.srrrg.link.Link;
 import link.srrrg.link.management.dto.CreateLinkRequest;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +41,7 @@ public class ProjectController {
 	@PatchMapping("/projects/{projectId}") public ProjectResponse rename(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId, @Valid @RequestBody RenameProjectRequest request) { Project project = projects.rename(p.userId(), projectId, request.name()); return new ProjectResponse(project.getId(), project.getName(), project.getSlug(), ProjectRole.OWNER); }
 	@DeleteMapping("/projects/{projectId}") public ResponseEntity<Void> archive(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId) { projects.archive(p.userId(), projectId); return ResponseEntity.noContent().build(); }
 	@GetMapping("/projects/{projectId}/overview") public ProjectOverviewResponse overview(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId) { return new ProjectOverviewResponse(projects.projectLinks(p.userId(), projectId).stream().map(ProjectLinkResponse::from).toList(), List.of()); }
+	@GetMapping("/projects/{projectId}/domains") public List<DomainResponse> domains(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId) { return List.of(DomainResponse.from(projects.projectDomain(p.userId(), projectId))); }
 	@PostMapping("/projects/{projectId}/links") public ResponseEntity<ProjectLinkResponse> createLink(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId, @Valid @RequestBody CreateLinkRequest request) { return ResponseEntity.status(HttpStatus.CREATED).body(ProjectLinkResponse.from(projects.createProjectLink(p.userId(), projectId, request))); }
 	@GetMapping("/projects/{projectId}/members") public List<MemberResponse> members(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId) { return projects.projectMembers(p.userId(), projectId).stream().map(MemberResponse::from).toList(); }
 	@GetMapping("/projects/{projectId}/invitations") public List<InvitationResponse> invitations(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId) { return projects.projectInvitations(p.userId(), projectId).stream().map(InvitationResponse::from).toList(); }
@@ -62,6 +64,7 @@ public class ProjectController {
 	public record AcceptInvitationResponse(Long projectId, boolean alreadyMember) { }
 	public record ProjectResponse(Long id, String name, String slug, ProjectRole role) { static ProjectResponse from(ProjectMember member) { return new ProjectResponse(member.getProject().getId(), member.getProject().getName(), member.getProject().getSlug(), member.getRole()); } }
 	public record ProjectOverviewResponse(List<ProjectLinkResponse> standaloneLinks, List<Object> campaigns) { }
+	public record DomainResponse(Long id, String hostname) { static DomainResponse from(ProjectDomain domain) { return new DomainResponse(domain.getId(), domain.getHostname()); } }
 	public record ProjectLinkResponse(String code, String originalUrl, Instant expiresAt, long accessCount, long redirectCount) { static ProjectLinkResponse from(Link link) { return new ProjectLinkResponse(link.getCode(), link.getOriginalUrl(), link.getExpiresAt(), link.getAccessCount(), link.getRedirectCount()); } }
 	public record MemberResponse(Long userId, String displayName, ProjectRole role) { static MemberResponse from(ProjectMember member) { return new MemberResponse(member.getUser().getId(), member.getUser().getDisplayName(), member.getRole()); } }
 	public record InvitationResponse(Long id, String email, ProjectRole role, Instant expiresAt) { static InvitationResponse from(ProjectInvitation invitation) { return new InvitationResponse(invitation.getId(), invitation.getEmail(), invitation.getRole(), invitation.getExpiresAt()); } }

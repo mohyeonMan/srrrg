@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import link.srrrg.link.LinkGoneException;
+import link.srrrg.link.LinkCodeConflictException;
 import link.srrrg.link.LinkNotFoundException;
 import link.srrrg.link.UnsafeUrlException;
 import link.srrrg.link.UrlRiskCheckFailedException;
@@ -69,6 +70,12 @@ public class GlobalExceptionHandler {
 		log.debug("API request failed: code={}", LINK_GONE);
 		return ResponseEntity.status(HttpStatus.GONE)
 				.body(new ApiErrorResponse(LINK_GONE, exception.getMessage()));
+	}
+
+	@ExceptionHandler(LinkCodeConflictException.class)
+	public ResponseEntity<ApiErrorResponse> handleLinkCodeConflict(LinkCodeConflictException exception) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+				.body(new ApiErrorResponse("LINK_CODE_CONFLICT", exception.getMessage()));
 	}
 
 	@ExceptionHandler(UnsafeUrlException.class)
