@@ -61,6 +61,7 @@ class WebAuthPostgreSqlIntegrationTest {
 		registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
 		registry.add("spring.datasource.username", POSTGRES::getUsername);
 		registry.add("spring.datasource.password", POSTGRES::getPassword);
+		registry.add("srrrg.base-url", () -> "https://srrrg.link");
 		registry.add("srrrg.auth.jwt.active-kid", () -> "test");
 		registry.add("srrrg.auth.jwt.active-key-base64", () -> JWT_KEY);
 		registry.add("srrrg.oauth.google.client-id", () -> "google-client");
