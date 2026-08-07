@@ -1,8 +1,159 @@
 <!doctype html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="context-path" th:content="@{/}"><title>srrrg - 프로젝트</title><link rel="stylesheet" th:href="@{/css/srrrg.css}"><script defer th:src="@{/js/srrrg-projects.js}"></script></head>
-<body><div th:replace="~{fragments/srrrg-layout :: header}"></div><main class="management-shell" id="projects-app">
-<section class="management-gate"><p class="section-kicker">PROJECTS</p><h1>프로젝트와 멤버</h1><p>프로젝트별로 링크와 멤버를 관리합니다.</p>
-<form id="create-project-form"><label class="field"><span class="field-label">새 프로젝트 이름</span><input class="field-input" name="name" maxlength="100" required></label><button class="primary-button">프로젝트 만들기</button></form><p id="project-message" class="form-message" role="status"></p>
-</section><section class="management-console"><h2>내 프로젝트</h2><div id="project-list"></div><div id="project-detail" hidden><h2 id="project-name"></h2><h3>멤버</h3><div id="member-list"></div><form id="invite-form"><label class="field"><span class="field-label">초대할 이메일</span><input class="field-input" name="email" type="email" required></label><label class="field"><span class="field-label">역할</span><select class="field-input" name="role"><option value="EDITOR">EDITOR</option><option value="VIEWER">VIEWER</option></select></label><button class="primary-button">이메일 초대 보내기</button></form><h3>보낸 초대</h3><div id="invitation-list"></div><h3>기존 익명 링크 편입</h3><form id="import-form"><label class="field"><span class="field-label">코드</span><input class="field-input" name="code" maxlength="6" required></label><label class="field"><span class="field-label">secret key</span><input class="field-input" name="secretKey" type="password" required></label><button class="secondary-button">프로젝트로 편입</button></form></div></section>
-</main><div th:replace="~{fragments/srrrg-layout :: footer}"></div></body></html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="context-path" th:content="@{/}">
+	<title>srrrg - 프로젝트</title>
+	<link rel="stylesheet" th:href="@{/css/srrrg.css}">
+	<script defer th:src="@{/js/srrrg-projects.js}"></script>
+</head>
+<body>
+<div th:replace="~{fragments/srrrg-layout :: header}"></div>
+
+<main class="projects-shell" id="projects-app">
+	<header class="projects-heading">
+		<div>
+			<p class="section-kicker">PROJECTS</p>
+			<h1>프로젝트 링크</h1>
+			<p>팀과 함께 쓰는 단축 URL을 프로젝트 도메인에서 만들고 관리하세요.</p>
+		</div>
+	</header>
+
+	<div class="projects-layout">
+		<aside class="project-sidebar surface-panel" aria-labelledby="project-list-title">
+			<div class="project-sidebar-heading">
+				<h2 id="project-list-title">내 프로젝트</h2>
+				<span id="project-count" class="status-badge">0</span>
+			</div>
+			<nav id="project-list" class="project-list" aria-label="프로젝트 선택"></nav>
+
+			<form id="create-project-form" class="project-create-form" novalidate>
+				<label class="field" for="new-project-name">
+					<span class="field-label">새 프로젝트 이름</span>
+					<input id="new-project-name" class="field-input" name="name" maxlength="100" autocomplete="off" aria-describedby="project-message" required>
+				</label>
+				<button class="secondary-button" type="submit">프로젝트 만들기</button>
+			</form>
+			<p id="project-message" class="form-message" role="status" aria-live="polite"></p>
+		</aside>
+
+		<section class="project-workspace" aria-live="polite">
+			<div id="project-empty" class="project-empty surface-panel">
+				<p class="section-kicker">GET STARTED</p>
+				<h2>프로젝트를 선택하세요</h2>
+				<p>프로젝트별 링크와 멤버 정보를 이곳에서 확인할 수 있습니다.</p>
+			</div>
+
+			<div id="project-detail" class="project-detail" hidden>
+				<header class="project-detail-header surface-panel">
+					<div>
+						<div class="project-title-line">
+							<h2 id="project-name" tabindex="-1"></h2>
+							<span id="project-role" class="status-badge"></span>
+						</div>
+						<p id="project-domain" class="project-domain">도메인을 불러오는 중...</p>
+					</div>
+					<button id="copy-project-domain" class="copy-button" type="button" disabled>복사</button>
+				</header>
+
+				<section id="link-create-panel" class="project-card project-link-create surface-panel" aria-labelledby="link-create-title">
+					<div class="project-card-heading">
+						<div>
+							<p class="section-kicker">CREATE</p>
+							<h2 id="link-create-title">프로젝트 링크 만들기</h2>
+							<p>이 프로젝트의 전용 도메인으로 단축 URL을 만듭니다.</p>
+						</div>
+					</div>
+
+					<form id="create-project-link-form" class="form-grid" novalidate>
+						<label class="field" for="project-original-url">
+							<span class="field-label">원본 URL</span>
+							<input id="project-original-url" class="field-input" name="originalUrl" type="url" maxlength="2048" placeholder="https://example.com/very/long/path" aria-describedby="project-url-error link-create-message" required>
+							<span id="project-url-error" class="field-error" hidden></span>
+						</label>
+
+						<fieldset id="project-expire-options" class="expire-options" aria-describedby="project-expiration-error">
+							<legend>만료 시각</legend>
+							<button class="quick-expire-option" type="button" data-expires-option="none" aria-pressed="true">없음</button>
+							<button class="quick-expire-option" type="button" data-expires-option="1:hours" aria-pressed="false">1시간</button>
+							<button class="quick-expire-option" type="button" data-expires-option="1:days" aria-pressed="false">하루</button>
+							<button class="quick-expire-option" type="button" data-expires-option="1:months" aria-pressed="false">1개월</button>
+							<button class="quick-expire-option" type="button" data-expires-option="1:years" aria-pressed="false">1년</button>
+							<button class="quick-expire-option" type="button" data-expires-option="custom" aria-pressed="false">직접 입력</button>
+						</fieldset>
+						<label id="project-custom-expiration-field" class="field" for="project-expires-at" hidden>
+							<span class="field-label">직접 입력</span>
+							<input id="project-expires-at" class="field-input" name="expiresAt" type="datetime-local" aria-describedby="project-expiration-error">
+						</label>
+						<span id="project-expiration-error" class="field-error" hidden></span>
+
+						<div class="project-form-actions">
+							<p id="link-create-message" class="form-message" role="status" aria-live="polite"></p>
+							<button id="create-project-link-button" class="primary-button" type="submit" disabled>단축 URL 만들기</button>
+						</div>
+					</form>
+
+					<section id="project-link-result" class="project-link-result" aria-labelledby="project-link-result-title" hidden>
+						<span class="status-badge success">생성 완료</span>
+						<h3 id="project-link-result-title" tabindex="-1">단축 URL이 준비됐어요</h3>
+						<div class="copy-row">
+							<a id="created-project-link" class="url-box" target="_blank" rel="noopener noreferrer"></a>
+							<button id="copy-created-project-link" class="copy-button" type="button">복사</button>
+						</div>
+					</section>
+				</section>
+
+				<section class="project-card surface-panel" aria-labelledby="project-links-title">
+					<div class="project-card-heading">
+						<div>
+							<p class="section-kicker">OVERVIEW</p>
+							<h2 id="project-links-title">최근 링크</h2>
+						</div>
+						<span id="project-link-count" class="status-badge">0</span>
+					</div>
+					<div id="project-link-list" class="project-link-list"></div>
+				</section>
+
+				<details class="project-admin surface-panel">
+					<summary>프로젝트 관리</summary>
+					<div class="project-admin-content">
+						<section id="project-settings-section" class="project-admin-section" aria-labelledby="project-settings-title">
+							<h3 id="project-settings-title">프로젝트 설정</h3>
+							<form id="rename-project-form" class="project-inline-form" novalidate>
+								<label class="field" for="rename-project-name"><span class="field-label">프로젝트 이름</span><input id="rename-project-name" class="field-input" name="name" maxlength="100" required></label>
+								<button class="secondary-button" type="submit">이름 저장</button>
+							</form>
+							<button id="delete-project-button" class="danger-button" type="button">프로젝트 삭제</button>
+						</section>
+
+						<section class="project-admin-section" aria-labelledby="member-list-title">
+							<h3 id="member-list-title">멤버</h3>
+							<div id="member-list" class="member-list"></div>
+							<form id="invite-form" class="project-inline-form" novalidate>
+								<label class="field" for="invite-email"><span class="field-label">초대할 이메일</span><input id="invite-email" class="field-input" name="email" type="email" maxlength="320" required></label>
+								<label class="field" for="invite-role"><span class="field-label">역할</span><select id="invite-role" class="field-input" name="role"><option value="EDITOR">EDITOR</option><option value="VIEWER">VIEWER</option></select></label>
+								<button class="secondary-button" type="submit">초대 보내기</button>
+							</form>
+							<div id="invitation-list" class="invitation-list"></div>
+						</section>
+
+						<section id="import-section" class="project-admin-section" aria-labelledby="import-title">
+							<h3 id="import-title">기존 익명 링크 편입</h3>
+							<p>기존 링크의 code와 secret key를 입력하면 프로젝트 링크로 전환됩니다.</p>
+							<form id="import-form" class="project-inline-form" novalidate>
+								<label class="field" for="import-code"><span class="field-label">code</span><input id="import-code" class="field-input" name="code" maxlength="6" autocomplete="off" required></label>
+								<label class="field" for="import-secret-key"><span class="field-label">secret key</span><input id="import-secret-key" class="field-input" name="secretKey" type="password" autocomplete="off" spellcheck="false" required></label>
+								<button class="secondary-button" type="submit">프로젝트로 편입</button>
+							</form>
+						</section>
+					</div>
+				</details>
+			</div>
+		</section>
+	</div>
+</main>
+
+<div th:replace="~{fragments/srrrg-layout :: footer}"></div>
+</body>
+</html>
