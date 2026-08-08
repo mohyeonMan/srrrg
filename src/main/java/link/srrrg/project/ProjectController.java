@@ -27,6 +27,8 @@ import link.srrrg.campaign.CampaignService;
 import link.srrrg.domain.ProjectDomain;
 import link.srrrg.link.Link;
 import link.srrrg.link.management.dto.CreateLinkRequest;
+import link.srrrg.link.management.dto.LinkManagementResponse;
+import link.srrrg.link.management.dto.UpdateLinkRequest;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -49,6 +51,9 @@ public class ProjectController {
 	}
 	@GetMapping("/projects/{projectId}/domains") public List<DomainResponse> domains(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId) { return List.of(DomainResponse.from(projects.projectDomain(p.userId(), projectId))); }
 	@PostMapping("/projects/{projectId}/links") public ResponseEntity<ProjectLinkResponse> createLink(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId, @Valid @RequestBody CreateLinkRequest request) { return ResponseEntity.status(HttpStatus.CREATED).body(ProjectLinkResponse.from(projects.createProjectLink(p.userId(), projectId, request))); }
+	@GetMapping("/projects/{projectId}/links/{code}") public LinkManagementResponse link(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId, @PathVariable String code) { return projects.projectLink(p.userId(), projectId, code); }
+	@PatchMapping("/projects/{projectId}/links/{code}") public LinkManagementResponse updateLink(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId, @PathVariable String code, @RequestBody UpdateLinkRequest request) { return projects.updateProjectLink(p.userId(), projectId, code, request); }
+	@DeleteMapping("/projects/{projectId}/links/{code}") public ResponseEntity<Void> deleteLink(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId, @PathVariable String code) { projects.deleteProjectLink(p.userId(), projectId, code); return ResponseEntity.noContent().build(); }
 	@GetMapping("/projects/{projectId}/members") public List<MemberResponse> members(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId) { return projects.projectMembers(p.userId(), projectId).stream().map(MemberResponse::from).toList(); }
 	@GetMapping("/projects/{projectId}/invitations") public List<InvitationResponse> invitations(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId) { return projects.projectInvitations(p.userId(), projectId).stream().map(InvitationResponse::from).toList(); }
 	@PostMapping("/projects/{projectId}/invitations") public ResponseEntity<InvitationResponse> invite(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId, @Valid @RequestBody InviteRequest request) { return ResponseEntity.status(HttpStatus.CREATED).body(InvitationResponse.from(projects.invite(p.userId(), projectId, request.email(), request.role()))); }

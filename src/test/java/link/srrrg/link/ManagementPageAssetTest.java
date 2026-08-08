@@ -19,6 +19,6 @@ class ManagementPageAssetTest {
 		assertThat(template).contains("사용 가능", "type=\"password\"").doesNotContain("샘플 통계");
 		assertThat(script).doesNotContain("NO_THREAT_FOUND", "THREAT_DETECTED", "verifiedAt", "buildSampleAnalytics");
 		assertThat(script).doesNotContain("localStorage", "sessionStorage");
-		assertThat(script).contains("expired ? '만료됨' : '사용 가능'", "X-Srrrg-Secret-Key", "/statistics?");
+		assertThat(script).contains("expired ? '만료됨' : '사용 가능'", "X-Srrrg-Secret-Key", "/statistics?", "projectMode", "X-XSRF-TOKEN");
 	}
 }

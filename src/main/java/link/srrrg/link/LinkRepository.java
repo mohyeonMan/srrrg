@@ -34,7 +34,7 @@ public interface LinkRepository extends JpaRepository<Link, Long>, JpaSpecificat
 	List<Link> findByCampaignIdAndDeletedFalseOrderByIdDesc(Long campaignId, Pageable pageable);
 	List<Link> findByCampaignIdAndDeletedFalseAndIdLessThanOrderByIdDesc(Long campaignId, Long id, Pageable pageable);
 	Optional<Link> findByCampaignIdAndExternalId(Long campaignId, String externalId);
-	@EntityGraph(attributePaths = {"project", "campaign"})
+	@EntityGraph(attributePaths = {"project", "campaign", "domain"})
 	Optional<Link> findByProjectIdAndCode(Long projectId, String code);
 
 	@Modifying

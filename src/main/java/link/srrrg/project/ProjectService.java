@@ -18,10 +18,14 @@ import link.srrrg.identity.User;
 import link.srrrg.identity.UserRepository;
 import link.srrrg.link.Link;
 import link.srrrg.link.LinkCodeConflictException;
+import link.srrrg.link.LinkGoneException;
+import link.srrrg.link.LinkNotFoundException;
 import link.srrrg.link.LinkRepository;
 import link.srrrg.link.SecretKeyManager;
 import link.srrrg.link.management.LinkManagementService;
 import link.srrrg.link.management.dto.CreateLinkRequest;
+import link.srrrg.link.management.dto.LinkManagementResponse;
+import link.srrrg.link.management.dto.UpdateLinkRequest;
 
 @Service
 public class ProjectService {
@@ -207,6 +211,30 @@ public class ProjectService {
 				String.valueOf(request.originalUrl()) + "\n" + String.valueOf(request.expiresAt()));
 		return linkManagement.createForProject(request, project(projectId), domains.get(projectId), null,
 				normalizedKey == null ? null : apiKeyId, normalizedKey, requestHash);
+	}
+
+	@Transactional
+	public void deleteProjectLink(Long userId, Long projectId, String code) {
+		requireRole(userId, projectId, ProjectRole.EDITOR);
+		projectLink(projectId, code).delete();
+	}
+
+	@Transactional(readOnly = true)
+	public LinkManagementResponse projectLink(Long userId, Long projectId, String code) {
+		ProjectMember member = requireRole(userId, projectId, ProjectRole.VIEWER);
+		return linkManagement.projectManagementResponse(projectLink(projectId, code), member.getRole() != ProjectRole.VIEWER);
+	}
+
+	@Transactional
+	public LinkManagementResponse updateProjectLink(Long userId, Long projectId, String code, UpdateLinkRequest request) {
+		requireRole(userId, projectId, ProjectRole.EDITOR);
+		return linkManagement.updateProjectLink(projectLink(projectId, code), request);
+	}
+
+	private Link projectLink(Long projectId, String code) {
+		Link link = links.findByProjectIdAndCode(projectId, code).orElseThrow(LinkNotFoundException::new);
+		if (link.isDeleted()) throw new LinkGoneException(LinkGoneException.Reason.DELETED);
+		return link;
 	}
 
 	private ProjectMember requireRole(Long userId, Long projectId, ProjectRole minimum) {

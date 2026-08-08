@@ -348,7 +348,7 @@
 		byId('load-more-links-button').hidden = !page.nextCursor;
 	}
 
-	function statisticsLink(code) { const link = element('a', '', '단일 링크 통계'); link.href = `${base}/statistics?projectId=${state.projectId}&code=${encodeURIComponent(code)}`; return link; }
+	function statisticsLink(code) { const link = element('a', '', '상세보기'); link.href = `${base}/manage?projectId=${state.projectId}&campaignId=${state.campaignId}&code=${encodeURIComponent(code)}`; return link; }
 
 	byId('load-more-links-button').addEventListener('click', () => loadLinks(state.linksCursor));
 

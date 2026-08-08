@@ -266,6 +266,36 @@ class LinkManagementServiceTest {
 	}
 
 	@Test
+	void authenticatedCampaignLinkCanReturnToInheritedDestinationWithoutRiskCheck() {
+		Link link = link("https://own.example");
+		ProjectDomain domain = mock(ProjectDomain.class);
+		when(domain.getHostname()).thenReturn("acme.srrrg.link");
+		when(link.getDomain()).thenReturn(domain);
+		when(link.getCampaign()).thenReturn(mock(Campaign.class));
+		when(repository.save(link)).thenReturn(link);
+		UpdateLinkRequest request = new UpdateLinkRequest();
+		request.setOriginalUrl(null);
+
+		var response = service.updateProjectLink(link, request);
+
+		verify(link).updateOriginalUrl(null);
+		verify(riskVerificationService, never()).verify(any());
+		assertThat(response.shortUrl()).isEqualTo("https://acme.srrrg.link/aB3x9Q");
+	}
+
+	@Test
+	void standaloneProjectLinkCannotRemoveItsDestination() {
+		Link link = link("https://own.example");
+		UpdateLinkRequest request = new UpdateLinkRequest();
+		request.setOriginalUrl(null);
+
+		assertThatThrownBy(() -> service.updateProjectLink(link, request))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessage("프로젝트 단일 링크에는 목적지 URL이 필요합니다.");
+		verify(repository, never()).save(any());
+	}
+
+	@Test
 	void rejectsMissingManagedLink() {
 		when(repository.findByCodeAndProjectIsNull("aB3x9Q")).thenReturn(Optional.empty());
 

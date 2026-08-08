@@ -25,6 +25,7 @@ import link.srrrg.link.Link;
 import link.srrrg.link.LinkRepository;
 import link.srrrg.link.SecretKeyManager;
 import link.srrrg.link.management.LinkManagementService;
+import link.srrrg.link.management.dto.UpdateLinkRequest;
 
 class ProjectServiceTest {
 	private final ProjectRepository projects = mock(ProjectRepository.class);
@@ -164,6 +165,63 @@ class ProjectServiceTest {
 		verify(link).assignToProject(project, domain, user);
 		verify(links).lockAnonymousByCode("aB3x9Q");
 		verify(links).flush();
+	}
+
+	@Test
+	void editorDeletesProjectOwnedLink() {
+		ProjectMember editor = mock(ProjectMember.class);
+		Project project = mock(Project.class);
+		Link link = mock(Link.class);
+		when(editor.getRole()).thenReturn(ProjectRole.EDITOR);
+		when(editor.getProject()).thenReturn(project);
+		when(members.findByIdProjectIdAndIdUserId(1L, 2L)).thenReturn(Optional.of(editor));
+		when(links.findByProjectIdAndCode(1L, "aB3x9Q")).thenReturn(Optional.of(link));
+
+		service.deleteProjectLink(2L, 1L, "aB3x9Q");
+
+		verify(link).delete();
+	}
+
+	@Test
+	void viewerCannotDeleteProjectOwnedLink() {
+		ProjectMember viewer = mock(ProjectMember.class);
+		when(viewer.getRole()).thenReturn(ProjectRole.VIEWER);
+		when(viewer.getProject()).thenReturn(mock(Project.class));
+		when(members.findByIdProjectIdAndIdUserId(1L, 2L)).thenReturn(Optional.of(viewer));
+
+		assertThatThrownBy(() -> service.deleteProjectLink(2L, 1L, "aB3x9Q"))
+				.isInstanceOf(SecurityException.class);
+		verify(links, never()).findByProjectIdAndCode(any(), any());
+	}
+
+	@Test
+	void viewerCanOpenProjectLinkButSettingsAreReadOnly() {
+		ProjectMember viewer = mock(ProjectMember.class);
+		Link link = mock(Link.class);
+		when(viewer.getRole()).thenReturn(ProjectRole.VIEWER);
+		when(viewer.getProject()).thenReturn(mock(Project.class));
+		when(members.findByIdProjectIdAndIdUserId(1L, 2L)).thenReturn(Optional.of(viewer));
+		when(links.findByProjectIdAndCode(1L, "aB3x9Q")).thenReturn(Optional.of(link));
+
+		service.projectLink(2L, 1L, "aB3x9Q");
+
+		verify(linkManagement).projectManagementResponse(link, false);
+	}
+
+	@Test
+	void editorCanUpdateProjectOwnedLink() {
+		ProjectMember editor = mock(ProjectMember.class);
+		Link link = mock(Link.class);
+		UpdateLinkRequest request = new UpdateLinkRequest();
+		request.setExpiresAt(null);
+		when(editor.getRole()).thenReturn(ProjectRole.EDITOR);
+		when(editor.getProject()).thenReturn(mock(Project.class));
+		when(members.findByIdProjectIdAndIdUserId(1L, 2L)).thenReturn(Optional.of(editor));
+		when(links.findByProjectIdAndCode(1L, "aB3x9Q")).thenReturn(Optional.of(link));
+
+		service.updateProjectLink(2L, 1L, "aB3x9Q", request);
+
+		verify(linkManagement).updateProjectLink(link, request);
 	}
 
 	@Test

@@ -5,6 +5,12 @@
 	}
 
 	const apiUrl = app.dataset.apiUrl || '/api/links';
+	const contextPath = apiUrl.endsWith('/api/links') ? apiUrl.slice(0, -'/api/links'.length) : '';
+	const pageQuery = new URLSearchParams(location.search);
+	const projectId = pageQuery.get('projectId');
+	const requestedCode = extractLinkCode(pageQuery.get('code') || app.dataset.prefilledCode || '');
+	const requestedCampaignId = pageQuery.get('campaignId');
+	const projectMode = Boolean(projectId && requestedCode);
 	const noExpirationValue = '-';
 	const numberFormatter = new Intl.NumberFormat('ko-KR');
 	const state = {
@@ -68,12 +74,12 @@
 	init();
 
 	function init() {
-		codeInput.value = app.dataset.prefilledCode || '';
+		codeInput.value = requestedCode || '';
 		authForm.addEventListener('submit', handleAuthentication);
 		codeInput.addEventListener('input', handleAuthInput);
 		secretInput.addEventListener('input', handleAuthInput);
 		toggleSecretButton.addEventListener('click', toggleSecretVisibility);
-		changeLinkButton.addEventListener('click', () => requestDiscard(showAuthenticationGate));
+		changeLinkButton.addEventListener('click', () => requestDiscard(projectMode ? returnToList : showAuthenticationGate));
 		copyManagedShortUrl.addEventListener('click', () => copyToClipboard(managedShortUrl.textContent, copyManagedShortUrl));
 
 		analyticsTab.addEventListener('click', () => requestTab('analytics'));
@@ -96,6 +102,25 @@
 		confirmDeleteButton.addEventListener('click', handleDelete);
 		confirmDiscardButton.addEventListener('click', handleDiscardConfirmation);
 		window.addEventListener('beforeunload', protectUnsavedChanges);
+		if (projectMode) {
+			authForm.hidden = true;
+			gate.querySelector('.credential-privacy-note').hidden = true;
+			byId('management-gate-title').textContent = '링크 상세';
+			gate.querySelector('.management-gate-heading > p:last-child').textContent = '링크 정보와 권한을 확인하고 있습니다.';
+			changeLinkButton.textContent = requestedCampaignId ? '캠페인으로' : '프로젝트로';
+			loadProjectLink();
+		}
+	}
+
+	async function loadProjectLink() {
+		try {
+			const response = await fetch(projectLinkUrl(), {headers: {'Accept': 'application/json'}});
+			const body = await readApiBody(response);
+			if (!response.ok) throw new Error(body.message || '링크를 확인하지 못했습니다.');
+			openConsole(body);
+		} catch (error) {
+			showMessage(authMessage, error.message, true);
+		}
 	}
 
 	function handleAuthInput() {
@@ -158,7 +183,7 @@
 		state.link = link;
 		gate.hidden = true;
 		consoleView.hidden = false;
-		settingsTab.disabled = false;
+		settingsTab.disabled = !link.editable;
 		renderIdentity();
 		renderSettings();
 		switchTab('analytics');
@@ -185,8 +210,8 @@
 		managedShortUrl.textContent = link.shortUrl;
 		managedShortUrl.href = link.shortUrl;
 		openManagedShortUrl.href = link.shortUrl;
-		managedDestination.textContent = link.originalUrl;
-		managedDestination.title = link.originalUrl;
+		managedDestination.textContent = link.originalUrl || '캠페인 기본 목적지 사용';
+		managedDestination.title = link.originalUrl || '';
 		managedCreatedAt.textContent = formatDateTime(link.createdAt);
 		managedUpdatedAt.textContent = formatDateTime(link.updatedAt);
 		managedExpirationSummary.textContent = formatExpiration(link.expiresAt);
@@ -237,8 +262,8 @@
 		const query = new URLSearchParams({from: analyticsFrom.value, to: analyticsTo.value, bucket: analyticsBucket.value});
 		let analytics;
 		try {
-			const response = await fetch(`${apiUrl}/${encodeURIComponent(state.link.code)}/statistics?${query}`, {
-				headers: {'Accept': 'application/json', 'X-Srrrg-Secret-Key': state.secretKey}
+			const response = await fetch(statisticsUrl(query), {
+				headers: requestHeaders()
 			});
 			analytics = await readApiBody(response);
 			if (!response.ok) throw new Error(analytics.message || '통계를 불러올 수 없습니다.');
@@ -337,8 +362,9 @@
 		if (!state.link) {
 			return;
 		}
-		settingsOriginalUrl.value = state.link.originalUrl;
-		state.loadedOriginalUrl = state.link.originalUrl;
+		settingsOriginalUrl.value = state.link.originalUrl || '';
+		settingsOriginalUrl.placeholder = state.link.campaignId ? '비우면 캠페인 기본 목적지를 사용합니다' : 'https://example.com';
+		state.loadedOriginalUrl = state.link.originalUrl || '';
 		if (state.link.expiresAt) {
 			state.selectedExpiresOption = 'custom';
 			setDateTimeInputMode(settingsExpiresAt, true, toDatetimeLocal(new Date(state.link.expiresAt)));
@@ -417,7 +443,7 @@
 
 	async function handleSettingsSave(event) {
 		event.preventDefault();
-		if (!state.link || !state.secretKey || !validateSettings()) {
+		if (!state.link || !isAuthorized() || !validateSettings()) {
 			return;
 		}
 
@@ -425,7 +451,7 @@
 		const expiresValue = getSettingsExpiresValue();
 		const requestBody = {};
 		if (originalUrl !== state.loadedOriginalUrl) {
-			requestBody.originalUrl = originalUrl;
+			requestBody.originalUrl = originalUrl || null;
 		}
 		if (expiresValue !== state.loadedExpiresAt) {
 			requestBody.expiresAt = expiresValue ? new Date(expiresValue).toISOString() : null;
@@ -436,13 +462,9 @@
 		openDeleteDialogButton.disabled = true;
 		showMessage(settingsMessage, '변경사항을 저장하고 있습니다.');
 		try {
-			const response = await fetch(`${apiUrl}/${encodeURIComponent(state.link.code)}`, {
+			const response = await fetch(linkUrl(), {
 				method: 'PATCH',
-				headers: {
-					'Content-Type': 'application/json',
-					'Accept': 'application/json',
-					'X-Srrrg-Secret-Key': state.secretKey
-				},
+				headers: requestHeaders(true),
 				body: JSON.stringify(requestBody)
 			});
 			const body = await readApiBody(response);
@@ -466,7 +488,7 @@
 	function validateSettings() {
 		let valid = true;
 		const originalUrl = settingsOriginalUrl.value.trim();
-		if (!isHttpUrl(originalUrl)) {
+		if ((!originalUrl && !state.link.campaignId) || (originalUrl && !isHttpUrl(originalUrl))) {
 			setFieldError(settingsOriginalUrl, settingsOriginalUrlError, 'http 또는 https로 시작하는 올바른 URL을 입력하세요.');
 			valid = false;
 		}
@@ -480,17 +502,14 @@
 
 	async function handleDelete(event) {
 		event.preventDefault();
-		if (!state.link || !state.secretKey) {
+		if (!state.link || !isAuthorized()) {
 			return;
 		}
 		setButtonLoading(confirmDeleteButton, true, '삭제 중...');
 		try {
-			const response = await fetch(`${apiUrl}/${encodeURIComponent(state.link.code)}`, {
+			const response = await fetch(linkUrl(), {
 				method: 'DELETE',
-				headers: {
-					'Accept': 'application/json',
-					'X-Srrrg-Secret-Key': state.secretKey
-				}
+				headers: requestHeaders()
 			});
 			const body = await readApiBody(response);
 			if (!response.ok) {
@@ -499,8 +518,11 @@
 				return;
 			}
 			deleteDialog.close();
-			showAuthenticationGate();
-			showMessage(authMessage, '링크를 삭제했습니다.');
+			if (projectMode) returnToList();
+			else {
+				showAuthenticationGate();
+				showMessage(authMessage, '링크를 삭제했습니다.');
+			}
 		} catch (error) {
 			deleteDialog.close();
 			showMessage(settingsMessage, '서버에 연결할 수 없습니다. 잠시 후 다시 시도하세요.', true);
@@ -540,6 +562,20 @@
 	function getSettingsExpiresValue() {
 		return state.selectedExpiresOption === 'none' ? '' : settingsExpiresAt.value;
 	}
+
+	function projectLinkUrl() { return `${contextPath}/api/web/projects/${encodeURIComponent(projectId)}/links/${encodeURIComponent(requestedCode)}`; }
+	function linkUrl() { return projectMode ? projectLinkUrl() : `${apiUrl}/${encodeURIComponent(state.link.code)}`; }
+	function statisticsUrl(query) { return projectMode ? `${projectLinkUrl()}/statistics?${query}` : `${linkUrl()}/statistics?${query}`; }
+	function requestHeaders(json = false) {
+		const headers = {'Accept': 'application/json'};
+		if (json) headers['Content-Type'] = 'application/json';
+		if (projectMode) headers['X-XSRF-TOKEN'] = csrf();
+		else headers['X-Srrrg-Secret-Key'] = state.secretKey;
+		return headers;
+	}
+	function isAuthorized() { return projectMode || Boolean(state.secretKey); }
+	function csrf() { return decodeURIComponent(document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]+)/)?.[1] || ''); }
+	function returnToList() { location.href = requestedCampaignId ? `${contextPath}/campaigns?projectId=${encodeURIComponent(projectId)}&campaignId=${encodeURIComponent(requestedCampaignId)}` : `${contextPath}/projects?projectId=${encodeURIComponent(projectId)}`; }
 
 	function delta(current, previous) { return previous ? (current - previous) / previous * 100 : current ? 100 : 0; }
 	function outcomeLabel(value) { return value === 'REDIRECTED' ? '실제 이동' : value === 'BLOCKED' ? '차단' : value === 'CHECK_FAILED' ? '검사 실패' : 'URL 변경'; }

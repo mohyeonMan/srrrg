@@ -163,6 +163,8 @@ class LinkControllerTest {
 				"https://srrrg.link/aB3x9Q",
 				"https://example.com/path",
 				null,
+				true,
+				null,
 				new LinkStatisticsSummary(12, 8),
 				Instant.parse("2026-07-10T10:00:00Z"),
 				Instant.parse("2026-07-10T11:00:00Z")

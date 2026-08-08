@@ -5,6 +5,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -236,6 +238,39 @@ class SecurityWebTest {
 					.header("X-Srrrg-Secret-Key", "srrrg_sk_secret"))
 				.andExpect(status().isNoContent());
 		verify(projectService).importAnonymousLink(1L, 7L, "aB3x9Q", "srrrg_sk_secret");
+	}
+
+	@Test
+	void deletesProjectLinkWithJwtAndCsrf() throws Exception {
+		MvcResult page = mockMvc.perform(get("/login")).andExpect(status().isOk()).andReturn();
+		jakarta.servlet.http.Cookie csrf = page.getResponse().getCookie("XSRF-TOKEN");
+		org.junit.jupiter.api.Assertions.assertNotNull(csrf);
+		when(jwtService.verify("access-token")).thenReturn(1L);
+		jakarta.servlet.http.Cookie jwt = new jakarta.servlet.http.Cookie("srrrg_access", "access-token");
+
+		mockMvc.perform(delete("/api/web/projects/7/links/aB3x9Q")
+					.cookie(jwt, csrf).header("X-XSRF-TOKEN", csrf.getValue()))
+				.andExpect(status().isNoContent());
+		verify(projectService).deleteProjectLink(1L, 7L, "aB3x9Q");
+	}
+
+	@Test
+	void readsAndUpdatesProjectLinkWithJwt() throws Exception {
+		when(jwtService.verify("access-token")).thenReturn(1L);
+		jakarta.servlet.http.Cookie jwt = new jakarta.servlet.http.Cookie("srrrg_access", "access-token");
+
+		mockMvc.perform(get("/api/web/projects/7/links/aB3x9Q").cookie(jwt))
+				.andExpect(status().isOk());
+		verify(projectService).projectLink(1L, 7L, "aB3x9Q");
+
+		MvcResult page = mockMvc.perform(get("/login")).andExpect(status().isOk()).andReturn();
+		jakarta.servlet.http.Cookie csrf = page.getResponse().getCookie("XSRF-TOKEN");
+		org.junit.jupiter.api.Assertions.assertNotNull(csrf);
+		mockMvc.perform(patch("/api/web/projects/7/links/aB3x9Q")
+					.cookie(jwt, csrf).header("X-XSRF-TOKEN", csrf.getValue())
+					.contentType(MediaType.APPLICATION_JSON).content("{\"originalUrl\":\"https://new.example\"}"))
+				.andExpect(status().isOk());
+		verify(projectService).updateProjectLink(eq(1L), eq(7L), eq("aB3x9Q"), any());
 	}
 
 	@Test

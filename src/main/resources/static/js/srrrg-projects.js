@@ -189,7 +189,7 @@
 			meta.append(
 				element('span', '', link.expiresAt ? `만료 ${formatDate(link.expiresAt)}` : '만료 없음'),
 				element('span', '', `진입 ${link.accessCount.toLocaleString()} · 이동 ${link.redirectCount.toLocaleString()}`),
-				statisticsLink(`${base}/statistics?projectId=${state.selected.id}&code=${encodeURIComponent(link.code)}`)
+				statisticsLink(`${base}/manage?projectId=${state.selected.id}&code=${encodeURIComponent(link.code)}`)
 			);
 			row.append(main, meta);
 			return row;
@@ -218,7 +218,7 @@
 		replaceChildren(byId('campaign-list'), rows);
 	}
 
-	function statisticsLink(href) { const link = element('a', '', '통계'); link.href = href; return link; }
+	function statisticsLink(href) { const link = element('a', '', href.includes('code=') ? '상세보기' : '통계'); link.href = href; return link; }
 
 	function renderMembers(members) {
 		const rows = members.map((member) => {

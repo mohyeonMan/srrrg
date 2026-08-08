@@ -2,6 +2,7 @@ package link.srrrg.link.management;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -105,7 +106,7 @@ public class LinkManagementService {
 
 	@Transactional(readOnly = true)
 	public LinkManagementResponse getManagedLink(String code, String secretKey) {
-		return toManagementResponse(findManagedLink(code, secretKey));
+		return toManagementResponse(findManagedLink(code, secretKey), true, null);
 	}
 
 	public LinkManagementResponse updateManagedLink(String code, String secretKey, UpdateLinkRequest request) {
@@ -132,7 +133,31 @@ public class LinkManagementService {
 		Link savedLink = linkRepository.save(link);
 		log.info("Managed link updated: code={}, originalUrlChanged={}, expiresAtChanged={}",
 				code, urlChanged, request.isExpiresAtPresent());
-		return toManagementResponse(savedLink);
+		return toManagementResponse(savedLink, true, null);
+	}
+
+	public LinkManagementResponse projectManagementResponse(Link link, boolean editable) {
+		return toManagementResponse(link, editable, projectShortUrl(link));
+	}
+
+	public LinkManagementResponse updateProjectLink(Link link, UpdateLinkRequest request) {
+		validateUpdateRequest(request);
+		boolean urlChanged = request.isOriginalUrlPresent() && !Objects.equals(link.getOriginalUrl(), request.getOriginalUrl());
+		if (request.isOriginalUrlPresent()) {
+			if (request.getOriginalUrl() == null || request.getOriginalUrl().isBlank()) {
+				if (link.getCampaign() == null) throw new IllegalArgumentException("프로젝트 단일 링크에는 목적지 URL이 필요합니다.");
+			} else {
+				urlValidator.validate(request.getOriginalUrl());
+			}
+			// 로그인 프로젝트 멤버를 신뢰하므로 URL 위험 검사는 의도적으로 생략한다.
+			// 신뢰 정책이 바뀌면 requireNoKnownThreat를 이 지점에 복구한다.
+			if (urlChanged) link.updateOriginalUrl(request.getOriginalUrl());
+		}
+		if (request.isExpiresAtPresent()) {
+			validateExpiration(request.getExpiresAt());
+			link.updateExpiresAt(request.getExpiresAt());
+		}
+		return toManagementResponse(linkRepository.save(link), true, projectShortUrl(link));
 	}
 
 	@Transactional
@@ -171,11 +196,15 @@ public class LinkManagementService {
 		return link;
 	}
 
-	private LinkManagementResponse toManagementResponse(Link link) {
-		return new LinkManagementResponse(link.getCode(), baseUrl + "/" + link.getCode(),
-				link.getOriginalUrl(), link.getExpiresAt(),
+	private LinkManagementResponse toManagementResponse(Link link, boolean editable, String shortUrl) {
+		return new LinkManagementResponse(link.getCode(), shortUrl == null ? baseUrl + "/" + link.getCode() : shortUrl,
+				link.getOriginalUrl(), link.getCampaign() == null ? null : link.getCampaign().getId(), editable, link.getExpiresAt(),
 				new LinkStatisticsSummary(link.getAccessCount(), link.getRedirectCount()),
 				link.getCreatedAt(), link.getUpdatedAt());
+	}
+
+	private String projectShortUrl(Link link) {
+		return "https://" + link.getDomain().getHostname() + "/" + link.getCode();
 	}
 
 	public Link createForProject(CreateLinkRequest request, Project project, ProjectDomain domain, User createdBy) {

@@ -6,10 +6,12 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +30,7 @@ import link.srrrg.link.Link;
 import link.srrrg.link.LinkGoneException;
 import link.srrrg.link.LinkRepository;
 import link.srrrg.link.LinkUtmValueRepository;
+import link.srrrg.link.LinkUtmValueRepository.EffectiveUtmValue;
 import link.srrrg.link.UnsafeUrlException;
 import link.srrrg.link.UrlRiskCheckFailedException;
 import link.srrrg.link.UrlValidator;
@@ -38,14 +41,12 @@ import link.srrrg.link.risk.RiskVerdict;
 import link.srrrg.link.risk.UrlRiskAssessment;
 import link.srrrg.link.risk.UrlRiskVerificationService;
 import link.srrrg.campaign.Campaign;
-import link.srrrg.campaign.CampaignUtmDefaultRepository;
 import link.srrrg.project.Project;
 
 class RedirectServiceTest {
 
 	private final LinkRepository repository = mock(LinkRepository.class);
 	private final LinkUtmValueRepository linkUtmValueRepository = mock(LinkUtmValueRepository.class);
-	private final CampaignUtmDefaultRepository campaignUtmDefaults = mock(CampaignUtmDefaultRepository.class);
 	private final UrlValidator validator = mock(UrlValidator.class);
 	private final UrlRiskVerificationService riskVerificationService = mock(UrlRiskVerificationService.class);
 	private final LinkAccessEventRecorder accessRecorder = mock(LinkAccessEventRecorder.class);
@@ -65,7 +66,7 @@ class RedirectServiceTest {
 	void setUp() {
 		registry = new SimpleMeterRegistry();
 		metrics = new SrrrgMetrics(registry);
-		service = new RedirectService(repository, linkUtmValueRepository, campaignUtmDefaults, validator, riskVerificationService,
+		service = new RedirectService(repository, linkUtmValueRepository, validator, riskVerificationService,
 				accessRecorder, transactions, metrics, domains);
 		when(domains.resolve("srrrg.link")).thenReturn(Optional.of(new HostRoute(null)));
 	}
@@ -75,7 +76,6 @@ class RedirectServiceTest {
 		try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
 			context.registerBean(LinkRepository.class, () -> repository);
 			context.registerBean(LinkUtmValueRepository.class, () -> linkUtmValueRepository);
-			context.registerBean(CampaignUtmDefaultRepository.class, () -> campaignUtmDefaults);
 			context.registerBean(UrlValidator.class, () -> validator);
 			context.registerBean(UrlRiskVerificationService.class, () -> riskVerificationService);
 			context.registerBean(LinkAccessEventRecorder.class, () -> accessRecorder);
@@ -130,10 +130,15 @@ class RedirectServiceTest {
 		when(domains.resolve("acme.srrrg.link")).thenReturn(Optional.of(new HostRoute(11L)));
 		when(repository.findByDomainIdAndCode(11L, "aB3x9Q")).thenReturn(Optional.of(link));
 		when(repository.incrementAccessAndRedirectCountsById(7L)).thenReturn(1);
+		EffectiveUtmValue utm = mock(EffectiveUtmValue.class);
+		when(utm.getFieldName()).thenReturn("utm_source");
+		when(utm.getValue()).thenReturn("campaign-default");
+		when(linkUtmValueRepository.findEffectiveByLinkId(7L)).thenReturn(List.of(utm));
 
 		assertThat(service.redirect("acme.srrrg.link", "aB3x9Q", requestInfo))
-				.isEqualTo("https://current.example/default");
+				.isEqualTo("https://current.example/default?utm_source=campaign-default");
 		verify(riskVerificationService, never()).verify(any());
+		verify(linkUtmValueRepository, times(1)).findEffectiveByLinkId(7L);
 	}
 
 	@Test

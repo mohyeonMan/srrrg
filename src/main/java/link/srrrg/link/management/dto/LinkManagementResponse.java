@@ -6,6 +6,8 @@ public record LinkManagementResponse(
 		String code,
 		String shortUrl,
 		String originalUrl,
+		Long campaignId,
+		boolean editable,
 		Instant expiresAt,
 		LinkStatisticsSummary statistics,
 		Instant createdAt,

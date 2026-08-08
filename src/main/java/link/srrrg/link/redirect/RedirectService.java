@@ -2,7 +2,6 @@ package link.srrrg.link.redirect;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,8 +11,6 @@ import org.springframework.transaction.support.TransactionOperations;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import io.micrometer.core.instrument.Timer;
-import link.srrrg.campaign.CampaignUtmDefault;
-import link.srrrg.campaign.CampaignUtmDefaultRepository;
 import link.srrrg.common.metrics.SrrrgMetrics;
 import link.srrrg.domain.ProjectDomainService;
 import link.srrrg.domain.ProjectDomainService.HostRoute;
@@ -22,8 +19,8 @@ import link.srrrg.link.Link;
 import link.srrrg.link.LinkGoneException;
 import link.srrrg.link.LinkNotFoundException;
 import link.srrrg.link.LinkRepository;
-import link.srrrg.link.LinkUtmValue;
 import link.srrrg.link.LinkUtmValueRepository;
+import link.srrrg.link.LinkUtmValueRepository.EffectiveUtmValue;
 import link.srrrg.link.UnsafeUrlException;
 import link.srrrg.link.UrlRiskCheckFailedException;
 import link.srrrg.link.UrlValidator;
@@ -40,7 +37,6 @@ public class RedirectService {
 
 	private final LinkRepository linkRepository;
 	private final LinkUtmValueRepository linkUtmValueRepository;
-	private final CampaignUtmDefaultRepository campaignUtmDefaults;
 	private final UrlValidator urlValidator;
 	private final UrlRiskVerificationService riskVerificationService;
 	private final LinkAccessEventRecorder accessEventRecorder;
@@ -50,24 +46,21 @@ public class RedirectService {
 
 	@Autowired
 	public RedirectService(LinkRepository linkRepository, LinkUtmValueRepository linkUtmValueRepository,
-			CampaignUtmDefaultRepository campaignUtmDefaults, UrlValidator urlValidator,
-			UrlRiskVerificationService riskVerificationService,
+			UrlValidator urlValidator, UrlRiskVerificationService riskVerificationService,
 			LinkAccessEventRecorder accessEventRecorder,
 			PlatformTransactionManager transactionManager,
 			SrrrgMetrics metrics, ProjectDomainService domains) {
-		this(linkRepository, linkUtmValueRepository, campaignUtmDefaults, urlValidator, riskVerificationService, accessEventRecorder,
+		this(linkRepository, linkUtmValueRepository, urlValidator, riskVerificationService, accessEventRecorder,
 				new TransactionTemplate(transactionManager), metrics, domains);
 	}
 
 	RedirectService(LinkRepository linkRepository, LinkUtmValueRepository linkUtmValueRepository,
-			CampaignUtmDefaultRepository campaignUtmDefaults, UrlValidator urlValidator,
-			UrlRiskVerificationService riskVerificationService,
+			UrlValidator urlValidator, UrlRiskVerificationService riskVerificationService,
 			LinkAccessEventRecorder accessEventRecorder,
 			TransactionOperations transactions,
 			SrrrgMetrics metrics, ProjectDomainService domains) {
 		this.linkRepository = linkRepository;
 		this.linkUtmValueRepository = linkUtmValueRepository;
-		this.campaignUtmDefaults = campaignUtmDefaults;
 		this.urlValidator = urlValidator;
 		this.riskVerificationService = riskVerificationService;
 		this.accessEventRecorder = accessEventRecorder;
@@ -85,8 +78,9 @@ public class RedirectService {
 			HostRoute route = domains.resolve(host).orElseThrow(LinkNotFoundException::new);
 			Link initialLink = findAvailableLink(route, code);
 			String rawUrl = effectiveOriginalUrl(initialLink);
-			Map<String, String> utmValues = utmValuesFor(initialLink);
-			String checkedUrl = DestinationUrlMerger.merge(rawUrl, utmValues);
+			String checkedUrl = initialLink.getProject() == null
+					? DestinationUrlMerger.merge(rawUrl, utmValuesFor(initialLink))
+					: rawUrl;
 			urlValidator.validate(checkedUrl);
 
 			if (initialLink.getProject() == null) {
@@ -147,9 +141,11 @@ public class RedirectService {
 					log.warn("Access statistics update failed: code={}, updates={}", code, updates);
 					throw new LinkNotFoundException();
 				}
-				return currentLink.getProject() == null
-						? checkedMergedUrl
-						: DestinationUrlMerger.merge(effectiveOriginalUrl(currentLink), utmValuesFor(currentLink));
+				if (currentLink.getProject() == null) return checkedMergedUrl;
+				String currentUrl = effectiveOriginalUrl(currentLink);
+				return currentLink.getCampaign() == null
+						? currentUrl
+						: DestinationUrlMerger.merge(currentUrl, utmValuesFor(currentLink));
 			});
 			outcome = "success";
 			if (redirectUrl == null) {
@@ -171,13 +167,8 @@ public class RedirectService {
 
 	private Map<String, String> utmValuesFor(Link link) {
 		Map<String, String> values = new LinkedHashMap<>();
-		if (link.getCampaign() != null) {
-			for (CampaignUtmDefault campaignDefault : campaignUtmDefaults.findByCampaignIdOrderByFieldNameAsc(link.getCampaign().getId())) {
-				values.put(campaignDefault.getField().getName(), campaignDefault.getDefaultValue());
-			}
-		}
-		for (LinkUtmValue explicit : linkUtmValueRepository.findByLinkId(link.getId())) {
-			values.put(explicit.getField().getName(), explicit.getValue());
+		for (EffectiveUtmValue effective : linkUtmValueRepository.findEffectiveByLinkId(link.getId())) {
+			values.put(effective.getFieldName(), effective.getValue());
 		}
 		return values;
 	}

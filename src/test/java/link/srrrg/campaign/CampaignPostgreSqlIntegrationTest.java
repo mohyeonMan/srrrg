@@ -313,6 +313,45 @@ class CampaignPostgreSqlIntegrationTest {
 	}
 
 	@Test
+	void editorCanManageAndDeleteSingleCampaignLinkFromSharedDetailPage() throws Exception {
+		Owner owner = newOwner();
+		Long campaignId = createCampaign(owner, "개별 삭제 캠페인", null);
+		MvcResult created = mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/delete-me\"}"))
+				.andExpect(status().isCreated())
+				.andReturn();
+		String code = readJson(created, "code");
+
+		mockMvc.perform(get("/api/web/projects/{projectId}/links/{code}", owner.projectId, code).cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.code").value(code))
+				.andExpect(jsonPath("$.shortUrl").value("https://" + owner.host + "/" + code))
+				.andExpect(jsonPath("$.campaignId").value(campaignId))
+				.andExpect(jsonPath("$.editable").value(true));
+		mockMvc.perform(patch("/api/web/projects/{projectId}/links/{code}", owner.projectId, code)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/individual\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.originalUrl").value("https://example.com/individual"));
+		mockMvc.perform(patch("/api/web/projects/{projectId}/links/{code}", owner.projectId, code)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":null}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.originalUrl").doesNotExist());
+
+		mockMvc.perform(delete("/api/web/projects/{projectId}/links/{code}", owner.projectId, code)
+					.with(csrf()).cookie(owner.cookie))
+				.andExpect(status().isNoContent());
+
+		mockMvc.perform(get("/{code}", code).header("Host", owner.host))
+				.andExpect(status().isGone());
+		mockMvc.perform(get("/api/web/campaigns/{id}/links", campaignId).cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.items").isEmpty());
+	}
+
+	@Test
 	void blocksAddingMoreThanTenActiveFields() throws Exception {
 		Owner owner = newOwner();
 		Long templateId = createTemplate(owner, "field_01");
