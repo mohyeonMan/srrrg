@@ -431,6 +431,8 @@ class WebAuthPostgreSqlIntegrationTest {
 				"SELECT secret_key_hash IS NULL FROM links WHERE code = ?", Boolean.class, webCode)).isTrue();
 		assertThat(jdbcTemplate.queryForObject(
 				"SELECT domain_id FROM links WHERE code = ?", Long.class, webCode)).isEqualTo(domainId);
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT hostname FROM links WHERE code = ?", String.class, webCode)).isEqualTo(projectHost);
 		String previousProjectHost = projectHost;
 		projectHost = "renamed-project.srrrg.link";
 		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(
@@ -443,13 +445,24 @@ class WebAuthPostgreSqlIntegrationTest {
 				"SELECT slug FROM projects WHERE id = ?", String.class, projectId)).isEqualTo("renamed-project");
 		assertThat(jdbcTemplate.queryForObject(
 				"SELECT domain_id FROM links WHERE code = ?", Long.class, webCode)).isEqualTo(domainId);
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT hostname FROM links WHERE code = ?", String.class, webCode)).isEqualTo(previousProjectHost);
 		mockMvc.perform(get("/{code}", webCode).header("Host", previousProjectHost))
-				.andExpect(status().isNotFound());
+				.andExpect(status().isFound())
+				.andExpect(header().string("Location", "https://example.com/web-project"));
 		mockMvc.perform(get("/{code}", webCode)
 					.header("Host", projectHost)
 					.header("X-Forwarded-Host", "attacker.example"))
+				.andExpect(status().isNotFound());
+		String newCode = com.jayway.jsonpath.JsonPath.read(mockMvc.perform(post("/api/web/projects/{projectId}/links", projectId)
+					.with(csrf()).cookie(cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/new-domain\"}"))
+				.andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(), "$.code");
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT hostname FROM links WHERE code = ?", String.class, newCode)).isEqualTo(projectHost);
+		mockMvc.perform(get("/{code}", newCode).header("Host", projectHost))
 				.andExpect(status().isFound())
-				.andExpect(header().string("Location", "https://example.com/web-project"));
+				.andExpect(header().string("Location", "https://example.com/new-domain"));
 		mockMvc.perform(get("/{code}", webCode).header("Host", "srrrg.link"))
 				.andExpect(status().isNotFound());
 		mockMvc.perform(get("/{code}", webCode).header("Host", "unregistered.srrrg.link"))
@@ -459,22 +472,26 @@ class WebAuthPostgreSqlIntegrationTest {
 		Long otherProjectId = projectMemberRepository.findByIdUserId(otherOwner.user().getId()).getFirst().getProject().getId();
 		Long otherDomainId = jdbcTemplate.queryForObject(
 				"SELECT id FROM project_domains WHERE project_id = ?", Long.class, otherProjectId);
-		String otherHost = jdbcTemplate.queryForObject(
-				"SELECT hostname FROM project_domains WHERE id = ?", String.class, otherDomainId);
+		projectService.changeDomain(otherOwner.user().getId(), otherProjectId, otherDomainId, slug);
 		jdbcTemplate.update("""
-				INSERT INTO links (code, original_url, project_id, domain_id)
-				VALUES (?, 'https://example.com/other-project', ?, ?)
-				""", webCode, otherProjectId, otherDomainId);
-		mockMvc.perform(get("/{code}", webCode).header("Host", otherHost))
+				INSERT INTO links (code, original_url, project_id, domain_id, hostname)
+				VALUES ('Other1', 'https://example.com/other-project', ?, ?, ?)
+				""", otherProjectId, otherDomainId, previousProjectHost);
+		mockMvc.perform(get("/Other1").header("Host", previousProjectHost))
 				.andExpect(status().isFound())
 				.andExpect(header().string("Location", "https://example.com/other-project"));
-		mockMvc.perform(get("/{code}", webCode).header("Host", projectHost))
+		mockMvc.perform(get("/{code}", webCode).header("Host", previousProjectHost))
 				.andExpect(status().isFound())
 				.andExpect(header().string("Location", "https://example.com/web-project"));
 		assertThatThrownBy(() -> jdbcTemplate.update("""
-				INSERT INTO links (code, original_url, project_id, domain_id)
-				VALUES ('BadMap', 'https://example.com', ?, ?)
-				""", projectId, otherDomainId))
+				INSERT INTO links (code, original_url, project_id, domain_id, hostname)
+				VALUES (?, 'https://example.com/conflict', ?, ?, ?)
+				""", webCode, otherProjectId, otherDomainId, previousProjectHost))
+				.isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+		assertThatThrownBy(() -> jdbcTemplate.update("""
+				INSERT INTO links (code, original_url, project_id, domain_id, hostname)
+				VALUES ('BadMap', 'https://example.com', ?, ?, ?)
+				""", projectId, otherDomainId, "renamed-project.srrrg.link"))
 				.isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
 
 		var anonymous = linkManagementService.create(new CreateLinkRequest("https://example.com/project", null));

@@ -31,14 +31,6 @@ public class CampaignUtmDefault {
 	@JoinColumn(name = "campaign_id")
 	private Campaign campaign;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@MapsId("utmTemplateFieldId")
-	@JoinColumn(name = "utm_template_field_id")
-	private UtmTemplateField field;
-
-	@Column(name = "utm_template_id", nullable = false)
-	private Long utmTemplateId;
-
 	@Column(name = "default_value", nullable = false, length = 500)
 	private String defaultValue;
 
@@ -47,16 +39,18 @@ public class CampaignUtmDefault {
 	@Column(name = "updated_at", nullable = false)
 	private Instant updatedAt;
 
-	private CampaignUtmDefault(Campaign campaign, UtmTemplateField field, Long utmTemplateId, String defaultValue) {
-		this.id = new CampaignUtmDefaultId(campaign.getId(), field.getId());
+	private CampaignUtmDefault(Campaign campaign, String fieldName, String defaultValue) {
+		this.id = new CampaignUtmDefaultId(campaign.getId(), fieldName);
 		this.campaign = campaign;
-		this.field = field;
-		this.utmTemplateId = utmTemplateId;
 		this.defaultValue = defaultValue;
 	}
 
-	public static CampaignUtmDefault create(Campaign campaign, UtmTemplateField field, Long utmTemplateId, String defaultValue) {
-		return new CampaignUtmDefault(campaign, field, utmTemplateId, defaultValue);
+	public static CampaignUtmDefault create(Campaign campaign, String fieldName, String defaultValue) {
+		return new CampaignUtmDefault(campaign, fieldName, defaultValue);
+	}
+
+	public String getFieldName() {
+		return id.fieldName();
 	}
 
 	public void updateValue(String defaultValue) {
@@ -74,5 +68,5 @@ public class CampaignUtmDefault {
 	}
 
 	@Embeddable
-	public record CampaignUtmDefaultId(Long campaignId, Long utmTemplateFieldId) implements Serializable { }
+	public record CampaignUtmDefaultId(Long campaignId, String fieldName) implements Serializable { }
 }

@@ -161,14 +161,14 @@
 		if (state.selected.role === 'OWNER') await loadInvitations(projectId);
 	}
 
-	function projectOrigin() {
-		if (!state.domain) return '';
+	function projectOrigin(hostname = state.domain) {
+		if (!hostname) return '';
 		const port = location.port ? `:${location.port}` : '';
-		return `${location.protocol}//${state.domain}${port}`;
+		return `${location.protocol}//${hostname}${port}`;
 	}
 
-	function shortUrl(code) {
-		return `${projectOrigin()}/${encodeURIComponent(code)}`;
+	function shortUrl(code, hostname = state.domain) {
+		return `${projectOrigin(hostname)}/${encodeURIComponent(code)}`;
 	}
 
 	function renderLinks(links) {
@@ -180,9 +180,9 @@
 		const rows = links.map((link) => {
 			const row = element('article', 'project-link-item');
 			const main = element('div', 'project-link-main');
-			const anchor = element('a', 'project-link-short-url', state.domain ? shortUrl(link.code) : link.code);
-			if (state.domain) {
-				anchor.href = shortUrl(link.code);
+			const anchor = element('a', 'project-link-short-url', link.hostname ? shortUrl(link.code, link.hostname) : link.code);
+			if (link.hostname) {
+				anchor.href = shortUrl(link.code, link.hostname);
 				anchor.target = '_blank';
 				anchor.rel = 'noopener noreferrer';
 			}
@@ -484,7 +484,7 @@
 			return setMessage(message, '서브도메인은 영문 소문자, 숫자, 하이픈을 사용한 3~63자로 입력하세요.', true);
 		}
 		if (slug === state.selected.slug) return setMessage(message, '현재 사용 중인 서브도메인입니다.');
-		if (!confirm(`서브도메인을 “${slug}”로 변경할까요? 기존 주소는 즉시 사용할 수 없게 됩니다.`)) return;
+		if (!confirm(`서브도메인을 “${slug}”로 변경할까요? 이후 생성하는 링크부터 새 주소를 사용합니다.`)) return;
 		const response = await request(`${base}/api/web/projects/${state.selected.id}/domains/${state.domainId}`, {
 			method: 'PATCH', body: JSON.stringify({ slug })
 		});

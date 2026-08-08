@@ -140,9 +140,8 @@ public class CampaignCsvService {
 				campaignImport.recordRowResult(false);
 				continue;
 			}
-			Long templateId = campaign.getUtmTemplate() == null ? null : campaign.getUtmTemplate().getId();
-			for (Map.Entry<UtmTemplateField, String> entry : row.utmValues().entrySet()) {
-				importRowUtmValues.save(CampaignImportRowUtmValue.create(savedRow, entry.getKey(), templateId, entry.getValue()));
+			for (Map.Entry<String, String> entry : row.utmValues().entrySet()) {
+				importRowUtmValues.save(CampaignImportRowUtmValue.create(savedRow, entry.getKey(), entry.getValue()));
 			}
 		}
 		return campaignImport;
@@ -164,7 +163,7 @@ public class CampaignCsvService {
 				CSVFormat.DEFAULT.builder().setHeader(headers.toArray(new String[0])).build())) {
 			for (CampaignImportRow row : failed) {
 				Map<String, String> values = importRowUtmValues.findByImportRowId(row.getId()).stream()
-						.collect(Collectors.toMap(value -> value.getField().getName(), CampaignImportRowUtmValue::getValue));
+						.collect(Collectors.toMap(CampaignImportRowUtmValue::getFieldName, CampaignImportRowUtmValue::getValue));
 				List<Object> record = new ArrayList<>();
 				record.add(row.getRowNumber());
 				record.add(row.getOriginalUrl());
@@ -190,8 +189,7 @@ public class CampaignCsvService {
 		if (found.size() > MAX_EXPORT_ROWS) {
 			throw new IllegalArgumentException("내보낼 링크가 " + MAX_EXPORT_ROWS + "개를 초과합니다. 조회 조건을 좁혀주세요.");
 		}
-		List<String> utmFieldNames = campaign.getUtmTemplate() == null ? List.of()
-				: fields.findByUtmTemplateIdOrderByNameAsc(campaign.getUtmTemplate().getId()).stream().map(UtmTemplateField::getName).toList();
+		List<String> utmFieldNames = activeFieldNames(campaign);
 
 		List<String> headers = new ArrayList<>(List.of("code", "short_url", COL_ORIGINAL_URL, COL_EXTERNAL_ID));
 		headers.addAll(utmFieldNames);
@@ -203,7 +201,7 @@ public class CampaignCsvService {
 				CSVFormat.DEFAULT.builder().setHeader(headers.toArray(new String[0])).build())) {
 			for (Link link : found) {
 				Map<String, String> values = linkUtmValues.findByLinkId(link.getId()).stream()
-						.collect(Collectors.toMap(value -> value.getField().getName(), LinkUtmValue::getValue));
+						.collect(Collectors.toMap(LinkUtmValue::getFieldName, LinkUtmValue::getValue));
 				List<Object> record = new ArrayList<>();
 				record.add(link.getCode());
 				record.add(baseUrl + "/" + link.getCode());
@@ -315,7 +313,7 @@ public class CampaignCsvService {
 					+ " (행 " + record.getRecordNumber() + ")");
 		}
 
-		Map<UtmTemplateField, String> resolved = Map.of();
+		Map<String, String> resolved = Map.of();
 		if (preFailCode == null) {
 			Map<String, String> rawValues = new LinkedHashMap<>();
 			for (String header : utmHeaderNames) {
@@ -368,6 +366,6 @@ public class CampaignCsvService {
 		return cause != null && cause.getMessage() != null && cause.getMessage().contains(constraintName);
 	}
 
-	private record ParsedRow(String originalUrl, String externalId, Map<UtmTemplateField, String> utmValues,
+	private record ParsedRow(String originalUrl, String externalId, Map<String, String> utmValues,
 			String preFailureCode, String preFailureMessage) { }
 }

@@ -28,15 +28,13 @@ class ProjectDomainServiceTest {
 	}
 
 	@Test
-	void resolvesOnlyBaseAndRegisteredHostHeaders() {
-		ProjectDomain domain = mock(ProjectDomain.class);
-		when(domain.getId()).thenReturn(7L);
-		when(repository.findByHostname("acme.srrrg.link")).thenReturn(Optional.of(domain));
+	void resolvesOnlyBaseAndPlatformHostHeaders() {
 		ProjectDomainService service = new ProjectDomainService(repository, "https://srrrg.link");
 
 		assertThat(service.resolve("SRRRG.LINK:443")).contains(new ProjectDomainService.HostRoute(null));
-		assertThat(service.resolve("acme.srrrg.link")).contains(new ProjectDomainService.HostRoute(7L));
-		assertThat(service.resolve("unknown.srrrg.link")).isEmpty();
+		assertThat(service.resolve("acme.srrrg.link")).contains(new ProjectDomainService.HostRoute("acme.srrrg.link"));
+		assertThat(service.resolve("nested.acme.srrrg.link")).isEmpty();
+		assertThat(service.resolve("unknown.example")).isEmpty();
 		assertThat(service.resolve("acme.srrrg.link, attacker.example")).isEmpty();
 		assertThat(service.isReservedSlug("admin")).isTrue();
 	}

@@ -90,14 +90,14 @@ UI 변경 시에는 `docs/design/v2/*`도 읽는다.
 - 프로젝트·멤버 단계 적용 후, 기본 개인 프로젝트가 없는 로그인 사용자에게 하나를 만든다.
 - 프로젝트는 OWNER, EDITOR, VIEWER 멤버를 가진다.
 - 미가입 사용자를 포함한 이메일 초대를 최초 범위에 포함한다.
-- 프로젝트 slug는 lower-case DNS label 3~63자이며 전체 unique다. 생략 시 `p-`와 영문 소문자·숫자 난수 8자리로 생성한다. `OWNER`는 경고를 확인한 뒤 변경할 수 있고 기존 서브도메인은 즉시 사용할 수 없게 한다.
+- 프로젝트 slug는 lower-case DNS label 3~63자이며 전체 unique다. 생략 시 `p-`와 영문 소문자·숫자 난수 8자리로 생성한다. `OWNER`가 변경하면 이후 생성하는 링크부터 새 hostname을 사용하고 기존 링크는 생성 당시 hostname을 유지한다. 해제된 slug는 다른 프로젝트가 사용할 수 있다.
 - `actuator`, `admin`, `api`, `app`, `auth`, `cdn`, `cname`, `dev`, `docs`, `help`, `login`, `mail`, `manage`, `oauth`, `oauth2`, `openapi`, `static`, `status`, `support`, `www` slug를 예약한다.
 - 프로젝트 삭제는 `archived_at` 기반 soft delete로 처리하고 보관된 프로젝트의 링크와 API key 사용을 차단한다.
 - 기존 프로젝트와 링크의 `created_by_user_id`는 nullable로 두고 신규 생성과 익명 링크 귀속부터 기록한다.
 - 프로젝트마다 플랫폼 서브도메인 하나를 자동 생성한다.
 - 플랫폼 서브도메인은 `{project.slug}.srrrg.link` 형식이다.
 - 플랫폼 서브도메인은 wildcard DNS와 TLS 인증서를 공유한다.
-- 프로젝트 링크 code는 `UNIQUE(domain_id, code)`다.
+- 프로젝트 링크 code는 `UNIQUE(hostname, code)`다.
 - 기존 익명 링크 code는 srrrg 기본 도메인 안에서 계속 unique다.
 - 커스텀 도메인, CNAME 검증, 도메인별 인증서와 동적 Ingress 생성은 이번 개발에서 제외한다.
 
@@ -315,7 +315,7 @@ API key에서 `projectId`와 scope를 결정한다. 요청 경로의 프로젝�
 프로젝트를 만들 때 플랫폼 domain 하나를 자동으로 할당하고, 프로젝트 링크는 그 domain을 사용한다.
 
 ```text
-project_id + domain_id + code
+hostname + code
 ```
 
 DB 제약:
@@ -323,6 +323,7 @@ DB 제약:
 ```sql
 UNIQUE (code) WHERE project_id IS NULL
 UNIQUE (domain_id, code) WHERE domain_id IS NOT NULL
+UNIQUE (hostname, code) WHERE hostname IS NOT NULL
 ```
 
 기존 전역 `links.code` unique 제약은 신규 migration에서 제거한다. 기존 익명 링크에는 `domain_id`를 채우지 않는다.
@@ -334,9 +335,10 @@ srrrg.link + code
 → 기존 익명 링크 조회
 
 acme.srrrg.link + code
-→ project_domains 조회
-→ domain_id + code로 프로젝트 링크 조회
+→ hostname + code로 프로젝트 링크 조회
 ```
+
+프로젝트 링크에는 생성 당시 `project_domains.hostname`을 복사한다. 프로젝트 서브도메인을 변경해도 기존 링크의 hostname은 바꾸지 않으며, 해제된 서브도메인을 다른 프로젝트가 선택하더라도 기존 code와 겹치지 않는 새 링크를 만들 수 있다. 기존 `(domain_id, code)` 제약도 유지해 프로젝트 관리 API의 `projectId + code` 조회가 모호해지지 않게 한다.
 
 Ingress가 전달하는 Host를 기준으로 하며 임의 `X-Forwarded-Host`를 신뢰하지 않는다. 신뢰할 proxy 범위와 forwarded header 처리는 배포 설정과 함께 검증한다.
 
@@ -351,7 +353,9 @@ Ingress가 전달하는 Host를 기준으로 하며 임의 `X-Forwarded-Host`를
 - 단일 프로젝트 링크는 캠페인이 없어도 된다.
 - 캠페인 링크는 프로젝트와 캠페인의 project가 같아야 한다.
 - 링크에 직접 지정하지 않은 UTM 필드는 리다이렉트 시 현재 캠페인 기본값을 사용한다.
-- `link_utm_values`에는 링크가 직접 지정한 값만 저장한다.
+- 링크 값, 캠페인 기본값과 CSV import 값은 field ID가 아닌 정규화된 `field_name`으로 저장한다.
+- 현재 캠페인 템플릿의 활성 필드만 리다이렉트에 사용하고 나머지 이름 기반 값은 보존한다.
+- 템플릿 필드 추가·삭제와 캠페인의 템플릿 변경·해제는 기존 링크와 진행 중 import를 차단하지 않는다.
 - 링크 자체 목적지가 없으면 리다이렉트 시 현재 캠페인 기본 목적지를 사용하며, 둘 다 없으면 `410 Gone`을 반환한다.
 - 캠페인 기본 목적지 변경은 자체 목적지가 없는 기존 링크에 즉시 반영한다.
 - `external_id`는 캠페인 안에서 unique다.
@@ -478,6 +482,8 @@ srrrg 웹
 - link event를 link·campaign·project로 집계하고 캠페인 링크도 비회원과 공용인 링크 상세(통계·설정·삭제) 화면으로 연결
 - 빠른 기간과 사용자 지정 날짜, 일·월·년 추이, 결과, 유입과 접속 환경 조회
 - 캠페인 링크 확인 상태와 UTM 값별 집계 제공
+- 리다이렉트 당시 최종 UTM을 `link_access_events.effective_utm` JSONB에 저장하고 현재 템플릿 필드만 `REDIRECTED` 이벤트에서 집계
+- 현재 필드가 과거 스냅샷에 없으면 `(없음)`으로 표시하고, 만료 접근은 일반 통계에 포함하되 삭제 링크는 제외
 - 100,000 이벤트 기준 실제 쿼리 성능 측정
 
 완료 조건: 샘플 통계를 제거하고 세 집계 범위의 합계가 일관된다.

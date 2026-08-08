@@ -188,7 +188,7 @@
 	}
 
 	async function deleteField(fieldId) {
-		if (!confirm('이 필드를 삭제할까요? 기존 링크의 값과 통계는 유지됩니다.')) return;
+		if (!confirm('이 필드를 삭제하면 이 템플릿을 사용하는 모든 캠페인에서 즉시 숨겨집니다. 기존 값과 통계는 보존됩니다.')) return;
 		const templateId = state.campaign.utmTemplateId;
 		const response = await request(`${base}/api/web/projects/${state.projectId}/utm-templates/${templateId}/fields/${fieldId}`, { method: 'DELETE' });
 		if (!response.ok) return setMessage(byId('template-message'), (await body(response)).message || '필드를 삭제할 수 없습니다.', true);
@@ -199,6 +199,10 @@
 
 	byId('template-picker').addEventListener('change', async (event) => {
 		const value = event.target.value;
+		if (!confirm('템플릿을 변경하면 현재 필드 구성이 기존 링크의 리다이렉트와 통계에 즉시 적용됩니다. 계속할까요?')) {
+			event.target.value = state.campaign.utmTemplateId ? String(state.campaign.utmTemplateId) : '';
+			return;
+		}
 		const response = await request(`${base}/api/web/campaigns/${state.campaignId}/utm-template`, {
 			method: 'PATCH', body: JSON.stringify({ utmTemplateId: value ? Number(value) : null })
 		});
@@ -207,7 +211,7 @@
 			return;
 		}
 		state.campaign = await response.json();
-		setMessage(byId('template-message'), '템플릿을 변경했습니다. 새 링크와 새 CSV 양식부터 적용됩니다.');
+		setMessage(byId('template-message'), '템플릿을 변경했습니다. 기존 링크와 통계에도 즉시 적용됩니다.');
 		await refreshTemplateSelection();
 	});
 
@@ -233,6 +237,7 @@
 		if (!templateId) return setMessage(byId('template-message'), '먼저 템플릿을 선택하세요.', true);
 		const name = new FormData(event.target).get('name')?.trim();
 		if (!name) return;
+		if (!confirm('필드를 추가하면 이 템플릿을 사용하는 모든 캠페인에 즉시 반영됩니다. 계속할까요?')) return;
 		const response = await request(`${base}/api/web/projects/${state.projectId}/utm-templates/${templateId}/fields`, { method: 'POST', body: JSON.stringify({ name }) });
 		if (!response.ok) return setMessage(byId('template-message'), (await body(response)).message || '필드를 추가할 수 없습니다.', true);
 		event.target.reset();

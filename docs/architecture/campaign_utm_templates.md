@@ -16,11 +16,10 @@
 
 - 프로젝트 안에서 UTM 필드 구성을 템플릿으로 재사용한다.
 - 캠페인은 현재 사용할 UTM 템플릿과 필드별 기본값을 가진다.
-- 링크는 생성 당시 템플릿과 실제 UTM 값을 보존한다.
+- 링크·캠페인 기본값·CSV 행은 UTM 값을 필드 이름으로 보존한다.
 - CSV 양식은 캠페인이 현재 선택한 템플릿의 활성 필드로 생성한다.
-- 필드 추가·삭제·이름 변경이 기존 링크와 과거 통계를 훼손하지 않게 한다.
-- JSONB, SQL 배열과 컬럼 위치를 관계 식별 수단으로 사용하지 않는다.
-- 6단계에서 접근 이벤트를 UTM 필드와 값으로 집계할 수 있게 한다.
+- 현재 캠페인 템플릿의 활성 필드만 리다이렉트와 통계에 사용한다.
+- 성공한 리다이렉트의 최종 UTM은 접근 이벤트 JSONB에 스냅샷한다.
 
 ## 3. 관계
 
@@ -31,16 +30,12 @@ erDiagram
     PROJECTS ||--o{ CAMPAIGNS : "보유"
     UTM_TEMPLATES ||--o{ CAMPAIGNS : "현재 템플릿"
     CAMPAIGNS ||--o{ CAMPAIGN_UTM_DEFAULTS : "필드별 기본값"
-    UTM_TEMPLATE_FIELDS ||--o{ CAMPAIGN_UTM_DEFAULTS : "대상 필드"
     CAMPAIGNS ||--o{ LINKS : "링크 생성"
-    UTM_TEMPLATES ||--o{ LINKS : "생성 당시 템플릿"
-    LINKS ||--o{ LINK_UTM_VALUES : "실제 UTM 값"
-    UTM_TEMPLATE_FIELDS ||--o{ LINK_UTM_VALUES : "필드 연결"
+    LINKS ||--o{ LINK_UTM_VALUES : "이름별 명시값"
     LINKS ||--o{ LINK_ACCESS_EVENTS : "접근 기록"
     CAMPAIGNS ||--o{ CAMPAIGN_IMPORTS : "CSV 가져오기"
     CAMPAIGN_IMPORTS ||--o{ CAMPAIGN_IMPORT_ROWS : "행"
     CAMPAIGN_IMPORT_ROWS ||--o{ CAMPAIGN_IMPORT_ROW_UTM_VALUES : "행의 UTM 값"
-    UTM_TEMPLATE_FIELDS ||--o{ CAMPAIGN_IMPORT_ROW_UTM_VALUES : "필드 연결"
 ```
 
 ## 4. 테이블
@@ -79,9 +74,9 @@ created_at
 
 - 활성 필드는 템플릿당 최대 10개다.
 - `position`은 두지 않는다.
-- 컬럼 순서가 아니라 `id`로 관계를 맺고 `name`으로 CSV 헤더를 찾는다.
+- 필드 `id`는 템플릿 관리용이며 링크 값과 통계의 식별자는 `name`이다.
 - 활성 필드 이름은 한 템플릿 안에서 unique다.
-- 삭제한 필드는 기존 링크와 통계를 위해 물리적으로 제거하지 않는다.
+- 삭제는 soft delete하고 같은 이름을 다시 추가할 수 있다.
 
 권장 제약:
 
@@ -101,7 +96,7 @@ utm_template_id nullable
 ```
 
 - UTM을 사용하지 않는 캠페인을 허용한다.
-- 캠페인이 템플릿을 변경하면 새 링크와 새 CSV 양식부터 새 템플릿을 사용한다.
+- 캠페인의 템플릿 변경·해제는 기존 링크에도 즉시 적용한다.
 - 캠페인과 템플릿은 같은 프로젝트에 속해야 한다.
 
 권장 제약:
@@ -117,24 +112,19 @@ FOREIGN KEY (utm_template_id, project_id)
 
 ```text
 campaign_id
-utm_template_id
-utm_template_field_id
+field_name
 default_value
 ```
 
 - 템플릿은 필드 정의를 공유하고 기본값은 캠페인별로 저장한다.
-- 값이 없는 필드는 행을 만들지 않는다.
+- 값이 없는 필드는 행을 만들지 않으며 비활성 이름의 값도 보존한다.
 - 링크에 값이 없는 필드는 리다이렉트 시 현재 캠페인 기본값을 사용한다.
 - 기본값 변경은 값을 직접 지정하지 않은 기존 링크에도 즉시 반영한다.
 
 권장 제약:
 
 ```text
-PRIMARY KEY (campaign_id, utm_template_field_id)
-FOREIGN KEY (campaign_id, utm_template_id)
-    REFERENCES campaigns (id, utm_template_id)
-FOREIGN KEY (utm_template_field_id, utm_template_id)
-    REFERENCES utm_template_fields (id, utm_template_id)
+PRIMARY KEY (campaign_id, field_name)
 ```
 
 ### 4.5 `links` 변경
@@ -145,8 +135,7 @@ utm_template_id nullable
 external_id nullable
 ```
 
-- `utm_template_id`는 링크 생성 당시 캠페인이 사용한 템플릿의 snapshot 참조다.
-- 캠페인이 템플릿을 바꿔도 기존 링크의 참조는 바꾸지 않는다.
+- `utm_template_id`는 생성 당시 입력·CSV 추적용 참조이며 리다이렉트 활성 필드는 현재 캠페인 템플릿이 결정한다.
 - `external_id`는 사용자가 외부 데이터와 링크를 연결하려고 직접 넣는 선택적 식별자다.
 - `external_id`는 캠페인 안에서 unique이며 개인정보를 넣지 않게 안내한다.
 - 캠페인 없는 독립 프로젝트 링크에는 UTM 템플릿과 값을 두지 않는다.
@@ -168,23 +157,18 @@ FOREIGN KEY (utm_template_id, project_id)
 
 ```text
 link_id
-utm_template_id
-utm_template_field_id
+field_name
 value
 ```
 
-- 링크 생성 시 캠페인 기본값과 요청값을 해석한 최종 값만 저장한다.
+- 링크 생성 요청에서 직접 지정한 값만 저장한다.
 - 값이 없으면 행을 만들지 않는다.
-- 기존 링크 값은 이후 캠페인 기본값이나 템플릿 변경으로 수정하지 않는다.
+- 템플릿에서 비활성화된 이름도 보존하고 같은 이름이 다시 활성화되면 재사용한다.
 
 권장 제약:
 
 ```text
-PRIMARY KEY (link_id, utm_template_field_id)
-FOREIGN KEY (link_id, utm_template_id)
-    REFERENCES links (id, utm_template_id)
-FOREIGN KEY (utm_template_field_id, utm_template_id)
-    REFERENCES utm_template_fields (id, utm_template_id)
+PRIMARY KEY (link_id, field_name)
 ```
 
 ### 4.7 CSV import
@@ -214,14 +198,13 @@ campaign_import_rows
 
 campaign_import_row_utm_values
 - import_row_id
-- utm_template_id
-- utm_template_field_id
+- field_name
 - value
 ```
 
 - import 접수 시 헤더를 활성 템플릿 필드 이름과 대조한다.
-- 접수된 행은 당시의 템플릿과 필드 ID를 참조한다.
-- 접수 후 템플릿 필드가 삭제돼도 저장된 ID와 값으로 작업을 계속한다.
+- 접수된 행은 당시 헤더 이름과 값을 저장한다.
+- 접수 후 캠페인 템플릿이 변경되거나 필드가 삭제돼도 저장된 이름과 값으로 작업을 계속한다.
 - 오류 CSV는 원래 헤더와 행 번호, 안정적인 오류 code와 설명을 포함한다.
 
 ## 5. 템플릿과 필드 변경
@@ -229,15 +212,15 @@ campaign_import_row_utm_values
 ### 5.1 추가
 
 - 새 필드 행을 추가한다.
-- 해당 템플릿을 사용하는 캠페인의 새 양식과 새 링크에 반영한다.
-- 기존 링크에는 해당 필드 값이 없으므로 영향을 주지 않는다.
+- 해당 템플릿을 사용하는 모든 캠페인의 양식·리다이렉트·통계에 즉시 반영한다.
+- 과거 이벤트에 해당 이름이 없으면 통계에서 `(없음)`으로 집계한다.
 
 ### 5.2 삭제
 
 - `utm_template_fields.deleted_at`을 기록한다.
-- 새 양식, 새 링크와 새 캠페인 기본값 입력에서는 제외한다.
+- 양식, 리다이렉트와 통계에서 즉시 제외한다.
 - 기존 링크와 import 행의 값은 유지한다.
-- 기존 링크의 리다이렉트와 과거 통계는 삭제된 필드의 이름과 값을 계속 사용한다.
+- 같은 이름을 다시 추가하면 보존한 값과 과거 통계를 다시 사용한다.
 - 삭제된 필드는 활성 필드 최대 10개 계산에서 제외한다.
 
 ### 5.3 이름 변경
@@ -249,15 +232,13 @@ UTM 필드 이름은 실제 query parameter 이름이므로 같은 행의 이름
 → 새 이름으로 새 필드 생성
 ```
 
-- 기존 링크는 기존 필드 이름을 유지한다.
-- 새 링크와 새 CSV 양식은 새 필드 이름을 사용한다.
-- 과거 통계와 새 통계의 field identity가 섞이지 않는다.
+- 기존 이름의 값은 보존하지만 현재 리다이렉트와 통계에서는 제외한다.
+- 새 이름은 별도 이름으로 취급하며 과거 이벤트에는 값이 없으므로 `(없음)`이다.
 
 ### 5.4 기본값 변경
 
 - `campaign_utm_defaults`만 변경한다.
-- 새 링크부터 새 기본값을 복사한다.
-- 기존 링크 값은 변경하지 않는다.
+- 링크에 명시값이 없으면 다음 리다이렉트부터 새 기본값을 동적으로 사용한다.
 
 ## 6. CSV 양식
 
@@ -291,37 +272,27 @@ UI 단일 생성, 공개 단일 API, JSON batch와 CSV worker는 같은 링크 �
 
 1. 캠페인과 현재 템플릿의 프로젝트 소유권을 확인한다.
 2. 요청 UTM 이름을 활성 템플릿 필드와 매핑한다.
-3. 요청값이 없으면 캠페인 기본값을 사용한다.
-4. 최종 값마다 `link_utm_values`를 만든다.
-5. URL 형식과 내부 주소 차단 정책을 검증한 뒤 저장한다. 인증된 프로젝트 멤버와 API key가 만든 링크는 생성·리다이렉트 위험 검사를 생략한다.
+3. 요청에 명시된 이름과 값만 `link_utm_values`에 저장한다.
+4. URL 형식과 내부 주소 차단 정책을 검증한 뒤 저장한다. 인증된 프로젝트 멤버와 API key가 만든 링크는 생성·리다이렉트 위험 검사를 생략한다.
 
 리다이렉트 시:
 
 1. 기존 Host와 code 규칙으로 링크를 찾는다.
 2. 링크 자체 목적지가 없으면 현재 캠페인 기본 목적지를 읽고, 둘 다 없으면 `410 Gone`을 반환한다.
-3. 링크가 참조하는 템플릿 필드와 값을 읽는다. 삭제된 필드도 기존 링크에서는 포함한다.
-4. 기존 query를 보존하되 같은 이름은 링크 UTM 값으로 덮어쓴다.
-5. 이름과 값을 URL encoding하고 fragment를 보존한다.
+3. 현재 캠페인 템플릿의 활성 이름마다 링크 명시값, 캠페인 기본값 순으로 최종 UTM을 만든다.
+4. 기존 query를 보존하되 같은 이름은 최종 UTM 값으로 덮어쓴다.
+5. 성공한 리다이렉트의 최종 UTM을 접근 이벤트에 저장하고 fragment를 보존한다.
 
 캠페인을 삭제하면 캠페인과 소속 링크를 함께 soft delete하고 기존 주소는 `410 Gone`을 반환한다. 진행 중인 import도 새 링크를 만들지 않게 중단한다.
 
-## 8. 통계 확장성
+## 8. 통계
 
-5단계에서는 UTM 값을 저장하고 접근 이벤트와 조인할 수 있는 관계까지만 구현한다. 실제 집계 API와 화면은 6단계 범위다.
-
-```text
-link_access_events
-→ links
-→ link_utm_values
-→ utm_template_fields
-→ utm_templates
-→ campaigns 또는 projects
-```
-
-- 같은 템플릿을 사용하는 캠페인은 field ID와 값으로 비교할 수 있다.
-- 서로 다른 템플릿은 필드 이름과 값으로 묶을 수 있다.
-- 삭제된 필드는 과거 통계에 남긴다.
-- 통계용 별도 테이블이나 사전 집계는 6단계 성능 측정 전에는 만들지 않는다.
+- `link_access_events.effective_utm` JSONB에 리다이렉트 당시 최종 이름·값을 저장한다.
+- 현재 캠페인 템플릿의 활성 이름만 `REDIRECTED` 이벤트에서 집계한다.
+- 필드가 이벤트 생성 뒤 추가됐다면 해당 이벤트는 그 필드의 `(없음)` 값으로 집계한다.
+- 만료 접근은 `EXPIRED`로 일반 접근 통계에 포함하지만 UTM 통계에서는 제외한다.
+- 삭제 링크의 과거 이벤트는 모든 통계에서 제외한다.
+- 일별 사전 집계는 실제 JSONB 집계가 느려질 때 추가한다.
 
 ## 9. 이미 확정된 운영 한도
 

@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -30,7 +31,7 @@ class LinkAccessEventRecorderTest {
 				.thenReturn(new UserAgentInfo("Other", null, "Other", null, "DESKTOP", false));
 		LinkAccessEventRecorder recorder = new LinkAccessEventRecorder(repository, userAgentParser);
 
-		recorder.record(link, accessedAt, Outcome.REDIRECTED, requestInfo);
+		recorder.record(link, accessedAt, Outcome.REDIRECTED, requestInfo, Map.of("utm_source", "google"));
 
 		ArgumentCaptor<LinkAccessEvent> eventCaptor = ArgumentCaptor.forClass(LinkAccessEvent.class);
 		verify(repository).save(eventCaptor.capture());
@@ -38,5 +39,6 @@ class LinkAccessEventRecorderTest {
 		assertThat(eventCaptor.getValue().getAccessedAt()).isEqualTo(accessedAt);
 		assertThat(eventCaptor.getValue().getOutcome()).isEqualTo(Outcome.REDIRECTED);
 		assertThat(eventCaptor.getValue().getIpAddress()).isEqualTo("203.0.113.10");
+		assertThat(eventCaptor.getValue().getEffectiveUtm()).containsEntry("utm_source", "google");
 	}
 }

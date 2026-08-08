@@ -49,6 +49,9 @@ public class Link {
 	@JoinColumn(name = "domain_id")
 	private ProjectDomain domain;
 
+	@Column(length = 253)
+	private String hostname;
+
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "created_by_user_id")
 	private User createdBy;
@@ -115,6 +118,7 @@ public class Link {
 		Link link = new Link(code, originalUrl, null, expiresAt);
 		link.project = project;
 		link.domain = domain;
+		link.hostname = domain.getHostname();
 		link.createdBy = createdBy;
 		link.idempotencyApiKeyId = apiKeyId;
 		link.idempotencyKey = idempotencyKey;
@@ -159,6 +163,7 @@ public class Link {
 	public void assignToProject(Project project, ProjectDomain domain, User createdBy) {
 		this.project = project;
 		this.domain = domain;
+		this.hostname = domain.getHostname();
 		this.createdBy = createdBy;
 		this.secretKeyHash = null;
 		this.updatedAt = Instant.now();

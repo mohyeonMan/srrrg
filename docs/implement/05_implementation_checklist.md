@@ -86,13 +86,14 @@
 - [x] `links.domain_id` 추가
 - [x] 기존 전역 code unique 제약 제거 migration
 - [x] 익명 `UNIQUE(code)` partial index
-- [x] 프로젝트 `UNIQUE(domain_id, code)` partial index
+- [x] 프로젝트 `UNIQUE(hostname, code)` partial index
+- [x] 프로젝트 내부 code 중복 방지용 `UNIQUE(domain_id, code)` 유지
 - [x] 플랫폼 서브도메인 생성과 예약어 검사
 - [x] 프로젝트 생성 시 플랫폼 서브도메인 자동 할당
-- [x] OWNER의 플랫폼 서브도메인 변경과 기존 hostname 즉시 해제
+- [x] OWNER의 플랫폼 서브도메인 변경과 링크별 생성 hostname 보존
 - [x] wildcard DNS·TLS 배포 검증
 - [x] Host + code 기반 리다이렉트 조회
-- [x] 등록되지 않은 Host와 타 프로젝트 도메인 차단 테스트
+- [x] 링크 hostname과 일치하지 않는 Host 차단 테스트
 - [x] 기존 `srrrg.link/{code}` 회귀 테스트
 - [x] 4단계 완료 조건 충족
 
@@ -102,6 +103,7 @@
 - [x] link의 `campaign_id`, `external_id`, UTM 컬럼
 - [x] 프로젝트 단일 링크와 캠페인 목록 분리
 - [x] 캠페인 기본 목적지·UTM 기본값 동적 fallback
+- [x] 링크·기본값·CSV import의 이름 기반 UTM 저장과 템플릿 동적 필터
 - [x] 캠페인 내 `external_id` unique 제약
 - [x] 기존 query·fragment를 보존하는 UTM 병합
 - [x] JSON batch와 idempotency
@@ -121,6 +123,8 @@
 - [x] 기존 누적 통계를 management 화면의 실제 값에 연결
 - [x] 링크 단위 기간·결과·유입·접속 환경 집계
 - [x] 캠페인 단위 집계
+- [x] 접근 당시 최종 UTM JSONB 스냅샷과 REDIRECTED 기준 집계
+- [x] 만료 접근 통계 포함과 삭제 링크 통계 제외
 - [x] 프로젝트 단위 집계
 - [x] link·campaign·project 합계 일관성 검증
 - [x] 샘플 통계 제거

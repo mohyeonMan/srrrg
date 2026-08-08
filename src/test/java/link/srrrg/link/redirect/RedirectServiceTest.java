@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -100,18 +101,18 @@ class RedirectServiceTest {
 		String redirectUrl = service.redirect("srrrg.link", "aB3x9Q", requestInfo);
 
 		assertThat(redirectUrl).isEqualTo("https://example.com/path?q=1");
-		verify(accessRecorder).record(eq(link), any(Instant.class), eq(Outcome.REDIRECTED), eq(requestInfo));
+		verify(accessRecorder).record(eq(link), any(Instant.class), eq(Outcome.REDIRECTED), eq(requestInfo), eq(Map.of()));
 		verify(repository).incrementAccessAndRedirectCountsById(7L);
 		assertTimerCount("srrrg.redirect", "outcome", "redirected", 1);
 		assertWriteTimerCount("success", 1);
 	}
 
 	@Test
-	void projectDomainRoutesByDomainAndCode() {
+	void projectDomainRoutesByHostnameAndCode() {
 		Link link = link("https://project.example");
 		when(link.getProject()).thenReturn(mock(Project.class));
-		when(domains.resolve("acme.srrrg.link")).thenReturn(Optional.of(new HostRoute(11L)));
-		when(repository.findByDomainIdAndCode(11L, "aB3x9Q")).thenReturn(Optional.of(link));
+		when(domains.resolve("acme.srrrg.link")).thenReturn(Optional.of(new HostRoute("acme.srrrg.link")));
+		when(repository.findByHostnameAndCode("acme.srrrg.link", "aB3x9Q")).thenReturn(Optional.of(link));
 		when(repository.incrementAccessAndRedirectCountsById(7L)).thenReturn(1);
 
 		assertThat(service.redirect("acme.srrrg.link", "aB3x9Q", requestInfo))
@@ -127,8 +128,8 @@ class RedirectServiceTest {
 		when(campaign.getDefaultOriginalUrl()).thenReturn("https://current.example/default");
 		when(link.getCampaign()).thenReturn(campaign);
 		when(link.getProject()).thenReturn(mock(Project.class));
-		when(domains.resolve("acme.srrrg.link")).thenReturn(Optional.of(new HostRoute(11L)));
-		when(repository.findByDomainIdAndCode(11L, "aB3x9Q")).thenReturn(Optional.of(link));
+		when(domains.resolve("acme.srrrg.link")).thenReturn(Optional.of(new HostRoute("acme.srrrg.link")));
+		when(repository.findByHostnameAndCode("acme.srrrg.link", "aB3x9Q")).thenReturn(Optional.of(link));
 		when(repository.incrementAccessAndRedirectCountsById(7L)).thenReturn(1);
 		EffectiveUtmValue utm = mock(EffectiveUtmValue.class);
 		when(utm.getFieldName()).thenReturn("utm_source");
@@ -137,6 +138,8 @@ class RedirectServiceTest {
 
 		assertThat(service.redirect("acme.srrrg.link", "aB3x9Q", requestInfo))
 				.isEqualTo("https://current.example/default?utm_source=campaign-default");
+		verify(accessRecorder).record(eq(link), any(Instant.class), eq(Outcome.REDIRECTED), eq(requestInfo),
+				eq(Map.of("utm_source", "campaign-default")));
 		verify(riskVerificationService, never()).verify(any());
 		verify(linkUtmValueRepository, times(1)).findEffectiveByLinkId(7L);
 	}
@@ -146,8 +149,8 @@ class RedirectServiceTest {
 		Link link = link(null);
 		when(link.getCampaign()).thenReturn(mock(Campaign.class));
 		when(link.getProject()).thenReturn(mock(Project.class));
-		when(domains.resolve("acme.srrrg.link")).thenReturn(Optional.of(new HostRoute(11L)));
-		when(repository.findByDomainIdAndCode(11L, "aB3x9Q")).thenReturn(Optional.of(link));
+		when(domains.resolve("acme.srrrg.link")).thenReturn(Optional.of(new HostRoute("acme.srrrg.link")));
+		when(repository.findByHostnameAndCode("acme.srrrg.link", "aB3x9Q")).thenReturn(Optional.of(link));
 
 		assertThatThrownBy(() -> service.redirect("acme.srrrg.link", "aB3x9Q", requestInfo))
 				.isInstanceOf(LinkGoneException.class)
@@ -157,12 +160,12 @@ class RedirectServiceTest {
 
 	@Test
 	void anotherProjectDomainDoesNotResolveTheLink() {
-		when(domains.resolve("other.srrrg.link")).thenReturn(Optional.of(new HostRoute(12L)));
-		when(repository.findByDomainIdAndCode(12L, "aB3x9Q")).thenReturn(Optional.empty());
+		when(domains.resolve("other.srrrg.link")).thenReturn(Optional.of(new HostRoute("other.srrrg.link")));
+		when(repository.findByHostnameAndCode("other.srrrg.link", "aB3x9Q")).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.redirect("other.srrrg.link", "aB3x9Q", requestInfo))
 				.isInstanceOf(link.srrrg.link.LinkNotFoundException.class);
-		verify(repository, never()).findByDomainIdAndCode(11L, "aB3x9Q");
+		verify(repository, never()).findByHostnameAndCode("acme.srrrg.link", "aB3x9Q");
 	}
 
 	@Test
@@ -172,7 +175,7 @@ class RedirectServiceTest {
 		assertThatThrownBy(() -> service.redirect("unknown.srrrg.link", "aB3x9Q", requestInfo))
 				.isInstanceOf(link.srrrg.link.LinkNotFoundException.class);
 		verify(repository, never()).findByCodeAndProjectIsNull(any());
-		verify(repository, never()).findByDomainIdAndCode(any(), any());
+		verify(repository, never()).findByHostnameAndCode(any(), any());
 	}
 
 	@Test
@@ -209,11 +212,14 @@ class RedirectServiceTest {
 		Link link = link("https://example.com");
 		when(link.isExpiredAt(any(Instant.class))).thenReturn(true);
 		when(repository.findByCodeAndProjectIsNull("aB3x9Q")).thenReturn(Optional.of(link));
+		when(repository.incrementAccessCountById(7L)).thenReturn(1);
 
 		assertThatThrownBy(() -> service.redirect("srrrg.link", "aB3x9Q", requestInfo))
 				.isInstanceOf(LinkGoneException.class)
 				.extracting(exception -> ((LinkGoneException) exception).getReason())
 				.isEqualTo(LinkGoneException.Reason.EXPIRED);
+		verify(accessRecorder).record(eq(link), any(Instant.class), eq(Outcome.EXPIRED), eq(requestInfo));
+		verify(repository).incrementAccessCountById(7L);
 		assertTimerCount("srrrg.redirect", "outcome", "gone", 1);
 	}
 
@@ -233,6 +239,20 @@ class RedirectServiceTest {
 		verify(repository, never()).incrementAccessAndRedirectCountsById(any());
 		assertTimerCount("srrrg.redirect", "outcome", "check_failed", 1);
 		assertWriteTimerCount("success", 1);
+	}
+
+	@Test
+	void deletedLinkDoesNotCreateStatisticsEvent() {
+		Link link = link("https://example.com");
+		when(link.isDeleted()).thenReturn(true);
+		when(repository.findByCodeAndProjectIsNull("aB3x9Q")).thenReturn(Optional.of(link));
+
+		assertThatThrownBy(() -> service.redirect("srrrg.link", "aB3x9Q", requestInfo))
+				.isInstanceOf(LinkGoneException.class)
+				.extracting(exception -> ((LinkGoneException) exception).getReason())
+				.isEqualTo(LinkGoneException.Reason.DELETED);
+		verify(accessRecorder, never()).record(eq(link), any(), any(), eq(requestInfo));
+		verify(repository, never()).incrementAccessCountById(any());
 	}
 
 	@Test

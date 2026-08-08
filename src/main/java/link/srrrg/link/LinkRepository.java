@@ -21,7 +21,7 @@ public interface LinkRepository extends JpaRepository<Link, Long>, JpaSpecificat
 	@EntityGraph(attributePaths = {"project", "campaign"})
 	Optional<Link> findByCodeAndProjectIsNull(String code);
 	@EntityGraph(attributePaths = {"project", "campaign"})
-	Optional<Link> findByDomainIdAndCode(Long domainId, String code);
+	Optional<Link> findByHostnameAndCode(String hostname, String code);
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@EntityGraph(attributePaths = "project")
 	@Query("select l from Link l where l.code = :code and l.project is null")

@@ -24,7 +24,7 @@ import link.srrrg.project.ProjectMemberRepository;
 
 /**
  * campaign 링크 생성의 단일 진입점. web(JWT), 공개 API, JSON batch, CSV worker가 모두 이 서비스를 호출한다.
- * 요청값이 없는 UTM 필드는 캠페인 기본값으로 채우고, 최종 병합·검증·저장은 {@link LinkManagementService}에 위임한다.
+ * 링크에 명시된 UTM만 저장하고, 최종 병합·검증·저장은 {@link LinkManagementService}에 위임한다.
  */
 @Service
 public class CampaignLinkCreationService {
@@ -78,13 +78,13 @@ public class CampaignLinkCreationService {
 	private Link create(Campaign campaign, Project project, User createdBy, Long apiKeyId, String idempotencyKey, String requestHash,
 			CreateCampaignLinkRequest request) {
 		UtmTemplate template = campaign.getUtmTemplate();
-		Map<UtmTemplateField, String> resolved = resolveUtmValues(template, request.utmValuesOrEmpty());
+		Map<String, String> resolved = resolveUtmValues(template, request.utmValuesOrEmpty());
 		ProjectDomain domain = domains.get(project.getId());
 		return linkManagement.createForCampaign(request.normalizedOriginalUrl(), request.expiresAt(), project, domain, createdBy,
 				apiKeyId, idempotencyKey, requestHash, campaign, template, request.normalizedExternalId(), resolved);
 	}
 
-	public Map<UtmTemplateField, String> resolveUtmValues(UtmTemplate template, Map<String, String> requestValues) {
+	public Map<String, String> resolveUtmValues(UtmTemplate template, Map<String, String> requestValues) {
 		if (template == null) {
 			if (!requestValues.isEmpty()) {
 				throw new IllegalArgumentException("캠페인에 선택된 UTM 템플릿이 없어 UTM 값을 받을 수 없습니다.");
@@ -101,11 +101,11 @@ public class CampaignLinkCreationService {
 				throw new IllegalArgumentException("활성 UTM 필드가 아닙니다: " + requestedName);
 			}
 		}
-		Map<UtmTemplateField, String> resolved = new LinkedHashMap<>();
+		Map<String, String> resolved = new LinkedHashMap<>();
 		for (UtmTemplateField field : activeFields) {
 			String value = requestValues.get(field.getName());
 			if (value != null && !value.isBlank()) {
-				resolved.put(field, validUtmValue(value));
+				resolved.put(field.getName(), validUtmValue(value));
 			}
 		}
 		return resolved;

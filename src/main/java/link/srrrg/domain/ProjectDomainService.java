@@ -50,7 +50,9 @@ public class ProjectDomainService {
 		String hostname = hostname(hostHeader);
 		if (hostname == null) return Optional.empty();
 		if (baseHostname.equals(hostname)) return Optional.of(new HostRoute(null));
-		return domains.findByHostname(hostname).map(domain -> new HostRoute(domain.getId()));
+		String suffix = "." + baseHostname;
+		String slug = hostname.endsWith(suffix) ? hostname.substring(0, hostname.length() - suffix.length()) : "";
+		return slug.isEmpty() || slug.contains(".") ? Optional.empty() : Optional.of(new HostRoute(hostname));
 	}
 
 	private String hostname(String hostHeader) {
@@ -70,7 +72,7 @@ public class ProjectDomainService {
 		return IDN.toASCII(normalized).toLowerCase(Locale.ROOT);
 	}
 
-	public record HostRoute(Long domainId) {
-		public boolean isBaseDomain() { return domainId == null; }
+	public record HostRoute(String hostname) {
+		public boolean isBaseDomain() { return hostname == null; }
 	}
 }

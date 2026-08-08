@@ -3,7 +3,6 @@ package link.srrrg.link.management;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -13,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 import io.micrometer.core.instrument.Timer;
 import link.srrrg.campaign.Campaign;
 import link.srrrg.campaign.UtmTemplate;
-import link.srrrg.campaign.UtmTemplateField;
 import link.srrrg.common.metrics.SrrrgMetrics;
 import link.srrrg.domain.ProjectDomain;
 import link.srrrg.link.DestinationUrlMerger;
@@ -204,7 +202,7 @@ public class LinkManagementService {
 	}
 
 	private String projectShortUrl(Link link) {
-		return "https://" + link.getDomain().getHostname() + "/" + link.getCode();
+		return "https://" + link.getHostname() + "/" + link.getCode();
 	}
 
 	public Link createForProject(CreateLinkRequest request, Project project, ProjectDomain domain, User createdBy) {
@@ -230,11 +228,10 @@ public class LinkManagementService {
 	public Link createForCampaign(String originalUrl, Instant expiresAt, Project project, ProjectDomain domain, User createdBy,
 			Long apiKeyId, String idempotencyKey, String requestHash,
 			Campaign campaign, UtmTemplate utmTemplate, String externalId,
-			Map<UtmTemplateField, String> resolvedUtmValues) {
+			Map<String, String> resolvedUtmValues) {
 		Link existing = findIdempotentLink(apiKeyId, idempotencyKey, requestHash);
 		if (existing != null) return existing;
-		Map<String, String> utmByName = resolvedUtmValues.entrySet().stream()
-				.collect(Collectors.toMap(entry -> entry.getKey().getName(), Map.Entry::getValue));
+		Map<String, String> utmByName = Map.copyOf(resolvedUtmValues);
 		String currentDestination = originalUrl != null ? originalUrl : campaign.getDefaultOriginalUrl();
 		if (currentDestination != null) urlValidator.validate(DestinationUrlMerger.merge(currentDestination, utmByName));
 		validateExpiration(expiresAt);
@@ -242,9 +239,8 @@ public class LinkManagementService {
 		// 신뢰 정책이 바뀌면 동적 기본 목적지와 UTM을 해석한 뒤 requireNoKnownThreat를 복구한다.
 		Link link = saveCampaignLinkWithUniqueCode(originalUrl, expiresAt, project, domain, createdBy,
 				apiKeyId, idempotencyKey, requestHash, campaign, utmTemplate, externalId);
-		Long templateId = utmTemplate == null ? null : utmTemplate.getId();
-		for (Map.Entry<UtmTemplateField, String> entry : resolvedUtmValues.entrySet()) {
-			linkUtmValueRepository.save(LinkUtmValue.create(link, entry.getKey(), templateId, entry.getValue()));
+		for (Map.Entry<String, String> entry : resolvedUtmValues.entrySet()) {
+			linkUtmValueRepository.save(LinkUtmValue.create(link, entry.getKey(), entry.getValue()));
 		}
 		return link;
 	}

@@ -1,6 +1,10 @@
 package link.srrrg.link.access;
 
 import java.time.Instant;
+import java.util.Map;
+
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -28,7 +32,8 @@ public class LinkAccessEvent {
 		REDIRECTED,
 		BLOCKED,
 		CHECK_FAILED,
-		URL_CHANGED
+		URL_CHANGED,
+		EXPIRED
 	}
 
 	@Id
@@ -73,8 +78,12 @@ public class LinkAccessEvent {
 	@Column(name = "is_bot", nullable = false)
 	private boolean bot;
 
+	@JdbcTypeCode(SqlTypes.JSON)
+	@Column(name = "effective_utm", nullable = false, columnDefinition = "jsonb")
+	private Map<String, String> effectiveUtm;
+
 	private LinkAccessEvent(Link link, Instant accessedAt, Outcome outcome,
-			ClientRequestInfo requestInfo, UserAgentInfo userAgentInfo) {
+			ClientRequestInfo requestInfo, UserAgentInfo userAgentInfo, Map<String, String> effectiveUtm) {
 		this.link = link;
 		this.accessedAt = accessedAt;
 		this.outcome = outcome;
@@ -87,10 +96,11 @@ public class LinkAccessEvent {
 		this.osVersion = userAgentInfo.osVersion();
 		this.deviceType = userAgentInfo.deviceType();
 		this.bot = userAgentInfo.bot();
+		this.effectiveUtm = Map.copyOf(effectiveUtm);
 	}
 
 	public static LinkAccessEvent create(Link link, Instant accessedAt, Outcome outcome,
-			ClientRequestInfo requestInfo, UserAgentInfo userAgentInfo) {
-		return new LinkAccessEvent(link, accessedAt, outcome, requestInfo, userAgentInfo);
+			ClientRequestInfo requestInfo, UserAgentInfo userAgentInfo, Map<String, String> effectiveUtm) {
+		return new LinkAccessEvent(link, accessedAt, outcome, requestInfo, userAgentInfo, effectiveUtm);
 	}
 }

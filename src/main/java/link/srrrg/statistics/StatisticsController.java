@@ -107,7 +107,9 @@ public class StatisticsController {
 		return member;
 	}
 	private Link projectLink(Long projectId, String code) {
-		return links.findByProjectIdAndCode(projectId, code).orElseThrow(LinkNotFoundException::new);
+		Link link = links.findByProjectIdAndCode(projectId, code).orElseThrow(LinkNotFoundException::new);
+		if (link.isDeleted()) throw new LinkNotFoundException();
+		return link;
 	}
 	private Campaign campaign(Long campaignId) {
 		return campaigns.findById(campaignId).orElseThrow(() -> new IllegalArgumentException("캠페인을 찾을 수 없습니다."));

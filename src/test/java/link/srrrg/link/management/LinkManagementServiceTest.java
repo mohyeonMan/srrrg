@@ -99,6 +99,7 @@ class LinkManagementServiceTest {
 		Project project = mock(Project.class);
 		ProjectDomain domain = mock(ProjectDomain.class);
 		User user = mock(User.class);
+		when(domain.getHostname()).thenReturn("acme.srrrg.link");
 		when(codeGenerator.generate()).thenReturn("aB3x9Q");
 		when(repository.saveAndFlush(any(Link.class))).thenAnswer(call -> call.getArgument(0));
 
@@ -106,6 +107,7 @@ class LinkManagementServiceTest {
 
 		assertThat(link.getProject()).isSameAs(project);
 		assertThat(link.getDomain()).isSameAs(domain);
+		assertThat(link.getHostname()).isEqualTo("acme.srrrg.link");
 		assertThat(link.getCreatedBy()).isSameAs(user);
 		assertThat(link.getSecretKeyHash()).isNull();
 		verify(riskVerificationService, never()).verify(any());
@@ -270,7 +272,7 @@ class LinkManagementServiceTest {
 		Link link = link("https://own.example");
 		ProjectDomain domain = mock(ProjectDomain.class);
 		when(domain.getHostname()).thenReturn("acme.srrrg.link");
-		when(link.getDomain()).thenReturn(domain);
+		when(link.getHostname()).thenReturn("acme.srrrg.link");
 		when(link.getCampaign()).thenReturn(mock(Campaign.class));
 		when(repository.save(link)).thenReturn(link);
 		UpdateLinkRequest request = new UpdateLinkRequest();

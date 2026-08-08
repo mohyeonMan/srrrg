@@ -42,14 +42,14 @@ class CampaignLinkCreationServiceTest {
 
 	@Test
 	void storesExplicitRequestValue() {
-		Map<UtmTemplateField, String> resolved = service.resolveUtmValues(template, Map.of("utm_source", "request-source"));
+		Map<String, String> resolved = service.resolveUtmValues(template, Map.of("utm_source", "request-source"));
 
-		assertThat(resolved).containsEntry(sourceField, "request-source");
+		assertThat(resolved).containsEntry("utm_source", "request-source");
 	}
 
 	@Test
 	void omittedFieldIsNotCopiedFromCampaignDefault() {
-		Map<UtmTemplateField, String> resolved = service.resolveUtmValues(template, Map.of());
+		Map<String, String> resolved = service.resolveUtmValues(template, Map.of());
 
 		assertThat(resolved).isEmpty();
 	}
@@ -58,9 +58,9 @@ class CampaignLinkCreationServiceTest {
 	void explicitNullRequestValueSkipsDefaultEntirely() {
 		java.util.Map<String, String> requestValues = new java.util.HashMap<>();
 		requestValues.put("utm_source", null);
-		Map<UtmTemplateField, String> resolved = service.resolveUtmValues(template, requestValues);
+		Map<String, String> resolved = service.resolveUtmValues(template, requestValues);
 
-		assertThat(resolved).doesNotContainKey(sourceField);
+		assertThat(resolved).doesNotContainKey("utm_source");
 	}
 
 	@Test
@@ -77,7 +77,7 @@ class CampaignLinkCreationServiceTest {
 
 	@Test
 	void returnsEmptyMapWhenNoTemplateAndNoRequestValues() {
-		Map<UtmTemplateField, String> resolved = service.resolveUtmValues(null, Map.of());
+		Map<String, String> resolved = service.resolveUtmValues(null, Map.of());
 		assertThat(resolved).isEmpty();
 	}
 }

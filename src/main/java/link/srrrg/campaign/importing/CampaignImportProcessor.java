@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import link.srrrg.campaign.Campaign;
 import link.srrrg.campaign.UtmTemplate;
-import link.srrrg.campaign.UtmTemplateField;
 import link.srrrg.domain.ProjectDomainService;
 import link.srrrg.link.ExternalIdConflictException;
 import link.srrrg.link.UnsafeUrlException;
@@ -79,8 +78,8 @@ public class CampaignImportProcessor {
 		try {
 			Campaign campaign = campaignImport.getCampaign();
 			UtmTemplate template = campaignImport.getUtmTemplate();
-			Map<UtmTemplateField, String> resolved = importRowUtmValues.findByImportRowId(rowId).stream()
-					.collect(java.util.stream.Collectors.toMap(CampaignImportRowUtmValue::getField, CampaignImportRowUtmValue::getValue));
+			Map<String, String> resolved = importRowUtmValues.findByImportRowId(rowId).stream()
+					.collect(java.util.stream.Collectors.toMap(CampaignImportRowUtmValue::getFieldName, CampaignImportRowUtmValue::getValue));
 			var createdLink = linkManagement.createForCampaign(row.getOriginalUrl(), null, campaign.getProject(),
 					domains.get(campaign.getProject().getId()), null, null, null, null,
 					campaign, template, row.getExternalId(), resolved);

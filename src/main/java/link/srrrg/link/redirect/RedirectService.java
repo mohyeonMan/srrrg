@@ -76,7 +76,12 @@ public class RedirectService {
 		long startedAt = System.nanoTime();
 		try {
 			HostRoute route = domains.resolve(host).orElseThrow(LinkNotFoundException::new);
-			Link initialLink = findAvailableLink(route, code);
+			Link initialLink = findLink(route, code);
+			if (isDeleted(initialLink)) throw unavailable(code, initialLink, false);
+			if (initialLink.isExpiredAt(accessedAt)) {
+				recordAccess(initialLink, accessedAt, Outcome.EXPIRED, requestInfo);
+				throw unavailable(code, initialLink, true);
+			}
 			String rawUrl = effectiveOriginalUrl(initialLink);
 			String checkedUrl = initialLink.getProject() == null
 					? DestinationUrlMerger.merge(rawUrl, utmValuesFor(initialLink))
@@ -128,14 +133,15 @@ public class RedirectService {
 		String outcome = "error";
 		try {
 			String redirectUrl = transactions.execute(status -> {
-				Link currentLink = findAvailableLink(route, code);
+				Link currentLink = findAvailableLink(route, code, accessedAt);
 				if (!checkedRawUrl.equals(effectiveOriginalUrl(currentLink))) {
 					log.warn("Redirect verification invalidated: reason=URL_CHANGED, code={}", code);
 					accessEventRecorder.record(currentLink, accessedAt, Outcome.URL_CHANGED, requestInfo);
 					incrementAccessCount(currentLink.getId());
 					return null;
 				}
-				accessEventRecorder.record(currentLink, accessedAt, Outcome.REDIRECTED, requestInfo);
+				Map<String, String> effectiveUtm = currentLink.getCampaign() == null ? Map.of() : utmValuesFor(currentLink);
+				accessEventRecorder.record(currentLink, accessedAt, Outcome.REDIRECTED, requestInfo, effectiveUtm);
 				int updates = linkRepository.incrementAccessAndRedirectCountsById(currentLink.getId());
 				if (updates != 1) {
 					log.warn("Access statistics update failed: code={}, updates={}", code, updates);
@@ -145,7 +151,7 @@ public class RedirectService {
 				String currentUrl = effectiveOriginalUrl(currentLink);
 				return currentLink.getCampaign() == null
 						? currentUrl
-						: DestinationUrlMerger.merge(currentUrl, utmValuesFor(currentLink));
+						: DestinationUrlMerger.merge(currentUrl, effectiveUtm);
 			});
 			outcome = "success";
 			if (redirectUrl == null) {
@@ -196,20 +202,30 @@ public class RedirectService {
 		}
 	}
 
-	private Link findAvailableLink(HostRoute route, String code) {
+	private Link findLink(HostRoute route, String code) {
 		Link link = (route.isBaseDomain()
 				? linkRepository.findByCodeAndProjectIsNull(code)
-				: linkRepository.findByDomainIdAndCode(route.domainId(), code)).orElseThrow(() -> {
+				: linkRepository.findByHostnameAndCode(route.hostname(), code)).orElseThrow(() -> {
 			log.info("Link lookup failed: reason=NOT_FOUND, code={}", code);
 			return new LinkNotFoundException();
 		});
-		boolean deleted = link.isDeleted() || link.getProject() != null && link.getProject().getArchivedAt() != null;
-		boolean expired = link.isExpiredAt(Instant.now());
-		if (deleted || expired) {
-			log.info("Link unavailable: code={}, deleted={}, expired={}", code, deleted, expired);
-			throw new LinkGoneException(deleted ? LinkGoneException.Reason.DELETED : LinkGoneException.Reason.EXPIRED);
-		}
 		return link;
+	}
+
+	private Link findAvailableLink(HostRoute route, String code, Instant accessedAt) {
+		Link link = findLink(route, code);
+		if (isDeleted(link)) throw unavailable(code, link, false);
+		if (link.isExpiredAt(accessedAt)) throw unavailable(code, link, true);
+		return link;
+	}
+
+	private boolean isDeleted(Link link) {
+		return link.isDeleted() || link.getProject() != null && link.getProject().getArchivedAt() != null;
+	}
+
+	private LinkGoneException unavailable(String code, Link link, boolean expired) {
+		log.info("Link unavailable: code={}, deleted={}, expired={}", code, isDeleted(link), expired);
+		return new LinkGoneException(expired ? LinkGoneException.Reason.EXPIRED : LinkGoneException.Reason.DELETED);
 	}
 
 	private long elapsedMillis(long startedAt) {

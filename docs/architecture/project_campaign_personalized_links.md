@@ -118,6 +118,9 @@ link.srrrg
 - 캠페인은 이름, 설명, 기본 목적지 URL과 기본 UTM 값을 가질 수 있다.
 - 링크에 직접 지정하지 않은 UTM 필드는 리다이렉트 시점의 캠페인 기본값을 사용한다.
 - 캠페인 UTM 기본값 변경은 해당 필드를 직접 지정하지 않은 기존 링크에 즉시 반영한다.
+- UTM 템플릿은 여러 캠페인이 공유하는 활성 필드 집합이며 필드 추가·삭제는 사용 중인 캠페인에 즉시 반영한다.
+- 캠페인은 기존 링크나 진행 중인 CSV import와 관계없이 템플릿을 변경·해제할 수 있다.
+- 템플릿과 현재 일치하지 않는 링크 값·기본값·import 값은 이름 기반으로 보존하고 같은 이름이 활성화되면 다시 사용한다.
 - 링크가 자체 목적지 URL을 가지지 않으면 리다이렉트 시점의 캠페인 기본 목적지 URL을 사용한다.
 - 캠페인 기본 목적지 변경은 자체 목적지가 없는 기존 링크에 즉시 반영되며, 둘 다 없으면 `410 Gone`을 반환한다.
 - 캠페인 기본 목적지 제거는 허용하되 관리 화면에서 기존 fallback 링크가 410이 될 수 있음을 경고한다.
@@ -132,9 +135,8 @@ link.srrrg
 - 캠페인 소속은 선택 사항이다.
 - 캠페인 링크의 프로젝트는 캠페인의 프로젝트와 같아야 한다.
 - 캠페인 또는 프로젝트 간 링크 이동은 지원하지 않는다. 다른 분류가 필요하면 새 링크를 만든다.
-- UTM 값은 생성 후 변경하지 않는다. 변경이 필요하면 새 링크를 만든다.
-
-프로젝트·캠페인·UTM을 불변으로 두면 과거 접근 이벤트를 현재 링크 설정으로 잘못 재분류하는 문제를 피할 수 있다.
+- 링크의 명시적 UTM 값은 생성 후 변경하지 않지만, 현재 캠페인 템플릿과 기본값에 따라 실제 리다이렉트 UTM은 달라질 수 있다.
+- 과거 접근을 현재 설정으로 재분류하지 않도록 실제 리다이렉트에 사용한 최종 UTM을 접근 이벤트에 저장한다.
 
 ## 4. 데이터베이스 변경
 
@@ -248,7 +250,7 @@ created_at
 - 플랫폼 서브도메인은 `*.srrrg.link` wildcard DNS와 TLS 인증서를 공유하며 프로젝트별 Kubernetes 리소스를 생성하지 않는다.
 - 플랫폼 서브도메인은 `{project.slug}.srrrg.link` 형식이며 project slug 예약어 정책을 함께 사용한다.
 
-프로젝트 링크는 `(domain_id, code)` 조합으로 식별한다. 같은 code라도 플랫폼 서브도메인이 다르면 서로 다른 링크가 될 수 있다.
+프로젝트 링크는 생성 당시 플랫폼 hostname을 링크에 복사하고 `(hostname, code)` 조합으로 식별한다. 프로젝트의 현재 hostname을 변경해도 기존 링크 주소는 유지하며, 해제된 hostname은 다른 프로젝트가 다시 선택할 수 있다.
 
 커스텀 도메인 등록, CNAME 검증, 도메인별 인증서 발급과 동적 Ingress 생성은 이번 개발 범위에서 제외한다. 실제 수요가 생기면 관리형 edge와 도메인별 Ingress 방식의 운영 비용을 다시 비교해 별도 단계로 설계한다.
 
@@ -290,11 +292,6 @@ project_id
 name
 description nullable
 default_original_url nullable
-default_utm_source nullable
-default_utm_medium nullable
-default_utm_campaign nullable
-default_utm_term nullable
-default_utm_content nullable
 created_by_user_id
 created_at
 updated_at
@@ -310,17 +307,13 @@ archived_at nullable
 ```text
 project_id nullable
 domain_id nullable
+hostname nullable
 campaign_id nullable
 created_by_user_id nullable
 idempotency_api_key_id nullable
 idempotency_key nullable
 idempotency_request_hash nullable
 external_id nullable
-utm_source nullable
-utm_medium nullable
-utm_campaign nullable
-utm_term nullable
-utm_content nullable
 ```
 
 프로젝트 링크에는 per-link secret key가 없으므로 기존 `secret_key_hash NOT NULL` 제약을 신규 migration에서 nullable로 변경하고, `Link` 엔티티의 `nullable = false` 설정도 함께 보정한다. 기존 익명 링크의 secret hash 값은 그대로 유지한다.
@@ -330,13 +323,14 @@ utm_content nullable
 권장 제약은 다음과 같다.
 
 - 익명 링크: `project_id IS NULL`, `domain_id IS NULL`, `campaign_id IS NULL`, `secret_key_hash IS NOT NULL`
-- 프로젝트 링크: `project_id IS NOT NULL`, `domain_id IS NOT NULL`, `secret_key_hash IS NULL`
+- 프로젝트 링크: `project_id IS NOT NULL`, `domain_id IS NOT NULL`, `hostname IS NOT NULL`, `secret_key_hash IS NULL`
 - 프로젝트 링크의 프로젝트와 선택한 도메인의 프로젝트가 같아야 한다.
 - 캠페인 링크: `campaign_id IS NOT NULL`이면 `project_id IS NOT NULL`
 - 캠페인 링크의 프로젝트와 캠페인의 프로젝트가 같아야 한다.
 - 기존 전역 `links.code` unique 제약은 신규 migration에서 제거한다.
 - 익명 링크에는 `UNIQUE (code) WHERE project_id IS NULL` partial unique index를 둔다.
-- 프로젝트 링크에는 `UNIQUE (domain_id, code) WHERE domain_id IS NOT NULL` partial unique index를 둔다.
+- 프로젝트 링크에는 `UNIQUE (hostname, code) WHERE hostname IS NOT NULL` partial unique index를 둔다.
+- 기존 `UNIQUE (domain_id, code) WHERE domain_id IS NOT NULL` index도 유지해 같은 프로젝트 안에서 code가 중복되지 않게 한다.
 - `(campaign_id, external_id)`는 `external_id`가 있을 때 unique다.
 - `project_id`, `domain_id`, `campaign_id`에 목록·라우팅·집계용 인덱스를 추가한다.
 
@@ -346,15 +340,16 @@ utm_content nullable
 
 ### 4.8 기존 link_access_events
 
-현재 이벤트 테이블은 `link_id`를 가지고 있으므로 구조를 유지한다.
+현재 이벤트 테이블은 `link_id`와 리다이렉트 당시의 이름 기반 UTM JSONB 스냅샷을 가진다.
 
 ```text
 링크 통계      link_access_events.link_id
 캠페인 통계    link_access_events → links.campaign_id
 프로젝트 통계  link_access_events → links.project_id
+UTM 통계       link_access_events.effective_utm
 ```
 
-프로젝트, 캠페인, UTM을 링크 생성 후 변경하지 않으므로 이벤트에 같은 값을 중복 저장하지 않는다.
+성공한 리다이렉트는 최종 UTM을 `effective_utm`에 저장한다. 만료 접근은 `EXPIRED` 이벤트로 일반 접근 통계에 포함하지만 UTM 통계에서는 제외하고, 삭제 링크는 이벤트와 모든 통계에서 제외한다.
 
 ## 5. UTM과 목적지 URL 규칙
 
@@ -374,10 +369,12 @@ UTM 사용 여부와 캠페인 소속 여부는 독립적이다.
 목적지 생성 규칙은 하나의 공용 로직으로 처리한다.
 
 1. `original_url`의 기존 query parameter를 읽는다.
-2. 저장된 UTM 필드가 있으면 동일한 이름의 기존 UTM 값을 덮어쓴다.
-3. 비 UTM query parameter는 유지한다.
-4. 모든 이름과 값을 URL encoding한다.
-5. fragment가 있으면 query 뒤에 유지한다.
+2. 현재 캠페인 템플릿의 활성 필드 이름만 선택한다.
+3. 링크 명시값이 없으면 현재 캠페인 기본값을 사용한다.
+4. 최종 UTM이 있으면 동일한 이름의 기존 query 값을 덮어쓴다.
+5. 비 UTM query parameter는 유지한다.
+6. 모든 이름과 값을 URL encoding한다.
+7. fragment가 있으면 query 뒤에 유지한다.
 
 UTM에는 이름, 이메일, 전화번호 등 직접 식별 가능한 개인정보를 넣지 않는다.
 
@@ -476,7 +473,7 @@ GET    /api/web/projects/{projectId}/domains
 PATCH  /api/web/projects/{projectId}/domains/{domainId}
 ```
 
-플랫폼 서브도메인은 프로젝트 생성 시 자동 발급한다. `OWNER`만 DNS label 규칙과 예약어·중복 검사를 거쳐 변경할 수 있으며, 링크의 `domain_id`는 유지하고 기존 hostname은 즉시 해제한다. 별도 등록·검증·삭제 endpoint는 만들지 않는다.
+플랫폼 서브도메인은 프로젝트 생성 시 자동 발급한다. `OWNER`만 DNS label 규칙과 예약어·중복 검사를 거쳐 변경할 수 있다. 링크는 생성 당시 hostname을 유지하므로 기존 주소가 계속 동작하고, 변경 이후 생성하는 링크부터 새 hostname을 사용한다. 해제된 hostname은 다른 프로젝트가 다시 선택할 수 있다. 별도 등록·검증·삭제 endpoint는 만들지 않는다.
 
 ### 7.3 프로젝트 API key
 
@@ -520,7 +517,7 @@ POST   /api/v1/campaigns/{campaignId}/links/batch
 GET    /api/v1/campaigns/{campaignId}/links
 ```
 
-웹 endpoint는 JWT와 최신 프로젝트 역할을 검사하고, 공개 endpoint는 API key의 프로젝트와 `links:write` scope를 검사한다. 두 경로는 같은 링크 생성 service를 사용하며 프로젝트 링크에는 secret key를 발급하지 않는다. 4단계 도메인 migration 전에는 기존 전역 code와 `srrrg.link/{code}` 리다이렉트를 사용하고, 프로젝트 도메인 적용 시 `domain_id`와 도메인별 code 제약으로 전환한다.
+웹 endpoint는 JWT와 최신 프로젝트 역할을 검사하고, 공개 endpoint는 API key의 프로젝트와 `links:write` scope를 검사한다. 두 경로는 같은 링크 생성 service를 사용하며 프로젝트 링크에는 secret key를 발급하지 않는다. 4단계 도메인 migration 전에는 기존 전역 code와 `srrrg.link/{code}` 리다이렉트를 사용하고, 프로젝트 도메인 적용 시 링크별 hostname과 `(hostname, code)` 제약으로 전환한다.
 
 공개 생성 endpoint는 선택적 `Idempotency-Key`를 받는다. 같은 API key와 idempotency key로 같은 요청을 재시도하면 기존 링크를 반환하고, 다른 요청 본문에 재사용하면 `409 IDEMPOTENCY_CONFLICT`로 거절한다.
 
@@ -615,10 +612,13 @@ SDK 자동 생성, GraphQL, 별도 API gateway와 다국어 문서 사이트는 
 
 - 기간별 `accessCount`, `redirectCount`, 미이동 수
 - 일별 진입·이동 추이
-- 결과별 건수: `REDIRECTED`, `BLOCKED`, `CHECK_FAILED`, `URL_CHANGED`
+- 결과별 건수: `REDIRECTED`, `BLOCKED`, `CHECK_FAILED`, `URL_CHANGED`, `EXPIRED`
 - Referer 도메인별 유입
 - 브라우저, OS, 디바이스, 봇 비율
 - 최근 활동
+- 현재 캠페인 템플릿 필드별 `REDIRECTED` 이벤트의 접근 당시 UTM 값
+
+현재 활성 필드가 과거 이벤트 스냅샷에 없으면 `(없음)`으로 집계한다. 템플릿에서 제거한 필드는 숨기고 같은 이름을 다시 추가하면 보존된 링크 값과 과거 통계를 다시 표시한다.
 
 초기에는 `link_access_events`를 요청 시 직접 집계한다. 실제 데이터에서 조회 비용 문제가 확인되기 전에는 별도 큐, 실시간 스트림, 집계 서비스, 분석 DB를 추가하지 않는다.
 
@@ -652,7 +652,7 @@ SDK 자동 생성, GraphQL, 별도 API gateway와 다국어 문서 사이트는 
 
 원시 IP, User-Agent와 referer는 이벤트에 보관하되 통계 API와 화면에는 노출하지 않는다. 현재는 자동 삭제 기간을 두지 않으며, 보관 기간을 정할 때 별도 정리 작업을 추가한다.
 
-2026-08-08 PostgreSQL 17에서 단일 프로젝트 링크에 이벤트 100,000건을 생성하고 최근 7일 집계를 `EXPLAIN ANALYZE`로 측정했다. 기존 `(link_id, accessed_at DESC)` 인덱스를 사용했고 실행 시간은 약 1.3ms였다. 따라서 별도 사전 집계나 추가 인덱스는 도입하지 않았다.
+2026-08-08 PostgreSQL 17에서 단일 프로젝트 링크에 이벤트 100,000건을 생성하고 최근 7일 집계를 `EXPLAIN ANALYZE`로 측정했다. 기존 `(link_id, accessed_at DESC)` 인덱스를 사용했고 실행 시간은 약 1.3ms였다. UTM JSONB 집계는 실제 데이터가 수백만 건 수준에서 느려질 때 일별 사전 집계를 추가한다.
 
 ## 10. 구현 단계
 
@@ -717,6 +717,7 @@ SDK 자동 생성, GraphQL, 별도 API gateway와 다국어 문서 사이트는 
 - 플랫폼 서브도메인 예약·중복 정책
 - wildcard DNS·TLS 아래에서 프로젝트별 플랫폼 서브도메인 생성
 - 플랫폼 서브도메인으로 short URL 생성
+- 링크 생성 당시 hostname 보존과 해제된 서브도메인 재사용
 - Host + code 기반 프로젝트 링크 라우팅
 
 완료 기준: 프로젝트별 플랫폼 서브도메인에서 링크를 생성하고 열 수 있으며 기존 익명 링크와 충돌하지 않는다.
@@ -769,7 +770,8 @@ SDK 자동 생성, GraphQL, 별도 API gateway와 다국어 문서 사이트는 
 - OWNER, EDITOR, VIEWER 권한 행렬
 - 마지막 OWNER 제거 차단
 - 다른 프로젝트 리소스 접근 차단
-- 플랫폼 서브도메인 unique와 타 프로젝트 도메인 사용 차단
+- 플랫폼 서브도메인 동시 선점 차단과 해제 후 재사용
+- 서브도메인 변경 전후 링크의 hostname과 code 충돌 차단
 - API key 원문 미저장, hash 검증, scope, 만료, 폐기와 타 프로젝트 접근 차단
 - 운영 환경 Swagger UI 차단과 공개 OpenAPI의 내부 endpoint 제외
 - `/docs/api` 예제와 실제 OpenAPI 요청·응답 schema 일치
@@ -786,7 +788,7 @@ SDK 자동 생성, GraphQL, 별도 API gateway와 다국어 문서 사이트는 
 
 1. API key와 프로젝트별 rate limit
 2. 대량 생성 요청의 최대 링크 수
-3. 프로젝트·캠페인·UTM 변경 불가 정책의 UI 문구
+3. 공유 UTM 템플릿과 캠페인 템플릿 변경의 즉시 반영 경고 문구
 4. 접근 이벤트 보관 기간과 IP 개인정보 정책
 
 이 목록이 전부가 아니다. 구현자가 코드와 기존 문서를 읽으며 새로 발견한 미확정 사항도 구현 전에 질문해야 한다.

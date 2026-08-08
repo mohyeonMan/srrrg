@@ -11,7 +11,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.Table;
-import link.srrrg.campaign.UtmTemplateField;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -29,29 +28,23 @@ public class CampaignImportRowUtmValue {
 	@JoinColumn(name = "import_row_id")
 	private CampaignImportRow importRow;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@MapsId("utmTemplateFieldId")
-	@JoinColumn(name = "utm_template_field_id")
-	private UtmTemplateField field;
-
-	@Column(name = "utm_template_id", nullable = false)
-	private Long utmTemplateId;
-
 	@Column(nullable = false, length = 500)
 	private String value;
 
-	private CampaignImportRowUtmValue(CampaignImportRow importRow, UtmTemplateField field, Long utmTemplateId, String value) {
-		this.id = new CampaignImportRowUtmValueId(importRow.getId(), field.getId());
+	private CampaignImportRowUtmValue(CampaignImportRow importRow, String fieldName, String value) {
+		this.id = new CampaignImportRowUtmValueId(importRow.getId(), fieldName);
 		this.importRow = importRow;
-		this.field = field;
-		this.utmTemplateId = utmTemplateId;
 		this.value = value;
 	}
 
-	public static CampaignImportRowUtmValue create(CampaignImportRow importRow, UtmTemplateField field, Long utmTemplateId, String value) {
-		return new CampaignImportRowUtmValue(importRow, field, utmTemplateId, value);
+	public static CampaignImportRowUtmValue create(CampaignImportRow importRow, String fieldName, String value) {
+		return new CampaignImportRowUtmValue(importRow, fieldName, value);
+	}
+
+	public String getFieldName() {
+		return id.fieldName();
 	}
 
 	@Embeddable
-	public record CampaignImportRowUtmValueId(Long importRowId, Long utmTemplateFieldId) implements Serializable { }
+	public record CampaignImportRowUtmValueId(Long importRowId, String fieldName) implements Serializable { }
 }

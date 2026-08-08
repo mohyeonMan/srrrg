@@ -147,7 +147,7 @@ public class CampaignService {
 	@Transactional(readOnly = true)
 	public List<CampaignUtmDefault> defaults(Long userId, Long campaignId) {
 		Campaign campaign = get(userId, campaignId);
-		return defaults.findByCampaignIdOrderByFieldNameAsc(campaign.getId());
+		return activeDefaults(campaign);
 	}
 
 	/**
@@ -174,7 +174,7 @@ public class CampaignService {
 	@Transactional(readOnly = true)
 	public List<CampaignUtmDefault> defaultsForApiKey(Long projectId, Long campaignId) {
 		Campaign campaign = findForApiKey(projectId, campaignId);
-		return defaults.findByCampaignIdOrderByFieldNameAsc(campaign.getId());
+		return activeDefaults(campaign);
 	}
 
 	private Campaign applyTemplateSelection(Campaign campaign, Long templateId) {
@@ -183,11 +183,6 @@ public class CampaignService {
 			template = templates.findByIdAndProjectId(templateId, campaign.getProject().getId())
 					.orElseThrow(() -> new IllegalArgumentException("템플릿을 찾을 수 없습니다."));
 			if (template.isDeleted()) throw new IllegalArgumentException("템플릿을 찾을 수 없습니다.");
-		}
-		Long currentTemplateId = campaign.getUtmTemplate() == null ? null : campaign.getUtmTemplate().getId();
-		boolean changed = !java.util.Objects.equals(currentTemplateId, templateId);
-		if (changed) {
-			defaults.deleteByCampaignId(campaign.getId());
 		}
 		campaign.selectTemplate(template);
 		return campaign;
@@ -202,7 +197,7 @@ public class CampaignService {
 			UtmTemplateField field = fields.findByUtmTemplateIdAndNameAndDeletedAtIsNull(template.getId(), entry.getKey())
 					.orElseThrow(() -> new IllegalArgumentException("활성 필드가 아닙니다: " + entry.getKey()));
 			String value = entry.getValue();
-			var existing = defaults.findByCampaignIdAndFieldId(campaign.getId(), field.getId());
+			var existing = defaults.findByCampaignIdAndFieldName(campaign.getId(), field.getName());
 			if (value == null) {
 				existing.ifPresent(defaults::delete);
 				continue;
@@ -212,12 +207,20 @@ public class CampaignService {
 				existing.get().updateValue(trimmed);
 			} else {
 				try {
-					defaults.saveAndFlush(CampaignUtmDefault.create(campaign, field, template.getId(), trimmed));
+					defaults.saveAndFlush(CampaignUtmDefault.create(campaign, field.getName(), trimmed));
 				} catch (DataIntegrityViolationException exception) {
 					throw new IllegalArgumentException("기본값을 저장하지 못했습니다.", exception);
 				}
 			}
 		}
+	}
+
+	private List<CampaignUtmDefault> activeDefaults(Campaign campaign) {
+		if (campaign.getUtmTemplate() == null) return List.of();
+		java.util.Set<String> active = fields.findByUtmTemplateIdAndDeletedAtIsNullOrderByNameAsc(campaign.getUtmTemplate().getId())
+				.stream().map(UtmTemplateField::getName).collect(java.util.stream.Collectors.toSet());
+		return defaults.findByCampaignIdOrderByFieldNameAsc(campaign.getId()).stream()
+				.filter(value -> active.contains(value.getFieldName())).toList();
 	}
 
 	private Campaign campaignOrNotFound(Long campaignId) {

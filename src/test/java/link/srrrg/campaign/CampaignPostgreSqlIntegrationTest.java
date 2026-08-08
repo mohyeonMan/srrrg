@@ -200,8 +200,45 @@ class CampaignPostgreSqlIntegrationTest {
 
 		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId).cookie(owner.cookie))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.utm[0].value").value("second-source"))
-				.andExpect(jsonPath("$.utm[0].entries").value(2));
+				.andExpect(jsonPath("$.utm[?(@.value == 'first-source')].entries")
+						.value(org.hamcrest.Matchers.contains(1)))
+				.andExpect(jsonPath("$.utm[?(@.value == 'second-source')].entries")
+						.value(org.hamcrest.Matchers.contains(1)))
+				.andExpect(jsonPath("$.utm[?(@.value == 'fixed-source')].entries")
+						.value(org.hamcrest.Matchers.contains(1)));
+	}
+
+	@Test
+	void utmStatisticsFollowCurrentFieldsAndRestoreSameNameHistory() throws Exception {
+		Owner owner = newOwner();
+		Long templateId = createTemplate(owner, "utm_source");
+		Long fieldId = jdbcTemplate.queryForObject(
+				"SELECT id FROM utm_template_fields WHERE utm_template_id=? AND name='utm_source' AND deleted_at IS NULL",
+				Long.class, templateId);
+		Long campaignId = createCampaign(owner, "필드 변경 캠페인", templateId);
+		MvcResult created = mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/stats\",\"utmValues\":{\"utm_source\":\"newsletter\"}}"))
+				.andExpect(status().isCreated()).andReturn();
+		String code = readJson(created, "code");
+		mockMvc.perform(get("/{code}", code).header("Host", owner.host)).andExpect(status().isFound());
+
+		addField(owner, templateId, "utm_medium").andExpect(status().isCreated());
+		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId).cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.utm[?(@.field == 'utm_medium' && @.value == '(없음)')].entries")
+						.value(org.hamcrest.Matchers.contains(1)));
+
+		mockMvc.perform(delete("/api/web/projects/{projectId}/utm-templates/{templateId}/fields/{fieldId}",
+				owner.projectId, templateId, fieldId).with(csrf()).cookie(owner.cookie)).andExpect(status().isNoContent());
+		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId).cookie(owner.cookie))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.utm[?(@.field == 'utm_source')]").isEmpty());
+
+		addField(owner, templateId, "utm_source").andExpect(status().isCreated());
+		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId).cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.utm[?(@.field == 'utm_source' && @.value == 'newsletter')].entries")
+						.value(org.hamcrest.Matchers.contains(1)));
 	}
 
 	@Test
@@ -240,7 +277,7 @@ class CampaignPostgreSqlIntegrationTest {
 		mockMvc.perform(delete("/api/web/campaigns/{id}", campaignId).with(csrf()).cookie(owner.cookie))
 				.andExpect(status().isNoContent());
 		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId).cookie(owner.cookie))
-				.andExpect(status().isOk()).andExpect(jsonPath("$.summary.entries").value(1));
+				.andExpect(status().isOk()).andExpect(jsonPath("$.summary.entries").value(0));
 	}
 
 	@Test

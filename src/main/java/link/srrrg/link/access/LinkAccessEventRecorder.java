@@ -1,6 +1,7 @@
 package link.srrrg.link.access;
 
 import java.time.Instant;
+import java.util.Map;
 
 import org.springframework.stereotype.Component;
 
@@ -16,7 +17,12 @@ public class LinkAccessEventRecorder {
 	private final UserAgentParser userAgentParser;
 
 	public void record(Link link, Instant accessedAt, Outcome outcome, ClientRequestInfo requestInfo) {
+		record(link, accessedAt, outcome, requestInfo, Map.of());
+	}
+
+	public void record(Link link, Instant accessedAt, Outcome outcome, ClientRequestInfo requestInfo,
+			Map<String, String> effectiveUtm) {
 		UserAgentInfo userAgentInfo = userAgentParser.parse(requestInfo.userAgent());
-		repository.save(LinkAccessEvent.create(link, accessedAt, outcome, requestInfo, userAgentInfo));
+		repository.save(LinkAccessEvent.create(link, accessedAt, outcome, requestInfo, userAgentInfo, effectiveUtm));
 	}
 }

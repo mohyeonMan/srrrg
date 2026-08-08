@@ -28,18 +28,18 @@ public class StatisticsService {
 	public StatisticsService(JdbcTemplate jdbc) { this.jdbc = jdbc; }
 
 	public StatisticsResponse link(Long linkId, String name, LocalDate from, LocalDate to, Bucket bucket) {
-		return report("LINK", name, "l.id = ?", new Object[] {linkId}, from, to, bucket, List.of(), List.of(), List.of());
+		return report("LINK", name, "l.id = ? AND NOT l.is_deleted", new Object[] {linkId}, from, to, bucket, List.of(), List.of(), List.of());
 	}
 
 	public StatisticsResponse campaign(Long campaignId, String name, LocalDate from, LocalDate to, Bucket bucket) {
 		Period p = period(from, to);
-		return report("CAMPAIGN", name, "l.campaign_id = ?", new Object[] {campaignId}, from, to, bucket,
+		return report("CAMPAIGN", name, "l.campaign_id = ? AND NOT l.is_deleted", new Object[] {campaignId}, from, to, bucket,
 				linkRows(campaignId, p), utmRows(campaignId, p), List.of());
 	}
 
 	public StatisticsResponse project(Long projectId, String name, LocalDate from, LocalDate to, Bucket bucket) {
 		Period p = period(from, to);
-		return report("PROJECT", name, "l.project_id = ?", new Object[] {projectId}, from, to, bucket,
+		return report("PROJECT", name, "l.project_id = ? AND NOT l.is_deleted", new Object[] {projectId}, from, to, bucket,
 				List.of(), List.of(), campaignRows(projectId, p));
 	}
 
@@ -140,7 +140,7 @@ public class StatisticsService {
 				    SELECT COUNT(*) events,COUNT(*) FILTER (WHERE outcome='REDIRECTED') redirects
 				      FROM link_access_events WHERE link_id=l.id AND accessed_at>=? AND accessed_at<?
 				  ) p ON true
-				 WHERE l.campaign_id=? ORDER BY COALESCE(p.events,0) DESC,l.id DESC LIMIT 500
+				 WHERE l.campaign_id=? AND NOT l.is_deleted ORDER BY COALESCE(p.events,0) DESC,l.id DESC LIMIT 500
 				""";
 		return jdbc.query(sql, (rs, row) -> new LinkRow(rs.getString(1), rs.getString(2), rs.getString(3),
 				status(rs.getLong(4), rs.getLong(5)), rs.getLong(6), rs.getLong(7),
@@ -149,22 +149,43 @@ public class StatisticsService {
 
 	private List<UtmRow> utmRows(Long campaignId, Period p) {
 		String sql = """
-				WITH scoped_links AS (SELECT * FROM links WHERE campaign_id=?), all_stats AS (
-				  SELECT e.link_id,COUNT(*) events,COUNT(*) FILTER (WHERE NOT e.is_bot) humans
-				    FROM link_access_events e JOIN scoped_links l ON l.id=e.link_id GROUP BY e.link_id
+				WITH campaign_scope AS (
+				  SELECT id,utm_template_id FROM campaigns WHERE id=?
+				), active_fields AS (
+				  SELECT field.name FROM campaign_scope campaign
+				  JOIN utm_template_fields field ON field.utm_template_id=campaign.utm_template_id
+				   AND field.deleted_at IS NULL
+				), scoped_links AS (
+				  SELECT link.* FROM links link JOIN campaign_scope campaign ON campaign.id=link.campaign_id
+				   WHERE NOT link.is_deleted
+				), current_config AS (
+				  SELECT field.name field_name,COALESCE(value.value,defaults.default_value,'(없음)') field_value,COUNT(*) links
+				    FROM scoped_links link CROSS JOIN active_fields field
+				    LEFT JOIN link_utm_values value ON value.link_id=link.id AND value.field_name=field.name
+				    LEFT JOIN campaign_utm_defaults defaults ON defaults.campaign_id=link.campaign_id AND defaults.field_name=field.name
+				   GROUP BY field.name,COALESCE(value.value,defaults.default_value,'(없음)')
+				), all_per_link AS (
+				  SELECT field.name field_name,COALESCE(event.effective_utm->>field.name,'(없음)') field_value,event.link_id,
+				         COUNT(*) FILTER (WHERE NOT event.is_bot) humans,COUNT(*) events
+				    FROM link_access_events event JOIN scoped_links link ON link.id=event.link_id CROSS JOIN active_fields field
+				   WHERE event.outcome='REDIRECTED'
+				   GROUP BY field.name,COALESCE(event.effective_utm->>field.name,'(없음)'),event.link_id
+				), all_stats AS (
+				  SELECT field_name,field_value,COUNT(*) accessed_links,COUNT(*) FILTER (WHERE humans=0 AND events>0) bot_only_links
+				    FROM all_per_link GROUP BY field_name,field_value
 				), period_stats AS (
-				  SELECT e.link_id,COUNT(*) events,COUNT(*) FILTER (WHERE e.outcome='REDIRECTED') redirects
-				    FROM link_access_events e JOIN scoped_links l ON l.id=e.link_id
-				   WHERE e.accessed_at>=? AND e.accessed_at<? GROUP BY e.link_id
+				  SELECT field.name field_name,COALESCE(event.effective_utm->>field.name,'(없음)') field_value,COUNT(*) redirects
+				    FROM link_access_events event JOIN scoped_links link ON link.id=event.link_id CROSS JOIN active_fields field
+				   WHERE event.outcome='REDIRECTED' AND event.accessed_at>=? AND event.accessed_at<?
+				   GROUP BY field.name,COALESCE(event.effective_utm->>field.name,'(없음)')
+				), keys AS (
+				  SELECT field_name,field_value FROM current_config UNION SELECT field_name,field_value FROM all_stats
 				)
-				SELECT f.name,COALESCE(v.value,d.default_value,'(없음)'),COUNT(*),COUNT(*) FILTER (WHERE COALESCE(a.humans,0)>0),
-				       COUNT(*) FILTER (WHERE COALESCE(a.events,0)>0 AND COALESCE(a.humans,0)=0),
-				       COALESCE(SUM(p.events),0),COALESCE(SUM(p.redirects),0)
-				  FROM scoped_links l JOIN utm_template_fields f ON f.utm_template_id=l.utm_template_id
-				  LEFT JOIN link_utm_values v ON v.link_id=l.id AND v.utm_template_field_id=f.id
-				  LEFT JOIN campaign_utm_defaults d ON d.campaign_id=l.campaign_id AND d.utm_template_field_id=f.id
-				  LEFT JOIN all_stats a ON a.link_id=l.id LEFT JOIN period_stats p ON p.link_id=l.id
-				 GROUP BY f.name,COALESCE(v.value,d.default_value,'(없음)') ORDER BY 6 DESC,f.name,COALESCE(v.value,d.default_value,'(없음)') LIMIT 500
+				SELECT keys.field_name,keys.field_value,COALESCE(config.links,0),COALESCE(all_stats.accessed_links,0),
+				       COALESCE(all_stats.bot_only_links,0),COALESCE(period.redirects,0),COALESCE(period.redirects,0)
+				  FROM keys LEFT JOIN current_config config USING (field_name,field_value)
+				  LEFT JOIN all_stats USING (field_name,field_value) LEFT JOIN period_stats period USING (field_name,field_value)
+				 ORDER BY 6 DESC,keys.field_name,keys.field_value LIMIT 500
 				""";
 		return jdbc.query(sql, (rs, row) -> new UtmRow(rs.getString(1), rs.getString(2), rs.getLong(3), rs.getLong(4),
 				rs.getLong(5), rs.getLong(6), rs.getLong(7)), campaignId, timestamp(p.start), timestamp(p.end));
@@ -173,7 +194,7 @@ public class StatisticsService {
 	private List<CampaignRow> campaignRows(Long projectId, Period p) {
 		String sql = """
 				SELECT c.id,c.name,COUNT(DISTINCT l.id),COUNT(e.id),COUNT(e.id) FILTER (WHERE e.outcome='REDIRECTED')
-				  FROM campaigns c LEFT JOIN links l ON l.campaign_id=c.id
+				  FROM campaigns c LEFT JOIN links l ON l.campaign_id=c.id AND NOT l.is_deleted
 				  LEFT JOIN link_access_events e ON e.link_id=l.id AND e.accessed_at>=? AND e.accessed_at<?
 				 WHERE c.project_id=? GROUP BY c.id ORDER BY 4 DESC,c.id DESC
 				""";

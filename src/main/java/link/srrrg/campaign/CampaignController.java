@@ -173,7 +173,7 @@ public class CampaignController {
 
 	private Map<String, String> toDefaultsMap(List<CampaignUtmDefault> defaults) {
 		Map<String, String> map = new java.util.LinkedHashMap<>();
-		for (CampaignUtmDefault campaignDefault : defaults) map.put(campaignDefault.getField().getName(), campaignDefault.getDefaultValue());
+		for (CampaignUtmDefault campaignDefault : defaults) map.put(campaignDefault.getFieldName(), campaignDefault.getDefaultValue());
 		return map;
 	}
 

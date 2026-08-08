@@ -104,7 +104,7 @@ class CampaignServiceTest {
 	}
 
 	@Test
-	void switchingTemplateDeletesExistingDefaultsForOldTemplate() {
+	void switchingTemplatePreservesNameBasedDefaults() {
 		Campaign campaign = campaignOwnedBy(1L, ProjectRole.EDITOR);
 		when(campaign.getId()).thenReturn(100L);
 		when(campaign.isArchived()).thenReturn(false);
@@ -120,12 +120,11 @@ class CampaignServiceTest {
 
 		service.selectTemplate(5L, 100L, 22L);
 
-		verify(defaults).deleteByCampaignId(100L);
 		verify(campaign).selectTemplate(newTemplate);
 	}
 
 	@Test
-	void selectingSameTemplateDoesNotDeleteDefaults() {
+	void selectingSameTemplateKeepsDefaults() {
 		Campaign campaign = campaignOwnedBy(1L, ProjectRole.EDITOR);
 		when(campaign.getId()).thenReturn(100L);
 		when(campaign.isArchived()).thenReturn(false);
@@ -138,7 +137,7 @@ class CampaignServiceTest {
 
 		service.selectTemplate(5L, 100L, 11L);
 
-		verify(defaults, never()).deleteByCampaignId(any());
+		verify(campaign).selectTemplate(template);
 	}
 
 	@Test
@@ -152,10 +151,10 @@ class CampaignServiceTest {
 		when(campaigns.findById(100L)).thenReturn(Optional.of(campaign));
 
 		UtmTemplateField field = mock(UtmTemplateField.class);
-		when(field.getId()).thenReturn(50L);
+		when(field.getName()).thenReturn("utm_source");
 		when(fields.findByUtmTemplateIdAndNameAndDeletedAtIsNull(11L, "utm_source")).thenReturn(Optional.of(field));
 		CampaignUtmDefault existing = mock(CampaignUtmDefault.class);
-		when(defaults.findByCampaignIdAndFieldId(100L, 50L)).thenReturn(Optional.of(existing));
+		when(defaults.findByCampaignIdAndFieldName(100L, "utm_source")).thenReturn(Optional.of(existing));
 
 		java.util.Map<String, String> updates = new java.util.HashMap<>();
 		updates.put("utm_source", null);
