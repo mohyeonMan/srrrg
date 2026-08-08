@@ -323,7 +323,7 @@ public class CampaignCsvService {
 				if (!cell.isEmpty()) rawValues.put(header, cell);
 			}
 			try {
-				resolved = linkCreation.resolveUtmValues(campaign, campaign.getUtmTemplate(), rawValues);
+				resolved = linkCreation.resolveUtmValues(campaign.getUtmTemplate(), rawValues);
 			} catch (IllegalArgumentException exception) {
 				preFailCode = "INVALID_UTM_VALUE";
 				preFailMessage = exception.getMessage();

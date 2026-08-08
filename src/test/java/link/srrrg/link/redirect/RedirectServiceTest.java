@@ -38,12 +38,14 @@ import link.srrrg.link.risk.RiskVerdict;
 import link.srrrg.link.risk.UrlRiskAssessment;
 import link.srrrg.link.risk.UrlRiskVerificationService;
 import link.srrrg.campaign.Campaign;
+import link.srrrg.campaign.CampaignUtmDefaultRepository;
 import link.srrrg.project.Project;
 
 class RedirectServiceTest {
 
 	private final LinkRepository repository = mock(LinkRepository.class);
 	private final LinkUtmValueRepository linkUtmValueRepository = mock(LinkUtmValueRepository.class);
+	private final CampaignUtmDefaultRepository campaignUtmDefaults = mock(CampaignUtmDefaultRepository.class);
 	private final UrlValidator validator = mock(UrlValidator.class);
 	private final UrlRiskVerificationService riskVerificationService = mock(UrlRiskVerificationService.class);
 	private final LinkAccessEventRecorder accessRecorder = mock(LinkAccessEventRecorder.class);
@@ -63,7 +65,7 @@ class RedirectServiceTest {
 	void setUp() {
 		registry = new SimpleMeterRegistry();
 		metrics = new SrrrgMetrics(registry);
-		service = new RedirectService(repository, linkUtmValueRepository, validator, riskVerificationService,
+		service = new RedirectService(repository, linkUtmValueRepository, campaignUtmDefaults, validator, riskVerificationService,
 				accessRecorder, transactions, metrics, domains);
 		when(domains.resolve("srrrg.link")).thenReturn(Optional.of(new HostRoute(null)));
 	}
@@ -73,6 +75,7 @@ class RedirectServiceTest {
 		try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
 			context.registerBean(LinkRepository.class, () -> repository);
 			context.registerBean(LinkUtmValueRepository.class, () -> linkUtmValueRepository);
+			context.registerBean(CampaignUtmDefaultRepository.class, () -> campaignUtmDefaults);
 			context.registerBean(UrlValidator.class, () -> validator);
 			context.registerBean(UrlRiskVerificationService.class, () -> riskVerificationService);
 			context.registerBean(LinkAccessEventRecorder.class, () -> accessRecorder);

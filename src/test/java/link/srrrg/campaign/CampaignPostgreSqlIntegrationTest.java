@@ -128,6 +128,28 @@ class CampaignPostgreSqlIntegrationTest {
 	}
 
 	@Test
+	void campaignWithUtmTemplateCanBeReadAfterServiceTransactionEnds() throws Exception {
+		Owner owner = newOwner();
+		Long templateId = createTemplate(owner, "utm_source");
+		Long campaignId = createCampaign(owner, "템플릿 조회 캠페인", templateId);
+
+		mockMvc.perform(get("/api/web/projects/{projectId}/campaigns", owner.projectId).cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.items[0].utmTemplateId").value(templateId))
+				.andExpect(jsonPath("$.items[0].utmTemplateName").isNotEmpty());
+
+		mockMvc.perform(get("/api/web/campaigns/{campaignId}", campaignId).cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.utmTemplateId").value(templateId))
+				.andExpect(jsonPath("$.utmTemplateName").isNotEmpty());
+
+		mockMvc.perform(get("/api/web/projects/{projectId}/overview", owner.projectId).cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.campaigns[0].utmTemplateId").value(templateId))
+				.andExpect(jsonPath("$.campaigns[0].utmTemplateName").isNotEmpty());
+	}
+
+	@Test
 	void createsCampaignLinkMergingUtmAndPreservingExistingQueryOnRedirect() throws Exception {
 		Owner owner = newOwner();
 
@@ -146,6 +168,40 @@ class CampaignPostgreSqlIntegrationTest {
 				.andReturn();
 		String location = redirect.getResponse().getHeader("Location");
 		assertThat(location).contains("lang=ko").contains("utm_source=newsletter");
+	}
+
+	@Test
+	void omittedUtmValueDynamicallyUsesCurrentCampaignDefaultWithoutCopyingItToLink() throws Exception {
+		Owner owner = newOwner();
+		Long templateId = createTemplate(owner, "utm_source");
+		Long campaignId = createCampaign(owner, "동적 UTM 캠페인", templateId);
+		updateUtmDefault(owner, campaignId, "first-source");
+
+		MvcResult created = mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/dynamic\"}"))
+				.andExpect(status().isCreated()).andReturn();
+		String code = readJson(created, "code");
+		Long linkId = jdbcTemplate.queryForObject("SELECT id FROM links WHERE code=?", Long.class, code);
+		assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM link_utm_values WHERE link_id=?", Long.class, linkId)).isZero();
+		MvcResult explicitCreated = mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/explicit\",\"utmValues\":{\"utm_source\":\"fixed-source\"}}"))
+				.andExpect(status().isCreated()).andReturn();
+		String explicitCode = readJson(explicitCreated, "code");
+
+		mockMvc.perform(get("/{code}", code).header("Host", owner.host))
+				.andExpect(status().isFound()).andExpect(header().string("Location", org.hamcrest.Matchers.containsString("utm_source=first-source")));
+		updateUtmDefault(owner, campaignId, "second-source");
+		mockMvc.perform(get("/{code}", code).header("Host", owner.host))
+				.andExpect(status().isFound()).andExpect(header().string("Location", org.hamcrest.Matchers.containsString("utm_source=second-source")));
+		mockMvc.perform(get("/{code}", explicitCode).header("Host", owner.host))
+				.andExpect(status().isFound()).andExpect(header().string("Location", org.hamcrest.Matchers.containsString("utm_source=fixed-source")));
+
+		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId).cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.utm[0].value").value("second-source"))
+				.andExpect(jsonPath("$.utm[0].entries").value(2));
 	}
 
 	@Test
@@ -419,6 +475,13 @@ class CampaignPostgreSqlIntegrationTest {
 					.andExpect(status().isOk());
 		}
 		return campaignId;
+	}
+
+	private void updateUtmDefault(Owner owner, Long campaignId, String value) throws Exception {
+		mockMvc.perform(patch("/api/web/campaigns/{id}/utm-defaults", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"defaults\":{\"utm_source\":\"" + value + "\"}}"))
+				.andExpect(status().isOk());
 	}
 
 	private Owner newOwner() {

@@ -4,11 +4,19 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CampaignRepository extends JpaRepository<Campaign, Long> {
+	@Override
+	@EntityGraph(attributePaths = "utmTemplate")
+	Optional<Campaign> findById(Long id);
+
+	@EntityGraph(attributePaths = "utmTemplate")
 	Optional<Campaign> findByIdAndProjectId(Long id, Long projectId);
+	@EntityGraph(attributePaths = "utmTemplate")
 	List<Campaign> findByProjectIdAndArchivedAtIsNullOrderByIdDesc(Long projectId, Pageable pageable);
+	@EntityGraph(attributePaths = "utmTemplate")
 	List<Campaign> findByProjectIdAndArchivedAtIsNullAndIdLessThanOrderByIdDesc(Long projectId, Long id, Pageable pageable);
 	long countByUtmTemplateIdAndArchivedAtIsNull(Long utmTemplateId);
 }

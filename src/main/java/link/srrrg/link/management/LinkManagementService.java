@@ -196,7 +196,7 @@ public class LinkManagementService {
 
 	/**
 	 * campaign 링크 생성 유스케이스. UI 단일 생성, JSON batch, CSV worker가 모두 이 메서드를 호출한다.
-	 * resolvedUtmValues는 이미 요청값과 캠페인 기본값을 해석한 최종 필드별 값이다.
+	 * resolvedUtmValues에는 링크 요청에 명시한 값만 들어간다. 누락한 값은 리다이렉트 시 현재 캠페인 기본값을 사용한다.
 	 */
 	public Link createForCampaign(String originalUrl, Instant expiresAt, Project project, ProjectDomain domain, User createdBy,
 			Long apiKeyId, String idempotencyKey, String requestHash,

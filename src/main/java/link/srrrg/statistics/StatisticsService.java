@@ -157,13 +157,14 @@ public class StatisticsService {
 				    FROM link_access_events e JOIN scoped_links l ON l.id=e.link_id
 				   WHERE e.accessed_at>=? AND e.accessed_at<? GROUP BY e.link_id
 				)
-				SELECT f.name,COALESCE(v.value,'(없음)'),COUNT(*),COUNT(*) FILTER (WHERE COALESCE(a.humans,0)>0),
+				SELECT f.name,COALESCE(v.value,d.default_value,'(없음)'),COUNT(*),COUNT(*) FILTER (WHERE COALESCE(a.humans,0)>0),
 				       COUNT(*) FILTER (WHERE COALESCE(a.events,0)>0 AND COALESCE(a.humans,0)=0),
 				       COALESCE(SUM(p.events),0),COALESCE(SUM(p.redirects),0)
 				  FROM scoped_links l JOIN utm_template_fields f ON f.utm_template_id=l.utm_template_id
 				  LEFT JOIN link_utm_values v ON v.link_id=l.id AND v.utm_template_field_id=f.id
+				  LEFT JOIN campaign_utm_defaults d ON d.campaign_id=l.campaign_id AND d.utm_template_field_id=f.id
 				  LEFT JOIN all_stats a ON a.link_id=l.id LEFT JOIN period_stats p ON p.link_id=l.id
-				 GROUP BY f.name,COALESCE(v.value,'(없음)') ORDER BY 6 DESC,f.name,COALESCE(v.value,'(없음)') LIMIT 500
+				 GROUP BY f.name,COALESCE(v.value,d.default_value,'(없음)') ORDER BY 6 DESC,f.name,COALESCE(v.value,d.default_value,'(없음)') LIMIT 500
 				""";
 		return jdbc.query(sql, (rs, row) -> new UtmRow(rs.getString(1), rs.getString(2), rs.getLong(3), rs.getLong(4),
 				rs.getLong(5), rs.getLong(6), rs.getLong(7)), campaignId, timestamp(p.start), timestamp(p.end));

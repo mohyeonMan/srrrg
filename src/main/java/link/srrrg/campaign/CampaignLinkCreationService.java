@@ -33,18 +33,16 @@ public class CampaignLinkCreationService {
 
 	private final CampaignService campaignService;
 	private final UtmTemplateFieldRepository fields;
-	private final CampaignUtmDefaultRepository defaults;
 	private final LinkManagementService linkManagement;
 	private final ProjectDomainService domains;
 	private final ProjectMemberRepository members;
 	private final RateLimitService rateLimitService;
 
 	public CampaignLinkCreationService(CampaignService campaignService, UtmTemplateFieldRepository fields,
-			CampaignUtmDefaultRepository defaults, LinkManagementService linkManagement,
+			LinkManagementService linkManagement,
 			ProjectDomainService domains, ProjectMemberRepository members, RateLimitService rateLimitService) {
 		this.campaignService = campaignService;
 		this.fields = fields;
-		this.defaults = defaults;
 		this.linkManagement = linkManagement;
 		this.domains = domains;
 		this.members = members;
@@ -80,13 +78,13 @@ public class CampaignLinkCreationService {
 	private Link create(Campaign campaign, Project project, User createdBy, Long apiKeyId, String idempotencyKey, String requestHash,
 			CreateCampaignLinkRequest request) {
 		UtmTemplate template = campaign.getUtmTemplate();
-		Map<UtmTemplateField, String> resolved = resolveUtmValues(campaign, template, request.utmValuesOrEmpty());
+		Map<UtmTemplateField, String> resolved = resolveUtmValues(template, request.utmValuesOrEmpty());
 		ProjectDomain domain = domains.get(project.getId());
 		return linkManagement.createForCampaign(request.normalizedOriginalUrl(), request.expiresAt(), project, domain, createdBy,
 				apiKeyId, idempotencyKey, requestHash, campaign, template, request.normalizedExternalId(), resolved);
 	}
 
-	public Map<UtmTemplateField, String> resolveUtmValues(Campaign campaign, UtmTemplate template, Map<String, String> requestValues) {
+	public Map<UtmTemplateField, String> resolveUtmValues(UtmTemplate template, Map<String, String> requestValues) {
 		if (template == null) {
 			if (!requestValues.isEmpty()) {
 				throw new IllegalArgumentException("캠페인에 선택된 UTM 템플릿이 없어 UTM 값을 받을 수 없습니다.");
@@ -103,16 +101,9 @@ public class CampaignLinkCreationService {
 				throw new IllegalArgumentException("활성 UTM 필드가 아닙니다: " + requestedName);
 			}
 		}
-		Map<String, String> defaultsByName = new LinkedHashMap<>();
-		for (CampaignUtmDefault campaignDefault : defaults.findByCampaignIdOrderByFieldNameAsc(campaign.getId())) {
-			defaultsByName.put(campaignDefault.getField().getName(), campaignDefault.getDefaultValue());
-		}
-
 		Map<UtmTemplateField, String> resolved = new LinkedHashMap<>();
 		for (UtmTemplateField field : activeFields) {
-			String value = requestValues.containsKey(field.getName())
-					? requestValues.get(field.getName())
-					: defaultsByName.get(field.getName());
+			String value = requestValues.get(field.getName());
 			if (value != null && !value.isBlank()) {
 				resolved.put(field, validUtmValue(value));
 			}
