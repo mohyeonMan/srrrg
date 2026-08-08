@@ -283,6 +283,10 @@
 	font-size: 12px;
 }
 
+.project-admin-section .project-domain-warning {
+	color: var(--color-danger);
+}
+
 .project-inline-form,
 .member-list,
 .invitation-list {

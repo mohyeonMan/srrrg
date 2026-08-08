@@ -50,6 +50,7 @@ public class ProjectController {
 		return new ProjectOverviewResponse(projects.projectLinks(p.userId(), projectId).stream().map(ProjectLinkResponse::from).toList(), campaignSummaries);
 	}
 	@GetMapping("/projects/{projectId}/domains") public List<DomainResponse> domains(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId) { return List.of(DomainResponse.from(projects.projectDomain(p.userId(), projectId))); }
+	@PatchMapping("/projects/{projectId}/domains/{domainId}") public DomainResponse changeDomain(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId, @PathVariable Long domainId, @Valid @RequestBody ChangeDomainRequest request) { return DomainResponse.from(projects.changeDomain(p.userId(), projectId, domainId, request.slug())); }
 	@PostMapping("/projects/{projectId}/links") public ResponseEntity<ProjectLinkResponse> createLink(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId, @Valid @RequestBody CreateLinkRequest request) { return ResponseEntity.status(HttpStatus.CREATED).body(ProjectLinkResponse.from(projects.createProjectLink(p.userId(), projectId, request))); }
 	@GetMapping("/projects/{projectId}/links/{code}") public LinkManagementResponse link(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId, @PathVariable String code) { return projects.projectLink(p.userId(), projectId, code); }
 	@PatchMapping("/projects/{projectId}/links/{code}") public LinkManagementResponse updateLink(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId, @PathVariable String code, @RequestBody UpdateLinkRequest request) { return projects.updateProjectLink(p.userId(), projectId, code, request); }
@@ -71,6 +72,7 @@ public class ProjectController {
 	public record RenameProjectRequest(@NotBlank @Size(max = 100) String name) { }
 	public record InviteRequest(@Email @NotBlank @Size(max = 320) String email, @NotNull ProjectRole role) { }
 	public record ChangeRoleRequest(@NotNull ProjectRole role) { }
+	public record ChangeDomainRequest(@NotBlank @Size(min = 3, max = 63) String slug) { }
 	public record CreateApiKeyRequest(@NotBlank @Size(max = 100) String name, @NotNull Set<@NotBlank String> scopes, Instant expiresAt) { }
 	public record AcceptInvitationResponse(Long projectId, boolean alreadyMember) { }
 	public record ProjectResponse(Long id, String name, String slug, ProjectRole role) { static ProjectResponse from(ProjectMember member) { return new ProjectResponse(member.getProject().getId(), member.getProject().getName(), member.getProject().getSlug(), member.getRole()); } }

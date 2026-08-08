@@ -44,6 +44,10 @@ public class ProjectDomain {
 		return new ProjectDomain(project, hostname);
 	}
 
+	public void changeHostname(String hostname) {
+		this.hostname = hostname;
+	}
+
 	@PrePersist
 	void onCreate() {
 		createdAt = Instant.now();

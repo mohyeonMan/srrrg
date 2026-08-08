@@ -473,9 +473,10 @@ DELETE /api/web/projects/{projectId}/members/{userId}
 
 ```text
 GET    /api/web/projects/{projectId}/domains
+PATCH  /api/web/projects/{projectId}/domains/{domainId}
 ```
 
-플랫폼 서브도메인은 프로젝트 생성 시 자동 발급하므로 별도 등록·검증·수정·삭제 endpoint를 만들지 않는다.
+플랫폼 서브도메인은 프로젝트 생성 시 자동 발급한다. `OWNER`만 DNS label 규칙과 예약어·중복 검사를 거쳐 변경할 수 있으며, 링크의 `domain_id`는 유지하고 기존 hostname은 즉시 해제한다. 별도 등록·검증·삭제 endpoint는 만들지 않는다.
 
 ### 7.3 프로젝트 API key
 

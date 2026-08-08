@@ -142,6 +142,12 @@
 								<label class="field" for="rename-project-name"><span class="field-label">프로젝트 이름</span><input id="rename-project-name" class="field-input" name="name" maxlength="100" required></label>
 								<button class="secondary-button" type="submit">이름 저장</button>
 							</form>
+							<form id="change-project-domain-form" class="project-inline-form" novalidate>
+								<label class="field" for="change-project-domain"><span class="field-label">서브도메인</span><input id="change-project-domain" class="field-input" name="slug" minlength="3" maxlength="63" autocapitalize="none" autocomplete="off" spellcheck="false" required></label>
+								<button class="secondary-button" type="submit">도메인 변경</button>
+							</form>
+							<p class="project-domain-warning">변경하면 기존 서브도메인은 즉시 사용할 수 없습니다.</p>
+							<p id="domain-change-message" class="form-message" role="status" aria-live="polite"></p>
 							<button id="delete-project-button" class="danger-button" type="button">프로젝트 삭제</button>
 						</section>
 

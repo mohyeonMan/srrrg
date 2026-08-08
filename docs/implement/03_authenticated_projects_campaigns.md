@@ -90,7 +90,7 @@ UI 변경 시에는 `docs/design/v2/*`도 읽는다.
 - 프로젝트·멤버 단계 적용 후, 기본 개인 프로젝트가 없는 로그인 사용자에게 하나를 만든다.
 - 프로젝트는 OWNER, EDITOR, VIEWER 멤버를 가진다.
 - 미가입 사용자를 포함한 이메일 초대를 최초 범위에 포함한다.
-- 프로젝트 slug는 lower-case DNS label 3~63자, 전체 unique, 생성 후 변경 불가로 둔다. 생략 시 `p-`와 영문 소문자·숫자 난수 8자리로 생성한다.
+- 프로젝트 slug는 lower-case DNS label 3~63자이며 전체 unique다. 생략 시 `p-`와 영문 소문자·숫자 난수 8자리로 생성한다. `OWNER`는 경고를 확인한 뒤 변경할 수 있고 기존 서브도메인은 즉시 사용할 수 없게 한다.
 - `actuator`, `admin`, `api`, `app`, `auth`, `cdn`, `cname`, `dev`, `docs`, `help`, `login`, `mail`, `manage`, `oauth`, `oauth2`, `openapi`, `static`, `status`, `support`, `www` slug를 예약한다.
 - 프로젝트 삭제는 `archived_at` 기반 soft delete로 처리하고 보관된 프로젝트의 링크와 API key 사용을 차단한다.
 - 기존 프로젝트와 링크의 `created_by_user_id`는 nullable로 두고 신규 생성과 익명 링크 귀속부터 기록한다.

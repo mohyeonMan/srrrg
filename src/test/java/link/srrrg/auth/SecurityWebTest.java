@@ -288,6 +288,24 @@ class SecurityWebTest {
 	}
 
 	@Test
+	void changesProjectPlatformDomainWithJwtAndCsrf() throws Exception {
+		when(jwtService.verify("access-token")).thenReturn(1L);
+		link.srrrg.domain.ProjectDomain domain = org.mockito.Mockito.mock(link.srrrg.domain.ProjectDomain.class);
+		when(domain.getId()).thenReturn(3L);
+		when(domain.getHostname()).thenReturn("renamed.srrrg.link");
+		when(projectService.changeDomain(1L, 7L, 3L, "renamed")).thenReturn(domain);
+		jakarta.servlet.http.Cookie jwt = new jakarta.servlet.http.Cookie("srrrg_access", "access-token");
+		MvcResult page = mockMvc.perform(get("/login")).andExpect(status().isOk()).andReturn();
+		jakarta.servlet.http.Cookie csrf = page.getResponse().getCookie("XSRF-TOKEN");
+
+		mockMvc.perform(patch("/api/web/projects/7/domains/3")
+					.cookie(jwt, csrf).header("X-XSRF-TOKEN", csrf.getValue())
+					.contentType(MediaType.APPLICATION_JSON).content("{\"slug\":\"renamed\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.hostname").value("renamed.srrrg.link"));
+	}
+
+	@Test
 	void createsProjectLinkWithApiKeyWithoutJwtFilter() throws Exception {
 		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
 				.thenReturn(new ApiKeyService.ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_WRITE)));

@@ -431,6 +431,20 @@ class WebAuthPostgreSqlIntegrationTest {
 				"SELECT secret_key_hash IS NULL FROM links WHERE code = ?", Boolean.class, webCode)).isTrue();
 		assertThat(jdbcTemplate.queryForObject(
 				"SELECT domain_id FROM links WHERE code = ?", Long.class, webCode)).isEqualTo(domainId);
+		String previousProjectHost = projectHost;
+		projectHost = "renamed-project.srrrg.link";
+		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(
+					"/api/web/projects/{projectId}/domains/{domainId}", projectId, domainId)
+					.with(csrf()).cookie(cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"slug\":\"renamed-project\"}"))
+				.andExpect(status().isOk())
+				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.hostname").value(projectHost));
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT slug FROM projects WHERE id = ?", String.class, projectId)).isEqualTo("renamed-project");
+		assertThat(jdbcTemplate.queryForObject(
+				"SELECT domain_id FROM links WHERE code = ?", Long.class, webCode)).isEqualTo(domainId);
+		mockMvc.perform(get("/{code}", webCode).header("Host", previousProjectHost))
+				.andExpect(status().isNotFound());
 		mockMvc.perform(get("/{code}", webCode)
 					.header("Host", projectHost)
 					.header("X-Forwarded-Host", "attacker.example"))

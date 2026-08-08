@@ -89,6 +89,7 @@
 - [x] 프로젝트 `UNIQUE(domain_id, code)` partial index
 - [x] 플랫폼 서브도메인 생성과 예약어 검사
 - [x] 프로젝트 생성 시 플랫폼 서브도메인 자동 할당
+- [x] OWNER의 플랫폼 서브도메인 변경과 기존 hostname 즉시 해제
 - [x] wildcard DNS·TLS 배포 검증
 - [x] Host + code 기반 리다이렉트 조회
 - [x] 등록되지 않은 Host와 타 프로젝트 도메인 차단 테스트

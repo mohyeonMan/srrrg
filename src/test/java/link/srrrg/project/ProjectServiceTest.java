@@ -302,6 +302,34 @@ class ProjectServiceTest {
 	}
 
 	@Test
+	void ownerChangesProjectPlatformDomain() {
+		Project project = mock(Project.class);
+		ProjectMember owner = mock(ProjectMember.class);
+		ProjectDomain domain = mock(ProjectDomain.class);
+		when(owner.getRole()).thenReturn(ProjectRole.OWNER);
+		when(owner.getProject()).thenReturn(project);
+		when(project.getSlug()).thenReturn("before");
+		when(members.findByIdProjectIdAndIdUserId(1L, 2L)).thenReturn(Optional.of(owner));
+		when(domains.change(1L, 3L, "after-domain")).thenReturn(domain);
+
+		assertThat(service.changeDomain(2L, 1L, 3L, " After-Domain ")).isSameAs(domain);
+		verify(project).changeSlug("after-domain");
+		verify(domains).change(1L, 3L, "after-domain");
+	}
+
+	@Test
+	void viewerCannotChangeProjectPlatformDomain() {
+		ProjectMember viewer = mock(ProjectMember.class);
+		when(viewer.getRole()).thenReturn(ProjectRole.VIEWER);
+		when(viewer.getProject()).thenReturn(mock(Project.class));
+		when(members.findByIdProjectIdAndIdUserId(1L, 2L)).thenReturn(Optional.of(viewer));
+
+		assertThatThrownBy(() -> service.changeDomain(2L, 1L, 3L, "after-domain"))
+				.isInstanceOf(SecurityException.class);
+		verify(domains, never()).change(any(), any(), any());
+	}
+
+	@Test
 	void rejectsInvitationForArchivedProject() {
 		ProjectInvitation invitation = mock(ProjectInvitation.class);
 		Project project = mock(Project.class);

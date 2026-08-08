@@ -3,7 +3,7 @@
 	if (!app) return;
 
 	const base = document.querySelector('meta[name="context-path"]')?.content.replace(/\/$/, '') || '';
-	const state = { selected: null, domain: null, expiresOption: 'none', refreshing: null };
+	const state = { selected: null, domain: null, domainId: null, expiresOption: 'none', refreshing: null };
 	const byId = (id) => document.getElementById(id);
 	const projectMessage = byId('project-message');
 	const linkMessage = byId('link-create-message');
@@ -106,11 +106,14 @@
 	async function selectProject(project) {
 		state.selected = project;
 		state.domain = null;
+		state.domainId = null;
 		byId('project-empty').hidden = true;
 		byId('project-detail').hidden = false;
 		byId('project-name').textContent = project.name;
 		byId('project-role').textContent = project.role;
 		byId('rename-project-name').value = project.name;
+		byId('change-project-domain').value = project.slug;
+		setMessage(byId('domain-change-message'), '');
 		byId('project-domain').textContent = '도메인을 불러오는 중...';
 		byId('copy-project-domain').disabled = true;
 		byId('project-link-result').hidden = true;
@@ -144,6 +147,7 @@
 
 		if (domainsResponse.ok) {
 			const domains = await domainsResponse.json();
+			state.domainId = domains[0]?.id || null;
 			state.domain = domains[0]?.hostname || null;
 			byId('project-domain').textContent = state.domain || '연결된 도메인이 없습니다.';
 			byId('copy-project-domain').disabled = !state.domain;
@@ -469,6 +473,25 @@
 		if (!response.ok) return setMessage(projectMessage, responseBody.message || '프로젝트 이름을 변경할 수 없습니다.', true);
 		setMessage(projectMessage, '프로젝트 이름을 변경했습니다.');
 		await loadProjects(responseBody.id);
+	});
+
+	byId('change-project-domain-form').addEventListener('submit', async (event) => {
+		event.preventDefault();
+		if (!state.selected || !state.domainId) return;
+		const slug = new FormData(event.target).get('slug')?.trim().toLowerCase();
+		const message = byId('domain-change-message');
+		if (!slug || !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])$/.test(slug) || slug.length < 3 || slug.length > 63) {
+			return setMessage(message, '서브도메인은 영문 소문자, 숫자, 하이픈을 사용한 3~63자로 입력하세요.', true);
+		}
+		if (slug === state.selected.slug) return setMessage(message, '현재 사용 중인 서브도메인입니다.');
+		if (!confirm(`서브도메인을 “${slug}”로 변경할까요? 기존 주소는 즉시 사용할 수 없게 됩니다.`)) return;
+		const response = await request(`${base}/api/web/projects/${state.selected.id}/domains/${state.domainId}`, {
+			method: 'PATCH', body: JSON.stringify({ slug })
+		});
+		const responseBody = await body(response);
+		if (!response.ok) return setMessage(message, responseBody.message || '서브도메인을 변경할 수 없습니다.', true);
+		await loadProjects(state.selected.id);
+		setMessage(byId('domain-change-message'), '서브도메인을 변경했습니다.');
 	});
 
 	byId('delete-project-button').addEventListener('click', async () => {

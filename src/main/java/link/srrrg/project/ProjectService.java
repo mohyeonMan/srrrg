@@ -99,6 +99,21 @@ public class ProjectService {
 	}
 
 	@Transactional
+	public ProjectDomain changeDomain(Long userId, Long projectId, Long domainId, String requestedSlug) {
+		Project project = requireRole(userId, projectId, ProjectRole.OWNER).getProject();
+		String slug = normalizedSlug(requestedSlug);
+		if (!slug.equals(project.getSlug()) && projects.existsBySlug(slug)) {
+			throw new IllegalArgumentException("이미 사용 중인 서브도메인입니다.");
+		}
+		project.changeSlug(slug);
+		try {
+			return domains.change(projectId, domainId, slug);
+		} catch (DataIntegrityViolationException exception) {
+			throw new IllegalArgumentException("이미 사용 중인 서브도메인입니다.", exception);
+		}
+	}
+
+	@Transactional
 	public void archive(Long userId, Long projectId) {
 		requireRole(userId, projectId, ProjectRole.OWNER).getProject().archive();
 	}
@@ -255,10 +270,15 @@ public class ProjectService {
 			}
 			throw new IllegalStateException("프로젝트 slug를 생성하지 못했습니다.");
 		}
+		String normalized = normalizedSlug(requested);
+		if (projects.existsBySlug(normalized)) throw new IllegalArgumentException("이미 사용 중인 프로젝트 slug입니다.");
+		return normalized;
+	}
+	private String normalizedSlug(String requested) {
+		if (requested == null) throw new IllegalArgumentException("프로젝트 slug가 올바르지 않습니다.");
 		String normalized = requested.trim().toLowerCase(Locale.ROOT);
 		if (normalized.length() < 3 || normalized.length() > 63 || !normalized.matches("[a-z0-9](?:[a-z0-9-]*[a-z0-9])")
 				|| domains.isReservedSlug(normalized)) throw new IllegalArgumentException("프로젝트 slug가 올바르지 않습니다.");
-		if (projects.existsBySlug(normalized)) throw new IllegalArgumentException("이미 사용 중인 프로젝트 slug입니다.");
 		return normalized;
 	}
 	private String validEmail(String value) { if (value == null || !value.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$") || value.length() > 320) throw new IllegalArgumentException("올바른 이메일을 입력하세요."); return value.trim().toLowerCase(java.util.Locale.ROOT); }

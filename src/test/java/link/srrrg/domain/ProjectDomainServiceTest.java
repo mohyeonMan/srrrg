@@ -2,6 +2,7 @@ package link.srrrg.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
@@ -38,5 +39,16 @@ class ProjectDomainServiceTest {
 		assertThat(service.resolve("unknown.srrrg.link")).isEmpty();
 		assertThat(service.resolve("acme.srrrg.link, attacker.example")).isEmpty();
 		assertThat(service.isReservedSlug("admin")).isTrue();
+	}
+
+	@Test
+	void changesPlatformHostnameWithoutReplacingDomain() {
+		ProjectDomain domain = mock(ProjectDomain.class);
+		when(repository.findByIdAndProjectId(3L, 7L)).thenReturn(Optional.of(domain));
+		when(repository.saveAndFlush(domain)).thenReturn(domain);
+		ProjectDomainService service = new ProjectDomainService(repository, "https://srrrg.link");
+
+		assertThat(service.change(7L, 3L, "renamed")).isSameAs(domain);
+		verify(domain).changeHostname("renamed.srrrg.link");
 	}
 }

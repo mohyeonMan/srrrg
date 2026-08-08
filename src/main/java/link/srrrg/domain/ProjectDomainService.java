@@ -39,6 +39,13 @@ public class ProjectDomainService {
 				.orElseThrow(() -> new IllegalStateException("프로젝트 도메인을 찾을 수 없습니다."));
 	}
 
+	public ProjectDomain change(Long projectId, Long domainId, String slug) {
+		ProjectDomain domain = domains.findByIdAndProjectId(domainId, projectId)
+				.orElseThrow(() -> new IllegalArgumentException("프로젝트 도메인을 찾을 수 없습니다."));
+		domain.changeHostname(slug + "." + baseHostname);
+		return domains.saveAndFlush(domain);
+	}
+
 	public Optional<HostRoute> resolve(String hostHeader) {
 		String hostname = hostname(hostHeader);
 		if (hostname == null) return Optional.empty();

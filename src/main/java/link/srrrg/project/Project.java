@@ -51,6 +51,7 @@ public class Project {
 	public static Project create(String name, String slug, User createdBy) { return new Project(name, slug, createdBy); }
 
 	public void rename(String name) { this.name = name; }
+	public void changeSlug(String slug) { this.slug = slug; }
 	public void archive() { this.archivedAt = Instant.now(); }
 
 	@PrePersist void onCreate() { createdAt = updatedAt = Instant.now(); }
