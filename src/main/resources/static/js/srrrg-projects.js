@@ -188,7 +188,8 @@
 			const meta = element('div', 'project-link-meta');
 			meta.append(
 				element('span', '', link.expiresAt ? `만료 ${formatDate(link.expiresAt)}` : '만료 없음'),
-				element('span', '', `진입 ${link.accessCount.toLocaleString()} · 이동 ${link.redirectCount.toLocaleString()}`)
+				element('span', '', `진입 ${link.accessCount.toLocaleString()} · 이동 ${link.redirectCount.toLocaleString()}`),
+				statisticsLink(`${base}/statistics?projectId=${state.selected.id}&code=${encodeURIComponent(link.code)}`)
 			);
 			row.append(main, meta);
 			return row;
@@ -209,12 +210,15 @@
 			link.href = `${base}/campaigns?projectId=${state.selected.id}&campaignId=${campaign.id}`;
 			main.append(link, element('p', 'project-link-original', campaign.description || '설명 없음'));
 			const meta = element('div', 'project-link-meta');
-			meta.append(element('span', '', campaign.utmTemplateName ? `템플릿 · ${campaign.utmTemplateName}` : 'UTM 템플릿 없음'));
+			meta.append(element('span', '', campaign.utmTemplateName ? `템플릿 · ${campaign.utmTemplateName}` : 'UTM 템플릿 없음'),
+				statisticsLink(`${base}/statistics?projectId=${state.selected.id}&campaignId=${campaign.id}`));
 			row.append(main, meta);
 			return row;
 		});
 		replaceChildren(byId('campaign-list'), rows);
 	}
+
+	function statisticsLink(href) { const link = element('a', '', '통계'); link.href = href; return link; }
 
 	function renderMembers(members) {
 		const rows = members.map((member) => {
@@ -441,9 +445,13 @@
 	byId('create-campaign-form').addEventListener('submit', async (event) => {
 		event.preventDefault();
 		if (!state.selected) return;
-		const name = new FormData(event.target).get('name')?.trim();
+		const data = new FormData(event.target);
+		const name = data.get('name')?.trim();
 		if (!name) return setMessage(byId('campaign-message'), '캠페인 이름을 입력하세요.', true);
-		const response = await request(`${base}/api/web/projects/${state.selected.id}/campaigns`, { method: 'POST', body: JSON.stringify({ name }) });
+		const defaultOriginalUrl = data.get('defaultOriginalUrl')?.trim() || null;
+		const response = await request(`${base}/api/web/projects/${state.selected.id}/campaigns`, {
+			method: 'POST', body: JSON.stringify({ name, defaultOriginalUrl })
+		});
 		const responseBody = await body(response);
 		if (!response.ok) return setMessage(byId('campaign-message'), responseBody.message || '캠페인을 만들 수 없습니다.', true);
 		event.target.reset();

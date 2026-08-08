@@ -32,6 +32,7 @@ import link.srrrg.campaign.CampaignController.ImportResponse;
 import link.srrrg.campaign.CampaignController.SelectTemplateRequest;
 import link.srrrg.campaign.CampaignController.UpdateUtmDefaultsRequest;
 import link.srrrg.campaign.dto.CreateCampaignLinkRequest;
+import link.srrrg.campaign.dto.UpdateCampaignRequest;
 import link.srrrg.campaign.importing.CampaignCsvService;
 import link.srrrg.campaign.importing.CampaignImport;
 import link.srrrg.campaign.importing.CampaignImportRepository;
@@ -66,7 +67,21 @@ public class PublicCampaignController {
 	public ResponseEntity<CampaignResponse> create(HttpServletRequest request, @PathVariable Long projectId, @RequestBody CreateCampaignRequest body) {
 		principal(request, projectId, ApiKeyScope.CAMPAIGNS_WRITE);
 		return ResponseEntity.status(HttpStatus.CREATED)
-				.body(CampaignResponse.from(campaigns.createForApiKey(projectId, body.name(), body.description())));
+				.body(CampaignResponse.from(campaigns.createForApiKey(projectId, body.name(), body.description(), body.defaultOriginalUrl())));
+	}
+
+	@PatchMapping("/campaigns/{campaignId}")
+	public CampaignResponse update(HttpServletRequest request, @PathVariable Long campaignId, @RequestBody UpdateCampaignRequest body) {
+		Long projectId = projectIdFrom(request);
+		principal(request, projectId, ApiKeyScope.CAMPAIGNS_WRITE);
+		if (!body.hasChanges()) throw new PublicApiException(400, "INVALID_REQUEST", "변경할 값을 하나 이상 입력해야 합니다.");
+		Campaign campaign = campaigns.findForApiKey(projectId, campaignId);
+		if (body.isNamePresent()) campaign = campaigns.renameForApiKey(projectId, campaignId, body.getName());
+		if (body.isDescriptionPresent()) campaign = campaigns.changeDescriptionForApiKey(projectId, campaignId, body.getDescription());
+		if (body.isDefaultOriginalUrlPresent()) {
+			campaign = campaigns.changeDefaultOriginalUrlForApiKey(projectId, campaignId, body.getDefaultOriginalUrl());
+		}
+		return CampaignResponse.from(campaign);
 	}
 
 	@GetMapping("/projects/{projectId}/campaigns")

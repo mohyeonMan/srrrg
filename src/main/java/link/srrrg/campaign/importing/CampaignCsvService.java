@@ -293,13 +293,14 @@ public class CampaignCsvService {
 	}
 
 	private ParsedRow parseRow(CSVRecord record, Campaign campaign, List<String> utmHeaderNames, Set<String> seenExternalIds) {
-		String storedOriginalUrl = safeCell(record, COL_ORIGINAL_URL).trim();
+		String originalUrlCell = safeCell(record, COL_ORIGINAL_URL).trim();
+		String storedOriginalUrl = originalUrlCell.isEmpty() ? null : originalUrlCell;
 		String rawExternalId = safeCell(record, COL_EXTERNAL_ID).trim();
 		String storedExternalId = rawExternalId.isEmpty() ? null : rawExternalId;
 
 		String preFailCode = null;
 		String preFailMessage = null;
-		if (storedOriginalUrl.length() > 2048) {
+		if (storedOriginalUrl != null && storedOriginalUrl.length() > 2048) {
 			preFailCode = "URL_TOO_LONG";
 			preFailMessage = "원본 URL은 2,048자 이하여야 합니다.";
 			storedOriginalUrl = storedOriginalUrl.substring(0, 2048);

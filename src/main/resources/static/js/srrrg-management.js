@@ -10,7 +10,6 @@
 	const state = {
 		secretKey: null,
 		link: null,
-		sampleMode: false,
 		selectedPeriod: 30,
 		selectedExpiresOption: 'none',
 		loadedOriginalUrl: null,
@@ -29,7 +28,6 @@
 	const authMessage = byId('management-auth-message');
 	const authButton = byId('management-auth-button');
 	const toggleSecretButton = byId('toggle-secret-visibility');
-	const sampleDashboardButton = byId('open-sample-dashboard');
 	const changeLinkButton = byId('change-managed-link');
 
 	const managedLinkTitle = byId('managed-link-title');
@@ -48,6 +46,9 @@
 	const settingsPanel = byId('settings-panel');
 	const periodButtons = document.querySelectorAll('[data-period]');
 	const analyticsPeriodLabel = byId('analytics-period-label');
+	const analyticsFrom = byId('analytics-from');
+	const analyticsTo = byId('analytics-to');
+	const analyticsBucket = byId('analytics-bucket');
 
 	const settingsForm = byId('management-settings-form');
 	const settingsOriginalUrl = byId('settings-original-url');
@@ -72,7 +73,6 @@
 		codeInput.addEventListener('input', handleAuthInput);
 		secretInput.addEventListener('input', handleAuthInput);
 		toggleSecretButton.addEventListener('click', toggleSecretVisibility);
-		sampleDashboardButton.addEventListener('click', openSampleDashboard);
 		changeLinkButton.addEventListener('click', () => requestDiscard(showAuthenticationGate));
 		copyManagedShortUrl.addEventListener('click', () => copyToClipboard(managedShortUrl.textContent, copyManagedShortUrl));
 
@@ -81,6 +81,8 @@
 		analyticsTab.addEventListener('keydown', handleTabKeydown);
 		settingsTab.addEventListener('keydown', handleTabKeydown);
 		periodButtons.forEach((button) => button.addEventListener('click', () => selectPeriod(Number(button.dataset.period))));
+		byId('analytics-custom-period').addEventListener('submit', (event) => { event.preventDefault(); periodButtons.forEach(button => button.setAttribute('aria-pressed', 'false')); renderAnalytics(); });
+		setAnalyticsDates(state.selectedPeriod);
 
 		settingsForm.addEventListener('submit', handleSettingsSave);
 		settingsOriginalUrl.addEventListener('input', handleSettingsInput);
@@ -143,7 +145,6 @@
 			}
 
 			state.secretKey = secretKey;
-			state.sampleMode = false;
 			secretInput.value = '';
 			openConsole(body);
 		} catch (error) {
@@ -153,29 +154,13 @@
 		}
 	}
 
-	function openSampleDashboard() {
-		state.secretKey = null;
-		state.sampleMode = true;
-		openConsole({
-			code: 'aB3x9Q',
-			shortUrl: 'https://srrrg.link/aB3x9Q',
-			originalUrl: 'https://example.com/campaign/summer-release?source=newsletter',
-			expiresAt: null,
-			statistics: {accessCount: 18420, redirectCount: 16972},
-			createdAt: '2026-05-18T03:24:00Z',
-			updatedAt: '2026-07-19T11:42:00Z'
-		});
-	}
-
 	function openConsole(link) {
 		state.link = link;
 		gate.hidden = true;
 		consoleView.hidden = false;
-		settingsTab.disabled = state.sampleMode;
+		settingsTab.disabled = false;
 		renderIdentity();
-		if (!state.sampleMode) {
-			renderSettings();
-		}
+		renderSettings();
 		switchTab('analytics');
 		renderAnalytics(state.selectedPeriod);
 		managedLinkTitle.focus({preventScroll: true});
@@ -184,7 +169,6 @@
 	function showAuthenticationGate() {
 		state.secretKey = null;
 		state.link = null;
-		state.sampleMode = false;
 		state.pendingDiscardAction = null;
 		consoleView.hidden = true;
 		gate.hidden = false;
@@ -209,9 +193,6 @@
 	}
 
 	function requestTab(tabName) {
-		if (tabName === 'settings' && state.sampleMode) {
-			return;
-		}
 		if (tabName === 'analytics' && hasSettingsChanges()) {
 			requestDiscard(() => switchTab('analytics'));
 			return;
@@ -246,74 +227,38 @@
 	function selectPeriod(days) {
 		state.selectedPeriod = days;
 		periodButtons.forEach((button) => button.setAttribute('aria-pressed', String(Number(button.dataset.period) === days)));
+		setAnalyticsDates(days);
+		analyticsBucket.value = 'DAY';
 		renderAnalytics(days);
 	}
 
-	function renderAnalytics(days) {
-		const analytics = buildSampleAnalytics(days);
-		analyticsPeriodLabel.textContent = `최근 ${days}일 · Asia/Seoul`;
+	async function renderAnalytics(days) {
+		analyticsPeriodLabel.textContent = `${analyticsFrom.value} ~ ${analyticsTo.value} · Asia/Seoul`;
+		const query = new URLSearchParams({from: analyticsFrom.value, to: analyticsTo.value, bucket: analyticsBucket.value});
+		let analytics;
+		try {
+			const response = await fetch(`${apiUrl}/${encodeURIComponent(state.link.code)}/statistics?${query}`, {
+				headers: {'Accept': 'application/json', 'X-Srrrg-Secret-Key': state.secretKey}
+			});
+			analytics = await readApiBody(response);
+			if (!response.ok) throw new Error(analytics.message || '통계를 불러올 수 없습니다.');
+		} catch (error) {
+			analyticsPeriodLabel.textContent = error.message;
+			return;
+		}
 		byId('metric-entries').textContent = numberFormatter.format(analytics.summary.entries);
 		byId('metric-redirects').textContent = numberFormatter.format(analytics.summary.redirects);
-		byId('metric-no-redirect').textContent = numberFormatter.format(analytics.summary.entries - analytics.summary.redirects);
+		byId('metric-no-redirect').textContent = numberFormatter.format(analytics.summary.nonRedirects);
 		byId('metric-bots').textContent = numberFormatter.format(analytics.summary.bots);
-		byId('metric-entries-delta').textContent = `이전 기간 대비 ${formatDelta(analytics.summary.entriesDelta)}`;
-		byId('metric-redirects-delta').textContent = `이전 기간 대비 ${formatDelta(analytics.summary.redirectsDelta)}`;
-		byId('metric-bots-share').textContent = `전체 진입의 ${analytics.summary.botShare.toFixed(1)}%`;
-		renderTrend(analytics.timeSeries);
+		byId('metric-entries-delta').textContent = `이전 기간 대비 ${formatDelta(delta(analytics.summary.entries, analytics.summary.previousEntries))}`;
+		byId('metric-redirects-delta').textContent = `이전 기간 대비 ${formatDelta(delta(analytics.summary.redirects, analytics.summary.previousRedirects))}`;
+		byId('metric-bots-share').textContent = `전체 진입의 ${(analytics.summary.entries ? analytics.summary.bots / analytics.summary.entries * 100 : 0).toFixed(1)}%`;
+		renderTrend(analytics.trend.map((item) => ({date: new Date(item.date.replace(' ', 'T')), entries: item.entries, redirects: item.redirects})));
 		renderBreakdown(byId('referrer-breakdown'), analytics.referrers);
 		renderBreakdown(byId('device-breakdown'), analytics.devices);
 		renderCompactData(byId('browser-breakdown'), analytics.browsers);
 		renderCompactData(byId('os-breakdown'), analytics.operatingSystems);
 		renderRecentActivity(analytics.recentActivity);
-	}
-
-	function buildSampleAnalytics(days) {
-		const today = new Date();
-		const timeSeries = [];
-		for (let index = days - 1; index >= 0; index--) {
-			const date = new Date(today);
-			date.setDate(today.getDate() - index);
-			const sequence = days - 1 - index;
-			const weekday = date.getDay();
-			const weekdayFactor = weekday === 0 || weekday === 6 ? -72 : 42;
-			const entries = Math.max(120, Math.round(486 + Math.sin(sequence * 0.72) * 88 + Math.cos(sequence * 0.19) * 52 + weekdayFactor));
-			const redirects = Math.max(90, entries - Math.round(34 + (sequence % 5) * 7 + Math.abs(Math.sin(sequence)) * 18));
-			timeSeries.push({date, entries, redirects});
-		}
-
-		const entries = sum(timeSeries, 'entries');
-		const redirects = sum(timeSeries, 'redirects');
-		const bots = Math.round(entries * 0.072);
-		return {
-			summary: {
-				entries,
-				redirects,
-				bots,
-				botShare: bots / entries * 100,
-				entriesDelta: days === 7 ? 8.6 : days === 30 ? 12.4 : 5.8,
-				redirectsDelta: days === 7 ? 7.9 : days === 30 ? 10.8 : 4.6
-			},
-			timeSeries,
-			referrers: distribute(entries, [
-				['직접 유입', 41.8], ['google.com', 24.7], ['newsletter.example', 16.3], ['github.com', 9.1], ['기타', 8.1]
-			]),
-			devices: distribute(entries, [
-				['모바일', 58.4], ['데스크톱', 34.2], ['태블릿', 4.1], ['봇/기타', 3.3]
-			]),
-			browsers: distribute(entries, [
-				['Chrome', 52.6], ['Safari', 26.9], ['Samsung Internet', 9.8], ['Edge', 6.2], ['기타', 4.5]
-			]),
-			operatingSystems: distribute(entries, [
-				['Android', 38.7], ['iOS', 25.1], ['Windows', 22.8], ['macOS', 10.6], ['기타', 2.8]
-			]),
-			recentActivity: [
-				['오늘 14:32', 'redirected', '실제 이동', 'google.com', '모바일', 'Chrome'],
-				['오늘 14:18', 'redirected', '실제 이동', '직접 유입', '데스크톱', 'Safari'],
-				['오늘 13:56', 'blocked', '미이동', 'newsletter.example', '모바일', 'Samsung Internet'],
-				['오늘 13:41', 'redirected', '실제 이동', 'github.com', '데스크톱', 'Chrome'],
-				['오늘 12:27', 'redirected', '실제 이동', '직접 유입', '태블릿', 'Safari']
-			]
-		};
 	}
 
 	function renderTrend(series) {
@@ -324,7 +269,7 @@
 		const padding = {top: 18, right: 18, bottom: 38, left: 54};
 		const plotWidth = width - padding.left - padding.right;
 		const plotHeight = height - padding.top - padding.bottom;
-		const maximum = Math.ceil(Math.max(...series.map((item) => item.entries)) / 100) * 100;
+		const maximum = Math.max(1, Math.ceil(Math.max(0, ...series.map((item) => item.entries)) / 100) * 100);
 		const gridLines = [];
 		for (let index = 0; index <= 4; index++) {
 			const y = padding.top + plotHeight * index / 4;
@@ -379,17 +324,17 @@
 	function renderRecentActivity(items) {
 		byId('recent-activity-body').innerHTML = items.map((item) => `
 			<tr>
-				<td data-label="시각">${escapeHtml(item[0])}</td>
-				<td data-label="결과"><span class="activity-result ${item[1]}">${escapeHtml(item[2])}</span></td>
-				<td data-label="유입 경로">${escapeHtml(item[3])}</td>
-				<td data-label="디바이스">${escapeHtml(item[4])}</td>
-				<td data-label="브라우저">${escapeHtml(item[5])}</td>
+				<td data-label="시각">${escapeHtml(formatDateTime(item.accessedAt))}</td>
+				<td data-label="결과"><span class="activity-result ${item.outcome.toLowerCase()}">${escapeHtml(outcomeLabel(item.outcome))}</span></td>
+				<td data-label="유입 경로">${escapeHtml(item.referrerDomain)}</td>
+				<td data-label="디바이스">${escapeHtml(item.device)}</td>
+				<td data-label="브라우저">${escapeHtml(item.browser)}</td>
 			</tr>
 		`).join('');
 	}
 
 	function renderSettings() {
-		if (!state.link || state.sampleMode) {
+		if (!state.link) {
 			return;
 		}
 		settingsOriginalUrl.value = state.link.originalUrl;
@@ -456,7 +401,7 @@
 	}
 
 	function hasSettingsChanges() {
-		if (!state.link || state.sampleMode) {
+		if (!state.link) {
 			return false;
 		}
 		return settingsOriginalUrl.value.trim() !== state.loadedOriginalUrl
@@ -596,13 +541,10 @@
 		return state.selectedExpiresOption === 'none' ? '' : settingsExpiresAt.value;
 	}
 
-	function distribute(total, entries) {
-		return entries.map(([name, share]) => ({name, share, count: Math.round(total * share / 100)}));
-	}
-
-	function sum(items, property) {
-		return items.reduce((total, item) => total + item[property], 0);
-	}
+	function delta(current, previous) { return previous ? (current - previous) / previous * 100 : current ? 100 : 0; }
+	function outcomeLabel(value) { return value === 'REDIRECTED' ? '실제 이동' : value === 'BLOCKED' ? '차단' : value === 'CHECK_FAILED' ? '검사 실패' : 'URL 변경'; }
+	function localDate(date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
+	function setAnalyticsDates(days) { const end = new Date(), start = new Date(); start.setDate(end.getDate() - days + 1); analyticsFrom.value = localDate(start); analyticsTo.value = localDate(end); }
 
 	function formatDelta(value) {
 		return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;

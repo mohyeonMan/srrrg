@@ -41,6 +41,9 @@ public class Campaign {
 	@Column(length = 500)
 	private String description;
 
+	@Column(name = "default_original_url", length = 2048)
+	private String defaultOriginalUrl;
+
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "created_by_user_id")
 	private User createdBy;
@@ -52,15 +55,16 @@ public class Campaign {
 	@Column(name = "archived_at")
 	private Instant archivedAt;
 
-	private Campaign(Project project, String name, String description, User createdBy) {
+	private Campaign(Project project, String name, String description, String defaultOriginalUrl, User createdBy) {
 		this.project = project;
 		this.name = name;
 		this.description = description;
+		this.defaultOriginalUrl = defaultOriginalUrl;
 		this.createdBy = createdBy;
 	}
 
-	public static Campaign create(Project project, String name, String description, User createdBy) {
-		return new Campaign(project, name, description, createdBy);
+	public static Campaign create(Project project, String name, String description, String defaultOriginalUrl, User createdBy) {
+		return new Campaign(project, name, description, defaultOriginalUrl, createdBy);
 	}
 
 	public void rename(String name) {
@@ -69,6 +73,10 @@ public class Campaign {
 
 	public void changeDescription(String description) {
 		this.description = description;
+	}
+
+	public void changeDefaultOriginalUrl(String defaultOriginalUrl) {
+		this.defaultOriginalUrl = defaultOriginalUrl;
 	}
 
 	public void selectTemplate(UtmTemplate utmTemplate) {

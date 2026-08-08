@@ -82,7 +82,7 @@ public class CampaignLinkCreationService {
 		UtmTemplate template = campaign.getUtmTemplate();
 		Map<UtmTemplateField, String> resolved = resolveUtmValues(campaign, template, request.utmValuesOrEmpty());
 		ProjectDomain domain = domains.get(project.getId());
-		return linkManagement.createForCampaign(request.originalUrl(), request.expiresAt(), project, domain, createdBy,
+		return linkManagement.createForCampaign(request.normalizedOriginalUrl(), request.expiresAt(), project, domain, createdBy,
 				apiKeyId, idempotencyKey, requestHash, campaign, template, request.normalizedExternalId(), resolved);
 	}
 
@@ -137,7 +137,7 @@ public class CampaignLinkCreationService {
 
 	public String requestFingerprint(CreateCampaignLinkRequest request) {
 		Map<String, String> sorted = new TreeMap<>(request.utmValuesOrEmpty());
-		String payload = request.originalUrl() + "\n" + request.expiresAt() + "\n" + request.normalizedExternalId() + "\n" + sorted;
+		String payload = request.normalizedOriginalUrl() + "\n" + request.expiresAt() + "\n" + request.normalizedExternalId() + "\n" + sorted;
 		try {
 			return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(payload.getBytes(StandardCharsets.UTF_8)));
 		} catch (NoSuchAlgorithmException exception) {

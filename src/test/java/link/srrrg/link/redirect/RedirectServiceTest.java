@@ -37,6 +37,8 @@ import link.srrrg.link.access.LinkAccessEventRecorder;
 import link.srrrg.link.risk.RiskVerdict;
 import link.srrrg.link.risk.UrlRiskAssessment;
 import link.srrrg.link.risk.UrlRiskVerificationService;
+import link.srrrg.campaign.Campaign;
+import link.srrrg.project.Project;
 
 class RedirectServiceTest {
 
@@ -104,14 +106,45 @@ class RedirectServiceTest {
 	@Test
 	void projectDomainRoutesByDomainAndCode() {
 		Link link = link("https://project.example");
+		when(link.getProject()).thenReturn(mock(Project.class));
 		when(domains.resolve("acme.srrrg.link")).thenReturn(Optional.of(new HostRoute(11L)));
 		when(repository.findByDomainIdAndCode(11L, "aB3x9Q")).thenReturn(Optional.of(link));
-		when(riskVerificationService.verify("https://project.example")).thenReturn(assessment(RiskVerdict.SAFE));
 		when(repository.incrementAccessAndRedirectCountsById(7L)).thenReturn(1);
 
 		assertThat(service.redirect("acme.srrrg.link", "aB3x9Q", requestInfo))
 				.isEqualTo("https://project.example");
 		verify(repository, never()).findByCodeAndProjectIsNull(any());
+		verify(riskVerificationService, never()).verify(any());
+	}
+
+	@Test
+	void campaignLinkWithoutOwnUrlUsesCurrentCampaignDefault() {
+		Link link = link(null);
+		Campaign campaign = mock(Campaign.class);
+		when(campaign.getDefaultOriginalUrl()).thenReturn("https://current.example/default");
+		when(link.getCampaign()).thenReturn(campaign);
+		when(link.getProject()).thenReturn(mock(Project.class));
+		when(domains.resolve("acme.srrrg.link")).thenReturn(Optional.of(new HostRoute(11L)));
+		when(repository.findByDomainIdAndCode(11L, "aB3x9Q")).thenReturn(Optional.of(link));
+		when(repository.incrementAccessAndRedirectCountsById(7L)).thenReturn(1);
+
+		assertThat(service.redirect("acme.srrrg.link", "aB3x9Q", requestInfo))
+				.isEqualTo("https://current.example/default");
+		verify(riskVerificationService, never()).verify(any());
+	}
+
+	@Test
+	void campaignLinkWithoutOwnOrDefaultUrlReturnsGone() {
+		Link link = link(null);
+		when(link.getCampaign()).thenReturn(mock(Campaign.class));
+		when(link.getProject()).thenReturn(mock(Project.class));
+		when(domains.resolve("acme.srrrg.link")).thenReturn(Optional.of(new HostRoute(11L)));
+		when(repository.findByDomainIdAndCode(11L, "aB3x9Q")).thenReturn(Optional.of(link));
+
+		assertThatThrownBy(() -> service.redirect("acme.srrrg.link", "aB3x9Q", requestInfo))
+				.isInstanceOf(LinkGoneException.class)
+				.extracting(exception -> ((LinkGoneException) exception).getReason())
+				.isEqualTo(LinkGoneException.Reason.NO_DESTINATION);
 	}
 
 	@Test

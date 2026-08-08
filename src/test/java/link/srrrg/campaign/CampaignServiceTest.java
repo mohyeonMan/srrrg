@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import link.srrrg.campaign.importing.CampaignImportRepository;
 import link.srrrg.identity.UserRepository;
 import link.srrrg.link.LinkRepository;
+import link.srrrg.link.UrlValidator;
 import link.srrrg.project.Project;
 import link.srrrg.project.ProjectMember;
 import link.srrrg.project.ProjectMemberRepository;
@@ -34,11 +35,36 @@ class CampaignServiceTest {
 	private final UserRepository users = mock(UserRepository.class);
 	private final LinkRepository links = mock(LinkRepository.class);
 	private final CampaignImportRepository imports = mock(CampaignImportRepository.class);
+	private final UrlValidator urlValidator = mock(UrlValidator.class);
 	private CampaignService service;
 
 	@BeforeEach
 	void setUp() {
-		service = new CampaignService(campaigns, templates, fields, defaults, members, projects, users, links, imports);
+		service = new CampaignService(campaigns, templates, fields, defaults, members, projects, users, links, imports, urlValidator);
+	}
+
+	@Test
+	void updatesDefaultOriginalUrlAfterUrlValidation() {
+		Campaign campaign = campaignOwnedBy(1L, ProjectRole.EDITOR);
+		when(campaign.isArchived()).thenReturn(false);
+		when(campaigns.findById(100L)).thenReturn(Optional.of(campaign));
+
+		service.changeDefaultOriginalUrl(5L, 100L, " https://example.com/default ");
+
+		verify(urlValidator).validate("https://example.com/default");
+		verify(campaign).changeDefaultOriginalUrl("https://example.com/default");
+	}
+
+	@Test
+	void allowsRemovingDefaultOriginalUrl() {
+		Campaign campaign = campaignOwnedBy(1L, ProjectRole.EDITOR);
+		when(campaign.isArchived()).thenReturn(false);
+		when(campaigns.findById(100L)).thenReturn(Optional.of(campaign));
+
+		service.changeDefaultOriginalUrl(5L, 100L, null);
+
+		verify(urlValidator, never()).validate(any());
+		verify(campaign).changeDefaultOriginalUrl(null);
 	}
 
 	@Test

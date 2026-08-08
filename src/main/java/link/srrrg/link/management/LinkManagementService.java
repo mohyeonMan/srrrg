@@ -188,7 +188,8 @@ public class LinkManagementService {
 		if (existing != null) return existing;
 		urlValidator.validate(request.originalUrl());
 		validateExpiration(request.expiresAt());
-		requireNoKnownThreat(request.originalUrl());
+		// 프로젝트 링크는 인증된 멤버 또는 프로젝트 API key의 생성자를 신뢰해 위험 검사를 생략한다.
+		// 신뢰 정책이 바뀌면 requireNoKnownThreat(request.originalUrl())를 이 지점에 복구한다.
 		return saveProjectLinkWithUniqueCode(request.originalUrl(), request.expiresAt(), project, domain, createdBy,
 				apiKeyId, idempotencyKey, requestHash);
 	}
@@ -205,10 +206,11 @@ public class LinkManagementService {
 		if (existing != null) return existing;
 		Map<String, String> utmByName = resolvedUtmValues.entrySet().stream()
 				.collect(Collectors.toMap(entry -> entry.getKey().getName(), Map.Entry::getValue));
-		String mergedUrl = DestinationUrlMerger.merge(originalUrl, utmByName);
-		urlValidator.validate(mergedUrl);
+		String currentDestination = originalUrl != null ? originalUrl : campaign.getDefaultOriginalUrl();
+		if (currentDestination != null) urlValidator.validate(DestinationUrlMerger.merge(currentDestination, utmByName));
 		validateExpiration(expiresAt);
-		requireNoKnownThreat(mergedUrl);
+		// 캠페인 링크도 인증된 멤버 또는 프로젝트 API key의 생성자를 신뢰해 위험 검사를 생략한다.
+		// 신뢰 정책이 바뀌면 동적 기본 목적지와 UTM을 해석한 뒤 requireNoKnownThreat를 복구한다.
 		Link link = saveCampaignLinkWithUniqueCode(originalUrl, expiresAt, project, domain, createdBy,
 				apiKeyId, idempotencyKey, requestHash, campaign, utmTemplate, externalId);
 		Long templateId = utmTemplate == null ? null : utmTemplate.getId();

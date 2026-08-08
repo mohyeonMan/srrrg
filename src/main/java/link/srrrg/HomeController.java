@@ -34,6 +34,9 @@ public class HomeController {
 		return "campaigns";
 	}
 
+	@GetMapping("/statistics")
+	public String statistics() { return "statistics"; }
+
 	@GetMapping("/favicon.ico")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void favicon() {

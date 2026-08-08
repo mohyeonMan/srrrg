@@ -35,7 +35,7 @@ public class Link {
 	@Column(nullable = false, length = 6)
 	private String code;
 
-	@Column(name = "original_url", nullable = false, length = 2048)
+	@Column(name = "original_url", length = 2048)
 	private String originalUrl;
 
 	@Column(name = "secret_key_hash", length = 100)

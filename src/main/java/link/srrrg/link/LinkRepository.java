@@ -18,9 +18,9 @@ import jakarta.persistence.LockModeType;
 
 public interface LinkRepository extends JpaRepository<Link, Long>, JpaSpecificationExecutor<Link> {
 
-	@EntityGraph(attributePaths = "project")
+	@EntityGraph(attributePaths = {"project", "campaign"})
 	Optional<Link> findByCodeAndProjectIsNull(String code);
-	@EntityGraph(attributePaths = "project")
+	@EntityGraph(attributePaths = {"project", "campaign"})
 	Optional<Link> findByDomainIdAndCode(Long domainId, String code);
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@EntityGraph(attributePaths = "project")
@@ -34,6 +34,8 @@ public interface LinkRepository extends JpaRepository<Link, Long>, JpaSpecificat
 	List<Link> findByCampaignIdAndDeletedFalseOrderByIdDesc(Long campaignId, Pageable pageable);
 	List<Link> findByCampaignIdAndDeletedFalseAndIdLessThanOrderByIdDesc(Long campaignId, Long id, Pageable pageable);
 	Optional<Link> findByCampaignIdAndExternalId(Long campaignId, String externalId);
+	@EntityGraph(attributePaths = {"project", "campaign"})
+	Optional<Link> findByProjectIdAndCode(Long projectId, String code);
 
 	@Modifying
 	@Query("update Link l set l.deleted = true, l.updatedAt = CURRENT_TIMESTAMP where l.campaign.id = :campaignId and l.deleted = false")

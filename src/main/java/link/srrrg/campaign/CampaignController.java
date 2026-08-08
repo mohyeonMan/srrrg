@@ -50,7 +50,8 @@ public class CampaignController {
 	public ResponseEntity<CampaignResponse> create(@AuthenticationPrincipal SrrrgPrincipal principal, @PathVariable Long projectId,
 			@Valid @RequestBody CreateCampaignRequest request) {
 		return ResponseEntity.status(HttpStatus.CREATED)
-				.body(CampaignResponse.from(campaigns.create(principal.userId(), projectId, request.name(), request.description())));
+				.body(CampaignResponse.from(campaigns.create(principal.userId(), projectId, request.name(), request.description(),
+						request.defaultOriginalUrl())));
 	}
 
 	@GetMapping("/projects/{projectId}/campaigns")
@@ -73,6 +74,8 @@ public class CampaignController {
 		Campaign campaign = null;
 		if (request.isNamePresent()) campaign = campaigns.rename(principal.userId(), campaignId, request.getName());
 		if (request.isDescriptionPresent()) campaign = campaigns.changeDescription(principal.userId(), campaignId, request.getDescription());
+		if (request.isDefaultOriginalUrlPresent()) campaign = campaigns.changeDefaultOriginalUrl(principal.userId(), campaignId,
+				request.getDefaultOriginalUrl());
 		return CampaignResponse.from(campaign);
 	}
 
@@ -179,15 +182,17 @@ public class CampaignController {
 		return limit;
 	}
 
-	public record CreateCampaignRequest(@NotBlank @Size(max = 100) String name, @Size(max = 500) String description) { }
+	public record CreateCampaignRequest(@NotBlank @Size(max = 100) String name, @Size(max = 500) String description,
+			@Size(max = 2048) String defaultOriginalUrl) { }
 	public record SelectTemplateRequest(Long utmTemplateId) { }
 	public record UpdateUtmDefaultsRequest(Map<String, String> defaults) {
 		public Map<String, String> defaultsOrEmpty() { return defaults == null ? Map.of() : defaults; }
 	}
-	public record CampaignResponse(Long id, String name, String description, Long utmTemplateId, String utmTemplateName,
+	public record CampaignResponse(Long id, String name, String description, String defaultOriginalUrl,
+			Long utmTemplateId, String utmTemplateName,
 			Instant createdAt, Instant updatedAt) {
 		public static CampaignResponse from(Campaign campaign) {
-			return new CampaignResponse(campaign.getId(), campaign.getName(), campaign.getDescription(),
+			return new CampaignResponse(campaign.getId(), campaign.getName(), campaign.getDescription(), campaign.getDefaultOriginalUrl(),
 					campaign.getUtmTemplate() == null ? null : campaign.getUtmTemplate().getId(),
 					campaign.getUtmTemplate() == null ? null : campaign.getUtmTemplate().getName(),
 					campaign.getCreatedAt(), campaign.getUpdatedAt());

@@ -15,6 +15,7 @@
 	<p class="section-kicker">CAMPAIGNS</p>
 	<div class="campaign-heading-row">
 		<h1 id="campaign-name">캠페인</h1>
+		<p><a id="campaign-statistics-link" class="secondary-button compact-action" href="#">캠페인 통계</a></p>
 		<a id="back-to-project" class="secondary-button" href="#">프로젝트로 돌아가기</a>
 	</div>
 	<p id="campaign-description" class="campaign-description"></p>
@@ -28,6 +29,18 @@
 	</div>
 
 	<div id="campaign-body" hidden>
+		<section class="surface-panel campaign-card" aria-labelledby="destination-title">
+			<h2 id="destination-title">기본 목적지</h2>
+			<p>자체 원본 URL이 없는 캠페인 링크는 이동할 때 현재 기본 목적지를 사용합니다.</p>
+			<form id="default-destination-form" class="project-inline-form" novalidate>
+				<label class="field" for="campaign-default-url"><span class="field-label">기본 목적지 URL (선택)</span>
+					<input id="campaign-default-url" class="field-input" name="defaultOriginalUrl" type="url" maxlength="2048">
+				</label>
+				<button class="secondary-button" type="submit">기본 목적지 저장</button>
+			</form>
+			<p id="default-destination-message" class="form-message" role="status" aria-live="polite"></p>
+		</section>
+
 		<section class="surface-panel campaign-card" aria-labelledby="template-title">
 			<h2 id="template-title">UTM 템플릿</h2>
 			<p>템플릿을 바꾸면 기존 링크의 UTM은 그대로 유지되고 새 링크와 새 CSV 양식부터 새 템플릿을 사용합니다.</p>
@@ -70,8 +83,8 @@
 		<section class="surface-panel campaign-card" aria-labelledby="create-link-title">
 			<h2 id="create-link-title">개인화 링크 만들기</h2>
 			<form id="create-campaign-link-form" class="form-grid" novalidate>
-				<label class="field" for="campaign-original-url"><span class="field-label">원본 URL</span>
-					<input id="campaign-original-url" class="field-input" name="originalUrl" type="url" maxlength="2048" required>
+				<label class="field" for="campaign-original-url"><span class="field-label">원본 URL (선택)</span>
+					<input id="campaign-original-url" class="field-input" name="originalUrl" type="url" maxlength="2048" placeholder="비우면 현재 캠페인 기본 목적지 사용">
 				</label>
 				<label class="field" for="campaign-external-id"><span class="field-label">external_id (선택, 이메일·이름·전화번호 금지)</span>
 					<input id="campaign-external-id" class="field-input" name="externalId" maxlength="100" autocomplete="off">

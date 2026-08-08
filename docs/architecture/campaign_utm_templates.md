@@ -203,7 +203,7 @@ campaign_import_rows
 - id
 - import_id
 - row_number
-- original_url
+- original_url nullable
 - external_id
 - status
 - link_id nullable
@@ -273,6 +273,8 @@ https://example.com/event,customer-001,email,naver,newsletter
 ```
 
 - 양식은 캠페인 화면에서 다운로드한다.
+- `original_url` 셀이 비어 있으면 링크 자체 목적지를 저장하지 않고 리다이렉트 시 현재 캠페인 기본 목적지를 사용한다.
+- 링크 자체 목적지와 현재 캠페인 기본 목적지가 모두 없으면 해당 링크는 `410 Gone`을 반환한다.
 - 필드 위치에는 의미가 없으며 업로드는 헤더 이름으로 매핑한다.
 - 출력은 활성 필드 이름 오름차순을 사용하고 DB에 위치를 저장하지 않는다.
 - UTF-8과 UTF-8 BOM을 허용한다.
@@ -289,14 +291,15 @@ UI 단일 생성, 공개 단일 API, JSON batch와 CSV worker는 같은 링크 �
 2. 요청 UTM 이름을 활성 템플릿 필드와 매핑한다.
 3. 요청값이 없으면 캠페인 기본값을 사용한다.
 4. 최종 값마다 `link_utm_values`를 만든다.
-5. UTM을 병합한 최종 목적지 URL이 기존 위험 검사를 통과한 뒤 저장한다.
+5. URL 형식과 내부 주소 차단 정책을 검증한 뒤 저장한다. 인증된 프로젝트 멤버와 API key가 만든 링크는 생성·리다이렉트 위험 검사를 생략한다.
 
 리다이렉트 시:
 
 1. 기존 Host와 code 규칙으로 링크를 찾는다.
-2. 링크가 참조하는 템플릿 필드와 값을 읽는다. 삭제된 필드도 기존 링크에서는 포함한다.
-3. 기존 query를 보존하되 같은 이름은 링크 UTM 값으로 덮어쓴다.
-4. 이름과 값을 URL encoding하고 fragment를 보존한다.
+2. 링크 자체 목적지가 없으면 현재 캠페인 기본 목적지를 읽고, 둘 다 없으면 `410 Gone`을 반환한다.
+3. 링크가 참조하는 템플릿 필드와 값을 읽는다. 삭제된 필드도 기존 링크에서는 포함한다.
+4. 기존 query를 보존하되 같은 이름은 링크 UTM 값으로 덮어쓴다.
+5. 이름과 값을 URL encoding하고 fragment를 보존한다.
 
 캠페인을 삭제하면 캠페인과 소속 링크를 함께 soft delete하고 기존 주소는 `410 Gone`을 반환한다. 진행 중인 import도 새 링크를 만들지 않게 중단한다.
 

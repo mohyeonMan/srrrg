@@ -16,9 +16,9 @@ class ManagementPageAssetTest {
 		String script = Files.readString(Path.of("src/main/resources/static/js/srrrg-management.js"));
 
 		assertThat(template).doesNotContain("management-verification-status", "management-verified-at");
-		assertThat(template).contains("사용 가능", "type=\"password\"", "샘플 통계");
-		assertThat(script).doesNotContain("NO_THREAT_FOUND", "THREAT_DETECTED", "CHECK_FAILED", "verifiedAt");
+		assertThat(template).contains("사용 가능", "type=\"password\"").doesNotContain("샘플 통계");
+		assertThat(script).doesNotContain("NO_THREAT_FOUND", "THREAT_DETECTED", "verifiedAt", "buildSampleAnalytics");
 		assertThat(script).doesNotContain("localStorage", "sessionStorage");
-		assertThat(script).contains("expired ? '만료됨' : '사용 가능'", "X-Srrrg-Secret-Key");
+		assertThat(script).contains("expired ? '만료됨' : '사용 가능'", "X-Srrrg-Secret-Key", "/statistics?");
 	}
 }

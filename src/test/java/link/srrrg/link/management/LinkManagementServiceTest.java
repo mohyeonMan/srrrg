@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,7 @@ import link.srrrg.link.risk.UrlRiskAssessment;
 import link.srrrg.link.risk.UrlRiskVerificationService;
 import link.srrrg.identity.User;
 import link.srrrg.project.Project;
+import link.srrrg.campaign.Campaign;
 
 class LinkManagementServiceTest {
 
@@ -97,7 +99,6 @@ class LinkManagementServiceTest {
 		Project project = mock(Project.class);
 		ProjectDomain domain = mock(ProjectDomain.class);
 		User user = mock(User.class);
-		when(riskVerificationService.verify(any())).thenReturn(assessment(RiskVerdict.SAFE));
 		when(codeGenerator.generate()).thenReturn("aB3x9Q");
 		when(repository.saveAndFlush(any(Link.class))).thenAnswer(call -> call.getArgument(0));
 
@@ -107,6 +108,24 @@ class LinkManagementServiceTest {
 		assertThat(link.getDomain()).isSameAs(domain);
 		assertThat(link.getCreatedBy()).isSameAs(user);
 		assertThat(link.getSecretKeyHash()).isNull();
+		verify(riskVerificationService, never()).verify(any());
+	}
+
+	@Test
+	void createsCampaignLinkWithoutOwnUrlAndWithoutRiskCheck() {
+		Project project = mock(Project.class);
+		ProjectDomain domain = mock(ProjectDomain.class);
+		Campaign campaign = mock(Campaign.class);
+		when(codeGenerator.generate()).thenReturn("aB3x9Q");
+		when(repository.saveAndFlush(any(Link.class))).thenAnswer(call -> call.getArgument(0));
+
+		Link link = service.createForCampaign(null, null, project, domain, null, null, null, null,
+				campaign, null, null, Map.of());
+
+		assertThat(link.getOriginalUrl()).isNull();
+		assertThat(link.getCampaign()).isSameAs(campaign);
+		verify(validator, never()).validate(any());
+		verify(riskVerificationService, never()).verify(any());
 	}
 
 	@Test

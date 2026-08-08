@@ -13,6 +13,7 @@ import link.srrrg.identity.User;
 import link.srrrg.identity.UserRepository;
 import link.srrrg.link.LinkGoneException;
 import link.srrrg.link.LinkRepository;
+import link.srrrg.link.UrlValidator;
 import link.srrrg.project.Project;
 import link.srrrg.project.ProjectMember;
 import link.srrrg.project.ProjectMemberRepository;
@@ -31,10 +32,11 @@ public class CampaignService {
 	private final UserRepository users;
 	private final LinkRepository links;
 	private final CampaignImportRepository imports;
+	private final UrlValidator urlValidator;
 
 	public CampaignService(CampaignRepository campaigns, UtmTemplateRepository templates, UtmTemplateFieldRepository fields,
 			CampaignUtmDefaultRepository defaults, ProjectMemberRepository members, ProjectRepository projects,
-			UserRepository users, LinkRepository links, CampaignImportRepository imports) {
+			UserRepository users, LinkRepository links, CampaignImportRepository imports, UrlValidator urlValidator) {
 		this.campaigns = campaigns;
 		this.templates = templates;
 		this.fields = fields;
@@ -44,18 +46,21 @@ public class CampaignService {
 		this.users = users;
 		this.links = links;
 		this.imports = imports;
+		this.urlValidator = urlValidator;
 	}
 
 	@Transactional
-	public Campaign create(Long userId, Long projectId, String name, String description) {
+	public Campaign create(Long userId, Long projectId, String name, String description, String defaultOriginalUrl) {
 		Project project = requireRole(userId, projectId, ProjectRole.EDITOR).getProject();
-		return campaigns.save(Campaign.create(project, validName(name), validDescription(description), user(userId)));
+		return campaigns.save(Campaign.create(project, validName(name), validDescription(description),
+				validDefaultOriginalUrl(defaultOriginalUrl), user(userId)));
 	}
 
 	@Transactional
-	public Campaign createForApiKey(Long projectId, String name, String description) {
+	public Campaign createForApiKey(Long projectId, String name, String description, String defaultOriginalUrl) {
 		Project project = projects.findById(projectId).orElseThrow(() -> new IllegalArgumentException("프로젝트를 찾을 수 없습니다."));
-		return campaigns.save(Campaign.create(project, validName(name), validDescription(description), null));
+		return campaigns.save(Campaign.create(project, validName(name), validDescription(description),
+				validDefaultOriginalUrl(defaultOriginalUrl), null));
 	}
 
 	@Transactional(readOnly = true)
@@ -93,6 +98,34 @@ public class CampaignService {
 	@Transactional
 	public Campaign changeDescription(Long userId, Long campaignId, String description) {
 		Campaign campaign = requireEditableCampaign(userId, campaignId);
+		campaign.changeDescription(validDescription(description));
+		return campaign;
+	}
+
+	@Transactional
+	public Campaign changeDefaultOriginalUrl(Long userId, Long campaignId, String defaultOriginalUrl) {
+		Campaign campaign = requireEditableCampaign(userId, campaignId);
+		campaign.changeDefaultOriginalUrl(validDefaultOriginalUrl(defaultOriginalUrl));
+		return campaign;
+	}
+
+	@Transactional
+	public Campaign changeDefaultOriginalUrlForApiKey(Long projectId, Long campaignId, String defaultOriginalUrl) {
+		Campaign campaign = findForApiKey(projectId, campaignId);
+		campaign.changeDefaultOriginalUrl(validDefaultOriginalUrl(defaultOriginalUrl));
+		return campaign;
+	}
+
+	@Transactional
+	public Campaign renameForApiKey(Long projectId, Long campaignId, String name) {
+		Campaign campaign = findForApiKey(projectId, campaignId);
+		campaign.rename(validName(name));
+		return campaign;
+	}
+
+	@Transactional
+	public Campaign changeDescriptionForApiKey(Long projectId, Long campaignId, String description) {
+		Campaign campaign = findForApiKey(projectId, campaignId);
 		campaign.changeDescription(validDescription(description));
 		return campaign;
 	}
@@ -238,5 +271,14 @@ public class CampaignService {
 	private String validDefaultValue(String value) {
 		if (value.length() > 500) throw new IllegalArgumentException("UTM 기본값은 500자 이하로 입력하세요.");
 		return value;
+	}
+
+	private String validDefaultOriginalUrl(String value) {
+		if (value == null || value.isBlank()) return null;
+		String trimmed = value.trim();
+		urlValidator.validate(trimmed);
+		// 인증된 프로젝트 멤버와 프로젝트 API key가 설정하므로 위험 검사는 의도적으로 생략한다.
+		// 신뢰 정책이 바뀌면 LinkManagementService.requireNoKnownThreat와 같은 검사를 이 지점에 복구한다.
+		return trimmed;
 	}
 }

@@ -78,24 +78,28 @@ public class RedirectService {
 		try {
 			HostRoute route = domains.resolve(host).orElseThrow(LinkNotFoundException::new);
 			Link initialLink = findAvailableLink(route, code);
-			String rawUrl = initialLink.getOriginalUrl();
+			String rawUrl = effectiveOriginalUrl(initialLink);
 			Map<String, String> utmValues = utmValuesFor(initialLink.getId());
 			String checkedUrl = DestinationUrlMerger.merge(rawUrl, utmValues);
 			urlValidator.validate(checkedUrl);
 
-			RiskVerdict verdict = riskVerificationService.verify(checkedUrl).verdict();
-			if (verdict == RiskVerdict.THREAT) {
-				recordAccess(initialLink, accessedAt, Outcome.BLOCKED, requestInfo);
-				log.warn("Redirect blocked by URL risk verification: code={}, elapsedMs={}",
-						code, elapsedMillis(startedAt));
-				throw new UnsafeUrlException();
+			if (initialLink.getProject() == null) {
+				RiskVerdict verdict = riskVerificationService.verify(checkedUrl).verdict();
+				if (verdict == RiskVerdict.THREAT) {
+					recordAccess(initialLink, accessedAt, Outcome.BLOCKED, requestInfo);
+					log.warn("Redirect blocked by URL risk verification: code={}, elapsedMs={}",
+							code, elapsedMillis(startedAt));
+					throw new UnsafeUrlException();
+				}
+				if (verdict == RiskVerdict.UNKNOWN) {
+					recordAccess(initialLink, accessedAt, Outcome.CHECK_FAILED, requestInfo);
+					log.warn("Redirect unavailable after URL risk verification: code={}, elapsedMs={}",
+							code, elapsedMillis(startedAt));
+					throw new UrlRiskCheckFailedException();
+				}
 			}
-			if (verdict == RiskVerdict.UNKNOWN) {
-				recordAccess(initialLink, accessedAt, Outcome.CHECK_FAILED, requestInfo);
-				log.warn("Redirect unavailable after URL risk verification: code={}, elapsedMs={}",
-						code, elapsedMillis(startedAt));
-				throw new UrlRiskCheckFailedException();
-			}
+			// 프로젝트 링크는 인증된 멤버 또는 API key 생성자를 신뢰해 위험 검사를 생략한다.
+			// 신뢰 정책이 바뀌면 위 검사의 조건을 제거해 모든 링크에 다시 적용한다.
 
 			String redirectUrl = completeRedirect(route, code, rawUrl, checkedUrl, utmValues, accessedAt, requestInfo);
 			log.info("Redirect issued: code={}, elapsedMs={}", code, elapsedMillis(startedAt));
@@ -125,7 +129,7 @@ public class RedirectService {
 		try {
 			String redirectUrl = transactions.execute(status -> {
 				Link currentLink = findAvailableLink(route, code);
-				if (!checkedRawUrl.equals(currentLink.getOriginalUrl())) {
+				if (!checkedRawUrl.equals(effectiveOriginalUrl(currentLink))) {
 					log.warn("Redirect verification invalidated: reason=URL_CHANGED, code={}", code);
 					accessEventRecorder.record(currentLink, accessedAt, Outcome.URL_CHANGED, requestInfo);
 					incrementAccessCount(currentLink.getId());
@@ -147,6 +151,14 @@ public class RedirectService {
 		} finally {
 			metrics.recordRedirectWrite(sample, "access", outcome);
 		}
+	}
+
+	private String effectiveOriginalUrl(Link link) {
+		if (link.getOriginalUrl() != null) return link.getOriginalUrl();
+		if (link.getCampaign() != null && link.getCampaign().getDefaultOriginalUrl() != null) {
+			return link.getCampaign().getDefaultOriginalUrl();
+		}
+		throw new LinkGoneException(LinkGoneException.Reason.NO_DESTINATION);
 	}
 
 	private Map<String, String> utmValuesFor(Long linkId) {

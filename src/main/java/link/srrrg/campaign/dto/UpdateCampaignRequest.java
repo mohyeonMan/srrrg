@@ -8,8 +8,10 @@ public class UpdateCampaignRequest {
 
 	private String name;
 	private String description;
+	private String defaultOriginalUrl;
 	private boolean namePresent;
 	private boolean descriptionPresent;
+	private boolean defaultOriginalUrlPresent;
 
 	@JsonSetter("name")
 	public void setName(String name) {
@@ -23,7 +25,13 @@ public class UpdateCampaignRequest {
 		this.descriptionPresent = true;
 	}
 
+	@JsonSetter("defaultOriginalUrl")
+	public void setDefaultOriginalUrl(String defaultOriginalUrl) {
+		this.defaultOriginalUrl = defaultOriginalUrl;
+		this.defaultOriginalUrlPresent = true;
+	}
+
 	public boolean hasChanges() {
-		return namePresent || descriptionPresent;
+		return namePresent || descriptionPresent || defaultOriginalUrlPresent;
 	}
 }

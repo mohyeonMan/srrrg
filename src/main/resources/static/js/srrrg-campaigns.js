@@ -115,13 +115,32 @@
 		byId('campaign-body').hidden = false;
 		byId('campaign-name').textContent = state.campaign.name;
 		byId('campaign-description').textContent = state.campaign.description || '';
+		byId('campaign-default-url').value = state.campaign.defaultOriginalUrl || '';
 		byId('download-template-link').href = `${base}/api/web/campaigns/${campaignId}/links/template.csv`;
+		byId('campaign-statistics-link').href = `${base}/statistics?projectId=${state.projectId}&campaignId=${campaignId}`;
 
 		await loadTemplates();
 		await refreshTemplateSelection();
 		await loadLinks(null);
 		resetImportPanel();
 	}
+
+	byId('default-destination-form').addEventListener('submit', async (event) => {
+		event.preventDefault();
+		const nextUrl = new FormData(event.target).get('defaultOriginalUrl')?.trim() || null;
+		if (state.campaign.defaultOriginalUrl && !nextUrl
+				&& !confirm('기본 목적지를 제거하면 자체 URL이 없는 링크는 410 Gone을 반환합니다. 계속할까요?')) return;
+		const response = await request(`${base}/api/web/campaigns/${state.campaignId}`, {
+			method: 'PATCH', body: JSON.stringify({ defaultOriginalUrl: nextUrl })
+		});
+		const responseBody = await body(response);
+		if (!response.ok) return setMessage(byId('default-destination-message'), responseBody.message || '기본 목적지를 저장할 수 없습니다.', true);
+		state.campaign = responseBody;
+		byId('campaign-default-url').value = state.campaign.defaultOriginalUrl || '';
+		setMessage(byId('default-destination-message'), nextUrl
+			? '기본 목적지를 저장했습니다. 자체 URL이 없는 링크에 즉시 적용됩니다.'
+			: '기본 목적지를 제거했습니다. 자체 URL이 없는 링크는 410 Gone을 반환합니다.');
+	});
 
 	async function loadTemplates() {
 		const response = await request(`${base}/api/web/projects/${state.projectId}/utm-templates`);
@@ -282,7 +301,7 @@
 			const response = await request(`${base}/api/web/campaigns/${state.campaignId}/links`, {
 				method: 'POST',
 				body: JSON.stringify({
-					originalUrl: data.get('originalUrl')?.trim(),
+					originalUrl: data.get('originalUrl')?.trim() || null,
 					externalId: data.get('externalId')?.trim() || null,
 					utmValues
 				})
@@ -312,11 +331,13 @@
 		const rows = items.map((link) => {
 			const row = element('article', 'project-link-item');
 			const main = element('div', 'project-link-main');
-			main.append(element('span', 'project-link-short-url', link.code), element('p', 'project-link-original', link.originalUrl));
+			main.append(element('span', 'project-link-short-url', link.code),
+				element('p', 'project-link-original', link.originalUrl || '캠페인 기본 목적지 사용'));
 			const meta = element('div', 'project-link-meta');
 			meta.append(
 				element('span', '', link.externalId ? `external_id: ${link.externalId}` : 'external_id 없음'),
-				element('span', '', formatDate(link.createdAt))
+				element('span', '', formatDate(link.createdAt)),
+				statisticsLink(link.code)
 			);
 			row.append(main, meta);
 			return row;
@@ -326,6 +347,8 @@
 		state.linksCursor = page.nextCursor;
 		byId('load-more-links-button').hidden = !page.nextCursor;
 	}
+
+	function statisticsLink(code) { const link = element('a', '', '단일 링크 통계'); link.href = `${base}/statistics?projectId=${state.projectId}&code=${encodeURIComponent(code)}`; return link; }
 
 	byId('load-more-links-button').addEventListener('click', () => loadLinks(state.linksCursor));
 

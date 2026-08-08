@@ -90,6 +90,44 @@ class CampaignPostgreSqlIntegrationTest {
 	private static int counter = 0;
 
 	@Test
+	void campaignDefaultDestinationIsResolvedDynamicallyAndMissingDestinationReturnsGone() throws Exception {
+		Owner owner = newOwner();
+		MvcResult createdCampaign = mockMvc.perform(post("/api/web/projects/{projectId}/campaigns", owner.projectId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"name\":\"동적 목적지\",\"defaultOriginalUrl\":\"https://first.example/path\"}"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.defaultOriginalUrl").value("https://first.example/path"))
+				.andReturn();
+		Long campaignId = Long.valueOf(readJson(createdCampaign, "id"));
+
+		MvcResult createdLink = mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON).content("{}"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.originalUrl").doesNotExist())
+				.andReturn();
+		String code = readJson(createdLink, "code");
+
+		mockMvc.perform(get("/{code}", code).header("Host", owner.host))
+				.andExpect(status().isFound())
+				.andExpect(header().string("Location", "https://first.example/path"));
+
+		mockMvc.perform(patch("/api/web/campaigns/{id}", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"defaultOriginalUrl\":\"https://second.example/path\"}"))
+				.andExpect(status().isOk());
+		mockMvc.perform(get("/{code}", code).header("Host", owner.host))
+				.andExpect(status().isFound())
+				.andExpect(header().string("Location", "https://second.example/path"));
+
+		mockMvc.perform(patch("/api/web/campaigns/{id}", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"defaultOriginalUrl\":null}"))
+				.andExpect(status().isOk());
+		mockMvc.perform(get("/{code}", code).header("Host", owner.host))
+				.andExpect(status().isGone());
+	}
+
+	@Test
 	void createsCampaignLinkMergingUtmAndPreservingExistingQueryOnRedirect() throws Exception {
 		Owner owner = newOwner();
 
@@ -108,6 +146,65 @@ class CampaignPostgreSqlIntegrationTest {
 				.andReturn();
 		String location = redirect.getResponse().getHeader("Location");
 		assertThat(location).contains("lang=ko").contains("utm_source=newsletter");
+	}
+
+	@Test
+	void campaignStatisticsReconcileAndEachCampaignLinkHasStandaloneDrillDown() throws Exception {
+		Owner owner = newOwner();
+		Long templateId = createTemplate(owner, "utm_source");
+		Long campaignId = createCampaign(owner, "통계 캠페인", templateId);
+		MvcResult created = mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/stats\",\"externalId\":\"person-1\",\"utmValues\":{\"utm_source\":\"newsletter\"}}"))
+				.andExpect(status().isCreated()).andReturn();
+		String code = readJson(created, "code");
+		mockMvc.perform(get("/{code}", code).header("Host", owner.host).header("User-Agent", "Mozilla/5.0 Chrome/120"))
+				.andExpect(status().isFound());
+
+		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId).cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.summary.entries").value(1))
+				.andExpect(jsonPath("$.summary.checkedLinks").value(1))
+				.andExpect(jsonPath("$.links[0].code").value(code))
+				.andExpect(jsonPath("$.utm[0].field").value("utm_source"))
+				.andExpect(jsonPath("$.utm[0].entries").value(1));
+		mockMvc.perform(get("/api/web/projects/{projectId}/links/{code}/statistics", owner.projectId, code).cookie(owner.cookie))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.scope").value("LINK"))
+				.andExpect(jsonPath("$.summary.entries").value(1));
+		mockMvc.perform(get("/api/web/projects/{projectId}/statistics", owner.projectId).cookie(owner.cookie))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.summary.entries").value(1))
+				.andExpect(jsonPath("$.campaigns[0].entries").value(1));
+
+		ApiKeyService.CreatedKey statsKey = apiKeyService.create(owner.userId, owner.projectId, "stats",
+				java.util.Set.of(ApiKeyScope.STATS_READ), null);
+		mockMvc.perform(get("/api/v1/projects/{projectId}/links/{code}/statistics", owner.projectId, code)
+					.header("Authorization", "Bearer " + statsKey.rawKey()))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.summary.entries").value(1));
+
+		mockMvc.perform(delete("/api/web/campaigns/{id}", campaignId).with(csrf()).cookie(owner.cookie))
+				.andExpect(status().isNoContent());
+		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId).cookie(owner.cookie))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.summary.entries").value(1));
+	}
+
+	@Test
+	void statisticsRangeQueryUsesTheTimeAndLinkIndexAtOneHundredThousandEvents() throws Exception {
+		Owner owner = newOwner();
+		MvcResult created = mockMvc.perform(post("/api/web/projects/{projectId}/links", owner.projectId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/performance\"}"))
+				.andExpect(status().isCreated()).andReturn();
+		Long linkId = jdbcTemplate.queryForObject("SELECT id FROM links WHERE code=?", Long.class, readJson(created, "code"));
+		jdbcTemplate.update("""
+				INSERT INTO link_access_events(link_id,accessed_at,outcome,is_bot)
+				SELECT ?,now()-(n||' minutes')::interval,'REDIRECTED',false FROM generate_series(1,100000) n
+				""", linkId);
+		String plan = String.join("\n", jdbcTemplate.queryForList("""
+				EXPLAIN (ANALYZE, BUFFERS)
+				SELECT COUNT(e.id) FROM links l JOIN link_access_events e ON e.link_id=l.id
+				WHERE e.accessed_at>=now()-interval '7 days' AND e.accessed_at<now() AND l.project_id=?
+				""", String.class, owner.projectId));
+		assertThat(plan).contains("idx_link_access_events_link_time", "Execution Time");
 	}
 
 	@Test

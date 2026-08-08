@@ -33,7 +33,7 @@ public class CampaignImportRow {
 	@Column(name = "row_number", nullable = false)
 	private int rowNumber;
 
-	@Column(name = "original_url", nullable = false, length = 2048)
+	@Column(name = "original_url", length = 2048)
 	private String originalUrl;
 
 	@Column(name = "external_id", length = 100)

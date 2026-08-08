@@ -64,7 +64,6 @@
 			<p id="management-auth-message" class="form-message" role="status" aria-live="polite"></p>
 			<div class="management-auth-actions">
 				<button id="management-auth-button" class="primary-button" type="submit">관리 화면 열기</button>
-				<button id="open-sample-dashboard" class="secondary-button" type="button">샘플 통계 보기</button>
 			</div>
 		</form>
 
@@ -85,7 +84,6 @@
 				<div class="link-identity-main">
 					<div class="link-status-line">
 						<span id="managed-link-status" class="status-badge success">사용 가능</span>
-						<span id="analytics-data-badge" class="sample-badge">샘플 통계</span>
 					</div>
 					<div class="managed-short-url-row">
 						<a id="managed-short-url" class="managed-short-url" target="_blank" rel="noopener noreferrer"></a>
@@ -119,11 +117,12 @@
 					<button type="button" data-period="90" aria-pressed="false">90일</button>
 				</div>
 			</div>
-
-			<div class="sample-data-notice">
-				<strong>현재 통계는 화면 검증을 위한 샘플 데이터입니다.</strong>
-				<span>링크 설정과 누적 수치는 실제 관리 API를 사용하며, 상세 통계는 집계 API 연결 후 교체됩니다.</span>
-			</div>
+			<form id="analytics-custom-period" class="analytics-custom-period">
+				<label>시작일 <input id="analytics-from" type="date" required></label>
+				<label>종료일 <input id="analytics-to" type="date" required></label>
+				<label>집계 <select id="analytics-bucket"><option value="DAY">일</option><option value="MONTH">월</option><option value="YEAR">년</option></select></label>
+				<button class="secondary-button compact-action" type="submit">적용</button>
+			</form>
 
 			<dl class="metric-grid" aria-label="기간 핵심 통계">
 				<div class="metric-item"><dt>단축 URL 진입</dt><dd id="metric-entries">0</dd><p id="metric-entries-delta">-</p></div>
