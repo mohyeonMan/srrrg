@@ -6,17 +6,27 @@
 	<meta name="context-path" th:content="@{/}">
 	<title>srrrg - 캠페인</title>
 	<link rel="stylesheet" th:href="@{/css/srrrg.css}">
+	<link rel="stylesheet" th:href="@{/css/srrrg/management.css}">
+	<link rel="stylesheet" th:href="@{/css/srrrg/workspace-shell.css}">
+	<link rel="stylesheet" th:href="@{/css/srrrg/drawer.css}">
+	<script defer th:src="@{/js/srrrg-workspace-shell.js}"></script>
+	<script defer th:src="@{/js/srrrg-link-drawer.js}"></script>
 	<script defer th:src="@{/js/srrrg-campaigns.js}"></script>
 </head>
 <body>
-<div th:replace="~{fragments/srrrg-layout :: header}"></div>
+<div class="workspace-layout">
+<div th:replace="~{fragments/workspace-shell :: sidebar(active='campaigns')}"></div>
+<div class="workspace-main">
+<div th:replace="~{fragments/workspace-shell :: topbar(title='캠페인')}"></div>
 
-<main class="page-shell" id="campaigns-app">
+<main class="page-shell workspace-content" id="campaigns-app">
 	<p class="section-kicker">CAMPAIGNS</p>
 	<div class="campaign-heading-row">
 		<h1 id="campaign-name">캠페인</h1>
-		<p><a id="campaign-statistics-link" class="secondary-button compact-action" href="#">캠페인 통계</a></p>
-		<a id="back-to-project" class="secondary-button" href="#">프로젝트로 돌아가기</a>
+		<div class="campaign-heading-actions">
+			<button id="archive-campaign-button" class="secondary-button compact-action" type="button">보관하기</button>
+			<a id="back-to-project" class="secondary-button" href="#">프로젝트로 돌아가기</a>
+		</div>
 	</div>
 	<p id="campaign-description" class="campaign-description"></p>
 	<p id="campaigns-message" class="form-message" role="status" aria-live="polite"></p>
@@ -29,155 +39,173 @@
 	</div>
 
 	<div id="campaign-body" hidden>
-		<section class="surface-panel campaign-card" aria-labelledby="destination-title">
-			<h2 id="destination-title">기본 목적지</h2>
-			<p>자체 원본 URL이 없는 캠페인 링크는 이동할 때 현재 기본 목적지를 사용합니다.</p>
-			<form id="default-destination-form" class="project-inline-form" novalidate>
-				<label class="field" for="campaign-default-url"><span class="field-label">기본 목적지 URL (선택)</span>
-					<input id="campaign-default-url" class="field-input" name="defaultOriginalUrl" type="url" maxlength="2048">
-				</label>
-				<button class="secondary-button" type="submit">기본 목적지 저장</button>
-			</form>
-			<p id="default-destination-message" class="form-message" role="status" aria-live="polite"></p>
-		</section>
+		<div class="console-tabs" role="tablist" aria-label="캠페인 상세 화면">
+			<button id="campaign-tab-overview" class="console-tab" type="button" role="tab" aria-selected="true" aria-controls="campaign-panel-overview">개요</button>
+			<button id="campaign-tab-links" class="console-tab" type="button" role="tab" aria-selected="false" aria-controls="campaign-panel-links">링크</button>
+			<button id="campaign-tab-utm" class="console-tab" type="button" role="tab" aria-selected="false" aria-controls="campaign-panel-utm">UTM 설정</button>
+			<button id="campaign-tab-statistics" class="console-tab" type="button" role="tab" aria-selected="false" aria-controls="campaign-panel-statistics">통계</button>
+		</div>
 
-		<section class="surface-panel campaign-card" aria-labelledby="template-title">
-			<h2 id="template-title">UTM 템플릿</h2>
-			<p>현재 템플릿과 활성 필드는 기존 링크의 리다이렉트에도 즉시 적용됩니다. 링크 개별값은 같은 이름의 캠페인 기본값보다 우선합니다.</p>
-			<div class="campaign-inline-row">
-				<label class="field" for="template-picker"><span class="field-label">사용할 템플릿</span>
-					<select id="template-picker" class="field-input">
-						<option value="">템플릿 없음</option>
-					</select>
-				</label>
-				<button id="reload-templates-button" class="secondary-button" type="button">새로고침</button>
-			</div>
-			<form id="create-template-form" class="project-inline-form" novalidate>
-				<label class="field" for="new-template-name"><span class="field-label">새 템플릿 이름</span>
-					<input id="new-template-name" class="field-input" name="name" maxlength="100" required>
-				</label>
-				<button class="secondary-button" type="submit">템플릿 만들기</button>
-			</form>
-
-			<div id="template-fields-panel" hidden>
-				<h3>활성 필드 (최대 10개)</h3>
-				<p class="help-text">필드 변경은 이 템플릿을 사용하는 모든 캠페인의 기존 링크와 통계에 즉시 반영됩니다.</p>
-				<div id="template-field-list" class="template-field-list"></div>
-				<form id="add-field-form" class="project-inline-form" novalidate>
-					<label class="field" for="new-field-name"><span class="field-label">필드 이름 (예: utm_source)</span>
-						<input id="new-field-name" class="field-input" name="name" maxlength="50" pattern="[a-z][a-z0-9_]{1,49}" required>
+		<section id="campaign-panel-overview" class="console-panel" role="tabpanel" aria-labelledby="campaign-tab-overview">
+			<section class="surface-panel campaign-card" aria-labelledby="destination-title">
+				<h2 id="destination-title">기본 목적지</h2>
+				<p>자체 원본 URL이 없는 캠페인 링크는 이동할 때 현재 기본 목적지를 사용합니다.</p>
+				<form id="default-destination-form" class="project-inline-form" novalidate>
+					<label class="field" for="campaign-default-url"><span class="field-label">기본 목적지 URL (선택)</span>
+						<input id="campaign-default-url" class="field-input" name="defaultOriginalUrl" type="url" maxlength="2048">
 					</label>
-					<button class="secondary-button" type="submit">필드 추가</button>
+					<button class="secondary-button" type="submit">기본 목적지 저장</button>
 				</form>
-			</div>
-			<p id="template-message" class="form-message" role="status" aria-live="polite"></p>
+				<p id="default-destination-message" class="form-message" role="status" aria-live="polite"></p>
+			</section>
 		</section>
 
-		<section id="defaults-panel" class="surface-panel campaign-card" aria-labelledby="defaults-title" hidden>
-			<h2 id="defaults-title">캠페인 기본값</h2>
-			<p>링크에서 직접 지정하지 않은 UTM 필드는 현재 캠페인 기본값을 사용합니다. 변경사항은 기존 링크에도 즉시 적용됩니다.</p>
-			<form id="defaults-form" class="template-field-list"></form>
-			<button id="save-defaults-button" class="secondary-button" type="button">기본값 저장</button>
-			<p id="defaults-message" class="form-message" role="status" aria-live="polite"></p>
-		</section>
-
-		<section class="surface-panel campaign-card" aria-labelledby="create-link-title">
-			<h2 id="create-link-title">개인화 링크 만들기</h2>
-			<form id="create-campaign-link-form" class="form-grid" novalidate>
-				<label class="field" for="campaign-original-url"><span class="field-label">원본 URL (선택)</span>
-					<input id="campaign-original-url" class="field-input" name="originalUrl" type="url" maxlength="2048" placeholder="비우면 현재 캠페인 기본 목적지 사용">
-				</label>
-				<label class="field" for="campaign-external-id"><span class="field-label">external_id (선택, 이메일·이름·전화번호 금지)</span>
-					<input id="campaign-external-id" class="field-input" name="externalId" maxlength="100" autocomplete="off">
-				</label>
-				<div id="campaign-utm-inputs" class="template-field-list"></div>
-				<section id="campaign-utm-preview" class="campaign-utm-preview" aria-labelledby="campaign-utm-preview-title" aria-live="polite">
-					<div class="campaign-utm-preview-heading">
-						<h3 id="campaign-utm-preview-title">현재 입력 기준 적용 예정 UTM</h3>
-						<span id="campaign-utm-preview-count" class="status-badge">0개</span>
+		<section id="campaign-panel-links" class="console-panel" role="tabpanel" aria-labelledby="campaign-tab-links" hidden>
+			<section class="surface-panel campaign-card" aria-labelledby="create-link-title">
+				<h2 id="create-link-title">개인화 링크 만들기</h2>
+				<form id="create-campaign-link-form" class="form-grid" novalidate>
+					<label class="field" for="campaign-original-url"><span class="field-label">원본 URL (선택)</span>
+						<input id="campaign-original-url" class="field-input" name="originalUrl" type="url" maxlength="2048" placeholder="비우면 현재 캠페인 기본 목적지 사용">
+					</label>
+					<label class="field" for="campaign-external-id"><span class="field-label">external_id (선택, 이메일·이름·전화번호 금지)</span>
+						<input id="campaign-external-id" class="field-input" name="externalId" maxlength="100" autocomplete="off">
+					</label>
+					<div id="campaign-utm-inputs" class="template-field-list"></div>
+					<section id="campaign-utm-preview" class="campaign-utm-preview" aria-labelledby="campaign-utm-preview-title" aria-live="polite">
+						<div class="campaign-utm-preview-heading">
+							<h3 id="campaign-utm-preview-title">현재 입력 기준 적용 예정 UTM</h3>
+							<span id="campaign-utm-preview-count" class="status-badge">0개</span>
+						</div>
+						<div id="campaign-utm-preview-list" class="campaign-utm-value-list"></div>
+						<p class="help-text">캠페인 기본값이 변경되면 링크에서 직접 지정하지 않은 필드도 함께 변경됩니다.</p>
+					</section>
+					<div class="project-form-actions">
+						<p id="create-campaign-link-message" class="form-message" role="status" aria-live="polite"></p>
+						<button id="create-campaign-link-button" class="primary-button" type="submit">링크 만들기</button>
 					</div>
-					<div id="campaign-utm-preview-list" class="campaign-utm-value-list"></div>
-					<p class="help-text">캠페인 기본값이 변경되면 링크에서 직접 지정하지 않은 필드도 함께 변경됩니다.</p>
-				</section>
-				<div class="project-form-actions">
-					<p id="create-campaign-link-message" class="form-message" role="status" aria-live="polite"></p>
-					<button id="create-campaign-link-button" class="primary-button" type="submit">링크 만들기</button>
+				</form>
+			</section>
+
+			<section class="surface-panel campaign-card" aria-labelledby="campaign-links-title">
+				<div class="project-card-heading">
+					<h2 id="campaign-links-title">캠페인 링크</h2>
+					<span id="campaign-link-count" class="status-badge">0</span>
 				</div>
-			</form>
+				<div class="campaign-link-toolbar">
+					<label class="campaign-link-select-all" for="campaign-link-select-all">
+						<input id="campaign-link-select-all" type="checkbox">
+						<span id="campaign-link-selected-count">0개 선택</span>
+					</label>
+					<button id="delete-selected-links-button" class="danger-button compact-action" type="button" disabled>선택 삭제</button>
+				</div>
+				<div id="campaign-link-table-wrap" class="campaign-link-table-wrap" hidden>
+					<table class="campaign-link-table">
+						<thead>
+						<tr>
+							<th class="campaign-link-check-column" scope="col"><span class="sr-only">선택</span></th>
+							<th scope="col">단축 코드</th>
+							<th scope="col">목적지</th>
+							<th scope="col">external_id</th>
+							<th scope="col">생성일</th>
+							<th scope="col">UTM</th>
+							<th scope="col"><span class="sr-only">관리</span></th>
+						</tr>
+						</thead>
+						<tbody id="campaign-link-list"></tbody>
+					</table>
+				</div>
+				<p id="campaign-link-empty" class="project-empty-list">아직 만든 링크가 없습니다.</p>
+				<p id="campaign-links-message" class="form-message" role="status" aria-live="polite"></p>
+				<button id="load-more-links-button" class="secondary-button" type="button" hidden>더 보기</button>
+			</section>
+
+			<section class="surface-panel campaign-card" aria-labelledby="csv-title">
+				<h2 id="csv-title">CSV 대량 생성</h2>
+				<p><a id="download-template-link" href="#">현재 캠페인용 CSV 양식 다운로드</a></p>
+				<form id="csv-upload-form" class="project-inline-form" novalidate>
+					<label class="field" for="csv-file"><span class="field-label">CSV 파일 (UTF-8, 최대 10,000행·10MB)</span>
+						<input id="csv-file" class="field-input" name="file" type="file" accept=".csv,text/csv" required>
+					</label>
+					<label class="field" for="csv-idempotency-key"><span class="field-label">Idempotency-Key</span>
+						<input id="csv-idempotency-key" class="field-input" name="idempotencyKey" maxlength="100" required>
+					</label>
+					<button class="secondary-button" type="submit">업로드</button>
+				</form>
+				<div id="import-status-panel" hidden>
+					<p id="import-status-text"></p>
+					<a id="download-errors-link" href="#" hidden>오류 CSV 다운로드</a>
+				</div>
+				<p id="csv-message" class="form-message" role="status" aria-live="polite"></p>
+			</section>
+
+			<section class="surface-panel campaign-card" aria-labelledby="export-title">
+				<h2 id="export-title">링크 내보내기</h2>
+				<div class="campaign-inline-row">
+					<label class="field" for="export-created-from"><span class="field-label">시작일</span>
+						<input id="export-created-from" class="field-input" type="datetime-local">
+					</label>
+					<label class="field" for="export-created-to"><span class="field-label">종료일</span>
+						<input id="export-created-to" class="field-input" type="datetime-local">
+					</label>
+					<label class="field" for="export-external-id"><span class="field-label">external_id 검색</span>
+						<input id="export-external-id" class="field-input" maxlength="100">
+					</label>
+				</div>
+				<button id="export-links-button" class="secondary-button" type="button">CSV 다운로드</button>
+			</section>
 		</section>
 
-		<section class="surface-panel campaign-card" aria-labelledby="campaign-links-title">
-			<div class="project-card-heading">
-				<h2 id="campaign-links-title">캠페인 링크</h2>
-				<span id="campaign-link-count" class="status-badge">0</span>
-			</div>
-			<div class="campaign-link-toolbar">
-				<label class="campaign-link-select-all" for="campaign-link-select-all">
-					<input id="campaign-link-select-all" type="checkbox">
-					<span id="campaign-link-selected-count">0개 선택</span>
-				</label>
-				<button id="delete-selected-links-button" class="danger-button compact-action" type="button" disabled>선택 삭제</button>
-			</div>
-			<div id="campaign-link-table-wrap" class="campaign-link-table-wrap" hidden>
-				<table class="campaign-link-table">
-					<thead>
-					<tr>
-						<th class="campaign-link-check-column" scope="col"><span class="sr-only">선택</span></th>
-						<th scope="col">단축 코드</th>
-						<th scope="col">목적지</th>
-						<th scope="col">external_id</th>
-						<th scope="col">생성일</th>
-						<th scope="col">UTM</th>
-						<th scope="col"><span class="sr-only">관리</span></th>
-					</tr>
-					</thead>
-					<tbody id="campaign-link-list"></tbody>
-				</table>
-			</div>
-			<p id="campaign-link-empty" class="project-empty-list">아직 만든 링크가 없습니다.</p>
-			<p id="campaign-links-message" class="form-message" role="status" aria-live="polite"></p>
-			<button id="load-more-links-button" class="secondary-button" type="button" hidden>더 보기</button>
+		<section id="campaign-panel-utm" class="console-panel" role="tabpanel" aria-labelledby="campaign-tab-utm" hidden>
+			<section class="surface-panel campaign-card" aria-labelledby="template-title">
+				<h2 id="template-title">UTM 템플릿</h2>
+				<p>현재 템플릿과 활성 필드는 기존 링크의 리다이렉트에도 즉시 적용됩니다. 링크 개별값은 같은 이름의 캠페인 기본값보다 우선합니다.</p>
+				<div class="campaign-inline-row">
+					<label class="field" for="template-picker"><span class="field-label">사용할 템플릿</span>
+						<select id="template-picker" class="field-input">
+							<option value="">템플릿 없음</option>
+						</select>
+					</label>
+					<button id="reload-templates-button" class="secondary-button" type="button">새로고침</button>
+					<a id="manage-utm-templates-link" class="secondary-button" href="#">템플릿 관리</a>
+				</div>
+				<form id="create-template-form" class="project-inline-form" novalidate>
+					<label class="field" for="new-template-name"><span class="field-label">새 템플릿 이름</span>
+						<input id="new-template-name" class="field-input" name="name" maxlength="100" required>
+					</label>
+					<button class="secondary-button" type="submit">템플릿 만들기</button>
+				</form>
+
+				<div id="template-fields-panel" hidden>
+					<h3>활성 필드 (최대 10개)</h3>
+					<p class="help-text">필드 변경은 이 템플릿을 사용하는 모든 캠페인의 기존 링크와 통계에 즉시 반영됩니다.</p>
+					<div id="template-field-list" class="template-field-list"></div>
+					<form id="add-field-form" class="project-inline-form" novalidate>
+						<label class="field" for="new-field-name"><span class="field-label">필드 이름 (예: utm_source)</span>
+							<input id="new-field-name" class="field-input" name="name" maxlength="50" pattern="[a-z][a-z0-9_]{1,49}" required>
+						</label>
+						<button class="secondary-button" type="submit">필드 추가</button>
+					</form>
+				</div>
+				<p id="template-message" class="form-message" role="status" aria-live="polite"></p>
+			</section>
+
+			<section id="defaults-panel" class="surface-panel campaign-card" aria-labelledby="defaults-title" hidden>
+				<h2 id="defaults-title">캠페인 기본값</h2>
+				<p>링크에서 직접 지정하지 않은 UTM 필드는 현재 캠페인 기본값을 사용합니다. 변경사항은 기존 링크에도 즉시 적용됩니다.</p>
+				<form id="defaults-form" class="template-field-list"></form>
+				<button id="save-defaults-button" class="secondary-button" type="button">기본값 저장</button>
+				<p id="defaults-message" class="form-message" role="status" aria-live="polite"></p>
+			</section>
 		</section>
 
-		<section class="surface-panel campaign-card" aria-labelledby="csv-title">
-			<h2 id="csv-title">CSV 대량 생성</h2>
-			<p><a id="download-template-link" href="#">현재 캠페인용 CSV 양식 다운로드</a></p>
-			<form id="csv-upload-form" class="project-inline-form" novalidate>
-				<label class="field" for="csv-file"><span class="field-label">CSV 파일 (UTF-8, 최대 10,000행·10MB)</span>
-					<input id="csv-file" class="field-input" name="file" type="file" accept=".csv,text/csv" required>
-				</label>
-				<label class="field" for="csv-idempotency-key"><span class="field-label">Idempotency-Key</span>
-					<input id="csv-idempotency-key" class="field-input" name="idempotencyKey" maxlength="100" required>
-				</label>
-				<button class="secondary-button" type="submit">업로드</button>
-			</form>
-			<div id="import-status-panel" hidden>
-				<p id="import-status-text"></p>
-				<a id="download-errors-link" href="#" hidden>오류 CSV 다운로드</a>
-			</div>
-			<p id="csv-message" class="form-message" role="status" aria-live="polite"></p>
+		<section id="campaign-panel-statistics" class="console-panel" role="tabpanel" aria-labelledby="campaign-tab-statistics" hidden>
+			<iframe id="campaign-statistics-frame" class="embedded-statistics-frame" title="캠페인 통계"></iframe>
 		</section>
-
-		<section class="surface-panel campaign-card" aria-labelledby="export-title">
-			<h2 id="export-title">링크 내보내기</h2>
-			<div class="campaign-inline-row">
-				<label class="field" for="export-created-from"><span class="field-label">시작일</span>
-					<input id="export-created-from" class="field-input" type="datetime-local">
-				</label>
-				<label class="field" for="export-created-to"><span class="field-label">종료일</span>
-					<input id="export-created-to" class="field-input" type="datetime-local">
-				</label>
-				<label class="field" for="export-external-id"><span class="field-label">external_id 검색</span>
-					<input id="export-external-id" class="field-input" maxlength="100">
-				</label>
-			</div>
-			<button id="export-links-button" class="secondary-button" type="button">CSV 다운로드</button>
-		</section>
-
-		<button id="archive-campaign-button" class="danger-button" type="button">캠페인 삭제</button>
 	</div>
 </main>
 
 <div th:replace="~{fragments/srrrg-layout :: footer}"></div>
+</div>
+</div>
 </body>
 </html>

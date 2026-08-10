@@ -13,11 +13,14 @@
 		selectedLinkCodes: new Set(),
 		linksCursor: null,
 		refreshing: null,
-		importPollHandle: null
+		importPollHandle: null,
+		statisticsFrameLoaded: false
 	};
+	let activeTab = 'overview';
 
 	const byId = (id) => document.getElementById(id);
 	const campaignsMessage = byId('campaigns-message');
+	const TABS = ['overview', 'links', 'utm', 'statistics'];
 
 	function csrf() {
 		return decodeURIComponent(document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]+)/)?.[1] || '');
@@ -70,12 +73,30 @@
 		return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 	}
 
+	function switchTab(tab) {
+		activeTab = tab;
+		TABS.forEach((name) => {
+			byId(`campaign-tab-${name}`).setAttribute('aria-selected', String(name === tab));
+			byId(`campaign-panel-${name}`).hidden = name !== tab;
+		});
+		if (tab === 'statistics') loadStatisticsFrame();
+	}
+
+	function loadStatisticsFrame() {
+		if (state.statisticsFrameLoaded || !state.campaignId) return;
+		state.statisticsFrameLoaded = true;
+		byId('campaign-statistics-frame').src = `${base}/statistics?projectId=${state.projectId}&campaignId=${state.campaignId}${periodSuffix()}`;
+	}
+
+	TABS.forEach((name) => byId(`campaign-tab-${name}`).addEventListener('click', () => switchTab(name)));
+
 	if (!state.projectId) {
 		setMessage(campaignsMessage, '프로젝트를 먼저 선택하세요.', true);
 		byId('back-to-project').href = `${base}/projects`;
 		return;
 	}
 	byId('back-to-project').href = `${base}/projects?projectId=${state.projectId}`;
+	byId('manage-utm-templates-link').href = `${base}/projects/utm-templates?projectId=${state.projectId}`;
 
 	async function loadCampaignPicker() {
 		const response = await request(`${base}/api/web/projects/${state.projectId}/campaigns?limit=100`);
@@ -119,7 +140,8 @@
 		byId('campaign-description').textContent = state.campaign.description || '';
 		byId('campaign-default-url').value = state.campaign.defaultOriginalUrl || '';
 		byId('download-template-link').href = `${base}/api/web/campaigns/${campaignId}/links/template.csv`;
-		byId('campaign-statistics-link').href = `${base}/statistics?projectId=${state.projectId}&campaignId=${campaignId}${periodSuffix()}`;
+		state.statisticsFrameLoaded = false;
+		if (activeTab === 'statistics') loadStatisticsFrame();
 
 		await loadTemplates();
 		await refreshTemplateSelection();
@@ -395,9 +417,10 @@
 		selectCell.append(checkbox);
 
 		const codeCell = tableCell('단축 코드');
-		const codeLink = element('a', 'campaign-link-code', link.code);
-		codeLink.href = managementUrl(link.code);
-		codeCell.append(codeLink);
+		const codeButton = element('button', 'campaign-link-code', link.code);
+		codeButton.type = 'button';
+		codeButton.addEventListener('click', () => openLinkDetail(link.code));
+		codeCell.append(codeButton);
 
 		const destinationCell = tableCell('목적지', 'campaign-link-destination',
 			link.originalUrl || '캠페인 기본 목적지 사용');
@@ -464,6 +487,14 @@
 	function periodSuffix() { return params.get('from') && params.get('to') ? `&from=${encodeURIComponent(params.get('from'))}&to=${encodeURIComponent(params.get('to'))}&bucket=${encodeURIComponent(params.get('bucket') || 'DAY')}` : ''; }
 
 	function statisticsLink(code) { const link = element('a', '', '상세보기'); link.href = managementUrl(code); return link; }
+
+	function openLinkDetail(code) {
+		SrrrgLinkDrawer.open({
+			base, request, body, projectId: state.projectId, code,
+			manageUrl: managementUrl(code),
+			onChange: () => loadLinks(null)
+		});
+	}
 
 	function updateLinkSelectionControls() {
 		const checkboxes = Array.from(byId('campaign-link-list').querySelectorAll('.campaign-link-checkbox'));
@@ -572,9 +603,9 @@
 	});
 
 	byId('archive-campaign-button').addEventListener('click', async () => {
-		if (!state.campaign || !confirm(`"${state.campaign.name}" 캠페인을 삭제할까요? 소속된 모든 링크가 함께 삭제됩니다.`)) return;
+		if (!state.campaign || !confirm(`"${state.campaign.name}" 캠페인을 보관할까요? 캠페인 목록에서 숨겨지며, 소속된 링크는 그대로 유지됩니다.`)) return;
 		const response = await request(`${base}/api/web/campaigns/${state.campaignId}`, { method: 'DELETE' });
-		if (!response.ok) return setMessage(campaignsMessage, (await body(response)).message || '캠페인을 삭제할 수 없습니다.', true);
+		if (!response.ok) return setMessage(campaignsMessage, (await body(response)).message || '캠페인을 보관할 수 없습니다.', true);
 		location.href = `${base}/projects?projectId=${state.projectId}`;
 	});
 
