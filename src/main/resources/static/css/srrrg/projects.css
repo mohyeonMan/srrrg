@@ -140,6 +140,13 @@
 	overflow-wrap: anywhere;
 }
 
+.project-detail-header-actions {
+	display: flex;
+	flex: 0 0 auto;
+	gap: var(--space-2);
+	align-items: center;
+}
+
 .project-card {
 	display: grid;
 	gap: var(--space-5);
@@ -395,8 +402,16 @@
 		flex-direction: column;
 	}
 
-	.project-detail-header .copy-button,
+	.project-detail-header-actions,
 	.project-form-actions .primary-button {
+		width: 100%;
+	}
+
+	.project-detail-header-actions {
+		flex-direction: column;
+	}
+
+	.project-detail-header-actions > * {
 		width: 100%;
 	}
 

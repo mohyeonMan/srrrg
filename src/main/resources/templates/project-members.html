@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="context-path" th:content="@{/}">
+	<title>srrrg - 멤버</title>
+	<link rel="stylesheet" th:href="@{/css/srrrg.css}">
+	<link rel="stylesheet" th:href="@{/css/srrrg/workspace-shell.css}">
+	<script defer th:src="@{/js/srrrg-workspace-shell.js}"></script>
+	<script defer th:src="@{/js/srrrg-project-members.js}"></script>
+</head>
+<body>
+<div class="workspace-layout">
+<div th:replace="~{fragments/workspace-shell :: sidebar(active='members')}"></div>
+<div class="workspace-main">
+<div th:replace="~{fragments/workspace-shell :: topbar(title='멤버')}"></div>
+
+<main class="page-shell workspace-content" id="project-members-app">
+	<p class="section-kicker">MEMBERS</p>
+	<div class="campaign-heading-row">
+		<h1 id="member-project-name">멤버 및 초대</h1>
+		<a id="back-to-project" class="secondary-button" href="#">프로젝트로 돌아가기</a>
+	</div>
+	<p id="members-message" class="form-message" role="status" aria-live="polite"></p>
+
+	<section class="surface-panel project-card" aria-labelledby="member-list-title">
+		<h2 id="member-list-title">멤버</h2>
+		<div id="member-list" class="member-list"></div>
+	</section>
+
+	<section id="invitation-management" class="surface-panel project-card" aria-labelledby="invitation-title">
+		<h2 id="invitation-title">초대</h2>
+		<p class="invitation-help">이메일로 초대 링크를 보냅니다. 링크를 열어 로그인한 계정이 참여하므로 링크가 전달되지 않도록 안내하세요.</p>
+		<form id="invite-form" class="project-inline-form">
+			<label class="field" for="invite-email"><span class="field-label">초대할 이메일</span><input id="invite-email" class="field-input" name="email" type="email" maxlength="320" autocomplete="email" aria-describedby="invite-message" required></label>
+			<label class="field" for="invite-role"><span class="field-label">권한</span><select id="invite-role" class="field-input" name="role"><option value="EDITOR">링크 편집 가능</option><option value="VIEWER">조회 전용</option></select></label>
+			<button id="invite-submit-button" class="secondary-button" type="submit">초대 보내기</button>
+		</form>
+		<p id="invite-message" class="form-message" role="status" aria-live="polite"></p>
+		<div class="invitation-list-heading"><h3>수락 대기</h3><span id="invitation-count" class="status-badge">0</span></div>
+		<div id="invitation-list" class="invitation-list"></div>
+	</section>
+</main>
+
+<div th:replace="~{fragments/srrrg-layout :: footer}"></div>
+</div>
+</div>
+</body>
+</html>

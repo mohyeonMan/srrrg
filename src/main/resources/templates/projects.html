@@ -6,12 +6,19 @@
 	<meta name="context-path" th:content="@{/}">
 	<title>srrrg - 프로젝트</title>
 	<link rel="stylesheet" th:href="@{/css/srrrg.css}">
+	<link rel="stylesheet" th:href="@{/css/srrrg/workspace-shell.css}">
+	<link rel="stylesheet" th:href="@{/css/srrrg/drawer.css}">
+	<script defer th:src="@{/js/srrrg-workspace-shell.js}"></script>
+	<script defer th:src="@{/js/srrrg-link-drawer.js}"></script>
 	<script defer th:src="@{/js/srrrg-projects.js}"></script>
 </head>
 <body>
-<div th:replace="~{fragments/srrrg-layout :: header}"></div>
+<div class="workspace-layout">
+<div th:replace="~{fragments/workspace-shell :: sidebar(active='projects')}"></div>
+<div class="workspace-main">
+<div th:replace="~{fragments/workspace-shell :: topbar(title='프로젝트')}"></div>
 
-<main class="projects-shell" id="projects-app">
+<main class="projects-shell workspace-content" id="projects-app">
 	<header class="projects-heading">
 		<div>
 			<p class="section-kicker">PROJECTS</p>
@@ -54,7 +61,11 @@
 						</div>
 						<p id="project-domain" class="project-domain">도메인을 불러오는 중...</p>
 					</div>
-					<button id="copy-project-domain" class="copy-button" type="button" disabled>복사</button>
+					<div class="project-detail-header-actions">
+						<button id="copy-project-domain" class="copy-button" type="button" disabled>복사</button>
+						<a id="project-members-link" class="secondary-button compact-action" href="#">멤버</a>
+						<a id="project-settings-link" class="secondary-button compact-action" href="#">설정</a>
+					</div>
 				</header>
 
 				<section id="link-create-panel" class="project-card project-link-create surface-panel" aria-labelledby="link-create-title">
@@ -133,58 +144,13 @@
 					<p id="campaign-message" class="form-message" role="status" aria-live="polite"></p>
 				</section>
 
-				<details class="project-admin surface-panel">
-					<summary>프로젝트 관리</summary>
-					<div class="project-admin-content">
-						<section id="project-settings-section" class="project-admin-section" aria-labelledby="project-settings-title">
-							<h3 id="project-settings-title">프로젝트 설정</h3>
-							<form id="rename-project-form" class="project-inline-form" novalidate>
-								<label class="field" for="rename-project-name"><span class="field-label">프로젝트 이름</span><input id="rename-project-name" class="field-input" name="name" maxlength="100" required></label>
-								<button class="secondary-button" type="submit">이름 저장</button>
-							</form>
-							<form id="change-project-domain-form" class="project-inline-form" novalidate>
-								<label class="field" for="change-project-domain"><span class="field-label">선점할 서브도메인</span><input id="change-project-domain" class="field-input" name="subdomain" minlength="3" maxlength="63" autocapitalize="none" autocomplete="off" spellcheck="false" required></label>
-								<button class="secondary-button" type="submit">선점하기</button>
-							</form>
-							<label class="field"><span class="field-label">신규 링크에 사용</span><input id="project-subdomain-enabled" type="checkbox"> 활성화</label>
-							<button id="release-project-subdomain" class="text-button" type="button">서브도메인 반납</button>
-							<p class="project-domain-warning">활성화 여부와 관계없이 서브도메인은 선점됩니다. 변경·반납해도 기존 링크 주소는 유지됩니다.</p>
-							<p id="domain-change-message" class="form-message" role="status" aria-live="polite"></p>
-							<button id="delete-project-button" class="danger-button" type="button">프로젝트 삭제</button>
-						</section>
-
-						<section class="project-admin-section" aria-labelledby="member-list-title">
-							<h3 id="member-list-title">멤버 및 초대</h3>
-							<div id="member-list" class="member-list"></div>
-							<div id="invitation-management" class="invitation-management">
-								<p class="invitation-help">이메일로 초대 링크를 보냅니다. 링크를 열어 로그인한 계정이 참여하므로 링크가 전달되지 않도록 안내하세요.</p>
-								<form id="invite-form" class="project-inline-form">
-									<label class="field" for="invite-email"><span class="field-label">초대할 이메일</span><input id="invite-email" class="field-input" name="email" type="email" maxlength="320" autocomplete="email" aria-describedby="invite-message" required></label>
-									<label class="field" for="invite-role"><span class="field-label">권한</span><select id="invite-role" class="field-input" name="role"><option value="EDITOR">링크 편집 가능</option><option value="VIEWER">조회 전용</option></select></label>
-									<button id="invite-submit-button" class="secondary-button" type="submit">초대 보내기</button>
-								</form>
-								<p id="invite-message" class="form-message" role="status" aria-live="polite"></p>
-								<div class="invitation-list-heading"><h4>수락 대기</h4><span id="invitation-count" class="status-badge">0</span></div>
-								<div id="invitation-list" class="invitation-list"></div>
-							</div>
-						</section>
-
-						<section id="import-section" class="project-admin-section" aria-labelledby="import-title">
-							<h3 id="import-title">기존 익명 링크 편입</h3>
-							<p>기존 링크의 code와 secret key를 입력하면 프로젝트 링크로 전환됩니다.</p>
-							<form id="import-form" class="project-inline-form" novalidate>
-								<label class="field" for="import-code"><span class="field-label">code</span><input id="import-code" class="field-input" name="code" maxlength="6" autocomplete="off" required></label>
-								<label class="field" for="import-secret-key"><span class="field-label">secret key</span><input id="import-secret-key" class="field-input" name="secretKey" type="password" autocomplete="off" spellcheck="false" required></label>
-								<button class="secondary-button" type="submit">프로젝트로 편입</button>
-							</form>
-						</section>
-					</div>
-				</details>
 			</div>
 		</section>
 	</div>
 </main>
 
 <div th:replace="~{fragments/srrrg-layout :: footer}"></div>
+</div>
+</div>
 </body>
 </html>

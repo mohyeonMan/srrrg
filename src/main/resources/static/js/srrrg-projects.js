@@ -7,7 +7,6 @@
 	const byId = (id) => document.getElementById(id);
 	const projectMessage = byId('project-message');
 	const linkMessage = byId('link-create-message');
-	const inviteMessage = byId('invite-message');
 	const originalUrlInput = byId('project-original-url');
 	const expiresAtInput = byId('project-expires-at');
 	const createLinkButton = byId('create-project-link-button');
@@ -111,11 +110,8 @@
 		byId('project-detail').hidden = false;
 		byId('project-name').textContent = project.name;
 		byId('project-role').textContent = project.role;
-		byId('rename-project-name').value = project.name;
-		byId('change-project-domain').value = project.subdomain || '';
-		byId('project-subdomain-enabled').checked = project.subdomainEnabled;
-		byId('project-subdomain-enabled').disabled = !project.subdomain;
-		byId('release-project-subdomain').disabled = !project.subdomain;
+		byId('project-members-link').href = `${base}/projects/members?projectId=${project.id}`;
+		byId('project-settings-link').href = `${base}/projects/settings?projectId=${project.id}`;
 		setMessage(byId('domain-change-message'), '');
 		byId('project-domain').textContent = '도메인을 불러오는 중...';
 		byId('copy-project-domain').disabled = true;
@@ -131,9 +127,7 @@
 	function setRoleVisibility(role) {
 		const canEdit = role === 'OWNER' || role === 'EDITOR';
 		byId('link-create-panel').hidden = !canEdit;
-		byId('import-section').hidden = !canEdit;
-		byId('project-settings-section').hidden = role !== 'OWNER';
-		byId('invitation-management').hidden = role !== 'OWNER';
+		byId('project-settings-link').hidden = role !== 'OWNER';
 		byId('campaign-section').hidden = false;
 		byId('create-campaign-form').hidden = !canEdit;
 	}
@@ -141,10 +135,9 @@
 	async function loadProjectData() {
 		if (!state.selected) return;
 		const projectId = state.selected.id;
-		const [overviewResponse, subdomainResponse, membersResponse] = await Promise.all([
+		const [overviewResponse, subdomainResponse] = await Promise.all([
 			request(`${base}/api/web/projects/${projectId}/overview`),
-			request(`${base}/api/web/projects/${projectId}/subdomain`),
-			request(`${base}/api/web/projects/${projectId}/members`)
+			request(`${base}/api/web/projects/${projectId}/subdomain`)
 		]);
 		if (state.selected?.id !== projectId) return;
 
@@ -152,9 +145,6 @@
 			const config = await subdomainResponse.json();
 			state.subdomain = config.subdomain;
 			state.subdomainEnabled = config.enabled;
-			byId('project-subdomain-enabled').checked = config.enabled;
-			byId('project-subdomain-enabled').disabled = !config.subdomain;
-			byId('release-project-subdomain').disabled = !config.subdomain;
 			byId('project-domain').textContent = projectOrigin(config.enabled ? config.subdomain : null);
 			byId('copy-project-domain').disabled = false;
 		}
@@ -163,8 +153,6 @@
 			renderLinks(overview.standaloneLinks || []);
 			renderCampaigns(overview.campaigns || []);
 		}
-		if (membersResponse.ok) renderMembers(await membersResponse.json());
-		if (state.selected.role === 'OWNER') await loadInvitations(projectId);
 	}
 
 	function projectOrigin(subdomain = state.subdomainEnabled ? state.subdomain : null) {
@@ -193,14 +181,22 @@
 			original.title = link.originalUrl;
 			main.append(anchor, original);
 			const meta = element('div', 'project-link-meta');
-			meta.append(
-				element('span', '', link.expiresAt ? `만료 ${formatDate(link.expiresAt)}` : '만료 없음'),
-				statisticsLink(`${base}/manage?projectId=${state.selected.id}&code=${encodeURIComponent(link.code)}`)
-			);
+			const detailButton = element('button', 'text-button', '상세보기');
+			detailButton.type = 'button';
+			detailButton.addEventListener('click', () => openLinkDetail(link.code));
+			meta.append(element('span', '', link.expiresAt ? `만료 ${formatDate(link.expiresAt)}` : '만료 없음'), detailButton);
 			row.append(main, meta);
 			return row;
 		});
 		replaceChildren(byId('project-link-list'), rows);
+	}
+
+	function openLinkDetail(code) {
+		SrrrgLinkDrawer.open({
+			base, request, body, projectId: state.selected.id, code,
+			manageUrl: `${base}/manage?projectId=${state.selected.id}&code=${encodeURIComponent(code)}`,
+			onChange: loadProjectData
+		});
 	}
 
 	function renderCampaigns(campaigns) {
@@ -225,65 +221,6 @@
 	}
 
 	function statisticsLink(href) { const link = element('a', '', href.includes('code=') ? '상세보기' : '통계'); link.href = href; return link; }
-
-	function renderMembers(members) {
-		const rows = members.map((member) => {
-			const row = element('div', 'member-row');
-			row.append(element('span', '', member.displayName || '이름 없음'), element('span', 'status-badge', roleLabel(member.role)));
-			return row;
-		});
-		replaceChildren(byId('member-list'), rows);
-	}
-
-	async function loadInvitations(projectId = state.selected?.id) {
-		if (!projectId) return;
-		const response = await request(`${base}/api/web/projects/${projectId}/invitations`);
-		if (!response.ok || state.selected?.id !== projectId) return;
-		renderInvitations(await response.json());
-	}
-
-	function renderInvitations(invitations) {
-		byId('invitation-count').textContent = String(invitations.length);
-		const rows = invitations.map((invitation) => {
-			const row = element('div', 'invitation-row');
-			const details = element('div', 'invitation-details');
-			const expired = new Date(invitation.expiresAt).getTime() <= Date.now();
-			details.append(
-				element('strong', '', invitation.email),
-				element('span', '', `${roleLabel(invitation.role)} · ${expired ? `${formatDate(invitation.expiresAt)} 만료` : `${formatDate(invitation.expiresAt)}까지`}`)
-			);
-			const actions = element('div', 'invitation-actions');
-			const cancel = element('button', 'text-button', '취소');
-			cancel.type = 'button';
-			cancel.addEventListener('click', () => updateInvitation(invitation.id, 'DELETE', '초대를 취소했습니다.'));
-			const resend = element('button', 'text-button', '재발송');
-			resend.type = 'button';
-			resend.addEventListener('click', () => updateInvitation(invitation.id, 'POST', '초대 메일을 다시 보냈습니다.'));
-			actions.append(cancel, resend);
-			row.append(details, actions);
-			return row;
-		});
-		replaceChildren(byId('invitation-list'), rows.length ? rows : [element('p', 'help-text', '대기 중인 초대가 없습니다.')]);
-	}
-
-	async function updateInvitation(id, method, successMessage) {
-		const suffix = method === 'POST' ? '/resend' : '';
-		try {
-			const response = await request(`${base}/api/web/invitations/${id}${suffix}`, { method });
-			if (!response.ok) {
-				setMessage(inviteMessage, (await body(response)).message || '초대를 변경할 수 없습니다.', true);
-				return;
-			}
-			setMessage(inviteMessage, successMessage);
-			await loadInvitations();
-		} catch (_) {
-			setMessage(inviteMessage, '서버에 연결할 수 없습니다. 잠시 후 다시 시도하세요.', true);
-		}
-	}
-
-	function roleLabel(role) {
-		return role === 'EDITOR' ? '링크 편집 가능' : role === 'VIEWER' ? '조회 전용' : '소유자';
-	}
 
 	function validateLinkForm() {
 		const urlError = byId('project-url-error');
@@ -463,105 +400,6 @@
 		event.target.reset();
 		setMessage(byId('campaign-message'), '캠페인을 만들었습니다.');
 		location.href = `${base}/campaigns?projectId=${state.selected.id}&campaignId=${responseBody.id}`;
-	});
-
-	byId('rename-project-form').addEventListener('submit', async (event) => {
-		event.preventDefault();
-		if (!state.selected) return;
-		const name = new FormData(event.target).get('name')?.trim();
-		if (!name) return setMessage(projectMessage, '프로젝트 이름을 입력하세요.', true);
-		const response = await request(`${base}/api/web/projects/${state.selected.id}`, { method: 'PATCH', body: JSON.stringify({ name }) });
-		const responseBody = await body(response);
-		if (!response.ok) return setMessage(projectMessage, responseBody.message || '프로젝트 이름을 변경할 수 없습니다.', true);
-		setMessage(projectMessage, '프로젝트 이름을 변경했습니다.');
-		await loadProjects(responseBody.id);
-	});
-
-	byId('change-project-domain-form').addEventListener('submit', async (event) => {
-		event.preventDefault();
-		if (!state.selected) return;
-		const subdomain = new FormData(event.target).get('subdomain')?.trim().toLowerCase();
-		const message = byId('domain-change-message');
-		if (!subdomain || !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])$/.test(subdomain) || subdomain.length < 3 || subdomain.length > 63) {
-			return setMessage(message, '서브도메인은 영문 소문자, 숫자, 하이픈을 사용한 3~63자로 입력하세요.', true);
-		}
-		if (subdomain === state.subdomain) return setMessage(message, '이미 선점한 서브도메인입니다.');
-		const response = await request(`${base}/api/web/projects/${state.selected.id}/subdomain`, {
-			method: 'PUT', body: JSON.stringify({ subdomain })
-		});
-		const responseBody = await body(response);
-		if (!response.ok) return setMessage(message, responseBody.message || '서브도메인을 변경할 수 없습니다.', true);
-		await loadProjects(state.selected.id);
-		setMessage(byId('domain-change-message'), '서브도메인을 선점했습니다. 활성화하면 신규 링크에 사용됩니다.');
-	});
-
-	byId('project-subdomain-enabled').addEventListener('change', async (event) => {
-		if (!state.selected) return;
-		const enabled = event.target.checked;
-		const response = await request(`${base}/api/web/projects/${state.selected.id}/subdomain/activation`, {
-			method: 'PATCH', body: JSON.stringify({ enabled })
-		});
-		if (!response.ok) {
-			event.target.checked = !enabled;
-			return setMessage(byId('domain-change-message'), (await body(response)).message || '활성화 상태를 변경할 수 없습니다.', true);
-		}
-		await loadProjects(state.selected.id);
-		setMessage(byId('domain-change-message'), enabled ? '신규 링크에 서브도메인을 사용합니다.' : '신규 링크에 기본 도메인을 사용합니다.');
-	});
-
-	byId('release-project-subdomain').addEventListener('click', async () => {
-		if (!state.selected || !state.subdomain || !confirm(`“${state.subdomain}” 서브도메인을 반납할까요? 기존 링크 주소는 유지됩니다.`)) return;
-		const response = await request(`${base}/api/web/projects/${state.selected.id}/subdomain`, { method: 'DELETE' });
-		if (!response.ok) return setMessage(byId('domain-change-message'), (await body(response)).message || '서브도메인을 반납할 수 없습니다.', true);
-		await loadProjects(state.selected.id);
-		setMessage(byId('domain-change-message'), '서브도메인을 반납했습니다.');
-	});
-
-	byId('delete-project-button').addEventListener('click', async () => {
-		if (!state.selected || !confirm(`“${state.selected.name}” 프로젝트를 삭제할까요? 프로젝트 링크와 API key를 더 이상 사용할 수 없습니다.`)) return;
-		const response = await request(`${base}/api/web/projects/${state.selected.id}`, { method: 'DELETE' });
-		if (!response.ok) return setMessage(projectMessage, (await body(response)).message || '프로젝트를 삭제할 수 없습니다.', true);
-		state.selected = null;
-		setMessage(projectMessage, '프로젝트를 삭제했습니다.');
-		await loadProjects();
-	});
-
-	byId('invite-form').addEventListener('submit', async (event) => {
-		event.preventDefault();
-		if (!state.selected) return;
-		const submit = byId('invite-submit-button');
-		const data = new FormData(event.target);
-		submit.disabled = true;
-		setMessage(inviteMessage, '초대 메일을 보내고 있습니다.');
-		try {
-			const response = await request(`${base}/api/web/projects/${state.selected.id}/invitations`, {
-				method: 'POST', body: JSON.stringify({ email: data.get('email'), role: data.get('role') })
-			});
-			if (!response.ok) return setMessage(inviteMessage, (await body(response)).message || '초대 메일을 보낼 수 없습니다.', true);
-			event.target.reset();
-			setMessage(inviteMessage, '초대 메일을 보냈습니다.');
-			await loadInvitations();
-		} catch (_) {
-			setMessage(inviteMessage, '서버에 연결할 수 없습니다. 잠시 후 다시 시도하세요.', true);
-		} finally {
-			submit.disabled = false;
-		}
-	});
-
-	byId('import-form').addEventListener('submit', async (event) => {
-		event.preventDefault();
-		if (!state.selected) return;
-		const data = new FormData(event.target);
-		const code = data.get('code')?.trim();
-		const secretKey = data.get('secretKey')?.trim();
-		if (!code || !secretKey) return setMessage(projectMessage, 'code와 secret key를 모두 입력하세요.', true);
-		const response = await request(`${base}/api/web/projects/${state.selected.id}/links/${encodeURIComponent(code)}/claim`, {
-			method: 'POST', headers: { 'X-Srrrg-Secret-Key': secretKey }
-		});
-		if (!response.ok) return setMessage(projectMessage, (await body(response)).message || '링크를 프로젝트로 편입할 수 없습니다.', true);
-		event.target.reset();
-		setMessage(projectMessage, '링크를 프로젝트로 편입했습니다. 기존 secret key는 더 이상 사용할 수 없습니다.');
-		await loadProjectData();
 	});
 
 	selectExpiration('none');

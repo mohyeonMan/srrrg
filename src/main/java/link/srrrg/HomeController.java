@@ -29,6 +29,21 @@ public class HomeController {
 		return "projects";
 	}
 
+	@GetMapping("/projects/members")
+	public String projectMembers() {
+		return "project-members";
+	}
+
+	@GetMapping("/projects/settings")
+	public String projectSettings() {
+		return "project-settings";
+	}
+
+	@GetMapping("/projects/utm-templates")
+	public String projectUtmTemplates() {
+		return "project-utm-templates";
+	}
+
 	@GetMapping("/campaigns")
 	public String campaigns() {
 		return "campaigns";

@@ -334,6 +334,11 @@
 	font-weight: 800;
 }
 
+.danger-zone {
+	background: var(--color-danger-soft);
+	border-color: var(--color-danger-border);
+}
+
 .login-shell {
 	display: grid;
 	place-items: center;
