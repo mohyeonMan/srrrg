@@ -96,13 +96,11 @@ class RedirectServiceTest {
 	void safeUrlRecordsRedirectAndReturnsOriginalUrl() {
 		Link link = availableLink("https://example.com/path?q=1");
 		when(riskVerificationService.verify(link.getOriginalUrl())).thenReturn(assessment(RiskVerdict.SAFE));
-		when(repository.incrementAccessAndRedirectCountsById(7L)).thenReturn(1);
 
 		String redirectUrl = service.redirect("srrrg.link", "aB3x9Q", requestInfo);
 
 		assertThat(redirectUrl).isEqualTo("https://example.com/path?q=1");
 		verify(accessRecorder).record(eq(link), any(Instant.class), eq(Outcome.REDIRECTED), eq(requestInfo), eq(Map.of()));
-		verify(repository).incrementAccessAndRedirectCountsById(7L);
 		assertTimerCount("srrrg.redirect", "outcome", "redirected", 1);
 		assertWriteTimerCount("success", 1);
 	}
@@ -113,7 +111,6 @@ class RedirectServiceTest {
 		when(link.getProject()).thenReturn(mock(Project.class));
 		when(domains.resolve("acme.srrrg.link")).thenReturn(Optional.of(new HostRoute("acme")));
 		when(repository.findBySubdomainAndCode("acme", "aB3x9Q")).thenReturn(Optional.of(link));
-		when(repository.incrementAccessAndRedirectCountsById(7L)).thenReturn(1);
 
 		assertThat(service.redirect("acme.srrrg.link", "aB3x9Q", requestInfo))
 				.isEqualTo("https://project.example");
@@ -130,7 +127,6 @@ class RedirectServiceTest {
 		when(link.getProject()).thenReturn(mock(Project.class));
 		when(domains.resolve("acme.srrrg.link")).thenReturn(Optional.of(new HostRoute("acme")));
 		when(repository.findBySubdomainAndCode("acme", "aB3x9Q")).thenReturn(Optional.of(link));
-		when(repository.incrementAccessAndRedirectCountsById(7L)).thenReturn(1);
 		EffectiveUtmValue utm = mock(EffectiveUtmValue.class);
 		when(utm.getFieldName()).thenReturn("utm_source");
 		when(utm.getValue()).thenReturn("campaign-default");
@@ -182,12 +178,10 @@ class RedirectServiceTest {
 	void threatUrlRecordsBlockedAccess() {
 		Link link = availableLink("https://bad.example");
 		when(riskVerificationService.verify("https://bad.example")).thenReturn(assessment(RiskVerdict.THREAT));
-		when(repository.incrementAccessCountById(7L)).thenReturn(1);
 
 		assertThatThrownBy(() -> service.redirect("srrrg.link", "aB3x9Q", requestInfo))
 				.isInstanceOf(UnsafeUrlException.class);
 		verify(accessRecorder).record(eq(link), any(Instant.class), eq(Outcome.BLOCKED), eq(requestInfo));
-		verify(repository, never()).incrementAccessAndRedirectCountsById(any());
 		assertTimerCount("srrrg.redirect", "outcome", "blocked", 1);
 		assertWriteTimerCount("success", 1);
 	}
@@ -197,12 +191,10 @@ class RedirectServiceTest {
 		Link link = availableLink("https://example.com");
 		when(riskVerificationService.verify("https://example.com"))
 				.thenReturn(UrlRiskAssessment.unknown(Instant.now()));
-		when(repository.incrementAccessCountById(7L)).thenReturn(1);
 
 		assertThatThrownBy(() -> service.redirect("srrrg.link", "aB3x9Q", requestInfo))
 				.isInstanceOf(UrlRiskCheckFailedException.class);
 		verify(accessRecorder).record(eq(link), any(Instant.class), eq(Outcome.CHECK_FAILED), eq(requestInfo));
-		verify(repository, never()).incrementAccessAndRedirectCountsById(any());
 		assertTimerCount("srrrg.redirect", "outcome", "check_failed", 1);
 		assertWriteTimerCount("success", 1);
 	}
@@ -212,14 +204,12 @@ class RedirectServiceTest {
 		Link link = link("https://example.com");
 		when(link.isExpiredAt(any(Instant.class))).thenReturn(true);
 		when(repository.findBySubdomainIsNullAndCode("aB3x9Q")).thenReturn(Optional.of(link));
-		when(repository.incrementAccessCountById(7L)).thenReturn(1);
 
 		assertThatThrownBy(() -> service.redirect("srrrg.link", "aB3x9Q", requestInfo))
 				.isInstanceOf(LinkGoneException.class)
 				.extracting(exception -> ((LinkGoneException) exception).getReason())
 				.isEqualTo(LinkGoneException.Reason.EXPIRED);
 		verify(accessRecorder).record(eq(link), any(Instant.class), eq(Outcome.EXPIRED), eq(requestInfo));
-		verify(repository).incrementAccessCountById(7L);
 		assertTimerCount("srrrg.redirect", "outcome", "gone", 1);
 	}
 
@@ -231,12 +221,10 @@ class RedirectServiceTest {
 				.thenReturn(Optional.of(oldLink))
 				.thenReturn(Optional.of(newLink));
 		when(riskVerificationService.verify("https://old.example")).thenReturn(assessment(RiskVerdict.SAFE));
-		when(repository.incrementAccessCountById(7L)).thenReturn(1);
 
 		assertThatThrownBy(() -> service.redirect("srrrg.link", "aB3x9Q", requestInfo))
 				.isInstanceOf(UrlRiskCheckFailedException.class);
 		verify(accessRecorder).record(eq(newLink), any(Instant.class), eq(Outcome.URL_CHANGED), eq(requestInfo));
-		verify(repository, never()).incrementAccessAndRedirectCountsById(any());
 		assertTimerCount("srrrg.redirect", "outcome", "check_failed", 1);
 		assertWriteTimerCount("success", 1);
 	}
@@ -252,7 +240,6 @@ class RedirectServiceTest {
 				.extracting(exception -> ((LinkGoneException) exception).getReason())
 				.isEqualTo(LinkGoneException.Reason.DELETED);
 		verify(accessRecorder, never()).record(eq(link), any(), any(), eq(requestInfo));
-		verify(repository, never()).incrementAccessCountById(any());
 	}
 
 	@Test

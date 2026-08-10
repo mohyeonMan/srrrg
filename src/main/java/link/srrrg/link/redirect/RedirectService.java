@@ -137,16 +137,10 @@ public class RedirectService {
 				if (!checkedRawUrl.equals(effectiveOriginalUrl(currentLink))) {
 					log.warn("Redirect verification invalidated: reason=URL_CHANGED, code={}", code);
 					accessEventRecorder.record(currentLink, accessedAt, Outcome.URL_CHANGED, requestInfo);
-					incrementAccessCount(currentLink.getId());
 					return null;
 				}
 				Map<String, String> effectiveUtm = currentLink.getCampaign() == null ? Map.of() : utmValuesFor(currentLink);
 				accessEventRecorder.record(currentLink, accessedAt, Outcome.REDIRECTED, requestInfo, effectiveUtm);
-				int updates = linkRepository.incrementAccessAndRedirectCountsById(currentLink.getId());
-				if (updates != 1) {
-					log.warn("Access statistics update failed: code={}, updates={}", code, updates);
-					throw new LinkNotFoundException();
-				}
 				if (currentLink.getProject() == null) return checkedMergedUrl;
 				String currentUrl = effectiveOriginalUrl(currentLink);
 				return currentLink.getCampaign() == null
@@ -184,21 +178,10 @@ public class RedirectService {
 		Timer.Sample sample = metrics.startTimer();
 		String outcome = "error";
 		try {
-			transactions.executeWithoutResult(status -> {
-				accessEventRecorder.record(link, accessedAt, accessOutcome, requestInfo);
-				incrementAccessCount(link.getId());
-			});
+			transactions.executeWithoutResult(status -> accessEventRecorder.record(link, accessedAt, accessOutcome, requestInfo));
 			outcome = "success";
 		} finally {
 			metrics.recordRedirectWrite(sample, "access", outcome);
-		}
-	}
-
-	private void incrementAccessCount(Long linkId) {
-		int updates = linkRepository.incrementAccessCountById(linkId);
-		if (updates != 1) {
-			log.warn("Access statistics update failed: linkId={}, updates={}", linkId, updates);
-			throw new LinkNotFoundException();
 		}
 	}
 

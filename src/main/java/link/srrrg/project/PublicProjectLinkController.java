@@ -86,8 +86,8 @@ public class PublicProjectLinkController {
 	ResponseEntity<ProblemDetail> handleUnreadable(HttpMessageNotReadableException exception) {
 		return handle(new PublicApiException(400, "INVALID_REQUEST", "요청 본문 형식이 올바르지 않습니다."));
 	}
-	record LinkResponse(String code, String originalUrl, java.time.Instant expiresAt, long accessCount, java.time.Instant createdAt) {
-		static LinkResponse from(Link link) { return new LinkResponse(link.getCode(), link.getOriginalUrl(), link.getExpiresAt(), link.getAccessCount(), link.getCreatedAt()); }
+	record LinkResponse(String code, String originalUrl, java.time.Instant expiresAt, java.time.Instant createdAt) {
+		static LinkResponse from(Link link) { return new LinkResponse(link.getCode(), link.getOriginalUrl(), link.getExpiresAt(), link.getCreatedAt()); }
 	}
 	static class PublicApiException extends RuntimeException {
 		final int status; final String code;

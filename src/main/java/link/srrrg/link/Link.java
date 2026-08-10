@@ -72,12 +72,6 @@ public class Link {
 	@Column(name = "expires_at")
 	private Instant expiresAt;
 
-	@Column(name = "access_count", nullable = false)
-	private long accessCount;
-
-	@Column(name = "redirect_count", nullable = false)
-	private long redirectCount;
-
 	@Column(name = "is_deleted", nullable = false)
 	private boolean deleted;
 
@@ -92,8 +86,6 @@ public class Link {
 		this.originalUrl = originalUrl;
 		this.secretKeyHash = secretKeyHash;
 		this.expiresAt = expiresAt;
-		this.accessCount = 0;
-		this.redirectCount = 0;
 		this.deleted = false;
 	}
 

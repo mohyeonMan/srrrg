@@ -30,7 +30,6 @@ import link.srrrg.link.access.ClientRequestInfoResolver;
 import link.srrrg.link.management.dto.CreateLinkResponse;
 import link.srrrg.link.management.dto.DeleteLinkResponse;
 import link.srrrg.link.management.dto.LinkManagementResponse;
-import link.srrrg.link.management.dto.LinkStatisticsSummary;
 import link.srrrg.link.management.dto.UpdateLinkRequest;
 
 class LinkControllerTest {
@@ -68,7 +67,7 @@ class LinkControllerTest {
 	}
 
 	@Test
-	void returnsManagedLinkWithStatistics() throws Exception {
+	void returnsManagedLinkWithoutDuplicatedCumulativeStatistics() throws Exception {
 		when(linkService.getManagedLink("aB3x9Q", "srrrg_sk_secret"))
 				.thenReturn(managementResponse());
 
@@ -76,8 +75,7 @@ class LinkControllerTest {
 					.header(SECRET_KEY_HEADER, "srrrg_sk_secret"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.code").value("aB3x9Q"))
-				.andExpect(jsonPath("$.statistics.accessCount").value(12))
-				.andExpect(jsonPath("$.statistics.redirectCount").value(8))
+				.andExpect(jsonPath("$.statistics").doesNotExist())
 				.andExpect(jsonPath("$.status").doesNotExist())
 				.andExpect(jsonPath("$.verifiedAt").doesNotExist())
 				.andExpect(jsonPath("$.secretKey").doesNotExist())
@@ -165,7 +163,6 @@ class LinkControllerTest {
 				null,
 				true,
 				null,
-				new LinkStatisticsSummary(12, 8),
 				Instant.parse("2026-07-10T10:00:00Z"),
 				Instant.parse("2026-07-10T11:00:00Z")
 		);

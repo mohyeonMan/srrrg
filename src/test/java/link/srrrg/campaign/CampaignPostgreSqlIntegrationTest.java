@@ -1,5 +1,7 @@
 package link.srrrg.campaign;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -88,6 +90,21 @@ class CampaignPostgreSqlIntegrationTest {
 	InvitationEmailSender invitationEmailSender;
 
 	private static int counter = 0;
+
+	@Test
+	void statisticsMigrationRemovesLinkCountersAndAddsScopedIndexes() {
+		List<String> columns = jdbcTemplate.queryForList("""
+				SELECT column_name FROM information_schema.columns
+				WHERE table_schema='public' AND table_name='links'
+				""", String.class);
+		List<String> indexes = jdbcTemplate.queryForList("""
+				SELECT indexname FROM pg_indexes WHERE schemaname='public'
+				""", String.class);
+
+		assertThat(columns).doesNotContain("access_count", "redirect_count");
+		assertThat(indexes).contains("ix_links_active_campaign_id", "ix_links_active_project_id",
+				"idx_link_access_events_link_time");
+	}
 
 	@Test
 	void campaignDefaultDestinationIsResolvedDynamicallyAndMissingDestinationReturnsGone() throws Exception {
@@ -213,11 +230,11 @@ class CampaignPostgreSqlIntegrationTest {
 
 		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId).cookie(owner.cookie))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.utm[?(@.value == 'first-source')].entries")
+				.andExpect(jsonPath("$.utm.items[?(@.value == 'first-source')].redirectedEvents")
 						.value(org.hamcrest.Matchers.contains(1)))
-				.andExpect(jsonPath("$.utm[?(@.value == 'second-source')].entries")
+				.andExpect(jsonPath("$.utm.items[?(@.value == 'second-source')].redirectedEvents")
 						.value(org.hamcrest.Matchers.contains(1)))
-				.andExpect(jsonPath("$.utm[?(@.value == 'fixed-source')].entries")
+				.andExpect(jsonPath("$.utm.items[?(@.value == 'fixed-source')].redirectedEvents")
 						.value(org.hamcrest.Matchers.contains(1)));
 	}
 
@@ -239,18 +256,18 @@ class CampaignPostgreSqlIntegrationTest {
 		addField(owner, templateId, "utm_medium").andExpect(status().isCreated());
 		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId).cookie(owner.cookie))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.utm[?(@.field == 'utm_medium' && @.value == '(없음)')].entries")
+				.andExpect(jsonPath("$.utm.items[?(@.field == 'utm_medium' && @.value == '(없음)')].redirectedEvents")
 						.value(org.hamcrest.Matchers.contains(1)));
 
 		mockMvc.perform(delete("/api/web/projects/{projectId}/utm-templates/{templateId}/fields/{fieldId}",
 				owner.projectId, templateId, fieldId).with(csrf()).cookie(owner.cookie)).andExpect(status().isNoContent());
 		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId).cookie(owner.cookie))
-				.andExpect(status().isOk()).andExpect(jsonPath("$.utm[?(@.field == 'utm_source')]").isEmpty());
+				.andExpect(status().isOk()).andExpect(jsonPath("$.utm.items[?(@.field == 'utm_source')]").isEmpty());
 
 		addField(owner, templateId, "utm_source").andExpect(status().isCreated());
 		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId).cookie(owner.cookie))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.utm[?(@.field == 'utm_source' && @.value == 'newsletter')].entries")
+				.andExpect(jsonPath("$.utm.items[?(@.field == 'utm_source' && @.value == 'newsletter')].redirectedEvents")
 						.value(org.hamcrest.Matchers.contains(1)));
 	}
 
@@ -269,29 +286,78 @@ class CampaignPostgreSqlIntegrationTest {
 
 		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId).cookie(owner.cookie))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.summary.entries").value(1))
-				.andExpect(jsonPath("$.summary.checkedLinks").value(1))
-				.andExpect(jsonPath("$.links[0].code").value(code))
-				.andExpect(jsonPath("$.utm[0].field").value("utm_source"))
-				.andExpect(jsonPath("$.utm[0].entries").value(1));
+				.andExpect(jsonPath("$.summary.current.entries").value(1))
+				.andExpect(jsonPath("$.summary.current.humanEntries").value(1))
+				.andExpect(jsonPath("$.summary.lifetimeLinks.humanAccessed").value(1))
+				.andExpect(jsonPath("$.links.items[0].code").value(code))
+				.andExpect(jsonPath("$.utm.items[0].field").value("utm_source"))
+				.andExpect(jsonPath("$.utm.items[0].redirectedEvents").value(1));
 		mockMvc.perform(get("/api/web/projects/{projectId}/links/{code}/statistics", owner.projectId, code).cookie(owner.cookie))
 				.andExpect(status().isOk()).andExpect(jsonPath("$.scope").value("LINK"))
-				.andExpect(jsonPath("$.summary.entries").value(1));
+				.andExpect(jsonPath("$.summary.current.entries").value(1));
 		mockMvc.perform(get("/api/web/projects/{projectId}/statistics", owner.projectId).cookie(owner.cookie))
-				.andExpect(status().isOk()).andExpect(jsonPath("$.summary.entries").value(1))
-				.andExpect(jsonPath("$.campaigns[0].entries").value(1));
+				.andExpect(status().isOk()).andExpect(jsonPath("$.summary.current.entries").value(1))
+				.andExpect(jsonPath("$.campaigns.items[0].period.entries").value(1));
 
 		ApiKeyService.CreatedKey statsKey = apiKeyService.create(owner.userId, owner.projectId, "stats",
 				java.util.Set.of(ApiKeyScope.STATS_READ), null);
 		mockMvc.perform(get("/api/v1/projects/{projectId}/links/{code}/statistics", owner.projectId, code)
 					.header("Authorization", "Bearer " + statsKey.rawKey()))
-				.andExpect(status().isOk()).andExpect(jsonPath("$.summary.entries").value(1));
+				.andExpect(status().isOk()).andExpect(jsonPath("$.summary.current.entries").value(1));
 
 		mockMvc.perform(delete("/api/web/campaigns/{id}", campaignId).with(csrf()).cookie(owner.cookie))
 				.andExpect(status().isNoContent());
 		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId).cookie(owner.cookie))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.code").value("CAMPAIGN_NOT_FOUND"));
+	}
+
+	@Test
+	void statisticsSeparateHumanAndBotEventsAndPageCampaignLinks() throws Exception {
+		Owner owner = newOwner();
+		Long campaignId = createCampaign(owner, "사람 봇 분리", null);
+		MvcResult first = mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/first\"}"))
+				.andExpect(status().isCreated()).andReturn();
+		mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/second\"}"))
+				.andExpect(status().isCreated());
+		Long linkId = jdbcTemplate.queryForObject("SELECT id FROM links WHERE code=?", Long.class, readJson(first, "code"));
+		jdbcTemplate.update("""
+				INSERT INTO link_access_events(link_id,accessed_at,outcome,is_bot)
+				VALUES (?,now(),'BLOCKED',false),(?,now(),'REDIRECTED',false),(?,now(),'REDIRECTED',true)
+				""", linkId, linkId, linkId);
+
+		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId)
+					.param("limit", "1").cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.summary.current.entries").value(3))
+				.andExpect(jsonPath("$.summary.current.redirects").value(2))
+				.andExpect(jsonPath("$.summary.current.humanEntries").value(2))
+				.andExpect(jsonPath("$.summary.current.humanRedirects").value(1))
+				.andExpect(jsonPath("$.summary.current.botEntries").value(1))
+				.andExpect(jsonPath("$.summary.current.botRedirects").value(1))
+				.andExpect(jsonPath("$.summary.current.nonRedirects").value(1))
+				.andExpect(jsonPath("$.links.totalItems").value(2))
+				.andExpect(jsonPath("$.links.nextOffset").value(1))
+				.andExpect(jsonPath("$.links.items.length()").value(1))
+				.andExpect(jsonPath("$.links.items[0].lifetimeStatus").value("HUMAN_ACCESSED"))
+				.andExpect(jsonPath("$.outcomes[?(@.outcome == 'REDIRECTED')].count")
+						.value(org.hamcrest.Matchers.contains(2)));
+	}
+
+	@Test
+	void statisticsRejectTooManyDailyBuckets() throws Exception {
+		Owner owner = newOwner();
+		Long campaignId = createCampaign(owner, "기간 제한", null);
+
+		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId)
+					.param("from", "2025-01-01").param("to", "2026-01-02")
+					.param("bucket", "DAY").cookie(owner.cookie))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("선택한 기간에는 더 큰 집계 단위를 사용하세요."));
 	}
 
 	@Test
@@ -312,6 +378,13 @@ class CampaignPostgreSqlIntegrationTest {
 				WHERE e.accessed_at>=now()-interval '7 days' AND e.accessed_at<now() AND l.project_id=?
 				""", String.class, owner.projectId));
 		assertThat(plan).contains("idx_link_access_events_link_time", "Execution Time");
+		mockMvc.perform(get("/api/web/projects/{projectId}/links/{code}/statistics", owner.projectId, readJson(created, "code"))
+					.param("from", java.time.LocalDate.now().minusDays(6).toString())
+					.param("to", java.time.LocalDate.now().toString())
+					.param("bucket", "DAY").cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.summary.current.entries").isNumber())
+				.andExpect(jsonPath("$.trend.length()").value(7));
 	}
 
 	@Test

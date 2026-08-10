@@ -119,7 +119,7 @@
 		byId('campaign-description').textContent = state.campaign.description || '';
 		byId('campaign-default-url').value = state.campaign.defaultOriginalUrl || '';
 		byId('download-template-link').href = `${base}/api/web/campaigns/${campaignId}/links/template.csv`;
-		byId('campaign-statistics-link').href = `${base}/statistics?projectId=${state.projectId}&campaignId=${campaignId}`;
+		byId('campaign-statistics-link').href = `${base}/statistics?projectId=${state.projectId}&campaignId=${campaignId}${periodSuffix()}`;
 
 		await loadTemplates();
 		await refreshTemplateSelection();
@@ -459,8 +459,9 @@
 	}
 
 	function managementUrl(code) {
-		return `${base}/manage?projectId=${state.projectId}&campaignId=${state.campaignId}&code=${encodeURIComponent(code)}`;
+		return `${base}/manage?projectId=${state.projectId}&campaignId=${state.campaignId}&code=${encodeURIComponent(code)}${periodSuffix()}`;
 	}
+	function periodSuffix() { return params.get('from') && params.get('to') ? `&from=${encodeURIComponent(params.get('from'))}&to=${encodeURIComponent(params.get('to'))}&bucket=${encodeURIComponent(params.get('bucket') || 'DAY')}` : ''; }
 
 	function statisticsLink(code) { const link = element('a', '', '상세보기'); link.href = managementUrl(code); return link; }
 

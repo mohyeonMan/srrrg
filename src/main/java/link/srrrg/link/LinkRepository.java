@@ -53,17 +53,4 @@ public interface LinkRepository extends JpaRepository<Link, Long>, JpaSpecificat
 			""")
 	int softDeleteByCampaignIdAndCodeIn(@Param("campaignId") Long campaignId, @Param("codes") List<String> codes);
 
-	@Modifying
-	@Query("update Link l set l.accessCount = l.accessCount + 1 where l.id = :id")
-	int incrementAccessCountById(@Param("id") Long id);
-
-	@Modifying
-	@Query("""
-			update Link l
-			   set l.accessCount = l.accessCount + 1,
-			       l.redirectCount = l.redirectCount + 1
-			 where l.id = :id
-			""")
-	int incrementAccessAndRedirectCountsById(@Param("id") Long id);
-
 }

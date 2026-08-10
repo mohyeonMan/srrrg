@@ -20,5 +20,7 @@ class ManagementPageAssetTest {
 		assertThat(script).doesNotContain("NO_THREAT_FOUND", "THREAT_DETECTED", "verifiedAt", "buildSampleAnalytics");
 		assertThat(script).doesNotContain("localStorage", "sessionStorage");
 		assertThat(script).contains("expired ? '만료됨' : '사용 가능'", "X-Srrrg-Secret-Key", "/statistics?", "projectMode", "X-XSRF-TOKEN");
+		assertThat(template).contains("metric-human-entries", "metric-human-redirects", "metric-human-rate");
+		assertThat(script).contains("analytics.summary.current", "formatComparison", "신규 유입");
 	}
 }

@@ -21,7 +21,7 @@ import link.srrrg.project.ApiKeyScope;
 import link.srrrg.project.ApiKeyService.ApiKeyPrincipal;
 import link.srrrg.project.ProjectMember;
 import link.srrrg.project.ProjectMemberRepository;
-import link.srrrg.statistics.StatisticsService.Bucket;
+import link.srrrg.statistics.StatisticsResponse.Bucket;
 
 @RestController
 public class StatisticsController {
@@ -41,63 +41,70 @@ public class StatisticsController {
 	@GetMapping("/api/links/{code}/statistics")
 	public StatisticsResponse anonymous(@PathVariable String code, @RequestHeader(SECRET_KEY) String secret,
 			@RequestParam(required = false) LocalDate from, @RequestParam(required = false) LocalDate to,
-			@RequestParam(defaultValue = "DAY") Bucket bucket) {
+			@RequestParam(defaultValue = "DAY") Bucket bucket,
+			@RequestParam(defaultValue = "0") int offset, @RequestParam(defaultValue = "50") int limit) {
 		linkManagement.getManagedLink(code, secret);
 		Link link = links.findByCodeAndProjectIsNull(code).orElseThrow(LinkNotFoundException::new);
-		return statistics.link(link.getId(), code, from, to, bucket);
+		return statistics.link(link.getId(), code, from, to, bucket, offset, limit);
 	}
 
 	@GetMapping("/api/web/projects/{projectId}/statistics")
 	public StatisticsResponse project(@AuthenticationPrincipal SrrrgPrincipal principal, @PathVariable Long projectId,
 			@RequestParam(required = false) LocalDate from, @RequestParam(required = false) LocalDate to,
-			@RequestParam(defaultValue = "DAY") Bucket bucket) {
+			@RequestParam(defaultValue = "DAY") Bucket bucket,
+			@RequestParam(defaultValue = "0") int offset, @RequestParam(defaultValue = "50") int limit) {
 		ProjectMember member = member(principal.userId(), projectId);
-		return statistics.project(projectId, member.getProject().getName(), from, to, bucket);
+		return statistics.project(projectId, member.getProject().getName(), from, to, bucket, offset, limit);
 	}
 
 	@GetMapping("/api/web/campaigns/{campaignId}/statistics")
 	public StatisticsResponse campaign(@AuthenticationPrincipal SrrrgPrincipal principal, @PathVariable Long campaignId,
 			@RequestParam(required = false) LocalDate from, @RequestParam(required = false) LocalDate to,
-			@RequestParam(defaultValue = "DAY") Bucket bucket) {
+			@RequestParam(defaultValue = "DAY") Bucket bucket,
+			@RequestParam(defaultValue = "0") int offset, @RequestParam(defaultValue = "50") int limit) {
 		Campaign campaign = campaign(campaignId);
 		member(principal.userId(), campaign.getProject().getId());
-		return statistics.campaign(campaignId, campaign.getName(), from, to, bucket);
+		return statistics.campaign(campaignId, campaign.getName(), from, to, bucket, offset, limit);
 	}
 
 	@GetMapping("/api/web/projects/{projectId}/links/{code}/statistics")
 	public StatisticsResponse projectLink(@AuthenticationPrincipal SrrrgPrincipal principal, @PathVariable Long projectId,
 			@PathVariable String code, @RequestParam(required = false) LocalDate from,
-			@RequestParam(required = false) LocalDate to, @RequestParam(defaultValue = "DAY") Bucket bucket) {
+			@RequestParam(required = false) LocalDate to, @RequestParam(defaultValue = "DAY") Bucket bucket,
+			@RequestParam(defaultValue = "0") int offset, @RequestParam(defaultValue = "50") int limit) {
 		member(principal.userId(), projectId);
 		Link link = projectLink(projectId, code);
-		return statistics.link(link.getId(), code, from, to, bucket);
+		return statistics.link(link.getId(), code, from, to, bucket, offset, limit);
 	}
 
 	@GetMapping("/api/v1/projects/{projectId}/statistics")
 	public StatisticsResponse publicProject(HttpServletRequest request, @PathVariable Long projectId,
 			@RequestParam(required = false) LocalDate from, @RequestParam(required = false) LocalDate to,
-			@RequestParam(defaultValue = "DAY") Bucket bucket) {
+			@RequestParam(defaultValue = "DAY") Bucket bucket,
+			@RequestParam(defaultValue = "0") int offset, @RequestParam(defaultValue = "50") int limit) {
 		ApiKeyPrincipal key = apiKey(request, projectId);
-		return statistics.project(projectId, "project-" + key.projectId(), from, to, bucket);
+		return statistics.project(projectId, "project-" + key.projectId(), from, to, bucket, offset, limit);
 	}
 
 	@GetMapping("/api/v1/campaigns/{campaignId}/statistics")
 	public StatisticsResponse publicCampaign(HttpServletRequest request, @PathVariable Long campaignId,
 			@RequestParam(required = false) LocalDate from, @RequestParam(required = false) LocalDate to,
-			@RequestParam(defaultValue = "DAY") Bucket bucket) {
+			@RequestParam(defaultValue = "DAY") Bucket bucket,
+			@RequestParam(defaultValue = "0") int offset, @RequestParam(defaultValue = "50") int limit) {
 		ApiKeyPrincipal key = apiKey(request, null);
 		Campaign campaign = campaign(campaignId);
 		if (!campaign.getProject().getId().equals(key.projectId())) throw new SecurityException("프로젝트 접근 권한이 없습니다.");
-		return statistics.campaign(campaignId, campaign.getName(), from, to, bucket);
+		return statistics.campaign(campaignId, campaign.getName(), from, to, bucket, offset, limit);
 	}
 
 	@GetMapping("/api/v1/projects/{projectId}/links/{code}/statistics")
 	public StatisticsResponse publicLink(HttpServletRequest request, @PathVariable Long projectId, @PathVariable String code,
 			@RequestParam(required = false) LocalDate from, @RequestParam(required = false) LocalDate to,
-			@RequestParam(defaultValue = "DAY") Bucket bucket) {
+			@RequestParam(defaultValue = "DAY") Bucket bucket,
+			@RequestParam(defaultValue = "0") int offset, @RequestParam(defaultValue = "50") int limit) {
 		apiKey(request, projectId);
 		Link link = projectLink(projectId, code);
-		return statistics.link(link.getId(), code, from, to, bucket);
+		return statistics.link(link.getId(), code, from, to, bucket, offset, limit);
 	}
 
 	private ProjectMember member(Long userId, Long projectId) {

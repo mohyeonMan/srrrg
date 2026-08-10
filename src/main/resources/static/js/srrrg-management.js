@@ -13,6 +13,7 @@
 	const projectMode = Boolean(projectId && requestedCode);
 	const noExpirationValue = '-';
 	const numberFormatter = new Intl.NumberFormat('ko-KR');
+	let analyticsRequestSequence = 0;
 	const state = {
 		secretKey: null,
 		link: null,
@@ -88,7 +89,14 @@
 		settingsTab.addEventListener('keydown', handleTabKeydown);
 		periodButtons.forEach((button) => button.addEventListener('click', () => selectPeriod(Number(button.dataset.period))));
 		byId('analytics-custom-period').addEventListener('submit', (event) => { event.preventDefault(); periodButtons.forEach(button => button.setAttribute('aria-pressed', 'false')); renderAnalytics(); });
-		setAnalyticsDates(state.selectedPeriod);
+		if (pageQuery.get('from') && pageQuery.get('to')) {
+			analyticsFrom.value = pageQuery.get('from');
+			analyticsTo.value = pageQuery.get('to');
+			periodButtons.forEach(button => button.setAttribute('aria-pressed', 'false'));
+		} else {
+			setAnalyticsDates(state.selectedPeriod);
+		}
+		if (['DAY', 'MONTH', 'YEAR'].includes(pageQuery.get('bucket'))) analyticsBucket.value = pageQuery.get('bucket');
 
 		settingsForm.addEventListener('submit', handleSettingsSave);
 		settingsOriginalUrl.addEventListener('input', handleSettingsInput);
@@ -258,6 +266,7 @@
 	}
 
 	async function renderAnalytics(days) {
+		const requestSequence = ++analyticsRequestSequence;
 		analyticsPeriodLabel.textContent = `${analyticsFrom.value} ~ ${analyticsTo.value} · Asia/Seoul`;
 		const query = new URLSearchParams({from: analyticsFrom.value, to: analyticsTo.value, bucket: analyticsBucket.value});
 		let analytics;
@@ -267,18 +276,25 @@
 			});
 			analytics = await readApiBody(response);
 			if (!response.ok) throw new Error(analytics.message || '통계를 불러올 수 없습니다.');
+			if (requestSequence !== analyticsRequestSequence) return;
 		} catch (error) {
+			if (requestSequence !== analyticsRequestSequence) return;
 			analyticsPeriodLabel.textContent = error.message;
 			return;
 		}
-		byId('metric-entries').textContent = numberFormatter.format(analytics.summary.entries);
-		byId('metric-redirects').textContent = numberFormatter.format(analytics.summary.redirects);
-		byId('metric-no-redirect').textContent = numberFormatter.format(analytics.summary.nonRedirects);
-		byId('metric-bots').textContent = numberFormatter.format(analytics.summary.bots);
-		byId('metric-entries-delta').textContent = `이전 기간 대비 ${formatDelta(delta(analytics.summary.entries, analytics.summary.previousEntries))}`;
-		byId('metric-redirects-delta').textContent = `이전 기간 대비 ${formatDelta(delta(analytics.summary.redirects, analytics.summary.previousRedirects))}`;
-		byId('metric-bots-share').textContent = `전체 진입의 ${(analytics.summary.entries ? analytics.summary.bots / analytics.summary.entries * 100 : 0).toFixed(1)}%`;
-		renderTrend(analytics.trend.map((item) => ({date: new Date(item.date.replace(' ', 'T')), entries: item.entries, redirects: item.redirects})));
+		const current = analytics.summary.current;
+		const previous = analytics.summary.previous;
+		byId('metric-entries').textContent = numberFormatter.format(current.entries);
+		byId('metric-redirects').textContent = numberFormatter.format(current.redirects);
+		byId('metric-human-entries').textContent = numberFormatter.format(current.humanEntries);
+		byId('metric-human-redirects').textContent = numberFormatter.format(current.humanRedirects);
+		byId('metric-no-redirect').textContent = numberFormatter.format(current.nonRedirects);
+		byId('metric-bots').textContent = numberFormatter.format(current.botEntries);
+		byId('metric-entries-delta').textContent = `이전 기간 대비 ${formatComparison(current.entries, previous.entries)}`;
+		byId('metric-redirects-delta').textContent = `이전 기간 대비 ${formatComparison(current.redirects, previous.redirects)}`;
+		byId('metric-human-rate').textContent = `이동률 ${formatRate(current.humanRedirects, current.humanEntries)}`;
+		byId('metric-bots-share').textContent = `전체 진입의 ${formatRate(current.botEntries, current.entries)}`;
+		renderTrend(analytics.trend.map((item) => ({date: new Date(`${item.periodStart}T00:00:00`), entries: item.entries, redirects: item.redirects})));
 		renderBreakdown(byId('referrer-breakdown'), analytics.referrers);
 		renderBreakdown(byId('device-breakdown'), analytics.devices);
 		renderCompactData(byId('browser-breakdown'), analytics.browsers);
@@ -294,7 +310,7 @@
 		const padding = {top: 18, right: 18, bottom: 38, left: 54};
 		const plotWidth = width - padding.left - padding.right;
 		const plotHeight = height - padding.top - padding.bottom;
-		const maximum = Math.max(1, Math.ceil(Math.max(0, ...series.map((item) => item.entries)) / 100) * 100);
+		const maximum = Math.max(4, Math.ceil(Math.max(0, ...series.map((item) => item.entries)) / 4) * 4);
 		const gridLines = [];
 		for (let index = 0; index <= 4; index++) {
 			const y = padding.top + plotHeight * index / 4;
@@ -575,16 +591,14 @@
 	}
 	function isAuthorized() { return projectMode || Boolean(state.secretKey); }
 	function csrf() { return decodeURIComponent(document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]+)/)?.[1] || ''); }
-	function returnToList() { location.href = requestedCampaignId ? `${contextPath}/campaigns?projectId=${encodeURIComponent(projectId)}&campaignId=${encodeURIComponent(requestedCampaignId)}` : `${contextPath}/projects?projectId=${encodeURIComponent(projectId)}`; }
+	function returnToList() { location.href = requestedCampaignId ? `${contextPath}/campaigns?projectId=${encodeURIComponent(projectId)}&campaignId=${encodeURIComponent(requestedCampaignId)}&from=${analyticsFrom.value}&to=${analyticsTo.value}&bucket=${analyticsBucket.value}` : `${contextPath}/projects?projectId=${encodeURIComponent(projectId)}`; }
 
-	function delta(current, previous) { return previous ? (current - previous) / previous * 100 : current ? 100 : 0; }
-	function outcomeLabel(value) { return value === 'REDIRECTED' ? '실제 이동' : value === 'BLOCKED' ? '차단' : value === 'CHECK_FAILED' ? '검사 실패' : 'URL 변경'; }
+	function outcomeLabel(value) { return value === 'REDIRECTED' ? '실제 이동' : value === 'BLOCKED' ? '차단' : value === 'CHECK_FAILED' ? '검사 실패' : value === 'EXPIRED' ? '만료' : 'URL 변경'; }
 	function localDate(date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
 	function setAnalyticsDates(days) { const end = new Date(), start = new Date(); start.setDate(end.getDate() - days + 1); analyticsFrom.value = localDate(start); analyticsTo.value = localDate(end); }
 
-	function formatDelta(value) {
-		return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
-	}
+	function formatComparison(current, previous) { if (!previous) return current ? '신규 유입' : '변화 없음'; const value = (current - previous) / previous * 100; return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`; }
+	function formatRate(numerator, denominator) { return denominator ? `${(numerator / denominator * 100).toFixed(1)}%` : '-'; }
 
 	function formatExpiration(value) {
 		if (!value) {

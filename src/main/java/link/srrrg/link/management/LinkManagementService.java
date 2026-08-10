@@ -31,7 +31,6 @@ import link.srrrg.link.management.dto.CreateLinkRequest;
 import link.srrrg.link.management.dto.CreateLinkResponse;
 import link.srrrg.link.management.dto.DeleteLinkResponse;
 import link.srrrg.link.management.dto.LinkManagementResponse;
-import link.srrrg.link.management.dto.LinkStatisticsSummary;
 import link.srrrg.link.management.dto.UpdateLinkRequest;
 import link.srrrg.link.risk.RiskVerdict;
 import link.srrrg.link.risk.UrlRiskVerificationService;
@@ -196,7 +195,6 @@ public class LinkManagementService {
 	private LinkManagementResponse toManagementResponse(Link link, boolean editable, String shortUrl) {
 		return new LinkManagementResponse(link.getCode(), shortUrl == null ? baseUrl + "/" + link.getCode() : shortUrl,
 				link.getOriginalUrl(), link.getCampaign() == null ? null : link.getCampaign().getId(), editable, link.getExpiresAt(),
-				new LinkStatisticsSummary(link.getAccessCount(), link.getRedirectCount()),
 				link.getCreatedAt(), link.getUpdatedAt());
 	}
 

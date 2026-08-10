@@ -9,7 +9,6 @@ public record LinkManagementResponse(
 		Long campaignId,
 		boolean editable,
 		Instant expiresAt,
-		LinkStatisticsSummary statistics,
 		Instant createdAt,
 		Instant updatedAt
 ) {
