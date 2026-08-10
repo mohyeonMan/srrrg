@@ -43,6 +43,16 @@ public interface LinkRepository extends JpaRepository<Link, Long>, JpaSpecificat
 	@Query("update Link l set l.deleted = true, l.updatedAt = CURRENT_TIMESTAMP where l.campaign.id = :campaignId and l.deleted = false")
 	int softDeleteByCampaignId(@Param("campaignId") Long campaignId);
 
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Query("""
+			update Link l
+			   set l.deleted = true, l.updatedAt = CURRENT_TIMESTAMP
+			 where l.campaign.id = :campaignId
+			   and l.code in :codes
+			   and l.deleted = false
+			""")
+	int softDeleteByCampaignIdAndCodeIn(@Param("campaignId") Long campaignId, @Param("codes") List<String> codes);
+
 	@Modifying
 	@Query("update Link l set l.accessCount = l.accessCount + 1 where l.id = :id")
 	int incrementAccessCountById(@Param("id") Long id);

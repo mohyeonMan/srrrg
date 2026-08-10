@@ -1,5 +1,6 @@
 package link.srrrg.campaign;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -136,6 +137,17 @@ public class CampaignService {
 		campaign.archive();
 		links.softDeleteByCampaignId(campaignId);
 		imports.cancelActiveByCampaignId(campaignId);
+	}
+
+	@Transactional
+	public int deleteLinks(Long userId, Long campaignId, List<String> codes) {
+		requireEditableCampaign(userId, campaignId);
+		List<String> uniqueCodes = new java.util.ArrayList<>(new LinkedHashSet<>(codes));
+		int deletedCount = links.softDeleteByCampaignIdAndCodeIn(campaignId, uniqueCodes);
+		if (deletedCount != uniqueCodes.size()) {
+			throw new IllegalArgumentException("선택한 링크 중 삭제할 수 없는 링크가 있습니다.");
+		}
+		return deletedCount;
 	}
 
 	@Transactional

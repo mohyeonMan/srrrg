@@ -24,6 +24,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import link.srrrg.auth.SrrrgPrincipal;
 import link.srrrg.campaign.dto.CreateCampaignLinkRequest;
@@ -129,6 +131,12 @@ public class CampaignController {
 		return WebCampaignLinkPageResponse.of(page, boundedLimit, effectiveUtm);
 	}
 
+	@DeleteMapping("/campaigns/{campaignId}/links")
+	public DeletedCampaignLinksResponse deleteLinks(@AuthenticationPrincipal SrrrgPrincipal principal,
+			@PathVariable Long campaignId, @Valid @RequestBody DeleteCampaignLinksRequest request) {
+		return new DeletedCampaignLinksResponse(campaigns.deleteLinks(principal.userId(), campaignId, request.codes()));
+	}
+
 	@GetMapping(value = "/campaigns/{campaignId}/links/template.csv", produces = "text/csv")
 	public ResponseEntity<byte[]> templateCsv(@AuthenticationPrincipal SrrrgPrincipal principal, @PathVariable Long campaignId) {
 		Campaign campaign = campaigns.get(principal.userId(), campaignId);
@@ -196,6 +204,9 @@ public class CampaignController {
 	public record UpdateUtmDefaultsRequest(Map<String, String> defaults) {
 		public Map<String, String> defaultsOrEmpty() { return defaults == null ? Map.of() : defaults; }
 	}
+	public record DeleteCampaignLinksRequest(
+			@NotNull @Size(min = 1, max = 100) List<@NotBlank @Pattern(regexp = "[0-9A-Za-z]{6}") String> codes) { }
+	public record DeletedCampaignLinksResponse(int deletedCount) { }
 	public record CampaignResponse(Long id, String name, String description, String defaultOriginalUrl,
 			Long utmTemplateId, String utmTemplateName,
 			Instant createdAt, Instant updatedAt) {

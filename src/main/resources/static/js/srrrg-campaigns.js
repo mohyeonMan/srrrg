@@ -10,6 +10,7 @@
 		campaign: null,
 		activeFields: [],
 		utmDefaults: {},
+		selectedLinkCodes: new Set(),
 		linksCursor: null,
 		refreshing: null,
 		importPollHandle: null
@@ -361,37 +362,89 @@
 		if (!response.ok) return;
 		const page = await response.json();
 		const items = page.items || [];
-		byId('campaign-link-count').textContent = String(items.length);
-		const rows = items.map((link) => {
-			const row = element('article', 'project-link-item');
-			const main = element('div', 'project-link-main');
-			main.append(element('span', 'project-link-short-url', link.code),
-				element('p', 'project-link-original', link.originalUrl || '캠페인 기본 목적지 사용'));
-			const meta = element('div', 'project-link-meta');
-			meta.append(
-				element('span', '', link.externalId ? `external_id: ${link.externalId}` : 'external_id 없음'),
-				element('span', '', formatDate(link.createdAt)),
-				statisticsLink(link.code)
-			);
-			row.append(main, meta, effectiveUtmDetails(link.effectiveUtmValues || []));
-			return row;
-		});
-		if (!cursor) replaceChildren(byId('campaign-link-list'), rows.length ? rows : [element('p', 'project-empty-list', '아직 만든 링크가 없습니다.')]);
-		else byId('campaign-link-list').append(...rows);
+		if (!cursor) {
+			state.selectedLinkCodes.clear();
+			replaceChildren(byId('campaign-link-list'), items.flatMap(campaignLinkRows));
+		} else {
+			byId('campaign-link-list').append(...items.flatMap(campaignLinkRows));
+		}
+		const renderedCount = byId('campaign-link-list').querySelectorAll('.campaign-link-row').length;
+		byId('campaign-link-count').textContent = String(renderedCount);
+		byId('campaign-link-table-wrap').hidden = renderedCount === 0;
+		byId('campaign-link-empty').hidden = renderedCount !== 0;
 		state.linksCursor = page.nextCursor;
 		byId('load-more-links-button').hidden = !page.nextCursor;
+		updateLinkSelectionControls();
 	}
 
-	function effectiveUtmDetails(values) {
-		if (!values.length) return element('p', 'campaign-link-utm-empty', '현재 적용 예정 UTM 없음');
-		const details = element('details', 'campaign-link-utm');
-		const summary = element('summary', 'campaign-link-utm-summary');
-		summary.append(element('span', '', '현재 적용 예정 UTM'), element('span', 'status-badge', `${values.length}개`));
+	function campaignLinkRows(link) {
+		const values = link.effectiveUtmValues || [];
+		const row = element('tr', 'campaign-link-row');
+		row.dataset.code = link.code;
+
+		const selectCell = tableCell('선택', 'campaign-link-check-column');
+		const checkbox = element('input', 'campaign-link-checkbox');
+		checkbox.type = 'checkbox';
+		checkbox.value = link.code;
+		checkbox.setAttribute('aria-label', `${link.code} 링크 선택`);
+		checkbox.addEventListener('change', () => {
+			if (checkbox.checked) state.selectedLinkCodes.add(link.code);
+			else state.selectedLinkCodes.delete(link.code);
+			updateLinkSelectionControls();
+		});
+		selectCell.append(checkbox);
+
+		const codeCell = tableCell('단축 코드');
+		const codeLink = element('a', 'campaign-link-code', link.code);
+		codeLink.href = managementUrl(link.code);
+		codeCell.append(codeLink);
+
+		const destinationCell = tableCell('목적지', 'campaign-link-destination',
+			link.originalUrl || '캠페인 기본 목적지 사용');
+		const externalIdCell = tableCell('external_id', '', link.externalId || '없음');
+		const createdAtCell = tableCell('생성일', '', formatDate(link.createdAt));
+
+		const utmCell = tableCell('UTM');
+		const utmButton = element('button', 'campaign-utm-toggle', values.length ? `${values.length}개` : '없음');
+		utmButton.type = 'button';
+		utmButton.disabled = values.length === 0;
+		utmButton.setAttribute('aria-expanded', 'false');
+		utmCell.append(utmButton);
+
+		const actionCell = tableCell('관리', 'campaign-link-action');
+		actionCell.append(statisticsLink(link.code));
+		row.append(selectCell, codeCell, destinationCell, externalIdCell, createdAtCell, utmCell, actionCell);
+
+		const detailRow = element('tr', 'campaign-link-utm-detail-row');
+		detailRow.hidden = true;
+		const detailCell = element('td', 'campaign-link-utm-detail-cell');
+		detailCell.colSpan = 7;
+		detailCell.append(effectiveUtmPanel(values));
+		detailRow.append(detailCell);
+		utmButton.addEventListener('click', () => {
+			const expanded = detailRow.hidden;
+			detailRow.hidden = !expanded;
+			utmButton.setAttribute('aria-expanded', String(expanded));
+			row.classList.toggle('utm-expanded', expanded);
+		});
+		return [row, detailRow];
+	}
+
+	function tableCell(label, className = '', text) {
+		const cell = element('td', className, text);
+		cell.dataset.label = label;
+		return cell;
+	}
+
+	function effectiveUtmPanel(values) {
+		const panel = element('div', 'campaign-link-utm-panel');
+		const heading = element('div', 'campaign-link-utm-heading');
+		heading.append(element('strong', '', '현재 적용 예정 UTM'), element('span', 'status-badge', `${values.length}개`));
 		const list = element('div', 'campaign-utm-value-list');
 		list.append(...values.map(utmValueRow));
 		const note = element('p', 'help-text', '캠페인 기본값 변경 시 링크 개별값이 없는 필드는 즉시 바뀝니다.');
-		details.append(summary, list, note);
-		return details;
+		panel.append(heading, list, note);
+		return panel;
 	}
 
 	function utmValueRow(value) {
@@ -405,7 +458,55 @@
 		return row;
 	}
 
-	function statisticsLink(code) { const link = element('a', '', '상세보기'); link.href = `${base}/manage?projectId=${state.projectId}&campaignId=${state.campaignId}&code=${encodeURIComponent(code)}`; return link; }
+	function managementUrl(code) {
+		return `${base}/manage?projectId=${state.projectId}&campaignId=${state.campaignId}&code=${encodeURIComponent(code)}`;
+	}
+
+	function statisticsLink(code) { const link = element('a', '', '상세보기'); link.href = managementUrl(code); return link; }
+
+	function updateLinkSelectionControls() {
+		const checkboxes = Array.from(byId('campaign-link-list').querySelectorAll('.campaign-link-checkbox'));
+		const checkedCount = checkboxes.filter((checkbox) => checkbox.checked).length;
+		const selectAll = byId('campaign-link-select-all');
+		selectAll.disabled = checkboxes.length === 0;
+		selectAll.checked = checkboxes.length > 0 && checkedCount === checkboxes.length;
+		selectAll.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+		byId('campaign-link-selected-count').textContent = `${state.selectedLinkCodes.size}개 선택`;
+		byId('delete-selected-links-button').disabled = state.selectedLinkCodes.size === 0;
+	}
+
+	byId('campaign-link-select-all').addEventListener('change', (event) => {
+		byId('campaign-link-list').querySelectorAll('.campaign-link-checkbox').forEach((checkbox) => {
+			checkbox.checked = event.target.checked;
+			if (checkbox.checked) state.selectedLinkCodes.add(checkbox.value);
+			else state.selectedLinkCodes.delete(checkbox.value);
+		});
+		updateLinkSelectionControls();
+	});
+
+	byId('delete-selected-links-button').addEventListener('click', async () => {
+		const codes = Array.from(state.selectedLinkCodes);
+		if (!codes.length || !confirm(`선택한 링크 ${codes.length}개를 삭제할까요? 삭제한 링크는 더 이상 이동하지 않습니다.`)) return;
+		const button = byId('delete-selected-links-button');
+		button.disabled = true;
+		setMessage(byId('campaign-links-message'), '선택한 링크를 삭제하고 있습니다...');
+		try {
+			const response = await request(`${base}/api/web/campaigns/${state.campaignId}/links`, {
+				method: 'DELETE', body: JSON.stringify({ codes })
+			});
+			const responseBody = await body(response);
+			if (!response.ok) {
+				setMessage(byId('campaign-links-message'), responseBody.message || '선택한 링크를 삭제할 수 없습니다.', true);
+				return;
+			}
+			await loadLinks(null);
+			setMessage(byId('campaign-links-message'), `링크 ${responseBody.deletedCount}개를 삭제했습니다.`);
+		} catch (_) {
+			setMessage(byId('campaign-links-message'), '네트워크 오류로 선택한 링크를 삭제하지 못했습니다.', true);
+		} finally {
+			updateLinkSelectionControls();
+		}
+	});
 
 	byId('load-more-links-button').addEventListener('click', () => loadLinks(state.linksCursor));
 

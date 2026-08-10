@@ -111,7 +111,31 @@
 				<h2 id="campaign-links-title">캠페인 링크</h2>
 				<span id="campaign-link-count" class="status-badge">0</span>
 			</div>
-			<div id="campaign-link-list" class="project-link-list"></div>
+			<div class="campaign-link-toolbar">
+				<label class="campaign-link-select-all" for="campaign-link-select-all">
+					<input id="campaign-link-select-all" type="checkbox">
+					<span id="campaign-link-selected-count">0개 선택</span>
+				</label>
+				<button id="delete-selected-links-button" class="danger-button compact-action" type="button" disabled>선택 삭제</button>
+			</div>
+			<div id="campaign-link-table-wrap" class="campaign-link-table-wrap" hidden>
+				<table class="campaign-link-table">
+					<thead>
+					<tr>
+						<th class="campaign-link-check-column" scope="col"><span class="sr-only">선택</span></th>
+						<th scope="col">단축 코드</th>
+						<th scope="col">목적지</th>
+						<th scope="col">external_id</th>
+						<th scope="col">생성일</th>
+						<th scope="col">UTM</th>
+						<th scope="col"><span class="sr-only">관리</span></th>
+					</tr>
+					</thead>
+					<tbody id="campaign-link-list"></tbody>
+				</table>
+			</div>
+			<p id="campaign-link-empty" class="project-empty-list">아직 만든 링크가 없습니다.</p>
+			<p id="campaign-links-message" class="form-message" role="status" aria-live="polite"></p>
 			<button id="load-more-links-button" class="secondary-button" type="button" hidden>더 보기</button>
 		</section>
 

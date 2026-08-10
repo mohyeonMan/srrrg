@@ -402,6 +402,43 @@ class CampaignPostgreSqlIntegrationTest {
 	}
 
 	@Test
+	void deletesSelectedCampaignLinksAtomicallyWithinCampaign() throws Exception {
+		Owner owner = newOwner();
+		Long campaignId = createCampaign(owner, "선택 삭제 캠페인", null);
+		Long otherCampaignId = createCampaign(owner, "다른 캠페인", null);
+		String firstCode = readJson(mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+				.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"originalUrl\":\"https://example.com/first\"}"))
+				.andExpect(status().isCreated()).andReturn(), "code");
+		String secondCode = readJson(mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+				.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"originalUrl\":\"https://example.com/second\"}"))
+				.andExpect(status().isCreated()).andReturn(), "code");
+		String otherCode = readJson(mockMvc.perform(post("/api/web/campaigns/{id}/links", otherCampaignId)
+				.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"originalUrl\":\"https://example.com/other\"}"))
+				.andExpect(status().isCreated()).andReturn(), "code");
+
+		mockMvc.perform(delete("/api/web/campaigns/{id}/links", campaignId)
+				.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"codes\":[\"%s\",\"%s\"]}".formatted(firstCode, otherCode)))
+				.andExpect(status().isBadRequest());
+		mockMvc.perform(get("/{code}", firstCode).header("Host", owner.host)).andExpect(status().isFound());
+
+		mockMvc.perform(delete("/api/web/campaigns/{id}/links", campaignId)
+				.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"codes\":[\"%s\",\"%s\"]}".formatted(firstCode, secondCode)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.deletedCount").value(2));
+
+		mockMvc.perform(get("/api/web/campaigns/{id}/links", campaignId).cookie(owner.cookie))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.items").isEmpty());
+		mockMvc.perform(get("/{code}", firstCode).header("Host", owner.host)).andExpect(status().isGone());
+		mockMvc.perform(get("/{code}", secondCode).header("Host", owner.host)).andExpect(status().isGone());
+		mockMvc.perform(get("/{code}", otherCode).header("Host", owner.host)).andExpect(status().isFound());
+	}
+
+	@Test
 	void blocksAddingMoreThanTenActiveFields() throws Exception {
 		Owner owner = newOwner();
 		Long templateId = createTemplate(owner, "field_01");
