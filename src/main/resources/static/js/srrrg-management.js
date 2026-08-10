@@ -8,7 +8,7 @@
 	const contextPath = apiUrl.endsWith('/api/links') ? apiUrl.slice(0, -'/api/links'.length) : '';
 	const pageQuery = new URLSearchParams(location.search);
 	const projectId = pageQuery.get('projectId');
-	const requestedCode = extractLinkCode(pageQuery.get('code') || app.dataset.prefilledCode || '');
+	const requestedCode = extractLinkCode(pageQuery.get('linkCode') || pageQuery.get('code') || app.dataset.prefilledCode || '');
 	const requestedCampaignId = pageQuery.get('campaignId');
 	const projectMode = Boolean(projectId && requestedCode);
 	const noExpirationValue = '-';
@@ -212,6 +212,7 @@
 
 	function renderIdentity() {
 		const link = state.link;
+		managedLinkTitle.textContent = link.name || '이름없음';
 		const expired = link.expiresAt && new Date(link.expiresAt).getTime() <= Date.now();
 		managedLinkStatus.textContent = expired ? '만료됨' : '사용 가능';
 		managedLinkStatus.className = expired ? 'status-badge warning' : 'status-badge success';
@@ -591,7 +592,7 @@
 	}
 	function isAuthorized() { return projectMode || Boolean(state.secretKey); }
 	function csrf() { return decodeURIComponent(document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]+)/)?.[1] || ''); }
-	function returnToList() { location.href = requestedCampaignId ? `${contextPath}/campaigns?projectId=${encodeURIComponent(projectId)}&campaignId=${encodeURIComponent(requestedCampaignId)}&from=${analyticsFrom.value}&to=${analyticsTo.value}&bucket=${analyticsBucket.value}` : `${contextPath}/projects?projectId=${encodeURIComponent(projectId)}`; }
+	function returnToList() { location.href = requestedCampaignId ? `${contextPath}/projects?projectId=${encodeURIComponent(projectId)}&campaignId=${encodeURIComponent(requestedCampaignId)}` : `${contextPath}/projects?projectId=${encodeURIComponent(projectId)}`; }
 
 	function outcomeLabel(value) { return value === 'REDIRECTED' ? '실제 이동' : value === 'BLOCKED' ? '차단' : value === 'CHECK_FAILED' ? '검사 실패' : value === 'EXPIRED' ? '만료' : 'URL 변경'; }
 	function localDate(date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }

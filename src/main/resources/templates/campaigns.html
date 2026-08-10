@@ -7,28 +7,22 @@
 	<title>srrrg - 캠페인</title>
 	<link rel="stylesheet" th:href="@{/css/srrrg.css}">
 	<link rel="stylesheet" th:href="@{/css/srrrg/management.css}">
-	<link rel="stylesheet" th:href="@{/css/srrrg/workspace-shell.css}">
-	<link rel="stylesheet" th:href="@{/css/srrrg/drawer.css}">
-	<script defer th:src="@{/js/srrrg-workspace-shell.js}"></script>
-	<script defer th:src="@{/js/srrrg-link-drawer.js}"></script>
 	<script defer th:src="@{/js/srrrg-campaigns.js}"></script>
 </head>
 <body>
-<div class="workspace-layout">
-<div th:replace="~{fragments/workspace-shell :: sidebar(active='campaigns')}"></div>
-<div class="workspace-main">
-<div th:replace="~{fragments/workspace-shell :: topbar(title='캠페인')}"></div>
+<div th:replace="~{fragments/srrrg-layout :: header}"></div>
 
-<main class="page-shell workspace-content" id="campaigns-app">
-	<p class="section-kicker">CAMPAIGNS</p>
-	<div class="campaign-heading-row">
-		<h1 id="campaign-name">캠페인</h1>
-		<div class="campaign-heading-actions">
-			<button id="archive-campaign-button" class="secondary-button compact-action" type="button">보관하기</button>
-			<a id="back-to-project" class="secondary-button" href="#">프로젝트로 돌아가기</a>
+<main class="page-shell" id="campaigns-app" th:fragment="workspace">
+	<header class="campaign-workspace-header">
+		<div class="campaign-heading-row">
+			<h1 id="campaign-name">캠페인</h1>
+			<div class="campaign-heading-actions">
+				<button id="archive-campaign-button" class="secondary-button compact-action" type="button">보관하기</button>
+				<a id="back-to-project" class="secondary-button" href="#">프로젝트로 돌아가기</a>
+			</div>
 		</div>
-	</div>
-	<p id="campaign-description" class="campaign-description"></p>
+		<p id="campaign-description" class="campaign-description"></p>
+	</header>
 	<p id="campaigns-message" class="form-message" role="status" aria-live="polite"></p>
 
 	<div id="campaign-picker-panel" class="surface-panel campaign-card">
@@ -64,6 +58,9 @@
 			<section class="surface-panel campaign-card" aria-labelledby="create-link-title">
 				<h2 id="create-link-title">개인화 링크 만들기</h2>
 				<form id="create-campaign-link-form" class="form-grid" novalidate>
+					<label class="field" for="campaign-link-name"><span class="field-label">이름 (선택)</span>
+						<input id="campaign-link-name" class="field-input" name="name" maxlength="100" placeholder="예: 뉴스레터 A안">
+					</label>
 					<label class="field" for="campaign-original-url"><span class="field-label">원본 URL (선택)</span>
 						<input id="campaign-original-url" class="field-input" name="originalUrl" type="url" maxlength="2048" placeholder="비우면 현재 캠페인 기본 목적지 사용">
 					</label>
@@ -103,6 +100,7 @@
 						<thead>
 						<tr>
 							<th class="campaign-link-check-column" scope="col"><span class="sr-only">선택</span></th>
+							<th scope="col">이름</th>
 							<th scope="col">단축 코드</th>
 							<th scope="col">목적지</th>
 							<th scope="col">external_id</th>
@@ -157,34 +155,20 @@
 
 		<section id="campaign-panel-utm" class="console-panel" role="tabpanel" aria-labelledby="campaign-tab-utm" hidden>
 			<section class="surface-panel campaign-card" aria-labelledby="template-title">
-				<h2 id="template-title">UTM 템플릿</h2>
-				<p>현재 템플릿과 활성 필드는 기존 링크의 리다이렉트에도 즉시 적용됩니다. 링크 개별값은 같은 이름의 캠페인 기본값보다 우선합니다.</p>
+				<h2 id="template-title">연결된 UTM 템플릿</h2>
+				<p>이 캠페인에서 사용할 프로젝트 템플릿을 선택합니다. 템플릿 구조 변경은 UTM 템플릿 관리에서만 할 수 있습니다.</p>
 				<div class="campaign-inline-row">
-					<label class="field" for="template-picker"><span class="field-label">사용할 템플릿</span>
+					<label class="field" for="template-picker"><span class="field-label">캠페인 템플릿</span>
 						<select id="template-picker" class="field-input">
 							<option value="">템플릿 없음</option>
 						</select>
 					</label>
-					<button id="reload-templates-button" class="secondary-button" type="button">새로고침</button>
 					<a id="manage-utm-templates-link" class="secondary-button" href="#">템플릿 관리</a>
 				</div>
-				<form id="create-template-form" class="project-inline-form" novalidate>
-					<label class="field" for="new-template-name"><span class="field-label">새 템플릿 이름</span>
-						<input id="new-template-name" class="field-input" name="name" maxlength="100" required>
-					</label>
-					<button class="secondary-button" type="submit">템플릿 만들기</button>
-				</form>
 
 				<div id="template-fields-panel" hidden>
-					<h3>활성 필드 (최대 10개)</h3>
-					<p class="help-text">필드 변경은 이 템플릿을 사용하는 모든 캠페인의 기존 링크와 통계에 즉시 반영됩니다.</p>
-					<div id="template-field-list" class="template-field-list"></div>
-					<form id="add-field-form" class="project-inline-form" novalidate>
-						<label class="field" for="new-field-name"><span class="field-label">필드 이름 (예: utm_source)</span>
-							<input id="new-field-name" class="field-input" name="name" maxlength="50" pattern="[a-z][a-z0-9_]{1,49}" required>
-						</label>
-						<button class="secondary-button" type="submit">필드 추가</button>
-					</form>
+					<h3>적용 필드</h3>
+					<div id="template-field-list" class="campaign-template-fields"></div>
 				</div>
 				<p id="template-message" class="form-message" role="status" aria-live="polite"></p>
 			</section>
@@ -205,7 +189,5 @@
 </main>
 
 <div th:replace="~{fragments/srrrg-layout :: footer}"></div>
-</div>
-</div>
 </body>
 </html>

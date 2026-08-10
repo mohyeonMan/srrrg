@@ -52,6 +52,10 @@
 }
 
 @media (max-width: 520px) {
+	.srrrg-header-nav { gap: 10px; }
+
+	.srrrg-account-menu summary > span:last-child { display: none; }
+
 	.srrrg-tagline {
 		display: none;
 	}

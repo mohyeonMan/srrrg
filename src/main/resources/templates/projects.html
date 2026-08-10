@@ -6,43 +6,82 @@
 	<meta name="context-path" th:content="@{/}">
 	<title>srrrg - 프로젝트</title>
 	<link rel="stylesheet" th:href="@{/css/srrrg.css}">
-	<link rel="stylesheet" th:href="@{/css/srrrg/workspace-shell.css}">
-	<link rel="stylesheet" th:href="@{/css/srrrg/drawer.css}">
-	<script defer th:src="@{/js/srrrg-workspace-shell.js}"></script>
-	<script defer th:src="@{/js/srrrg-link-drawer.js}"></script>
+	<link rel="stylesheet" th:href="@{/css/srrrg/management.css}">
 	<script defer th:src="@{/js/srrrg-projects.js}"></script>
+	<script defer th:src="@{/js/srrrg-campaigns.js}"></script>
+	<script defer th:src="@{/js/srrrg-project-utm-templates.js}"></script>
+	<script defer th:src="@{/js/srrrg-project-settings.js}"></script>
+	<script defer th:src="@{/js/srrrg-management.js}"></script>
 </head>
 <body>
-<div class="workspace-layout">
-<div th:replace="~{fragments/workspace-shell :: sidebar(active='projects')}"></div>
-<div class="workspace-main">
-<div th:replace="~{fragments/workspace-shell :: topbar(title='프로젝트')}"></div>
+<div th:replace="~{fragments/srrrg-layout :: header}"></div>
 
-<main class="projects-shell workspace-content" id="projects-app">
+<main class="projects-shell" id="projects-app">
 	<header class="projects-heading">
 		<div>
 			<p class="section-kicker">PROJECTS</p>
-			<h1>프로젝트 링크</h1>
+			<div class="project-heading-controls">
+				<h1><a id="project-heading-name" href="#">프로젝트</a></h1>
+				<details class="project-picker-menu">
+					<summary aria-label="프로젝트 선택">▾</summary>
+					<div id="project-picker" class="project-picker-options" role="menu" aria-label="내 프로젝트"></div>
+				</details>
+				<button id="open-create-project" class="project-heading-button" type="button" aria-label="새 프로젝트 만들기">+</button>
+			</div>
 			<p>팀과 함께 쓰는 단축 URL을 프로젝트 도메인에서 만들고 관리하세요.</p>
 		</div>
 	</header>
+	<p id="project-message" class="form-message" role="status" aria-live="polite"></p>
+
+	<dialog id="create-project-dialog" class="project-create-dialog" aria-labelledby="create-project-title">
+		<div class="project-dialog-heading">
+			<h2 id="create-project-title">새 프로젝트</h2>
+			<button id="close-create-project" type="button" aria-label="닫기">×</button>
+		</div>
+		<form id="create-project-form" class="form-grid" novalidate>
+			<label class="field" for="new-project-name">
+				<span class="field-label">프로젝트 이름</span>
+				<input id="new-project-name" class="field-input" name="name" maxlength="100" autocomplete="off" aria-describedby="project-message" required>
+			</label>
+			<button class="primary-button" type="submit">프로젝트 만들기</button>
+			<p id="create-project-message" class="form-message" role="status" aria-live="polite"></p>
+		</form>
+	</dialog>
 
 	<div class="projects-layout">
-		<aside class="project-sidebar surface-panel" aria-labelledby="project-list-title">
-			<div class="project-sidebar-heading">
-				<h2 id="project-list-title">내 프로젝트</h2>
-				<span id="project-count" class="status-badge">0</span>
+		<aside class="project-rail surface-panel" aria-label="프로젝트 탐색">
+			<p class="project-rail-label">프로젝트 관리</p>
+			<nav class="project-rail-actions" aria-label="프로젝트 작업">
+				<a id="project-create-link-nav" class="project-activity-item" href="#">
+					<span class="project-activity-kind link">↗</span>
+					<span class="project-activity-content"><strong>단축링크 생성</strong></span>
+				</a>
+				<a id="project-create-campaign-nav" class="project-activity-item" href="#">
+					<span class="project-activity-kind campaign">C</span>
+					<span class="project-activity-content"><strong>캠페인 생성</strong></span>
+				</a>
+				<a id="project-templates-nav" class="project-activity-item" href="#">
+					<span class="project-activity-kind template">T</span>
+					<span class="project-activity-content"><strong>UTM 템플릿 관리</strong></span>
+				</a>
+				<a id="project-settings-nav" class="project-activity-item" href="#">
+					<span class="project-activity-kind settings">⚙</span>
+					<span class="project-activity-content"><strong>프로젝트 설정</strong></span>
+				</a>
+			</nav>
+			<div class="project-activity-heading">
+				<span>콘텐츠</span>
+				<div class="project-activity-controls">
+					<button id="project-activity-filter" type="button" aria-label="콘텐츠 종류: 전체">전체</button>
+					<button id="project-activity-sort" type="button" aria-label="콘텐츠 정렬: 최신순">최신순</button>
+				</div>
 			</div>
-			<nav id="project-list" class="project-list" aria-label="프로젝트 선택"></nav>
-
-			<form id="create-project-form" class="project-create-form" novalidate>
-				<label class="field" for="new-project-name">
-					<span class="field-label">새 프로젝트 이름</span>
-					<input id="new-project-name" class="field-input" name="name" maxlength="100" autocomplete="off" aria-describedby="project-message" required>
-				</label>
-				<button class="secondary-button" type="submit">프로젝트 만들기</button>
-			</form>
-			<p id="project-message" class="form-message" role="status" aria-live="polite"></p>
+			<div class="project-activity-scroll">
+				<nav id="project-activity-list" class="project-activity-list" aria-label="캠페인과 단일 링크"></nav>
+				<div id="project-activity-scrollbar" class="project-activity-scrollbar" aria-hidden="true" hidden>
+					<span id="project-activity-scroll-thumb"></span>
+				</div>
+			</div>
 		</aside>
 
 		<section class="project-workspace" aria-live="polite">
@@ -56,19 +95,33 @@
 				<header class="project-detail-header surface-panel">
 					<div>
 						<div class="project-title-line">
-							<h2 id="project-name" tabindex="-1"></h2>
 							<span id="project-role" class="status-badge"></span>
 						</div>
 						<p id="project-domain" class="project-domain">도메인을 불러오는 중...</p>
 					</div>
 					<div class="project-detail-header-actions">
 						<button id="copy-project-domain" class="copy-button" type="button" disabled>복사</button>
-						<a id="project-members-link" class="secondary-button compact-action" href="#">멤버</a>
-						<a id="project-settings-link" class="secondary-button compact-action" href="#">설정</a>
 					</div>
+					<nav class="project-context-nav" aria-label="선택한 프로젝트 보조 메뉴">
+						<a id="project-statistics-link" href="#">통계</a>
+						<a id="project-members-link" href="#">멤버</a>
+					</nav>
 				</header>
 
-				<section id="link-create-panel" class="project-card project-link-create surface-panel" aria-labelledby="link-create-title">
+				<section id="project-home-panel" class="project-card surface-panel" aria-labelledby="project-home-title">
+					<div class="project-card-heading">
+						<div>
+							<h2 id="project-home-title">프로젝트 개요</h2>
+							<p>캠페인과 단축링크는 왼쪽 콘텐츠 목록에서 바로 열 수 있습니다.</p>
+						</div>
+					</div>
+					<dl class="project-overview-counts">
+						<div><dt>단일링크</dt><dd id="project-link-count">0</dd></div>
+						<div><dt>캠페인</dt><dd id="campaign-count">0</dd></div>
+					</dl>
+				</section>
+
+				<section id="link-create-panel" class="project-card project-link-create surface-panel" aria-labelledby="link-create-title" hidden>
 					<div class="project-card-heading">
 						<div>
 							<p class="section-kicker">CREATE</p>
@@ -78,6 +131,10 @@
 					</div>
 
 					<form id="create-project-link-form" class="form-grid" novalidate>
+						<label class="field" for="project-link-name">
+							<span class="field-label">이름 (선택)</span>
+							<input id="project-link-name" class="field-input" name="name" maxlength="100" placeholder="예: 여름 프로모션">
+						</label>
 						<label class="field" for="project-original-url">
 							<span class="field-label">원본 URL</span>
 							<input id="project-original-url" class="field-input" name="originalUrl" type="url" maxlength="2048" placeholder="https://example.com/very/long/path" aria-describedby="project-url-error link-create-message" required>
@@ -115,27 +172,13 @@
 					</section>
 				</section>
 
-				<section class="project-card surface-panel" aria-labelledby="project-links-title">
+				<section id="campaign-section" class="project-card surface-panel" aria-labelledby="campaign-create-title" hidden>
 					<div class="project-card-heading">
 						<div>
-							<p class="section-kicker">OVERVIEW</p>
-							<h2 id="project-links-title">최근 링크</h2>
+							<h2 id="campaign-create-title">캠페인 만들기</h2>
+							<p>관련 단축링크와 UTM 설정을 하나의 캠페인으로 관리합니다.</p>
 						</div>
-						<span id="project-link-count" class="status-badge">0</span>
 					</div>
-					<div id="project-link-list" class="project-link-list"></div>
-				</section>
-
-				<section id="campaign-section" class="project-card surface-panel" aria-labelledby="campaign-list-title" hidden>
-					<div class="project-card-heading">
-						<div>
-							<p class="section-kicker">CAMPAIGNS</p>
-							<h2 id="campaign-list-title">캠페인</h2>
-							<p>UTM과 external_id가 다른 개인화 링크를 캠페인으로 묶어 관리합니다.</p>
-						</div>
-						<span id="campaign-count" class="status-badge">0</span>
-					</div>
-					<div id="campaign-list" class="project-link-list"></div>
 					<form id="create-campaign-form" class="project-inline-form" novalidate>
 						<label class="field" for="new-campaign-name"><span class="field-label">새 캠페인 이름</span><input id="new-campaign-name" class="field-input" name="name" maxlength="100" required></label>
 						<label class="field" for="new-campaign-default-url"><span class="field-label">기본 목적지 URL (선택)</span><input id="new-campaign-default-url" class="field-input" name="defaultOriginalUrl" type="url" maxlength="2048"></label>
@@ -145,12 +188,26 @@
 				</section>
 
 			</div>
+
+			<section id="project-campaign-view" class="project-campaign-view" th:if="${param.campaignId != null and param.linkCode == null}">
+				<div th:replace="~{campaigns :: workspace}"></div>
+			</section>
+
+			<section id="project-link-view" class="project-link-view" th:if="${param.linkCode != null}">
+				<div th:replace="~{management :: workspace}"></div>
+			</section>
+
+			<section id="project-template-view" class="project-template-view" th:if="${param.campaignId == null and param.view != null and param.view[0] == 'utm-templates'}">
+				<div th:replace="~{project-utm-templates :: workspace}"></div>
+			</section>
+
+			<section id="project-settings-view" class="project-settings-view" th:if="${param.campaignId == null and param.view != null and param.view[0] == 'project-settings'}">
+				<div th:replace="~{project-settings :: workspace}"></div>
+			</section>
 		</section>
 	</div>
 </main>
 
 <div th:replace="~{fragments/srrrg-layout :: footer}"></div>
-</div>
-</div>
 </body>
 </html>

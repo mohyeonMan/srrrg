@@ -8,6 +8,7 @@ import java.util.Set;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.core.endpoint.PkceParameterNames;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
@@ -18,10 +19,8 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import link.srrrg.common.util.SecureRandomStringGenerator;
-import lombok.RequiredArgsConstructor;
 
 @Component
-@RequiredArgsConstructor
 public class DatabaseAuthorizationRequestRepository
 		implements AuthorizationRequestRepository<OAuth2AuthorizationRequest> {
 
@@ -33,6 +32,14 @@ public class DatabaseAuthorizationRequestRepository
 
 	private final OAuthAuthorizationRequestRepository repository;
 	private final SecureRandomStringGenerator random;
+	private final boolean secureCookies;
+
+	DatabaseAuthorizationRequestRepository(OAuthAuthorizationRequestRepository repository,
+			SecureRandomStringGenerator random, @Value("${srrrg.base-url}") String baseUrl) {
+		this.repository = repository;
+		this.random = random;
+		this.secureCookies = URI.create(baseUrl).getScheme().equalsIgnoreCase("https");
+	}
 
 	@Override
 	@Transactional(readOnly = true)
@@ -155,10 +162,10 @@ public class DatabaseAuthorizationRequestRepository
 		if (name != null) addCookie(response, name, "", Duration.ZERO);
 	}
 
-	static void addCookie(HttpServletResponse response, String name, String value, Duration maxAge) {
+	void addCookie(HttpServletResponse response, String name, String value, Duration maxAge) {
 		response.addHeader(HttpHeaders.SET_COOKIE, ResponseCookie.from(name, value)
 				.httpOnly(true)
-				.secure(true)
+				.secure(secureCookies)
 				.sameSite("Lax")
 				.path("/")
 				.maxAge(maxAge)

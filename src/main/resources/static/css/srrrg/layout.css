@@ -43,10 +43,90 @@
 	color: var(--color-brand);
 }
 
+.srrrg-header-login {
+	padding: 8px 12px;
+	color: #fff;
+	background: var(--color-brand);
+	border-radius: var(--radius-xs);
+	font-size: 13px;
+	font-weight: 800;
+	text-decoration: none;
+}
+
 .srrrg-header-nav {
 	display: flex;
 	gap: var(--space-4);
 	align-items: center;
+}
+
+.srrrg-account-menu {
+	position: relative;
+}
+
+.srrrg-account-menu summary {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	color: var(--color-text);
+	font-size: 14px;
+	font-weight: 800;
+	list-style: none;
+	cursor: pointer;
+}
+
+.srrrg-account-menu summary::-webkit-details-marker { display: none; }
+
+.srrrg-account-avatar {
+	display: grid;
+	width: 32px;
+	height: 32px;
+	place-items: center;
+	color: var(--color-brand-strong);
+	background: var(--color-brand-soft);
+	border: 1px solid var(--color-brand-border);
+	border-radius: 50%;
+	font-size: 11px;
+}
+
+.srrrg-account-popover {
+	position: absolute;
+	z-index: 20;
+	top: calc(100% + 10px);
+	right: 0;
+	display: grid;
+	width: 220px;
+	padding: var(--space-2);
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-sm);
+	box-shadow: var(--shadow-panel);
+}
+
+.srrrg-account-popover p {
+	margin: 0;
+	padding: 8px 10px;
+	color: var(--color-text-subtle);
+	font-size: 12px;
+	word-break: break-all;
+}
+
+.srrrg-account-popover a,
+.srrrg-account-popover button {
+	padding: 9px 10px;
+	color: var(--color-text);
+	background: transparent;
+	border: 0;
+	border-radius: 6px;
+	font-size: 13px;
+	font-weight: 700;
+	text-align: left;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.srrrg-account-popover a:hover,
+.srrrg-account-popover button:hover {
+	background: var(--color-surface-rail);
 }
 
 .srrrg-footer {

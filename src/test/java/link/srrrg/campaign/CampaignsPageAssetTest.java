@@ -22,7 +22,8 @@ class CampaignsPageAssetTest {
 				"id=\"delete-selected-links-button\"",
 				"class=\"campaign-link-table\"",
 				"현재 입력 기준 적용 예정 UTM",
-				"기존 링크의 리다이렉트에도 즉시 적용");
+				"id=\"manage-utm-templates-link\"",
+				"템플릿 구조 변경은 UTM 템플릿 관리에서만");
 		assertThat(script).contains(
 				"state.utmDefaults[field.name]",
 				"items.flatMap(campaignLinkRows)",
@@ -32,6 +33,8 @@ class CampaignsPageAssetTest {
 				"value.source === 'INPUT' ? '개별 입력'",
 				"value.source === 'LINK' ? '링크 개별값' : '캠페인 기본값'",
 				"링크에서 직접 지정하지 않은 필드에 즉시 적용됩니다.");
+		assertThat(template).doesNotContain("id=\"create-template-form\"", "id=\"add-field-form\"", "id=\"reload-templates-button\"");
+		assertThat(script).doesNotContain("deleteField(", "템플릿을 만들었습니다", "/projects/utm-templates");
 		assertThat(script).doesNotContain("innerHTML");
 	}
 }

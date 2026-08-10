@@ -39,6 +39,9 @@ public class User {
 	@Column(name = "updated_at", nullable = false)
 	private Instant updatedAt;
 
+	@Column(name = "onboarding_completed_at")
+	private Instant onboardingCompletedAt;
+
 	private User(String email, String displayName) {
 		this.email = email;
 		this.emailVerifiedAt = email == null ? null : Instant.now();
@@ -47,6 +50,22 @@ public class User {
 
 	public static User create(String email, String displayName) {
 		return new User(email, displayName);
+	}
+
+	public void updateDisplayName(String displayName) {
+		this.displayName = displayName;
+	}
+
+	public void completeOnboarding(String displayName, String email) {
+		this.displayName = displayName;
+		if (this.email == null) {
+			this.email = email;
+		}
+		this.onboardingCompletedAt = Instant.now();
+	}
+
+	public boolean needsOnboarding() {
+		return onboardingCompletedAt == null;
 	}
 
 	@PrePersist

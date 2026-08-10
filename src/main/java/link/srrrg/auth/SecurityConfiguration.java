@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -37,6 +38,7 @@ class SecurityConfiguration {
 			ProviderOidcUserService oidcUserService,
 			OAuthLoginSuccessHandler successHandler,
 			OAuthLoginFailureHandler failureHandler,
+			@Value("${srrrg.base-url}") String baseUrl,
 			JwtService jwtService,
 			ApiKeyService apiKeyService,
 			RateLimitService rateLimitService) throws Exception {
@@ -44,7 +46,7 @@ class SecurityConfiguration {
 		ApiKeyAuthenticationFilter apiKeyFilter = new ApiKeyAuthenticationFilter(apiKeyService, rateLimitService);
 		CookieCsrfTokenRepository csrf = CookieCsrfTokenRepository.withHttpOnlyFalse();
 		csrf.setHeaderName("X-XSRF-TOKEN");
-		csrf.setCookieCustomizer(cookie -> cookie.secure(true).sameSite("Lax").path("/"));
+		csrf.setCookieCustomizer(cookie -> cookie.secure(baseUrl.startsWith("https://")).sameSite("Lax").path("/"));
 		DefaultOAuth2AuthorizationRequestResolver resolver =
 				new DefaultOAuth2AuthorizationRequestResolver(registrations, "/oauth2/authorization");
 		resolver.setAuthorizationRequestCustomizer(OAuth2AuthorizationRequestCustomizers.withPkce());

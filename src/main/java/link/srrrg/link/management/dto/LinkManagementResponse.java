@@ -4,6 +4,7 @@ import java.time.Instant;
 
 public record LinkManagementResponse(
 		String code,
+		String name,
 		String shortUrl,
 		String originalUrl,
 		Long campaignId,

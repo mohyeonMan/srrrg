@@ -158,6 +158,7 @@ class LinkControllerTest {
 	private LinkManagementResponse managementResponse() {
 		return new LinkManagementResponse(
 				"aB3x9Q",
+				"테스트 링크",
 				"https://srrrg.link/aB3x9Q",
 				"https://example.com/path",
 				null,

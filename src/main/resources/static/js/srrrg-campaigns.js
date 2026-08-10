@@ -1,6 +1,8 @@
 (() => {
 	const app = document.querySelector('#campaigns-app');
 	if (!app) return;
+	const embeddedView = app.closest('#project-campaign-view');
+	if (embeddedView?.hidden) return;
 
 	const base = document.querySelector('meta[name="context-path"]')?.content.replace(/\/$/, '') || '';
 	const params = new URLSearchParams(location.search);
@@ -96,7 +98,7 @@
 		return;
 	}
 	byId('back-to-project').href = `${base}/projects?projectId=${state.projectId}`;
-	byId('manage-utm-templates-link').href = `${base}/projects/utm-templates?projectId=${state.projectId}`;
+	byId('manage-utm-templates-link').href = `${base}/projects?projectId=${state.projectId}&view=utm-templates`;
 
 	async function loadCampaignPicker() {
 		const response = await request(`${base}/api/web/projects/${state.projectId}/campaigns?limit=100`);
@@ -200,27 +202,8 @@
 	}
 
 	function renderTemplateFields() {
-		const rows = state.activeFields.map((field) => {
-			const row = element('div', 'template-field-row');
-			row.append(element('span', '', field.name));
-			const deleteButton = element('button', 'text-button', '삭제');
-			deleteButton.type = 'button';
-			deleteButton.addEventListener('click', () => deleteField(field.id));
-			row.append(deleteButton);
-			return row;
-		});
+		const rows = state.activeFields.map((field) => element('code', 'campaign-template-field', field.name));
 		replaceChildren(byId('template-field-list'), rows.length ? rows : [element('p', 'help-text', '활성 필드가 없습니다.')]);
-	}
-
-	async function deleteField(fieldId) {
-		if (!confirm('이 필드를 삭제하면 이 템플릿을 사용하는 모든 캠페인에서 즉시 숨겨집니다. 기존 값과 통계는 보존됩니다.')) return;
-		const templateId = state.campaign.utmTemplateId;
-		const response = await request(`${base}/api/web/projects/${state.projectId}/utm-templates/${templateId}/fields/${fieldId}`, { method: 'DELETE' });
-		if (!response.ok) return setMessage(byId('template-message'), (await body(response)).message || '필드를 삭제할 수 없습니다.', true);
-		setMessage(byId('template-message'), '필드를 삭제했습니다.');
-		await loadTemplates();
-		await refreshTemplateSelection();
-		await loadLinks(null);
 	}
 
 	byId('template-picker').addEventListener('change', async (event) => {
@@ -242,37 +225,6 @@
 		await loadLinks(null);
 	});
 
-	byId('reload-templates-button').addEventListener('click', async () => {
-		await loadTemplates();
-		await refreshTemplateSelection();
-	});
-
-	byId('create-template-form').addEventListener('submit', async (event) => {
-		event.preventDefault();
-		const name = new FormData(event.target).get('name')?.trim();
-		if (!name) return;
-		const response = await request(`${base}/api/web/projects/${state.projectId}/utm-templates`, { method: 'POST', body: JSON.stringify({ name }) });
-		if (!response.ok) return setMessage(byId('template-message'), (await body(response)).message || '템플릿을 만들 수 없습니다.', true);
-		event.target.reset();
-		setMessage(byId('template-message'), '템플릿을 만들었습니다. 아래에서 선택하세요.');
-		await loadTemplates();
-	});
-
-	byId('add-field-form').addEventListener('submit', async (event) => {
-		event.preventDefault();
-		const templateId = state.campaign.utmTemplateId;
-		if (!templateId) return setMessage(byId('template-message'), '먼저 템플릿을 선택하세요.', true);
-		const name = new FormData(event.target).get('name')?.trim();
-		if (!name) return;
-		if (!confirm('필드를 추가하면 이 템플릿을 사용하는 모든 캠페인에 즉시 반영됩니다. 계속할까요?')) return;
-		const response = await request(`${base}/api/web/projects/${state.projectId}/utm-templates/${templateId}/fields`, { method: 'POST', body: JSON.stringify({ name }) });
-		if (!response.ok) return setMessage(byId('template-message'), (await body(response)).message || '필드를 추가할 수 없습니다.', true);
-		event.target.reset();
-		setMessage(byId('template-message'), '필드를 추가했습니다.');
-		await loadTemplates();
-		await refreshTemplateSelection();
-		await loadLinks(null);
-	});
 
 	async function loadDefaults() {
 		const response = await request(`${base}/api/web/campaigns/${state.campaignId}/utm-defaults`);
@@ -357,6 +309,7 @@
 			const response = await request(`${base}/api/web/campaigns/${state.campaignId}/links`, {
 				method: 'POST',
 				body: JSON.stringify({
+					name: data.get('name')?.trim() || null,
 					originalUrl: data.get('originalUrl')?.trim() || null,
 					externalId: data.get('externalId')?.trim() || null,
 					utmValues
@@ -416,6 +369,7 @@
 		});
 		selectCell.append(checkbox);
 
+		const nameCell = tableCell('이름', '', link.name || '이름없음');
 		const codeCell = tableCell('단축 코드');
 		const codeButton = element('button', 'campaign-link-code', link.code);
 		codeButton.type = 'button';
@@ -436,12 +390,12 @@
 
 		const actionCell = tableCell('관리', 'campaign-link-action');
 		actionCell.append(statisticsLink(link.code));
-		row.append(selectCell, codeCell, destinationCell, externalIdCell, createdAtCell, utmCell, actionCell);
+		row.append(selectCell, nameCell, codeCell, destinationCell, externalIdCell, createdAtCell, utmCell, actionCell);
 
 		const detailRow = element('tr', 'campaign-link-utm-detail-row');
 		detailRow.hidden = true;
 		const detailCell = element('td', 'campaign-link-utm-detail-cell');
-		detailCell.colSpan = 7;
+		detailCell.colSpan = 8;
 		detailCell.append(effectiveUtmPanel(values));
 		detailRow.append(detailCell);
 		utmButton.addEventListener('click', () => {
@@ -482,18 +436,14 @@
 	}
 
 	function managementUrl(code) {
-		return `${base}/manage?projectId=${state.projectId}&campaignId=${state.campaignId}&code=${encodeURIComponent(code)}${periodSuffix()}`;
+		return `${base}/projects?projectId=${state.projectId}&campaignId=${state.campaignId}&linkCode=${encodeURIComponent(code)}`;
 	}
 	function periodSuffix() { return params.get('from') && params.get('to') ? `&from=${encodeURIComponent(params.get('from'))}&to=${encodeURIComponent(params.get('to'))}&bucket=${encodeURIComponent(params.get('bucket') || 'DAY')}` : ''; }
 
 	function statisticsLink(code) { const link = element('a', '', '상세보기'); link.href = managementUrl(code); return link; }
 
 	function openLinkDetail(code) {
-		SrrrgLinkDrawer.open({
-			base, request, body, projectId: state.projectId, code,
-			manageUrl: managementUrl(code),
-			onChange: () => loadLinks(null)
-		});
+		location.href = managementUrl(code);
 	}
 
 	function updateLinkSelectionControls() {

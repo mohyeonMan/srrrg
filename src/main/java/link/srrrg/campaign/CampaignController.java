@@ -224,9 +224,9 @@ public class CampaignController {
 			return new CampaignPageResponse(trimmed.stream().map(CampaignResponse::from).toList(), nextCursor);
 		}
 	}
-	public record CampaignLinkResponse(String code, String originalUrl, String externalId, Instant createdAt) {
+	public record CampaignLinkResponse(String code, String name, String originalUrl, String externalId, Instant createdAt) {
 		static CampaignLinkResponse from(Link link) {
-			return new CampaignLinkResponse(link.getCode(), link.getOriginalUrl(), link.getExternalId(), link.getCreatedAt());
+			return new CampaignLinkResponse(link.getCode(), link.getName(), link.getOriginalUrl(), link.getExternalId(), link.getCreatedAt());
 		}
 	}
 	public record CampaignLinkPageResponse(List<CampaignLinkResponse> items, Long nextCursor) {
@@ -241,10 +241,10 @@ public class CampaignController {
 			return new EffectiveUtmResponse(value.getFieldName(), value.getValue(), value.getSource());
 		}
 	}
-	public record WebCampaignLinkResponse(String code, String originalUrl, String externalId, Instant createdAt,
+	public record WebCampaignLinkResponse(String code, String name, String originalUrl, String externalId, Instant createdAt,
 			List<EffectiveUtmResponse> effectiveUtmValues) {
 		static WebCampaignLinkResponse from(Link link, List<EffectiveUtmResponse> effectiveUtmValues) {
-			return new WebCampaignLinkResponse(link.getCode(), link.getOriginalUrl(), link.getExternalId(), link.getCreatedAt(),
+			return new WebCampaignLinkResponse(link.getCode(), link.getName(), link.getOriginalUrl(), link.getExternalId(), link.getCreatedAt(),
 					effectiveUtmValues);
 		}
 	}

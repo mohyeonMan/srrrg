@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Base64;
 
 import org.junit.jupiter.api.Test;
@@ -41,8 +42,18 @@ class JwtServiceTest {
 				.hasMessageContaining("256bit");
 	}
 
+	@Test
+	void allowsLocalHttpButRejectsRemoteHttp() {
+		JwtProperties properties = new JwtProperties("current", NEW_KEY, "", "");
+
+		new JwtService(properties, "http://localhost:8080", Duration.ofMinutes(5)).requireConfigured();
+		assertThatThrownBy(() -> new JwtService(properties, "http://example.com", Duration.ofMinutes(5)).requireConfigured())
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("HTTPS");
+	}
+
 	private JwtService service(JwtProperties properties) {
-		return new JwtService(properties, "https://srrrg.link");
+		return new JwtService(properties, "https://srrrg.link", Duration.ofMinutes(5));
 	}
 
 	private static String encoded(String value) {

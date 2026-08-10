@@ -6,17 +6,12 @@
 	<meta name="context-path" th:content="@{/}">
 	<title>srrrg - UTM 템플릿</title>
 	<link rel="stylesheet" th:href="@{/css/srrrg.css}">
-	<link rel="stylesheet" th:href="@{/css/srrrg/workspace-shell.css}">
-	<script defer th:src="@{/js/srrrg-workspace-shell.js}"></script>
 	<script defer th:src="@{/js/srrrg-project-utm-templates.js}"></script>
 </head>
 <body>
-<div class="workspace-layout">
-<div th:replace="~{fragments/workspace-shell :: sidebar(active='utm-templates')}"></div>
-<div class="workspace-main">
-<div th:replace="~{fragments/workspace-shell :: topbar(title='UTM 템플릿')}"></div>
+<div th:replace="~{fragments/srrrg-layout :: header}"></div>
 
-<main class="projects-shell workspace-content" id="utm-templates-app">
+<main class="projects-shell" id="utm-templates-app" th:fragment="workspace">
 	<header class="projects-heading">
 		<div>
 			<p class="section-kicker">UTM TEMPLATES</p>
@@ -25,16 +20,13 @@
 		</div>
 		<a id="back-to-project" class="secondary-button" href="#">프로젝트로 돌아가기</a>
 	</header>
-	<p id="templates-message" class="form-message" role="status" aria-live="polite"></p>
-
-	<div class="projects-layout">
-		<aside class="project-sidebar surface-panel" aria-labelledby="template-list-title">
-			<div class="project-sidebar-heading">
-				<h2 id="template-list-title">템플릿</h2>
-				<span id="template-count" class="status-badge">0</span>
-			</div>
-			<nav id="template-list" class="project-list" aria-label="템플릿 선택"></nav>
-
+	<section class="project-switcher surface-panel" aria-labelledby="template-picker-label">
+		<label class="field project-picker-field" for="template-picker">
+			<span id="template-picker-label" class="field-label">템플릿</span>
+			<select id="template-picker" class="field-input" aria-describedby="templates-message"></select>
+		</label>
+		<details class="project-create-disclosure">
+			<summary class="secondary-button">새 템플릿</summary>
 			<form id="create-template-form" class="project-create-form" novalidate>
 				<label class="field" for="new-template-name">
 					<span class="field-label">새 템플릿 이름</span>
@@ -42,13 +34,16 @@
 				</label>
 				<button class="secondary-button" type="submit">템플릿 만들기</button>
 			</form>
-		</aside>
+		</details>
+		<p id="templates-message" class="form-message" role="status" aria-live="polite"></p>
+	</section>
 
+	<div class="projects-layout">
 		<section class="project-workspace" aria-live="polite">
 			<div id="template-empty" class="project-empty surface-panel">
 				<p class="section-kicker">GET STARTED</p>
 				<h2>템플릿을 선택하세요</h2>
-				<p>왼쪽에서 템플릿을 선택하거나 새로 만들어 필드를 구성하세요.</p>
+				<p>위에서 템플릿을 선택하거나 새로 만들어 필드를 구성하세요.</p>
 			</div>
 
 			<div id="template-detail" class="project-card surface-panel" hidden>
@@ -71,7 +66,5 @@
 </main>
 
 <div th:replace="~{fragments/srrrg-layout :: footer}"></div>
-</div>
-</div>
 </body>
 </html>

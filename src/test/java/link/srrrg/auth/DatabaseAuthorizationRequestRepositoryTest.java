@@ -24,7 +24,7 @@ class DatabaseAuthorizationRequestRepositoryTest {
 		SecureRandomStringGenerator random = mock(SecureRandomStringGenerator.class);
 		when(random.generate(any(), eq(43))).thenReturn("a".repeat(43));
 		DatabaseAuthorizationRequestRepository repository =
-				new DatabaseAuthorizationRequestRepository(persistence, random);
+				new DatabaseAuthorizationRequestRepository(persistence, random, "https://srrrg.link");
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		request.setParameter("returnTo", "https://evil.example/path");
 		MockHttpServletResponse response = new MockHttpServletResponse();

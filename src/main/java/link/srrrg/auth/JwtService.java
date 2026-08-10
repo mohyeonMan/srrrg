@@ -1,5 +1,6 @@
 package link.srrrg.auth;
 
+import java.net.URI;
 import java.text.ParseException;
 import java.time.Duration;
 import java.time.Instant;
@@ -25,15 +26,20 @@ import com.nimbusds.jwt.SignedJWT;
 @Service
 public class JwtService {
 
-	private static final Duration LIFETIME = Duration.ofMinutes(15);
 	private static final String AUDIENCE = "srrrg-web";
 
 	private final JwtProperties properties;
 	private final String issuer;
+	private final Duration accessLifetime;
 
-	public JwtService(JwtProperties properties, @Value("${srrrg.base-url}") String issuer) {
+	public JwtService(JwtProperties properties, @Value("${srrrg.base-url}") String issuer,
+			@Value("${srrrg.auth.jwt.access-lifetime:5m}") Duration accessLifetime) {
 		this.properties = properties;
 		this.issuer = issuer;
+		if (accessLifetime.isZero() || accessLifetime.isNegative()) {
+			throw new IllegalArgumentException("access JWT 유효시간은 0보다 커야 합니다.");
+		}
+		this.accessLifetime = accessLifetime;
 	}
 
 	public String issue(Long userId) {
@@ -44,7 +50,7 @@ public class JwtService {
 				.audience(AUDIENCE)
 				.subject(userId.toString())
 				.issueTime(Date.from(now))
-				.expirationTime(Date.from(now.plus(LIFETIME)))
+				.expirationTime(Date.from(now.plus(accessLifetime)))
 				.jwtID(UUID.randomUUID().toString())
 				.build();
 		SignedJWT jwt = new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.HS256)
@@ -87,7 +93,12 @@ public class JwtService {
 
 	public void requireConfigured() {
 		activeKey();
-		if (!issuer.startsWith("https://")) {
+		URI uri = URI.create(issuer);
+		String host = uri.getHost();
+		boolean localHttp = "http".equalsIgnoreCase(uri.getScheme())
+				&& ("localhost".equalsIgnoreCase(host) || "127.0.0.1".equals(host)
+						|| "::1".equals(host) || "[::1]".equals(host));
+		if (!"https".equalsIgnoreCase(uri.getScheme()) && !localHttp) {
 			throw new IllegalStateException("HTTPS base URL에서만 token을 발급할 수 있습니다.");
 		}
 	}

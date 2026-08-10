@@ -9,7 +9,22 @@
 	<nav class="srrrg-header-nav" aria-label="주요 메뉴">
 		<a class="srrrg-header-link" th:href="@{/projects}">프로젝트</a>
 		<a class="srrrg-header-link" th:href="@{/manage}">링크 관리</a>
+		<a class="srrrg-header-login" th:if="${accountUser == null}"
+			th:href="@{/login(returnTo=${accountReturnTo})}">로그인</a>
+		<details class="srrrg-account-menu" th:if="${accountUser != null}">
+			<summary>
+				<span class="srrrg-account-avatar" aria-hidden="true">내</span>
+				<span th:text="${accountUser.displayName}">내 계정</span>
+			</summary>
+			<div class="srrrg-account-popover">
+				<p th:text="${accountUser.email}">account@example.com</p>
+				<a th:href="@{/account}">내 정보 관리</a>
+				<button id="header-logout-button" type="button"
+					th:attr="data-logout-url=@{/api/web/auth/logout},data-home-url=@{/}">로그아웃</button>
+			</div>
+		</details>
 	</nav>
+	<script defer th:src="@{/js/srrrg-header-account.js}"></script>
 </header>
 
 <footer class="srrrg-footer" th:fragment="footer">

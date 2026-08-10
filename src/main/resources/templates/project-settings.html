@@ -6,17 +6,12 @@
 	<meta name="context-path" th:content="@{/}">
 	<title>srrrg - 설정</title>
 	<link rel="stylesheet" th:href="@{/css/srrrg.css}">
-	<link rel="stylesheet" th:href="@{/css/srrrg/workspace-shell.css}">
-	<script defer th:src="@{/js/srrrg-workspace-shell.js}"></script>
 	<script defer th:src="@{/js/srrrg-project-settings.js}"></script>
 </head>
 <body>
-<div class="workspace-layout">
-<div th:replace="~{fragments/workspace-shell :: sidebar(active='settings')}"></div>
-<div class="workspace-main">
-<div th:replace="~{fragments/workspace-shell :: topbar(title='설정')}"></div>
+<div th:replace="~{fragments/srrrg-layout :: header}"></div>
 
-<main class="page-shell workspace-content" id="project-settings-app">
+<main class="page-shell" id="project-settings-app" th:fragment="workspace">
 	<p class="section-kicker">SETTINGS</p>
 	<div class="campaign-heading-row">
 		<h1 id="settings-project-name">프로젝트 설정</h1>
@@ -62,7 +57,5 @@
 </main>
 
 <div th:replace="~{fragments/srrrg-layout :: footer}"></div>
-</div>
-</div>
 </body>
 </html>

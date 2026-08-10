@@ -60,6 +60,7 @@ srrrg:
     key-prefix: ${SRRRG_RATE_LIMIT_KEY_PREFIX:srrrg:dev:}
   auth:
     jwt:
+      access-lifetime: ${SRRRG_JWT_ACCESS_LIFETIME:5m}
       active-kid: ${SRRRG_JWT_ACTIVE_KID:}
       active-key-base64: ${SRRRG_JWT_ACTIVE_KEY_BASE64:}
       previous-kid: ${SRRRG_JWT_PREVIOUS_KID:}

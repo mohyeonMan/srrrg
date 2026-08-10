@@ -193,7 +193,7 @@ public class LinkManagementService {
 	}
 
 	private LinkManagementResponse toManagementResponse(Link link, boolean editable, String shortUrl) {
-		return new LinkManagementResponse(link.getCode(), shortUrl == null ? baseUrl + "/" + link.getCode() : shortUrl,
+		return new LinkManagementResponse(link.getCode(), link.getName(), shortUrl == null ? baseUrl + "/" + link.getCode() : shortUrl,
 				link.getOriginalUrl(), link.getCampaign() == null ? null : link.getCampaign().getId(), editable, link.getExpiresAt(),
 				link.getCreatedAt(), link.getUpdatedAt());
 	}
@@ -218,7 +218,7 @@ public class LinkManagementService {
 		// 프로젝트 링크는 인증된 멤버 또는 프로젝트 API key의 생성자를 신뢰해 위험 검사를 생략한다.
 		// 신뢰 정책이 바뀌면 requireNoKnownThreat(request.originalUrl())를 이 지점에 복구한다.
 		return saveProjectLinkWithUniqueCode(request.originalUrl(), request.expiresAt(), project, project.activeSubdomain(), createdBy,
-				apiKeyId, idempotencyKey, requestHash);
+				apiKeyId, idempotencyKey, requestHash, request.normalizedName());
 	}
 
 	/**
@@ -229,6 +229,14 @@ public class LinkManagementService {
 			Long apiKeyId, String idempotencyKey, String requestHash,
 			Campaign campaign, UtmTemplate utmTemplate, String externalId,
 			Map<String, String> resolvedUtmValues) {
+		return createForCampaign(originalUrl, expiresAt, project, createdBy, apiKeyId, idempotencyKey, requestHash,
+				campaign, utmTemplate, externalId, resolvedUtmValues, null);
+	}
+
+	public Link createForCampaign(String originalUrl, Instant expiresAt, Project project, User createdBy,
+			Long apiKeyId, String idempotencyKey, String requestHash,
+			Campaign campaign, UtmTemplate utmTemplate, String externalId,
+			Map<String, String> resolvedUtmValues, String name) {
 		Link existing = findIdempotentLink(apiKeyId, idempotencyKey, requestHash);
 		if (existing != null) return existing;
 		Map<String, String> utmByName = Map.copyOf(resolvedUtmValues);
@@ -238,7 +246,7 @@ public class LinkManagementService {
 		// 캠페인 링크도 인증된 멤버 또는 프로젝트 API key의 생성자를 신뢰해 위험 검사를 생략한다.
 		// 신뢰 정책이 바뀌면 동적 기본 목적지와 UTM을 해석한 뒤 requireNoKnownThreat를 복구한다.
 		Link link = saveCampaignLinkWithUniqueCode(originalUrl, expiresAt, project, project.activeSubdomain(), createdBy,
-				apiKeyId, idempotencyKey, requestHash, campaign, utmTemplate, externalId);
+				apiKeyId, idempotencyKey, requestHash, campaign, utmTemplate, externalId, name);
 		for (Map.Entry<String, String> entry : resolvedUtmValues.entrySet()) {
 			linkUtmValueRepository.save(LinkUtmValue.create(link, entry.getKey(), entry.getValue()));
 		}
@@ -268,12 +276,12 @@ public class LinkManagementService {
 	}
 
 	private Link saveProjectLinkWithUniqueCode(String originalUrl, Instant expiresAt, Project project, String subdomain, User createdBy,
-			Long apiKeyId, String idempotencyKey, String requestHash) {
+			Long apiKeyId, String idempotencyKey, String requestHash, String name) {
 		for (int attempt = 1; attempt <= MAX_CODE_GENERATION_ATTEMPTS; attempt++) {
 			String code = linkCodeGenerator.generate();
 			try {
 				return linkRepository.saveAndFlush(Link.createForProject(code, originalUrl, expiresAt, project, subdomain, createdBy,
-						apiKeyId, idempotencyKey, requestHash));
+						apiKeyId, idempotencyKey, requestHash, name));
 			} catch (DataIntegrityViolationException exception) {
 				Link existing = findIdempotentLink(apiKeyId, idempotencyKey, requestHash);
 				if (existing != null) return existing;
@@ -286,12 +294,12 @@ public class LinkManagementService {
 	}
 
 	private Link saveCampaignLinkWithUniqueCode(String originalUrl, Instant expiresAt, Project project, String subdomain, User createdBy,
-			Long apiKeyId, String idempotencyKey, String requestHash, Campaign campaign, UtmTemplate utmTemplate, String externalId) {
+			Long apiKeyId, String idempotencyKey, String requestHash, Campaign campaign, UtmTemplate utmTemplate, String externalId, String name) {
 		for (int attempt = 1; attempt <= MAX_CODE_GENERATION_ATTEMPTS; attempt++) {
 			String code = linkCodeGenerator.generate();
 			try {
 				return linkRepository.saveAndFlush(Link.createForCampaign(code, originalUrl, expiresAt, project, subdomain, createdBy,
-						apiKeyId, idempotencyKey, requestHash, campaign, utmTemplate, externalId));
+						apiKeyId, idempotencyKey, requestHash, campaign, utmTemplate, externalId, name));
 			} catch (DataIntegrityViolationException exception) {
 				if (isExternalIdConflict(exception)) {
 					throw new ExternalIdConflictException();

@@ -40,6 +40,7 @@ import link.srrrg.project.ProjectController;
 import link.srrrg.project.ProjectRole;
 import link.srrrg.project.ProjectService;
 import link.srrrg.link.LinkRepository;
+import link.srrrg.identity.UserRepository;
 
 @WebMvcTest(controllers = {HomeController.class, LoginController.class, LinkController.class, AuthController.class, PublicProjectLinkController.class, InvitationPageController.class, ProjectController.class})
 @Import({SecurityConfiguration.class, CsrfCookieFilter.class})
@@ -99,6 +100,9 @@ class SecurityWebTest {
 	@MockitoBean
 	CampaignService campaignService;
 
+	@MockitoBean
+	UserRepository userRepository;
+
 	@Test
 	void rendersAccessibleLoginOptions() throws Exception {
 		mockMvc.perform(get("/login"))
@@ -107,6 +111,22 @@ class SecurityWebTest {
 				.andExpect(content().string(org.hamcrest.Matchers.containsString("Kakao로 계속")))
 				.andExpect(content().string(org.hamcrest.Matchers.containsString("GitHub로 계속")))
 				.andExpect(content().string(org.hamcrest.Matchers.containsString("aria-label=\"소셜 로그인\"")));
+	}
+
+	@Test
+	void rendersAccountManagementPage() throws Exception {
+		mockMvc.perform(get("/account"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(org.hamcrest.Matchers.containsString("내 정보")))
+				.andExpect(content().string(org.hamcrest.Matchers.containsString("모든 기기에서 로그아웃")));
+	}
+
+	@Test
+	void rendersFirstLoginProfilePage() throws Exception {
+		mockMvc.perform(get("/onboarding"))
+				.andExpect(status().isOk())
+				.andExpect(content().string(org.hamcrest.Matchers.containsString("기본 정보를 확인해 주세요")))
+				.andExpect(content().string(org.hamcrest.Matchers.containsString("설정 완료")));
 	}
 
 	@Test

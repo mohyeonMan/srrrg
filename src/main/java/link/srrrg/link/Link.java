@@ -37,6 +37,9 @@ public class Link {
 	@Column(name = "original_url", length = 2048)
 	private String originalUrl;
 
+	@Column(length = 100)
+	private String name;
+
 	@Column(name = "secret_key_hash", length = 100)
 	private String secretKeyHash;
 
@@ -95,14 +98,27 @@ public class Link {
 
 	public static Link createForProject(String code, String originalUrl, Instant expiresAt,
 			Project project, String subdomain, User createdBy, Long apiKeyId, String idempotencyKey, String requestHash) {
+		return createForProject(code, originalUrl, expiresAt, project, subdomain, createdBy, apiKeyId, idempotencyKey, requestHash, null);
+	}
+
+	public static Link createForProject(String code, String originalUrl, Instant expiresAt,
+			Project project, String subdomain, User createdBy, Long apiKeyId, String idempotencyKey, String requestHash, String name) {
 		return createForCampaign(code, originalUrl, expiresAt, project, subdomain, createdBy, apiKeyId, idempotencyKey, requestHash,
-				null, null, null);
+				null, null, null, name);
 	}
 
 	public static Link createForCampaign(String code, String originalUrl, Instant expiresAt,
 			Project project, String subdomain, User createdBy, Long apiKeyId, String idempotencyKey, String requestHash,
 			Campaign campaign, UtmTemplate utmTemplate, String externalId) {
+		return createForCampaign(code, originalUrl, expiresAt, project, subdomain, createdBy, apiKeyId, idempotencyKey, requestHash,
+				campaign, utmTemplate, externalId, null);
+	}
+
+	public static Link createForCampaign(String code, String originalUrl, Instant expiresAt,
+			Project project, String subdomain, User createdBy, Long apiKeyId, String idempotencyKey, String requestHash,
+			Campaign campaign, UtmTemplate utmTemplate, String externalId, String name) {
 		Link link = new Link(code, originalUrl, null, expiresAt);
+		link.name = name;
 		link.project = project;
 		link.subdomain = subdomain;
 		link.createdBy = createdBy;

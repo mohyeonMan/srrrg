@@ -68,7 +68,6 @@
 			return;
 		}
 		state.templates = await response.json();
-		byId('template-count').textContent = String(state.templates.length);
 		renderTemplateList();
 		if (!state.templates.length) {
 			state.selectedId = null;
@@ -80,15 +79,13 @@
 	}
 
 	function renderTemplateList() {
-		const buttons = state.templates.map((template) => {
-			const button = element('button', 'project-list-button');
-			button.type = 'button';
-			button.setAttribute('aria-current', String(template.id === state.selectedId));
-			button.append(element('strong', '', template.name), element('span', '', `필드 ${template.activeFields.length}개`));
-			button.addEventListener('click', () => selectTemplate(template.id));
-			return button;
+		const options = state.templates.map((template) => {
+			const option = element('option', '', `${template.name} · 필드 ${template.activeFields.length}개`);
+			option.value = template.id;
+			return option;
 		});
-		replaceChildren(byId('template-list'), buttons);
+		replaceChildren(byId('template-picker'), options);
+		byId('template-picker').disabled = !state.templates.length;
 	}
 
 	function selectTemplate(id) {
@@ -98,10 +95,8 @@
 		byId('template-empty').hidden = true;
 		byId('template-detail').hidden = false;
 		byId('template-detail-name').textContent = template.name;
+		byId('template-picker').value = template.id;
 		setMessage(detailMessage, '');
-		document.querySelectorAll('#template-list .project-list-button').forEach((button, index) => {
-			button.setAttribute('aria-current', String(state.templates[index]?.id === id));
-		});
 		renderFields(template);
 	}
 
@@ -136,6 +131,11 @@
 		event.target.reset();
 		setMessage(templatesMessage, '템플릿을 만들었습니다.');
 		await loadTemplates(responseBody.id);
+	});
+
+	byId('template-picker').addEventListener('change', (event) => {
+		const template = state.templates.find(({ id }) => String(id) === event.target.value);
+		if (template) selectTemplate(template.id);
 	});
 
 	byId('add-field-form').addEventListener('submit', async (event) => {

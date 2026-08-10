@@ -11,8 +11,14 @@ public record CreateCampaignLinkRequest(
 		Instant expiresAt,
 		@Size(max = 100, message = "external_id는 100자 이하여야 합니다.")
 		String externalId,
-		Map<String, String> utmValues
+		Map<String, String> utmValues,
+		@Size(max = 100, message = "이름은 100자 이하여야 합니다.")
+		String name
 ) {
+	public CreateCampaignLinkRequest(String originalUrl, Instant expiresAt, String externalId, Map<String, String> utmValues) {
+		this(originalUrl, expiresAt, externalId, utmValues, null);
+	}
+
 	public Map<String, String> utmValuesOrEmpty() {
 		return utmValues == null ? Map.of() : utmValues;
 	}
@@ -23,5 +29,9 @@ public record CreateCampaignLinkRequest(
 
 	public String normalizedOriginalUrl() {
 		return originalUrl == null || originalUrl.isBlank() ? null : originalUrl.trim();
+	}
+
+	public String normalizedName() {
+		return name == null || name.isBlank() ? null : name.trim();
 	}
 }

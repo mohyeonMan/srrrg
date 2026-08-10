@@ -101,11 +101,12 @@ class LinkManagementServiceTest {
 		when(codeGenerator.generate()).thenReturn("aB3x9Q");
 		when(repository.saveAndFlush(any(Link.class))).thenAnswer(call -> call.getArgument(0));
 
-		Link link = service.createForProject(new CreateLinkRequest("https://example.com", null), project, user);
+		Link link = service.createForProject(new CreateLinkRequest("https://example.com", null, "  프로모션  "), project, user);
 
 		assertThat(link.getProject()).isSameAs(project);
 		assertThat(link.getSubdomain()).isEqualTo("acme");
 		assertThat(link.getCreatedBy()).isSameAs(user);
+		assertThat(link.getName()).isEqualTo("프로모션");
 		assertThat(link.getSecretKeyHash()).isNull();
 		verify(riskVerificationService, never()).verify(any());
 	}

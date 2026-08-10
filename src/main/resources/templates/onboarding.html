@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>프로필 설정 - srrrg</title>
+	<link rel="stylesheet" th:href="@{/css/srrrg.css}">
+	<script defer th:src="@{/js/srrrg-onboarding.js}"></script>
+</head>
+<body>
+<div th:replace="~{fragments/srrrg-layout :: header}"></div>
+
+<main id="onboarding-app" class="page-shell onboarding-shell"
+	th:attr="data-account-url=@{/api/web/account},data-complete-url=@{/api/web/account/onboarding},data-refresh-url=@{/api/web/auth/refresh},data-login-url=@{/login},data-home-url=@{/}">
+	<section class="surface-panel onboarding-card" aria-labelledby="onboarding-title">
+		<p class="section-eyebrow">WELCOME</p>
+		<div>
+			<h1 id="onboarding-title">기본 정보를 확인해 주세요</h1>
+			<p>프로젝트와 캠페인에서 사용할 이름과 이메일입니다.</p>
+		</div>
+		<form id="onboarding-form" class="form-grid" novalidate>
+			<label class="field" for="onboarding-name">
+				<span class="field-label">이름</span>
+				<input id="onboarding-name" class="field-input" name="displayName" maxlength="100" autocomplete="name" required disabled>
+			</label>
+			<label class="field" for="onboarding-email">
+				<span class="field-label">이메일</span>
+				<input id="onboarding-email" class="field-input" name="email" type="email" maxlength="320" autocomplete="email" required disabled>
+				<span id="onboarding-email-help" class="help-text">로그인 계정 정보를 확인하고 있습니다.</span>
+			</label>
+			<button class="primary-button" type="submit" disabled>설정 완료</button>
+			<p id="onboarding-message" class="form-message" role="status" aria-live="polite"></p>
+		</form>
+	</section>
+</main>
+
+<div th:replace="~{fragments/srrrg-layout :: footer}"></div>
+</body>
+</html>

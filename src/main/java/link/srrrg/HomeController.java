@@ -29,6 +29,16 @@ public class HomeController {
 		return "projects";
 	}
 
+	@GetMapping("/account")
+	public String account() {
+		return "account";
+	}
+
+	@GetMapping("/onboarding")
+	public String onboarding() {
+		return "onboarding";
+	}
+
 	@GetMapping("/projects/members")
 	public String projectMembers() {
 		return "project-members";

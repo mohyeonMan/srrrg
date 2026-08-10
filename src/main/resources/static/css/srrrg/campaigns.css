@@ -3,6 +3,15 @@
 	gap: var(--space-5);
 }
 
+.campaign-workspace-header {
+	display: grid;
+	gap: var(--space-2);
+	padding: clamp(20px, 3vw, 28px);
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-xs);
+}
+
 .campaign-heading-row {
 	display: flex;
 	align-items: center;
@@ -63,6 +72,21 @@
 .campaign-card h3 {
 	margin: 0;
 	font-size: 15px;
+}
+
+.campaign-template-fields {
+	display: flex;
+	gap: var(--space-2);
+	flex-wrap: wrap;
+	margin-top: var(--space-3);
+}
+
+.campaign-template-field {
+	padding: 6px 9px;
+	color: var(--color-brand-strong);
+	background: var(--color-brand-soft);
+	border-radius: 6px;
+	font-size: 12px;
 }
 
 .campaign-card > p {

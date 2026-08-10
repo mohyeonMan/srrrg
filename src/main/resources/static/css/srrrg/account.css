@@ -1,0 +1,89 @@
+.account-shell {
+	display: grid;
+	gap: var(--space-7);
+	max-width: 920px;
+}
+
+.account-heading h1 {
+	margin: var(--space-3) 0 var(--space-2);
+	font-size: clamp(30px, 4vw, 42px);
+}
+
+.account-heading > p:last-child,
+.account-card > div:first-child p {
+	margin: 0;
+	color: var(--color-text-muted);
+}
+
+.account-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 3fr) minmax(260px, 2fr);
+	gap: var(--space-5);
+	align-items: start;
+}
+
+.account-card {
+	display: grid;
+	gap: var(--space-6);
+	padding: var(--panel-padding);
+}
+
+.account-card h2 {
+	margin: 0 0 var(--space-2);
+	font-size: var(--text-section);
+}
+
+.account-facts {
+	display: grid;
+	gap: var(--space-3);
+	margin: 0;
+}
+
+.account-facts div {
+	display: grid;
+	grid-template-columns: 88px minmax(0, 1fr);
+	gap: var(--space-3);
+}
+
+.account-facts dt {
+	color: var(--color-text-subtle);
+	font-size: var(--text-small);
+	font-weight: 800;
+}
+
+.account-facts dd {
+	margin: 0;
+	color: var(--color-text);
+	word-break: break-word;
+}
+
+.account-session-actions {
+	display: grid;
+	gap: var(--space-3);
+}
+
+@media (max-width: 720px) {
+	.account-grid { grid-template-columns: 1fr; }
+}
+
+.onboarding-shell {
+	display: grid;
+	width: min(560px, calc(100% - 32px));
+	place-items: start stretch;
+}
+
+.onboarding-card {
+	display: grid;
+	gap: var(--space-6);
+	padding: var(--panel-padding);
+}
+
+.onboarding-card h1 {
+	margin: 0 0 var(--space-2);
+	font-size: clamp(28px, 4vw, 36px);
+}
+
+.onboarding-card > div > p {
+	margin: 0;
+	color: var(--color-text-muted);
+}

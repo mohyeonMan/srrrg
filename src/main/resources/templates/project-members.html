@@ -6,17 +6,12 @@
 	<meta name="context-path" th:content="@{/}">
 	<title>srrrg - 멤버</title>
 	<link rel="stylesheet" th:href="@{/css/srrrg.css}">
-	<link rel="stylesheet" th:href="@{/css/srrrg/workspace-shell.css}">
-	<script defer th:src="@{/js/srrrg-workspace-shell.js}"></script>
 	<script defer th:src="@{/js/srrrg-project-members.js}"></script>
 </head>
 <body>
-<div class="workspace-layout">
-<div th:replace="~{fragments/workspace-shell :: sidebar(active='members')}"></div>
-<div class="workspace-main">
-<div th:replace="~{fragments/workspace-shell :: topbar(title='멤버')}"></div>
+<div th:replace="~{fragments/srrrg-layout :: header}"></div>
 
-<main class="page-shell workspace-content" id="project-members-app">
+<main class="page-shell" id="project-members-app">
 	<p class="section-kicker">MEMBERS</p>
 	<div class="campaign-heading-row">
 		<h1 id="member-project-name">멤버 및 초대</h1>
@@ -44,7 +39,5 @@
 </main>
 
 <div th:replace="~{fragments/srrrg-layout :: footer}"></div>
-</div>
-</div>
 </body>
 </html>
