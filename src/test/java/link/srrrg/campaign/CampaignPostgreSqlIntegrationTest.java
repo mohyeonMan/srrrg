@@ -290,7 +290,8 @@ class CampaignPostgreSqlIntegrationTest {
 		mockMvc.perform(delete("/api/web/campaigns/{id}", campaignId).with(csrf()).cookie(owner.cookie))
 				.andExpect(status().isNoContent());
 		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId).cookie(owner.cookie))
-				.andExpect(status().isOk()).andExpect(jsonPath("$.summary.entries").value(0));
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.code").value("CAMPAIGN_NOT_FOUND"));
 	}
 
 	@Test
@@ -345,7 +346,7 @@ class CampaignPostgreSqlIntegrationTest {
 	}
 
 	@Test
-	void archivingCampaignSoftDeletesLinksReturningGoneOnRedirect() throws Exception {
+	void deletingCampaignSoftDeletesCampaignAndLinksReturningGoneOnRedirect() throws Exception {
 		Owner owner = newOwner();
 		Long campaignId = createCampaign(owner, "삭제될 캠페인", null);
 		MvcResult created = mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
@@ -357,6 +358,10 @@ class CampaignPostgreSqlIntegrationTest {
 
 		mockMvc.perform(delete("/api/web/campaigns/{id}", campaignId).with(csrf()).cookie(owner.cookie))
 				.andExpect(status().isNoContent());
+		assertThat(jdbcTemplate.queryForObject("SELECT is_deleted FROM campaigns WHERE id=?", Boolean.class, campaignId)).isTrue();
+		mockMvc.perform(get("/api/web/campaigns/{id}", campaignId).cookie(owner.cookie))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.code").value("CAMPAIGN_NOT_FOUND"));
 
 		mockMvc.perform(get("/{code}", code).header("Host", owner.host))
 				.andExpect(status().isGone());

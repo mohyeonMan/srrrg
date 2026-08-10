@@ -58,7 +58,7 @@ public class Link {
 	@Column(name = "idempotency_request_hash", length = 64)
 	private String idempotencyRequestHash;
 
-	@ManyToOne(fetch = FetchType.LAZY)
+	@ManyToOne(fetch = FetchType.EAGER)
 	@JoinColumn(name = "campaign_id")
 	private Campaign campaign;
 

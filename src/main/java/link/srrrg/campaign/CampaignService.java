@@ -12,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 import link.srrrg.campaign.importing.CampaignImportRepository;
 import link.srrrg.identity.User;
 import link.srrrg.identity.UserRepository;
-import link.srrrg.link.LinkGoneException;
 import link.srrrg.link.LinkRepository;
 import link.srrrg.link.UrlValidator;
 import link.srrrg.project.Project;
@@ -78,15 +77,15 @@ public class CampaignService {
 	private List<Campaign> listPage(Long projectId, Long cursor, int limit) {
 		PageRequest page = PageRequest.of(0, limit);
 		return cursor == null
-				? campaigns.findByProjectIdAndArchivedAtIsNullOrderByIdDesc(projectId, page)
-				: campaigns.findByProjectIdAndArchivedAtIsNullAndIdLessThanOrderByIdDesc(projectId, cursor, page);
+				? campaigns.findByProjectIdOrderByIdDesc(projectId, page)
+				: campaigns.findByProjectIdAndIdLessThanOrderByIdDesc(projectId, cursor, page);
 	}
 
 	@Transactional(readOnly = true)
 	public Campaign get(Long userId, Long campaignId) {
 		Campaign campaign = campaignOrNotFound(campaignId);
 		requireRole(userId, campaign.getProject().getId(), ProjectRole.VIEWER);
-		return unlessArchived(campaign);
+		return campaign;
 	}
 
 	@Transactional
@@ -132,11 +131,11 @@ public class CampaignService {
 	}
 
 	@Transactional
-	public void archive(Long userId, Long campaignId) {
+	public void delete(Long userId, Long campaignId) {
 		Campaign campaign = requireEditableCampaign(userId, campaignId);
-		campaign.archive();
 		links.softDeleteByCampaignId(campaignId);
 		imports.cancelActiveByCampaignId(campaignId);
+		campaigns.delete(campaign);
 	}
 
 	@Transactional
@@ -236,26 +235,21 @@ public class CampaignService {
 	}
 
 	private Campaign campaignOrNotFound(Long campaignId) {
-		return campaigns.findById(campaignId).orElseThrow(() -> new IllegalArgumentException("캠페인을 찾을 수 없습니다."));
-	}
-
-	private Campaign unlessArchived(Campaign campaign) {
-		if (campaign.isArchived()) throw new LinkGoneException();
-		return campaign;
+		return campaigns.findById(campaignId).orElseThrow(CampaignNotFoundException::new);
 	}
 
 	@Transactional(readOnly = true)
 	public Campaign requireEditableCampaign(Long userId, Long campaignId) {
 		Campaign campaign = campaignOrNotFound(campaignId);
 		requireRole(userId, campaign.getProject().getId(), ProjectRole.EDITOR);
-		return unlessArchived(campaign);
+		return campaign;
 	}
 
 	@Transactional(readOnly = true)
 	public Campaign findForApiKey(Long projectId, Long campaignId) {
 		Campaign campaign = campaigns.findByIdAndProjectId(campaignId, projectId)
-				.orElseThrow(() -> new IllegalArgumentException("캠페인을 찾을 수 없습니다."));
-		return unlessArchived(campaign);
+				.orElseThrow(CampaignNotFoundException::new);
+		return campaign;
 	}
 
 	private ProjectMember requireRole(Long userId, Long projectId, ProjectRole minimum) {

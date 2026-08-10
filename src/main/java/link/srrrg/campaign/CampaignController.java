@@ -87,8 +87,8 @@ public class CampaignController {
 	}
 
 	@DeleteMapping("/campaigns/{campaignId}")
-	public ResponseEntity<Void> archive(@AuthenticationPrincipal SrrrgPrincipal principal, @PathVariable Long campaignId) {
-		campaigns.archive(principal.userId(), campaignId);
+	public ResponseEntity<Void> delete(@AuthenticationPrincipal SrrrgPrincipal principal, @PathVariable Long campaignId) {
+		campaigns.delete(principal.userId(), campaignId);
 		return ResponseEntity.noContent().build();
 	}
 

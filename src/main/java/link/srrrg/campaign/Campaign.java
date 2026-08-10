@@ -13,6 +13,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.SoftDelete;
 import link.srrrg.identity.User;
 import link.srrrg.project.Project;
 import lombok.AccessLevel;
@@ -21,6 +22,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "campaigns")
+@SoftDelete(columnName = "is_deleted")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Campaign {
@@ -52,9 +54,6 @@ public class Campaign {
 	private Instant createdAt;
 	@Column(name = "updated_at", nullable = false)
 	private Instant updatedAt;
-	@Column(name = "archived_at")
-	private Instant archivedAt;
-
 	private Campaign(Project project, String name, String description, String defaultOriginalUrl, User createdBy) {
 		this.project = project;
 		this.name = name;
@@ -81,14 +80,6 @@ public class Campaign {
 
 	public void selectTemplate(UtmTemplate utmTemplate) {
 		this.utmTemplate = utmTemplate;
-	}
-
-	public void archive() {
-		this.archivedAt = Instant.now();
-	}
-
-	public boolean isArchived() {
-		return archivedAt != null;
 	}
 
 	@PrePersist

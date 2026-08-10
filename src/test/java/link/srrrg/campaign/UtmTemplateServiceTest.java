@@ -75,7 +75,7 @@ class UtmTemplateServiceTest {
 		UtmTemplate template = mock(UtmTemplate.class);
 		when(template.isDeleted()).thenReturn(false);
 		when(templates.findByIdAndProjectId(10L, 1L)).thenReturn(Optional.of(template));
-		when(campaigns.countByUtmTemplateIdAndArchivedAtIsNull(10L)).thenReturn(1L);
+		when(campaigns.countByUtmTemplateId(10L)).thenReturn(1L);
 
 		assertThatThrownBy(() -> service.delete(5L, 1L, 10L))
 				.isInstanceOf(IllegalArgumentException.class)

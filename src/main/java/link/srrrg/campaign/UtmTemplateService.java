@@ -149,7 +149,7 @@ public class UtmTemplateService {
 
 	private void doDelete(Long projectId, Long templateId) {
 		UtmTemplate template = template(templateId, projectId);
-		if (campaigns.countByUtmTemplateIdAndArchivedAtIsNull(templateId) > 0) {
+		if (campaigns.countByUtmTemplateId(templateId) > 0) {
 			throw new IllegalArgumentException("이 템플릿을 사용 중인 캠페인이 있어 삭제할 수 없습니다. 먼저 캠페인의 템플릿을 변경하세요.");
 		}
 		template.delete();

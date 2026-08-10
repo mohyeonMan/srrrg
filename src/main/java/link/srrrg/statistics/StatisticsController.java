@@ -112,7 +112,8 @@ public class StatisticsController {
 		return link;
 	}
 	private Campaign campaign(Long campaignId) {
-		return campaigns.findById(campaignId).orElseThrow(() -> new IllegalArgumentException("캠페인을 찾을 수 없습니다."));
+		return campaigns.findById(campaignId)
+				.orElseThrow(link.srrrg.campaign.CampaignNotFoundException::new);
 	}
 	private ApiKeyPrincipal apiKey(HttpServletRequest request, Long projectId) {
 		ApiKeyPrincipal key = (ApiKeyPrincipal) request.getAttribute("srrrg.apiKeyPrincipal");

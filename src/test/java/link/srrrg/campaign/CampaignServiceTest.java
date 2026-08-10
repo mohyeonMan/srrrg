@@ -46,7 +46,6 @@ class CampaignServiceTest {
 	@Test
 	void updatesDefaultOriginalUrlAfterUrlValidation() {
 		Campaign campaign = campaignOwnedBy(1L, ProjectRole.EDITOR);
-		when(campaign.isArchived()).thenReturn(false);
 		when(campaigns.findById(100L)).thenReturn(Optional.of(campaign));
 
 		service.changeDefaultOriginalUrl(5L, 100L, " https://example.com/default ");
@@ -58,7 +57,6 @@ class CampaignServiceTest {
 	@Test
 	void allowsRemovingDefaultOriginalUrl() {
 		Campaign campaign = campaignOwnedBy(1L, ProjectRole.EDITOR);
-		when(campaign.isArchived()).thenReturn(false);
 		when(campaigns.findById(100L)).thenReturn(Optional.of(campaign));
 
 		service.changeDefaultOriginalUrl(5L, 100L, null);
@@ -68,38 +66,34 @@ class CampaignServiceTest {
 	}
 
 	@Test
-	void archivingCampaignSoftDeletesItsLinksAndCancelsActiveImports() {
+	void deletingCampaignSoftDeletesItsLinksAndCancelsActiveImports() {
 		Campaign campaign = campaignOwnedBy(1L, ProjectRole.EDITOR);
 		when(campaign.getId()).thenReturn(100L);
-		when(campaign.isArchived()).thenReturn(false);
 		when(campaigns.findById(100L)).thenReturn(Optional.of(campaign));
 
-		service.archive(5L, 100L);
+		service.delete(5L, 100L);
 
-		verify(campaign).archive();
+		verify(campaigns).delete(campaign);
 		verify(links).softDeleteByCampaignId(100L);
 		verify(imports).cancelActiveByCampaignId(100L);
 	}
 
 	@Test
-	void archivingAlreadyArchivedCampaignReturnsGoneLikeARepeatLinkDelete() {
-		Campaign campaign = campaignOwnedBy(1L, ProjectRole.EDITOR);
-		when(campaign.getId()).thenReturn(100L);
-		when(campaign.isArchived()).thenReturn(true);
-		when(campaigns.findById(100L)).thenReturn(Optional.of(campaign));
+	void deletingMissingCampaignReturnsNotFound() {
+		when(campaigns.findById(100L)).thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> service.archive(5L, 100L)).isInstanceOf(link.srrrg.link.LinkGoneException.class);
+		assertThatThrownBy(() -> service.delete(5L, 100L)).isInstanceOf(CampaignNotFoundException.class);
 
-		verify(campaign, never()).archive();
+		verify(campaigns, never()).delete(any());
 		verify(links, never()).softDeleteByCampaignId(any());
 	}
 
 	@Test
-	void viewerCannotArchiveCampaign() {
+	void viewerCannotDeleteCampaign() {
 		Campaign campaign = campaignOwnedBy(1L, ProjectRole.VIEWER);
 		when(campaigns.findById(100L)).thenReturn(Optional.of(campaign));
 
-		assertThatThrownBy(() -> service.archive(5L, 100L)).isInstanceOf(SecurityException.class);
+		assertThatThrownBy(() -> service.delete(5L, 100L)).isInstanceOf(SecurityException.class);
 		verify(links, never()).softDeleteByCampaignId(any());
 	}
 
@@ -107,7 +101,6 @@ class CampaignServiceTest {
 	void switchingTemplatePreservesNameBasedDefaults() {
 		Campaign campaign = campaignOwnedBy(1L, ProjectRole.EDITOR);
 		when(campaign.getId()).thenReturn(100L);
-		when(campaign.isArchived()).thenReturn(false);
 		UtmTemplate oldTemplate = mock(UtmTemplate.class);
 		when(oldTemplate.getId()).thenReturn(11L);
 		when(campaign.getUtmTemplate()).thenReturn(oldTemplate);
@@ -127,7 +120,6 @@ class CampaignServiceTest {
 	void selectingSameTemplateKeepsDefaults() {
 		Campaign campaign = campaignOwnedBy(1L, ProjectRole.EDITOR);
 		when(campaign.getId()).thenReturn(100L);
-		when(campaign.isArchived()).thenReturn(false);
 		UtmTemplate template = mock(UtmTemplate.class);
 		when(template.getId()).thenReturn(11L);
 		when(campaign.getUtmTemplate()).thenReturn(template);
@@ -144,7 +136,6 @@ class CampaignServiceTest {
 	void updatingDefaultsWithNullValueDeletesExistingDefault() {
 		Campaign campaign = campaignOwnedBy(1L, ProjectRole.EDITOR);
 		when(campaign.getId()).thenReturn(100L);
-		when(campaign.isArchived()).thenReturn(false);
 		UtmTemplate template = mock(UtmTemplate.class);
 		when(template.getId()).thenReturn(11L);
 		when(campaign.getUtmTemplate()).thenReturn(template);
@@ -167,7 +158,6 @@ class CampaignServiceTest {
 	void rejectsUpdatingDefaultsForUnknownField() {
 		Campaign campaign = campaignOwnedBy(1L, ProjectRole.EDITOR);
 		when(campaign.getId()).thenReturn(100L);
-		when(campaign.isArchived()).thenReturn(false);
 		UtmTemplate template = mock(UtmTemplate.class);
 		when(template.getId()).thenReturn(11L);
 		when(campaign.getUtmTemplate()).thenReturn(template);
@@ -179,12 +169,10 @@ class CampaignServiceTest {
 	}
 
 	@Test
-	void getThrowsGoneForArchivedCampaign() {
-		Campaign campaign = campaignOwnedBy(1L, ProjectRole.VIEWER);
-		when(campaign.isArchived()).thenReturn(true);
-		when(campaigns.findById(100L)).thenReturn(Optional.of(campaign));
+	void getThrowsNotFoundForDeletedCampaign() {
+		when(campaigns.findById(100L)).thenReturn(Optional.empty());
 
-		assertThatThrownBy(() -> service.get(5L, 100L)).isInstanceOf(link.srrrg.link.LinkGoneException.class);
+		assertThatThrownBy(() -> service.get(5L, 100L)).isInstanceOf(CampaignNotFoundException.class);
 	}
 
 	private Campaign campaignOwnedBy(Long projectId, ProjectRole role) {

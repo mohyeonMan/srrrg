@@ -150,7 +150,7 @@ public class StatisticsService {
 	private List<UtmRow> utmRows(Long campaignId, Period p) {
 		String sql = """
 				WITH campaign_scope AS (
-				  SELECT id,utm_template_id FROM campaigns WHERE id=?
+				  SELECT id,utm_template_id FROM campaigns WHERE id=? AND NOT is_deleted
 				), active_fields AS (
 				  SELECT field.name FROM campaign_scope campaign
 				  JOIN utm_template_fields field ON field.utm_template_id=campaign.utm_template_id
@@ -196,7 +196,7 @@ public class StatisticsService {
 				SELECT c.id,c.name,COUNT(DISTINCT l.id),COUNT(e.id),COUNT(e.id) FILTER (WHERE e.outcome='REDIRECTED')
 				  FROM campaigns c LEFT JOIN links l ON l.campaign_id=c.id AND NOT l.is_deleted
 				  LEFT JOIN link_access_events e ON e.link_id=l.id AND e.accessed_at>=? AND e.accessed_at<?
-				 WHERE c.project_id=? GROUP BY c.id ORDER BY 4 DESC,c.id DESC
+				 WHERE c.project_id=? AND NOT c.is_deleted GROUP BY c.id ORDER BY 4 DESC,c.id DESC
 				""";
 		return jdbc.query(sql, (rs, row) -> new CampaignRow(rs.getLong(1), rs.getString(2), rs.getLong(3), rs.getLong(4), rs.getLong(5)),
 				timestamp(p.start), timestamp(p.end), projectId);

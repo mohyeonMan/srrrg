@@ -124,7 +124,7 @@ link.srrrg
 - 링크가 자체 목적지 URL을 가지지 않으면 리다이렉트 시점의 캠페인 기본 목적지 URL을 사용한다.
 - 캠페인 기본 목적지 변경은 자체 목적지가 없는 기존 링크에 즉시 반영되며, 둘 다 없으면 `410 Gone`을 반환한다.
 - 캠페인 기본 목적지 제거는 허용하되 관리 화면에서 기존 fallback 링크가 410이 될 수 있음을 경고한다.
-- 캠페인 삭제는 통계 보존을 위해 물리 삭제 대신 보관 처리한다.
+- 캠페인 삭제는 통계 보존을 위해 `is_deleted` 기반 soft delete로 처리한다.
 
 ### 3.5 링크
 
@@ -295,7 +295,7 @@ default_original_url nullable
 created_by_user_id
 created_at
 updated_at
-archived_at nullable
+is_deleted boolean not null default false
 ```
 
 `default_original_url`과 캠페인 UTM 기본값은 링크에 복사하지 않는다. 링크 자체 값이 없으면 리다이렉트할 때 현재 캠페인 값을 동적으로 사용한다.

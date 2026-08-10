@@ -36,6 +36,11 @@ class PublicCampaignApiExceptionHandler {
 		return problem(400, "INVALID_REQUEST", exception.getMessage(), null);
 	}
 
+	@ExceptionHandler(CampaignNotFoundException.class)
+	ResponseEntity<ProblemDetail> handleCampaignNotFound(CampaignNotFoundException exception) {
+		return problem(404, "CAMPAIGN_NOT_FOUND", exception.getMessage(), null);
+	}
+
 	@ExceptionHandler(SecurityException.class)
 	ResponseEntity<ProblemDetail> handleSecurity(SecurityException exception) {
 		return problem(403, "PROJECT_ACCESS_DENIED", "프로젝트 접근 권한이 없습니다.", null);

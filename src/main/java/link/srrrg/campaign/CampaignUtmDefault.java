@@ -26,7 +26,7 @@ public class CampaignUtmDefault {
 	@EmbeddedId
 	private CampaignUtmDefaultId id;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@ManyToOne(fetch = FetchType.EAGER, optional = false)
 	@MapsId("campaignId")
 	@JoinColumn(name = "campaign_id")
 	private Campaign campaign;

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import link.srrrg.campaign.BatchIdempotencyConflictException;
+import link.srrrg.campaign.CampaignNotFoundException;
 import link.srrrg.campaign.importing.ActiveImportConflictException;
 import link.srrrg.campaign.importing.CampaignImportIdempotencyConflictException;
 import link.srrrg.common.ratelimit.RateLimitExceededException;
@@ -45,6 +46,12 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(IllegalArgumentException.class)
 	public ResponseEntity<ApiErrorResponse> handleIllegalArgument(IllegalArgumentException exception) {
 		return badRequest(exception.getMessage());
+	}
+
+	@ExceptionHandler(CampaignNotFoundException.class)
+	public ResponseEntity<ApiErrorResponse> handleCampaignNotFound(CampaignNotFoundException exception) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+				.body(new ApiErrorResponse("CAMPAIGN_NOT_FOUND", exception.getMessage()));
 	}
 
 	@ExceptionHandler(SecurityException.class)
