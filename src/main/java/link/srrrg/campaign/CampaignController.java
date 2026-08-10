@@ -1,6 +1,8 @@
 package link.srrrg.campaign;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,6 +33,8 @@ import link.srrrg.campaign.importing.CampaignImport;
 import link.srrrg.campaign.importing.CampaignImportRepository;
 import link.srrrg.link.Link;
 import link.srrrg.link.LinkRepository;
+import link.srrrg.link.LinkUtmValueRepository;
+import link.srrrg.link.LinkUtmValueRepository.EffectiveUtmValueByLink;
 import link.srrrg.project.ProjectMemberRepository;
 import lombok.RequiredArgsConstructor;
 
@@ -44,6 +48,7 @@ public class CampaignController {
 	private final CampaignCsvService csv;
 	private final CampaignImportRepository imports;
 	private final LinkRepository links;
+	private final LinkUtmValueRepository linkUtmValues;
 	private final ProjectMemberRepository members;
 
 	@PostMapping("/projects/{projectId}/campaigns")
@@ -111,14 +116,17 @@ public class CampaignController {
 	}
 
 	@GetMapping("/campaigns/{campaignId}/links")
-	public CampaignLinkPageResponse links(@AuthenticationPrincipal SrrrgPrincipal principal, @PathVariable Long campaignId,
+	public WebCampaignLinkPageResponse links(@AuthenticationPrincipal SrrrgPrincipal principal, @PathVariable Long campaignId,
 			@RequestParam(required = false) Long cursor, @RequestParam(defaultValue = "50") int limit) {
 		campaigns.get(principal.userId(), campaignId);
 		int boundedLimit = boundedLimit(limit);
 		List<Link> page = cursor == null
 				? links.findByCampaignIdAndDeletedFalseOrderByIdDesc(campaignId, org.springframework.data.domain.PageRequest.of(0, boundedLimit + 1))
 				: links.findByCampaignIdAndDeletedFalseAndIdLessThanOrderByIdDesc(campaignId, cursor, org.springframework.data.domain.PageRequest.of(0, boundedLimit + 1));
-		return CampaignLinkPageResponse.of(page, boundedLimit);
+		List<Link> visibleLinks = page.size() > boundedLimit ? page.subList(0, boundedLimit) : page;
+		List<EffectiveUtmValueByLink> effectiveUtm = visibleLinks.isEmpty() ? List.of()
+				: linkUtmValues.findEffectiveByLinkIds(visibleLinks.stream().map(Link::getId).toList());
+		return WebCampaignLinkPageResponse.of(page, boundedLimit, effectiveUtm);
 	}
 
 	@GetMapping(value = "/campaigns/{campaignId}/links/template.csv", produces = "text/csv")
@@ -215,6 +223,31 @@ public class CampaignController {
 			List<Link> trimmed = page.size() > limit ? page.subList(0, limit) : page;
 			Long nextCursor = page.size() > limit ? trimmed.get(trimmed.size() - 1).getId() : null;
 			return new CampaignLinkPageResponse(trimmed.stream().map(CampaignLinkResponse::from).toList(), nextCursor);
+		}
+	}
+	public record EffectiveUtmResponse(String name, String value, String source) {
+		static EffectiveUtmResponse from(EffectiveUtmValueByLink value) {
+			return new EffectiveUtmResponse(value.getFieldName(), value.getValue(), value.getSource());
+		}
+	}
+	public record WebCampaignLinkResponse(String code, String originalUrl, String externalId, Instant createdAt,
+			List<EffectiveUtmResponse> effectiveUtmValues) {
+		static WebCampaignLinkResponse from(Link link, List<EffectiveUtmResponse> effectiveUtmValues) {
+			return new WebCampaignLinkResponse(link.getCode(), link.getOriginalUrl(), link.getExternalId(), link.getCreatedAt(),
+					effectiveUtmValues);
+		}
+	}
+	public record WebCampaignLinkPageResponse(List<WebCampaignLinkResponse> items, Long nextCursor) {
+		static WebCampaignLinkPageResponse of(List<Link> page, int limit, List<EffectiveUtmValueByLink> effectiveUtm) {
+			List<Link> trimmed = page.size() > limit ? page.subList(0, limit) : page;
+			Long nextCursor = page.size() > limit ? trimmed.get(trimmed.size() - 1).getId() : null;
+			Map<Long, List<EffectiveUtmResponse>> byLinkId = new LinkedHashMap<>();
+			for (EffectiveUtmValueByLink value : effectiveUtm) {
+				byLinkId.computeIfAbsent(value.getLinkId(), ignored -> new ArrayList<>()).add(EffectiveUtmResponse.from(value));
+			}
+			return new WebCampaignLinkPageResponse(trimmed.stream()
+					.map(link -> WebCampaignLinkResponse.from(link, byLinkId.getOrDefault(link.getId(), List.of())))
+					.toList(), nextCursor);
 		}
 	}
 	public record ImportResponse(Long id, String status, int totalRows, int processedRows, int succeededRows, int failedRows,

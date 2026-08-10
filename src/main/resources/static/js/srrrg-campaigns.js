@@ -9,6 +9,7 @@
 		campaignId: params.get('campaignId') ? Number(params.get('campaignId')) : null,
 		campaign: null,
 		activeFields: [],
+		utmDefaults: {},
 		linksCursor: null,
 		refreshing: null,
 		importPollHandle: null
@@ -161,6 +162,7 @@
 		const templateId = state.campaign.utmTemplateId;
 		if (!templateId) {
 			state.activeFields = [];
+			state.utmDefaults = {};
 			byId('template-fields-panel').hidden = true;
 			byId('defaults-panel').hidden = true;
 			renderUtmInputs();
@@ -195,6 +197,7 @@
 		setMessage(byId('template-message'), '필드를 삭제했습니다.');
 		await loadTemplates();
 		await refreshTemplateSelection();
+		await loadLinks(null);
 	}
 
 	byId('template-picker').addEventListener('change', async (event) => {
@@ -213,6 +216,7 @@
 		state.campaign = await response.json();
 		setMessage(byId('template-message'), '템플릿을 변경했습니다. 기존 링크와 통계에도 즉시 적용됩니다.');
 		await refreshTemplateSelection();
+		await loadLinks(null);
 	});
 
 	byId('reload-templates-button').addEventListener('click', async () => {
@@ -244,12 +248,17 @@
 		setMessage(byId('template-message'), '필드를 추가했습니다.');
 		await loadTemplates();
 		await refreshTemplateSelection();
+		await loadLinks(null);
 	});
 
 	async function loadDefaults() {
 		const response = await request(`${base}/api/web/campaigns/${state.campaignId}/utm-defaults`);
-		if (!response.ok) return;
+		if (!response.ok) {
+			state.utmDefaults = {};
+			return;
+		}
 		const defaults = await response.json();
+		state.utmDefaults = defaults;
 		byId('defaults-panel').hidden = state.activeFields.length === 0;
 		const rows = state.activeFields.map((field) => {
 			const label = element('label', 'field');
@@ -272,8 +281,10 @@
 		});
 		const response = await request(`${base}/api/web/campaigns/${state.campaignId}/utm-defaults`, { method: 'PATCH', body: JSON.stringify({ defaults }) });
 		if (!response.ok) return setMessage(byId('defaults-message'), (await body(response)).message || '기본값을 저장할 수 없습니다.', true);
-		setMessage(byId('defaults-message'), '기본값을 저장했습니다. 새 링크부터 적용됩니다.');
+		state.utmDefaults = await response.json();
+		setMessage(byId('defaults-message'), '기본값을 저장했습니다. 링크에서 직접 지정하지 않은 필드에 즉시 적용됩니다.');
 		renderUtmInputs();
+		await loadLinks(null);
 	});
 
 	function renderUtmInputs() {
@@ -285,10 +296,27 @@
 			input.maxLength = 500;
 			input.placeholder = '캠페인 기본값 사용';
 			input.dataset.fieldName = field.name;
+			input.addEventListener('input', renderUtmPreview);
 			label.append(input);
 			return label;
 		});
 		replaceChildren(byId('campaign-utm-inputs'), rows);
+		renderUtmPreview();
+	}
+
+	function renderUtmPreview() {
+		const inputs = new Map(Array.from(byId('campaign-utm-inputs').querySelectorAll('input'))
+			.map((input) => [input.dataset.fieldName, input.value.trim()]));
+		const values = state.activeFields.flatMap((field) => {
+			const linkValue = inputs.get(field.name);
+			if (linkValue) return [{ name: field.name, value: linkValue, source: 'INPUT' }];
+			const defaultValue = state.utmDefaults[field.name];
+			return defaultValue ? [{ name: field.name, value: defaultValue, source: 'CAMPAIGN_DEFAULT' }] : [];
+		});
+		byId('campaign-utm-preview-count').textContent = `${values.length}개`;
+		replaceChildren(byId('campaign-utm-preview-list'), values.length
+			? values.map(utmValueRow)
+			: [element('p', 'campaign-utm-empty', '현재 적용될 UTM이 없습니다.')]);
 	}
 
 	byId('create-campaign-link-form').addEventListener('submit', async (event) => {
@@ -317,6 +345,7 @@
 				return;
 			}
 			form.reset();
+			renderUtmPreview();
 			setMessage(byId('create-campaign-link-message'), `단축 링크(${responseBody.code})를 만들었습니다.`);
 			await loadLinks(null);
 		} finally {
@@ -344,13 +373,36 @@
 				element('span', '', formatDate(link.createdAt)),
 				statisticsLink(link.code)
 			);
-			row.append(main, meta);
+			row.append(main, meta, effectiveUtmDetails(link.effectiveUtmValues || []));
 			return row;
 		});
 		if (!cursor) replaceChildren(byId('campaign-link-list'), rows.length ? rows : [element('p', 'project-empty-list', '아직 만든 링크가 없습니다.')]);
 		else byId('campaign-link-list').append(...rows);
 		state.linksCursor = page.nextCursor;
 		byId('load-more-links-button').hidden = !page.nextCursor;
+	}
+
+	function effectiveUtmDetails(values) {
+		if (!values.length) return element('p', 'campaign-link-utm-empty', '현재 적용 예정 UTM 없음');
+		const details = element('details', 'campaign-link-utm');
+		const summary = element('summary', 'campaign-link-utm-summary');
+		summary.append(element('span', '', '현재 적용 예정 UTM'), element('span', 'status-badge', `${values.length}개`));
+		const list = element('div', 'campaign-utm-value-list');
+		list.append(...values.map(utmValueRow));
+		const note = element('p', 'help-text', '캠페인 기본값 변경 시 링크 개별값이 없는 필드는 즉시 바뀝니다.');
+		details.append(summary, list, note);
+		return details;
+	}
+
+	function utmValueRow(value) {
+		const row = element('div', 'campaign-utm-value-row');
+		const name = element('code', 'campaign-utm-name', value.name);
+		const content = element('span', 'campaign-utm-value', value.value);
+		const inherited = value.source === 'CAMPAIGN_DEFAULT';
+		const sourceLabel = value.source === 'INPUT' ? '개별 입력' : value.source === 'LINK' ? '링크 개별값' : '캠페인 기본값';
+		const source = element('span', `campaign-utm-source ${inherited ? 'campaign-default' : 'link-value'}`, sourceLabel);
+		row.append(name, content, source);
+		return row;
 	}
 
 	function statisticsLink(code) { const link = element('a', '', '상세보기'); link.href = `${base}/manage?projectId=${state.projectId}&campaignId=${state.campaignId}&code=${encodeURIComponent(code)}`; return link; }

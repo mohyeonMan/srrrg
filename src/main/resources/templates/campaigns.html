@@ -43,7 +43,7 @@
 
 		<section class="surface-panel campaign-card" aria-labelledby="template-title">
 			<h2 id="template-title">UTM 템플릿</h2>
-			<p>템플릿을 바꾸면 기존 링크의 UTM은 그대로 유지되고 새 링크와 새 CSV 양식부터 새 템플릿을 사용합니다.</p>
+			<p>현재 템플릿과 활성 필드는 기존 링크의 리다이렉트에도 즉시 적용됩니다. 링크 개별값은 같은 이름의 캠페인 기본값보다 우선합니다.</p>
 			<div class="campaign-inline-row">
 				<label class="field" for="template-picker"><span class="field-label">사용할 템플릿</span>
 					<select id="template-picker" class="field-input">
@@ -91,6 +91,14 @@
 					<input id="campaign-external-id" class="field-input" name="externalId" maxlength="100" autocomplete="off">
 				</label>
 				<div id="campaign-utm-inputs" class="template-field-list"></div>
+				<section id="campaign-utm-preview" class="campaign-utm-preview" aria-labelledby="campaign-utm-preview-title" aria-live="polite">
+					<div class="campaign-utm-preview-heading">
+						<h3 id="campaign-utm-preview-title">현재 입력 기준 적용 예정 UTM</h3>
+						<span id="campaign-utm-preview-count" class="status-badge">0개</span>
+					</div>
+					<div id="campaign-utm-preview-list" class="campaign-utm-value-list"></div>
+					<p class="help-text">캠페인 기본값이 변경되면 링크에서 직접 지정하지 않은 필드도 함께 변경됩니다.</p>
+				</section>
 				<div class="project-form-actions">
 					<p id="create-campaign-link-message" class="form-message" role="status" aria-live="polite"></p>
 					<button id="create-campaign-link-button" class="primary-button" type="submit">링크 만들기</button>

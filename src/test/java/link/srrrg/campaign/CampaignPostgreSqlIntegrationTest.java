@@ -198,6 +198,19 @@ class CampaignPostgreSqlIntegrationTest {
 		mockMvc.perform(get("/{code}", explicitCode).header("Host", owner.host))
 				.andExpect(status().isFound()).andExpect(header().string("Location", org.hamcrest.Matchers.containsString("utm_source=fixed-source")));
 
+		mockMvc.perform(get("/api/web/campaigns/{id}/links", campaignId).cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.items[?(@.code == '%s')].effectiveUtmValues[0].name".formatted(code))
+						.value(org.hamcrest.Matchers.contains("utm_source")))
+				.andExpect(jsonPath("$.items[?(@.code == '%s')].effectiveUtmValues[0].value".formatted(code))
+						.value(org.hamcrest.Matchers.contains("second-source")))
+				.andExpect(jsonPath("$.items[?(@.code == '%s')].effectiveUtmValues[0].source".formatted(code))
+						.value(org.hamcrest.Matchers.contains("CAMPAIGN_DEFAULT")))
+				.andExpect(jsonPath("$.items[?(@.code == '%s')].effectiveUtmValues[0].value".formatted(explicitCode))
+						.value(org.hamcrest.Matchers.contains("fixed-source")))
+				.andExpect(jsonPath("$.items[?(@.code == '%s')].effectiveUtmValues[0].source".formatted(explicitCode))
+						.value(org.hamcrest.Matchers.contains("LINK")));
+
 		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId).cookie(owner.cookie))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.utm[?(@.value == 'first-source')].entries")

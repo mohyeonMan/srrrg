@@ -78,6 +78,108 @@
 	font-size: 13px;
 }
 
+.campaign-utm-preview,
+.campaign-link-utm {
+	display: grid;
+	gap: var(--space-3);
+	padding: var(--space-4);
+	background: linear-gradient(135deg, var(--color-brand-soft), var(--color-surface-muted));
+	border: 1px solid var(--color-brand-border);
+	border-radius: var(--radius-md);
+}
+
+.campaign-utm-preview-heading,
+.campaign-link-utm-summary {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-3);
+}
+
+.campaign-utm-preview-heading h3 {
+	margin: 0;
+}
+
+.campaign-utm-value-list {
+	display: grid;
+	gap: var(--space-2);
+}
+
+.campaign-utm-value-row {
+	display: grid;
+	grid-template-columns: minmax(120px, .8fr) minmax(0, 1.8fr) auto;
+	align-items: center;
+	gap: var(--space-3);
+	padding: 11px 12px;
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-sm);
+}
+
+.campaign-utm-name,
+.campaign-utm-value {
+	overflow-wrap: anywhere;
+}
+
+.campaign-utm-name {
+	color: var(--color-brand-strong);
+	font-weight: 800;
+}
+
+.campaign-utm-value {
+	min-width: 0;
+}
+
+.campaign-utm-source {
+	padding: 5px 8px;
+	border-radius: var(--radius-pill);
+	font-size: 11px;
+	font-weight: 800;
+	white-space: nowrap;
+}
+
+.campaign-utm-source.link-value {
+	color: var(--color-brand-strong);
+	background: var(--color-brand-soft);
+}
+
+.campaign-utm-source.campaign-default {
+	color: var(--color-text-subtle);
+	background: var(--color-surface-rail);
+}
+
+.campaign-link-utm {
+	grid-column: 1 / -1;
+	margin-top: var(--space-3);
+	background: var(--color-surface-muted);
+	border-color: var(--color-border);
+}
+
+.campaign-link-utm-empty {
+	grid-column: 1 / -1;
+}
+
+.campaign-link-utm-summary {
+	cursor: pointer;
+	font-size: 13px;
+	font-weight: 800;
+	list-style-position: inside;
+}
+
+.campaign-link-utm[open] .campaign-link-utm-summary {
+	padding-bottom: var(--space-2);
+	border-bottom: 1px solid var(--color-border);
+}
+
+.campaign-link-utm-empty,
+.campaign-utm-empty,
+.campaign-utm-preview .help-text,
+.campaign-link-utm .help-text {
+	margin: 0;
+	color: var(--color-text-muted);
+	font-size: 12px;
+}
+
 #import-status-panel {
 	display: grid;
 	gap: var(--space-2);
@@ -101,5 +203,14 @@
 	.campaign-inline-row {
 		flex-direction: column;
 		align-items: stretch;
+	}
+
+	.campaign-utm-value-row {
+		grid-template-columns: 1fr;
+		gap: var(--space-2);
+	}
+
+	.campaign-utm-source {
+		width: fit-content;
 	}
 }
