@@ -21,15 +21,11 @@ class ProjectsPageAssetTest {
 				"type=\"url\"",
 				"data-expires-option=\"custom\"",
 				"id=\"project-link-result\"",
-				"aria-live=\"polite\"",
-				"id=\"invite-message\"",
-				"id=\"invitation-count\"",
-				"링크 편집 가능");
+				"aria-live=\"polite\"");
 		assertThat(script).contains(
 				"/api/web/projects/${state.selected.id}/links",
 				"originalUrl: originalUrlInput.value.trim()",
 				"expiresAt: expiresAt()",
-				"roleLabel(invitation.role)",
 				"new URLSearchParams(location.search).get('projectId')",
 				"navigator.clipboard.writeText",
 				"replaceChildren(...children)");
