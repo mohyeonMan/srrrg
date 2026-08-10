@@ -34,4 +34,11 @@ class HomeControllerTest {
 				.andExpect(view().name("management"))
 				.andExpect(model().attribute("prefilledCode", ""));
 	}
+
+	@Test
+	void rendersUtmTestDestination() throws Exception {
+		mvc.perform(get("/test/utm").param("any_parameter", "any value"))
+				.andExpect(status().isOk())
+				.andExpect(view().name("utm-test"));
+	}
 }

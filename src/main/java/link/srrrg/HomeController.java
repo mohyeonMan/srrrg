@@ -37,6 +37,9 @@ public class HomeController {
 	@GetMapping("/statistics")
 	public String statistics() { return "statistics"; }
 
+	@GetMapping("/test/utm")
+	public String utmTest() { return "utm-test"; }
+
 	@GetMapping("/favicon.ico")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void favicon() {

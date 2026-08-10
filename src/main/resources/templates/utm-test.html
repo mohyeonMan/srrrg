@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>쿼리 파라미터 확인</title>
+	<link rel="stylesheet" th:href="@{/css/srrrg.css}">
+	<link rel="stylesheet" th:href="@{/css/srrrg/utm-test.css}">
+	<script defer th:src="@{/js/srrrg-utm-test.js}"></script>
+</head>
+<body>
+<main class="utm-test-shell">
+	<header class="utm-test-heading">
+		<p class="section-eyebrow">TEST DESTINATION</p>
+		<h1>도착한 쿼리 파라미터</h1>
+		<p>현재 주소로 전달된 모든 쿼리 파라미터를 이름과 값 그대로 표시합니다.</p>
+	</header>
+
+	<section class="surface-panel utm-test-panel" aria-labelledby="request-url-title">
+		<h2 id="request-url-title">도착 URL</h2>
+		<code id="request-url" class="utm-test-url"></code>
+	</section>
+
+	<section class="surface-panel utm-test-panel" aria-labelledby="query-parameters-title">
+		<div class="utm-test-section-heading">
+			<h2 id="query-parameters-title">쿼리 파라미터</h2>
+			<span id="query-parameter-count" class="status-badge">0개</span>
+		</div>
+		<p id="query-parameter-empty">전달된 쿼리 파라미터가 없습니다.</p>
+		<div id="query-parameter-table-wrap" class="utm-test-table-wrap" hidden>
+			<table class="utm-test-table">
+				<thead>
+				<tr>
+					<th scope="col">이름</th>
+					<th scope="col">값</th>
+				</tr>
+				</thead>
+				<tbody id="query-parameter-rows"></tbody>
+			</table>
+		</div>
+		<noscript>쿼리 파라미터를 확인하려면 JavaScript를 활성화해야 합니다.</noscript>
+	</section>
+</main>
+</body>
+</html>
