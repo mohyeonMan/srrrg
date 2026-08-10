@@ -14,8 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import link.srrrg.campaign.dto.CreateCampaignLinkRequest;
 import link.srrrg.common.ratelimit.RateLimitService;
-import link.srrrg.domain.ProjectDomain;
-import link.srrrg.domain.ProjectDomainService;
 import link.srrrg.identity.User;
 import link.srrrg.link.Link;
 import link.srrrg.link.management.LinkManagementService;
@@ -34,17 +32,15 @@ public class CampaignLinkCreationService {
 	private final CampaignService campaignService;
 	private final UtmTemplateFieldRepository fields;
 	private final LinkManagementService linkManagement;
-	private final ProjectDomainService domains;
 	private final ProjectMemberRepository members;
 	private final RateLimitService rateLimitService;
 
 	public CampaignLinkCreationService(CampaignService campaignService, UtmTemplateFieldRepository fields,
 			LinkManagementService linkManagement,
-			ProjectDomainService domains, ProjectMemberRepository members, RateLimitService rateLimitService) {
+			ProjectMemberRepository members, RateLimitService rateLimitService) {
 		this.campaignService = campaignService;
 		this.fields = fields;
 		this.linkManagement = linkManagement;
-		this.domains = domains;
 		this.members = members;
 		this.rateLimitService = rateLimitService;
 	}
@@ -79,8 +75,7 @@ public class CampaignLinkCreationService {
 			CreateCampaignLinkRequest request) {
 		UtmTemplate template = campaign.getUtmTemplate();
 		Map<String, String> resolved = resolveUtmValues(template, request.utmValuesOrEmpty());
-		ProjectDomain domain = domains.get(project.getId());
-		return linkManagement.createForCampaign(request.normalizedOriginalUrl(), request.expiresAt(), project, domain, createdBy,
+		return linkManagement.createForCampaign(request.normalizedOriginalUrl(), request.expiresAt(), project, createdBy,
 				apiKeyId, idempotencyKey, requestHash, campaign, template, request.normalizedExternalId(), resolved);
 	}
 

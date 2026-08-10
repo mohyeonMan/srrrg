@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -33,6 +34,7 @@ import link.srrrg.link.management.dto.CreateLinkResponse;
 import link.srrrg.project.ApiKeyService;
 import link.srrrg.project.ApiKeyScope;
 import link.srrrg.project.PublicProjectLinkController;
+import link.srrrg.project.Project;
 import link.srrrg.project.InvitationPageController;
 import link.srrrg.project.ProjectController;
 import link.srrrg.project.ProjectRole;
@@ -276,33 +278,33 @@ class SecurityWebTest {
 	@Test
 	void returnsProjectPlatformDomainToJwtMember() throws Exception {
 		when(jwtService.verify("access-token")).thenReturn(1L);
-		link.srrrg.domain.ProjectDomain domain = org.mockito.Mockito.mock(link.srrrg.domain.ProjectDomain.class);
-		when(domain.getId()).thenReturn(3L);
-		when(domain.getHostname()).thenReturn("acme.dev.srrrg.link");
-		when(projectService.projectDomain(1L, 7L)).thenReturn(domain);
+		Project project = org.mockito.Mockito.mock(Project.class);
+		when(project.getSubdomain()).thenReturn("acme");
+		when(project.isSubdomainEnabled()).thenReturn(true);
+		when(projectService.projectDomain(1L, 7L)).thenReturn(project);
 
-		mockMvc.perform(get("/api/web/projects/7/domains")
+		mockMvc.perform(get("/api/web/projects/7/subdomain")
 				.cookie(new jakarta.servlet.http.Cookie("srrrg_access", "access-token")))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$[0].hostname").value("acme.dev.srrrg.link"));
+				.andExpect(jsonPath("$.subdomain").value("acme"))
+				.andExpect(jsonPath("$.enabled").value(true));
 	}
 
 	@Test
 	void changesProjectPlatformDomainWithJwtAndCsrf() throws Exception {
 		when(jwtService.verify("access-token")).thenReturn(1L);
-		link.srrrg.domain.ProjectDomain domain = org.mockito.Mockito.mock(link.srrrg.domain.ProjectDomain.class);
-		when(domain.getId()).thenReturn(3L);
-		when(domain.getHostname()).thenReturn("renamed.srrrg.link");
-		when(projectService.changeDomain(1L, 7L, 3L, "renamed")).thenReturn(domain);
+		Project project = org.mockito.Mockito.mock(Project.class);
+		when(project.getSubdomain()).thenReturn("renamed");
+		when(projectService.claimSubdomain(1L, 7L, "renamed")).thenReturn(project);
 		jakarta.servlet.http.Cookie jwt = new jakarta.servlet.http.Cookie("srrrg_access", "access-token");
 		MvcResult page = mockMvc.perform(get("/login")).andExpect(status().isOk()).andReturn();
 		jakarta.servlet.http.Cookie csrf = page.getResponse().getCookie("XSRF-TOKEN");
 
-		mockMvc.perform(patch("/api/web/projects/7/domains/3")
+		mockMvc.perform(put("/api/web/projects/7/subdomain")
 					.cookie(jwt, csrf).header("X-XSRF-TOKEN", csrf.getValue())
-					.contentType(MediaType.APPLICATION_JSON).content("{\"slug\":\"renamed\"}"))
+					.contentType(MediaType.APPLICATION_JSON).content("{\"subdomain\":\"renamed\"}"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.hostname").value("renamed.srrrg.link"));
+				.andExpect(jsonPath("$.subdomain").value("renamed"));
 	}
 
 	@Test

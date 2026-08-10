@@ -13,7 +13,6 @@ import io.micrometer.core.instrument.Timer;
 import link.srrrg.campaign.Campaign;
 import link.srrrg.campaign.UtmTemplate;
 import link.srrrg.common.metrics.SrrrgMetrics;
-import link.srrrg.domain.ProjectDomain;
 import link.srrrg.link.DestinationUrlMerger;
 import link.srrrg.link.ExternalIdConflictException;
 import link.srrrg.link.Link;
@@ -202,14 +201,17 @@ public class LinkManagementService {
 	}
 
 	private String projectShortUrl(Link link) {
-		return "https://" + link.getHostname() + "/" + link.getCode();
+		if (link.getSubdomain() == null) return baseUrl + "/" + link.getCode();
+		java.net.URI base = java.net.URI.create(baseUrl);
+		return base.getScheme() + "://" + link.getSubdomain() + "." + base.getHost()
+				+ (base.getPort() < 0 ? "" : ":" + base.getPort()) + "/" + link.getCode();
 	}
 
-	public Link createForProject(CreateLinkRequest request, Project project, ProjectDomain domain, User createdBy) {
-		return createForProject(request, project, domain, createdBy, null, null, null);
+	public Link createForProject(CreateLinkRequest request, Project project, User createdBy) {
+		return createForProject(request, project, createdBy, null, null, null);
 	}
 
-	public Link createForProject(CreateLinkRequest request, Project project, ProjectDomain domain, User createdBy,
+	public Link createForProject(CreateLinkRequest request, Project project, User createdBy,
 			Long apiKeyId, String idempotencyKey, String requestHash) {
 		Link existing = findIdempotentLink(apiKeyId, idempotencyKey, requestHash);
 		if (existing != null) return existing;
@@ -217,7 +219,7 @@ public class LinkManagementService {
 		validateExpiration(request.expiresAt());
 		// 프로젝트 링크는 인증된 멤버 또는 프로젝트 API key의 생성자를 신뢰해 위험 검사를 생략한다.
 		// 신뢰 정책이 바뀌면 requireNoKnownThreat(request.originalUrl())를 이 지점에 복구한다.
-		return saveProjectLinkWithUniqueCode(request.originalUrl(), request.expiresAt(), project, domain, createdBy,
+		return saveProjectLinkWithUniqueCode(request.originalUrl(), request.expiresAt(), project, project.activeSubdomain(), createdBy,
 				apiKeyId, idempotencyKey, requestHash);
 	}
 
@@ -225,7 +227,7 @@ public class LinkManagementService {
 	 * campaign 링크 생성 유스케이스. UI 단일 생성, JSON batch, CSV worker가 모두 이 메서드를 호출한다.
 	 * resolvedUtmValues에는 링크 요청에 명시한 값만 들어간다. 누락한 값은 리다이렉트 시 현재 캠페인 기본값을 사용한다.
 	 */
-	public Link createForCampaign(String originalUrl, Instant expiresAt, Project project, ProjectDomain domain, User createdBy,
+	public Link createForCampaign(String originalUrl, Instant expiresAt, Project project, User createdBy,
 			Long apiKeyId, String idempotencyKey, String requestHash,
 			Campaign campaign, UtmTemplate utmTemplate, String externalId,
 			Map<String, String> resolvedUtmValues) {
@@ -237,7 +239,7 @@ public class LinkManagementService {
 		validateExpiration(expiresAt);
 		// 캠페인 링크도 인증된 멤버 또는 프로젝트 API key의 생성자를 신뢰해 위험 검사를 생략한다.
 		// 신뢰 정책이 바뀌면 동적 기본 목적지와 UTM을 해석한 뒤 requireNoKnownThreat를 복구한다.
-		Link link = saveCampaignLinkWithUniqueCode(originalUrl, expiresAt, project, domain, createdBy,
+		Link link = saveCampaignLinkWithUniqueCode(originalUrl, expiresAt, project, project.activeSubdomain(), createdBy,
 				apiKeyId, idempotencyKey, requestHash, campaign, utmTemplate, externalId);
 		for (Map.Entry<String, String> entry : resolvedUtmValues.entrySet()) {
 			linkUtmValueRepository.save(LinkUtmValue.create(link, entry.getKey(), entry.getValue()));
@@ -267,12 +269,12 @@ public class LinkManagementService {
 		throw new IllegalStateException("단축 코드를 생성하지 못했습니다.");
 	}
 
-	private Link saveProjectLinkWithUniqueCode(String originalUrl, Instant expiresAt, Project project, ProjectDomain domain, User createdBy,
+	private Link saveProjectLinkWithUniqueCode(String originalUrl, Instant expiresAt, Project project, String subdomain, User createdBy,
 			Long apiKeyId, String idempotencyKey, String requestHash) {
 		for (int attempt = 1; attempt <= MAX_CODE_GENERATION_ATTEMPTS; attempt++) {
 			String code = linkCodeGenerator.generate();
 			try {
-				return linkRepository.saveAndFlush(Link.createForProject(code, originalUrl, expiresAt, project, domain, createdBy,
+				return linkRepository.saveAndFlush(Link.createForProject(code, originalUrl, expiresAt, project, subdomain, createdBy,
 						apiKeyId, idempotencyKey, requestHash));
 			} catch (DataIntegrityViolationException exception) {
 				Link existing = findIdempotentLink(apiKeyId, idempotencyKey, requestHash);
@@ -285,12 +287,12 @@ public class LinkManagementService {
 		throw new IllegalStateException("단축 코드를 생성하지 못했습니다.");
 	}
 
-	private Link saveCampaignLinkWithUniqueCode(String originalUrl, Instant expiresAt, Project project, ProjectDomain domain, User createdBy,
+	private Link saveCampaignLinkWithUniqueCode(String originalUrl, Instant expiresAt, Project project, String subdomain, User createdBy,
 			Long apiKeyId, String idempotencyKey, String requestHash, Campaign campaign, UtmTemplate utmTemplate, String externalId) {
 		for (int attempt = 1; attempt <= MAX_CODE_GENERATION_ATTEMPTS; attempt++) {
 			String code = linkCodeGenerator.generate();
 			try {
-				return linkRepository.saveAndFlush(Link.createForCampaign(code, originalUrl, expiresAt, project, domain, createdBy,
+				return linkRepository.saveAndFlush(Link.createForCampaign(code, originalUrl, expiresAt, project, subdomain, createdBy,
 						apiKeyId, idempotencyKey, requestHash, campaign, utmTemplate, externalId));
 			} catch (DataIntegrityViolationException exception) {
 				if (isExternalIdConflict(exception)) {

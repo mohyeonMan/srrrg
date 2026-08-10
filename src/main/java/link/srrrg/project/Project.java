@@ -29,8 +29,11 @@ public class Project {
 	@Column(nullable = false, length = 100)
 	private String name;
 
-	@Column(nullable = false, unique = true, length = 63)
-	private String slug;
+	@Column(unique = true, length = 63)
+	private String subdomain;
+
+	@Column(name = "subdomain_enabled", nullable = false)
+	private boolean subdomainEnabled;
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "created_by_user_id")
@@ -43,15 +46,22 @@ public class Project {
 	@Column(name = "archived_at")
 	private Instant archivedAt;
 
-	private Project(String name, String slug, User createdBy) {
+	private Project(String name, String subdomain, User createdBy) {
 		this.name = name;
-		this.slug = slug;
+		this.subdomain = subdomain;
+		this.subdomainEnabled = false;
 		this.createdBy = createdBy;
 	}
-	public static Project create(String name, String slug, User createdBy) { return new Project(name, slug, createdBy); }
+	public static Project create(String name, String subdomain, User createdBy) { return new Project(name, subdomain, createdBy); }
 
 	public void rename(String name) { this.name = name; }
-	public void changeSlug(String slug) { this.slug = slug; }
+	public void claimSubdomain(String subdomain) { this.subdomain = subdomain; }
+	public void releaseSubdomain() { this.subdomain = null; this.subdomainEnabled = false; }
+	public void setSubdomainEnabled(boolean enabled) {
+		if (enabled && subdomain == null) throw new IllegalStateException("선점한 서브도메인이 없습니다.");
+		this.subdomainEnabled = enabled;
+	}
+	public String activeSubdomain() { return subdomainEnabled ? subdomain : null; }
 	public void archive() { this.archivedAt = Instant.now(); }
 
 	@PrePersist void onCreate() { createdAt = updatedAt = Instant.now(); }

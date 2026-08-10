@@ -19,7 +19,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import link.srrrg.common.metrics.SrrrgMetrics;
-import link.srrrg.domain.ProjectDomain;
 import link.srrrg.link.Link;
 import link.srrrg.link.LinkCodeGenerator;
 import link.srrrg.link.LinkGoneException;
@@ -97,31 +96,44 @@ class LinkManagementServiceTest {
 	@Test
 	void createsProjectLinkWithoutSecret() {
 		Project project = mock(Project.class);
-		ProjectDomain domain = mock(ProjectDomain.class);
 		User user = mock(User.class);
-		when(domain.getHostname()).thenReturn("acme.srrrg.link");
+		when(project.activeSubdomain()).thenReturn("acme");
 		when(codeGenerator.generate()).thenReturn("aB3x9Q");
 		when(repository.saveAndFlush(any(Link.class))).thenAnswer(call -> call.getArgument(0));
 
-		Link link = service.createForProject(new CreateLinkRequest("https://example.com", null), project, domain, user);
+		Link link = service.createForProject(new CreateLinkRequest("https://example.com", null), project, user);
 
 		assertThat(link.getProject()).isSameAs(project);
-		assertThat(link.getDomain()).isSameAs(domain);
-		assertThat(link.getHostname()).isEqualTo("acme.srrrg.link");
+		assertThat(link.getSubdomain()).isEqualTo("acme");
 		assertThat(link.getCreatedBy()).isSameAs(user);
 		assertThat(link.getSecretKeyHash()).isNull();
 		verify(riskVerificationService, never()).verify(any());
 	}
 
 	@Test
+	void snapshotsOnlyAnEnabledSubdomainOnTheLink() {
+		Project project = Project.create("Acme", null, null);
+		when(codeGenerator.generate()).thenReturn("aB3x9Q", "cD4y8R");
+		when(repository.saveAndFlush(any(Link.class))).thenAnswer(call -> call.getArgument(0));
+
+		project.claimSubdomain("acme");
+		Link baseLink = service.createForProject(new CreateLinkRequest("https://base.example", null), project, null);
+		project.setSubdomainEnabled(true);
+		Link subdomainLink = service.createForProject(new CreateLinkRequest("https://sub.example", null), project, null);
+		project.releaseSubdomain();
+
+		assertThat(baseLink.getSubdomain()).isNull();
+		assertThat(subdomainLink.getSubdomain()).isEqualTo("acme");
+	}
+
+	@Test
 	void createsCampaignLinkWithoutOwnUrlAndWithoutRiskCheck() {
 		Project project = mock(Project.class);
-		ProjectDomain domain = mock(ProjectDomain.class);
 		Campaign campaign = mock(Campaign.class);
 		when(codeGenerator.generate()).thenReturn("aB3x9Q");
 		when(repository.saveAndFlush(any(Link.class))).thenAnswer(call -> call.getArgument(0));
 
-		Link link = service.createForCampaign(null, null, project, domain, null, null, null, null,
+		Link link = service.createForCampaign(null, null, project, null, null, null, null,
 				campaign, null, null, Map.of());
 
 		assertThat(link.getOriginalUrl()).isNull();
@@ -138,7 +150,7 @@ class LinkManagementServiceTest {
 				.thenReturn(Optional.of(existing));
 
 		Link link = service.createForProject(new CreateLinkRequest("https://example.com", null),
-				mock(Project.class), mock(ProjectDomain.class), null, 3L, "retry-1", "request-hash");
+				mock(Project.class), null, 3L, "retry-1", "request-hash");
 
 		assertThat(link).isSameAs(existing);
 		verify(validator, never()).validate(any());
@@ -152,7 +164,7 @@ class LinkManagementServiceTest {
 				.thenReturn(Optional.of(existing));
 
 		assertThatThrownBy(() -> service.createForProject(new CreateLinkRequest("https://other.example", null),
-				mock(Project.class), mock(ProjectDomain.class), null, 3L, "retry-1", "second-hash"))
+				mock(Project.class), null, 3L, "retry-1", "second-hash"))
 				.isInstanceOf(LinkManagementService.IdempotencyConflictException.class);
 	}
 
@@ -167,7 +179,7 @@ class LinkManagementServiceTest {
 		when(repository.saveAndFlush(any(Link.class))).thenThrow(new DataIntegrityViolationException("duplicate idempotency key"));
 
 		Link link = service.createForProject(new CreateLinkRequest("https://example.com", null),
-				mock(Project.class), mock(ProjectDomain.class), null, 3L, "retry-1", "request-hash");
+				mock(Project.class), null, 3L, "retry-1", "request-hash");
 
 		assertThat(link).isSameAs(existing);
 		verify(repository, times(1)).saveAndFlush(any());
@@ -270,9 +282,7 @@ class LinkManagementServiceTest {
 	@Test
 	void authenticatedCampaignLinkCanReturnToInheritedDestinationWithoutRiskCheck() {
 		Link link = link("https://own.example");
-		ProjectDomain domain = mock(ProjectDomain.class);
-		when(domain.getHostname()).thenReturn("acme.srrrg.link");
-		when(link.getHostname()).thenReturn("acme.srrrg.link");
+		when(link.getSubdomain()).thenReturn("acme");
 		when(link.getCampaign()).thenReturn(mock(Campaign.class));
 		when(repository.save(link)).thenReturn(link);
 		UpdateLinkRequest request = new UpdateLinkRequest();

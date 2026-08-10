@@ -9,53 +9,45 @@ import java.util.Set;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import link.srrrg.project.Project;
-
 @Service
 public class ProjectDomainService {
 	private static final Set<String> RESERVED_SLUGS = Set.of(
 			"actuator", "admin", "api", "app", "auth", "cdn", "cname", "dev", "docs", "help",
 			"login", "mail", "manage", "oauth", "oauth2", "openapi", "static", "status", "support", "www");
-	private final ProjectDomainRepository domains;
 	private final String baseHostname;
+	private final String scheme;
+	private final int port;
 
-	public ProjectDomainService(ProjectDomainRepository domains, @Value("${srrrg.base-url}") String baseUrl) {
-		this.domains = domains;
+	public ProjectDomainService(@Value("${srrrg.base-url}") String baseUrl) {
 		URI uri = URI.create(baseUrl);
 		if (uri.getHost() == null) throw new IllegalArgumentException("srrrg.base-url에 유효한 host가 필요합니다.");
 		this.baseHostname = normalizeHostname(uri.getHost());
+		this.scheme = uri.getScheme();
+		this.port = uri.getPort();
 	}
 
-	public ProjectDomain create(Project project) {
-		return domains.save(ProjectDomain.create(project, project.getSlug() + "." + baseHostname));
+	public boolean isReservedSubdomain(String subdomain) {
+		return RESERVED_SLUGS.contains(subdomain);
 	}
 
-	public boolean isReservedSlug(String slug) {
-		return RESERVED_SLUGS.contains(slug);
+	public String hostname(String subdomain) {
+		return subdomain == null ? baseHostname : subdomain + "." + baseHostname;
 	}
 
-	public ProjectDomain get(Long projectId) {
-		return domains.findByProjectId(projectId)
-				.orElseThrow(() -> new IllegalStateException("프로젝트 도메인을 찾을 수 없습니다."));
-	}
-
-	public ProjectDomain change(Long projectId, Long domainId, String slug) {
-		ProjectDomain domain = domains.findByIdAndProjectId(domainId, projectId)
-				.orElseThrow(() -> new IllegalArgumentException("프로젝트 도메인을 찾을 수 없습니다."));
-		domain.changeHostname(slug + "." + baseHostname);
-		return domains.saveAndFlush(domain);
+	public String origin(String subdomain) {
+		return scheme + "://" + hostname(subdomain) + (port < 0 ? "" : ":" + port);
 	}
 
 	public Optional<HostRoute> resolve(String hostHeader) {
-		String hostname = hostname(hostHeader);
+		String hostname = parseHostname(hostHeader);
 		if (hostname == null) return Optional.empty();
 		if (baseHostname.equals(hostname)) return Optional.of(new HostRoute(null));
 		String suffix = "." + baseHostname;
-		String slug = hostname.endsWith(suffix) ? hostname.substring(0, hostname.length() - suffix.length()) : "";
-		return slug.isEmpty() || slug.contains(".") ? Optional.empty() : Optional.of(new HostRoute(hostname));
+		String subdomain = hostname.endsWith(suffix) ? hostname.substring(0, hostname.length() - suffix.length()) : "";
+		return subdomain.isEmpty() || subdomain.contains(".") ? Optional.empty() : Optional.of(new HostRoute(subdomain));
 	}
 
-	private String hostname(String hostHeader) {
+	private String parseHostname(String hostHeader) {
 		if (hostHeader == null || hostHeader.isBlank()) return null;
 		try {
 			URI uri = URI.create("http://" + hostHeader.trim());
@@ -72,7 +64,7 @@ public class ProjectDomainService {
 		return IDN.toASCII(normalized).toLowerCase(Locale.ROOT);
 	}
 
-	public record HostRoute(String hostname) {
-		public boolean isBaseDomain() { return hostname == null; }
+	public record HostRoute(String subdomain) {
+		public boolean isBaseDomain() { return subdomain == null; }
 	}
 }

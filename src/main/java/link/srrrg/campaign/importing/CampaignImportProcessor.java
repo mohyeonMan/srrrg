@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import link.srrrg.campaign.Campaign;
 import link.srrrg.campaign.UtmTemplate;
-import link.srrrg.domain.ProjectDomainService;
 import link.srrrg.link.ExternalIdConflictException;
 import link.srrrg.link.UnsafeUrlException;
 import link.srrrg.link.UrlRiskCheckFailedException;
@@ -36,16 +35,13 @@ public class CampaignImportProcessor {
 	private final CampaignImportRowRepository importRows;
 	private final CampaignImportRowUtmValueRepository importRowUtmValues;
 	private final LinkManagementService linkManagement;
-	private final ProjectDomainService domains;
 
 	public CampaignImportProcessor(CampaignImportRepository imports, CampaignImportRowRepository importRows,
-			CampaignImportRowUtmValueRepository importRowUtmValues, LinkManagementService linkManagement,
-			ProjectDomainService domains) {
+			CampaignImportRowUtmValueRepository importRowUtmValues, LinkManagementService linkManagement) {
 		this.imports = imports;
 		this.importRows = importRows;
 		this.importRowUtmValues = importRowUtmValues;
 		this.linkManagement = linkManagement;
-		this.domains = domains;
 	}
 
 	@Transactional
@@ -81,7 +77,7 @@ public class CampaignImportProcessor {
 			Map<String, String> resolved = importRowUtmValues.findByImportRowId(rowId).stream()
 					.collect(java.util.stream.Collectors.toMap(CampaignImportRowUtmValue::getFieldName, CampaignImportRowUtmValue::getValue));
 			var createdLink = linkManagement.createForCampaign(row.getOriginalUrl(), null, campaign.getProject(),
-					domains.get(campaign.getProject().getId()), null, null, null, null,
+					null, null, null, null,
 					campaign, template, row.getExternalId(), resolved);
 			row.succeed(createdLink.getId());
 			campaignImport.recordRowResult(true);

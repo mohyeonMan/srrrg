@@ -111,13 +111,13 @@ class RedirectServiceTest {
 	void projectDomainRoutesByHostnameAndCode() {
 		Link link = link("https://project.example");
 		when(link.getProject()).thenReturn(mock(Project.class));
-		when(domains.resolve("acme.srrrg.link")).thenReturn(Optional.of(new HostRoute("acme.srrrg.link")));
-		when(repository.findByHostnameAndCode("acme.srrrg.link", "aB3x9Q")).thenReturn(Optional.of(link));
+		when(domains.resolve("acme.srrrg.link")).thenReturn(Optional.of(new HostRoute("acme")));
+		when(repository.findBySubdomainAndCode("acme", "aB3x9Q")).thenReturn(Optional.of(link));
 		when(repository.incrementAccessAndRedirectCountsById(7L)).thenReturn(1);
 
 		assertThat(service.redirect("acme.srrrg.link", "aB3x9Q", requestInfo))
 				.isEqualTo("https://project.example");
-		verify(repository, never()).findByCodeAndProjectIsNull(any());
+		verify(repository, never()).findBySubdomainIsNullAndCode(any());
 		verify(riskVerificationService, never()).verify(any());
 	}
 
@@ -128,8 +128,8 @@ class RedirectServiceTest {
 		when(campaign.getDefaultOriginalUrl()).thenReturn("https://current.example/default");
 		when(link.getCampaign()).thenReturn(campaign);
 		when(link.getProject()).thenReturn(mock(Project.class));
-		when(domains.resolve("acme.srrrg.link")).thenReturn(Optional.of(new HostRoute("acme.srrrg.link")));
-		when(repository.findByHostnameAndCode("acme.srrrg.link", "aB3x9Q")).thenReturn(Optional.of(link));
+		when(domains.resolve("acme.srrrg.link")).thenReturn(Optional.of(new HostRoute("acme")));
+		when(repository.findBySubdomainAndCode("acme", "aB3x9Q")).thenReturn(Optional.of(link));
 		when(repository.incrementAccessAndRedirectCountsById(7L)).thenReturn(1);
 		EffectiveUtmValue utm = mock(EffectiveUtmValue.class);
 		when(utm.getFieldName()).thenReturn("utm_source");
@@ -149,8 +149,8 @@ class RedirectServiceTest {
 		Link link = link(null);
 		when(link.getCampaign()).thenReturn(mock(Campaign.class));
 		when(link.getProject()).thenReturn(mock(Project.class));
-		when(domains.resolve("acme.srrrg.link")).thenReturn(Optional.of(new HostRoute("acme.srrrg.link")));
-		when(repository.findByHostnameAndCode("acme.srrrg.link", "aB3x9Q")).thenReturn(Optional.of(link));
+		when(domains.resolve("acme.srrrg.link")).thenReturn(Optional.of(new HostRoute("acme")));
+		when(repository.findBySubdomainAndCode("acme", "aB3x9Q")).thenReturn(Optional.of(link));
 
 		assertThatThrownBy(() -> service.redirect("acme.srrrg.link", "aB3x9Q", requestInfo))
 				.isInstanceOf(LinkGoneException.class)
@@ -160,12 +160,12 @@ class RedirectServiceTest {
 
 	@Test
 	void anotherProjectDomainDoesNotResolveTheLink() {
-		when(domains.resolve("other.srrrg.link")).thenReturn(Optional.of(new HostRoute("other.srrrg.link")));
-		when(repository.findByHostnameAndCode("other.srrrg.link", "aB3x9Q")).thenReturn(Optional.empty());
+		when(domains.resolve("other.srrrg.link")).thenReturn(Optional.of(new HostRoute("other")));
+		when(repository.findBySubdomainAndCode("other", "aB3x9Q")).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.redirect("other.srrrg.link", "aB3x9Q", requestInfo))
 				.isInstanceOf(link.srrrg.link.LinkNotFoundException.class);
-		verify(repository, never()).findByHostnameAndCode("acme.srrrg.link", "aB3x9Q");
+		verify(repository, never()).findBySubdomainAndCode("acme", "aB3x9Q");
 	}
 
 	@Test
@@ -174,8 +174,8 @@ class RedirectServiceTest {
 
 		assertThatThrownBy(() -> service.redirect("unknown.srrrg.link", "aB3x9Q", requestInfo))
 				.isInstanceOf(link.srrrg.link.LinkNotFoundException.class);
-		verify(repository, never()).findByCodeAndProjectIsNull(any());
-		verify(repository, never()).findByHostnameAndCode(any(), any());
+		verify(repository, never()).findBySubdomainIsNullAndCode(any());
+		verify(repository, never()).findBySubdomainAndCode(any(), any());
 	}
 
 	@Test
@@ -211,7 +211,7 @@ class RedirectServiceTest {
 	void expiredLinkReportsExpiredReason() {
 		Link link = link("https://example.com");
 		when(link.isExpiredAt(any(Instant.class))).thenReturn(true);
-		when(repository.findByCodeAndProjectIsNull("aB3x9Q")).thenReturn(Optional.of(link));
+		when(repository.findBySubdomainIsNullAndCode("aB3x9Q")).thenReturn(Optional.of(link));
 		when(repository.incrementAccessCountById(7L)).thenReturn(1);
 
 		assertThatThrownBy(() -> service.redirect("srrrg.link", "aB3x9Q", requestInfo))
@@ -227,7 +227,7 @@ class RedirectServiceTest {
 	void doesNotRedirectWhenUrlChangesWhileItIsChecked() {
 		Link oldLink = link("https://old.example");
 		Link newLink = link("https://new.example");
-		when(repository.findByCodeAndProjectIsNull("aB3x9Q"))
+		when(repository.findBySubdomainIsNullAndCode("aB3x9Q"))
 				.thenReturn(Optional.of(oldLink))
 				.thenReturn(Optional.of(newLink));
 		when(riskVerificationService.verify("https://old.example")).thenReturn(assessment(RiskVerdict.SAFE));
@@ -245,7 +245,7 @@ class RedirectServiceTest {
 	void deletedLinkDoesNotCreateStatisticsEvent() {
 		Link link = link("https://example.com");
 		when(link.isDeleted()).thenReturn(true);
-		when(repository.findByCodeAndProjectIsNull("aB3x9Q")).thenReturn(Optional.of(link));
+		when(repository.findBySubdomainIsNullAndCode("aB3x9Q")).thenReturn(Optional.of(link));
 
 		assertThatThrownBy(() -> service.redirect("srrrg.link", "aB3x9Q", requestInfo))
 				.isInstanceOf(LinkGoneException.class)
@@ -257,7 +257,7 @@ class RedirectServiceTest {
 
 	@Test
 	void missingLinkRecordsNotFoundOutcome() {
-		when(repository.findByCodeAndProjectIsNull("aB3x9Q")).thenReturn(Optional.empty());
+		when(repository.findBySubdomainIsNullAndCode("aB3x9Q")).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.redirect("srrrg.link", "aB3x9Q", requestInfo))
 				.isInstanceOf(link.srrrg.link.LinkNotFoundException.class);
@@ -267,7 +267,7 @@ class RedirectServiceTest {
 
 	private Link availableLink(String url) {
 		Link link = link(url);
-		when(repository.findByCodeAndProjectIsNull("aB3x9Q")).thenReturn(Optional.of(link));
+		when(repository.findBySubdomainIsNullAndCode("aB3x9Q")).thenReturn(Optional.of(link));
 		return link;
 	}
 

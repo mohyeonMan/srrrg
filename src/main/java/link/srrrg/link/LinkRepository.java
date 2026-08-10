@@ -21,7 +21,9 @@ public interface LinkRepository extends JpaRepository<Link, Long>, JpaSpecificat
 	@EntityGraph(attributePaths = {"project", "campaign"})
 	Optional<Link> findByCodeAndProjectIsNull(String code);
 	@EntityGraph(attributePaths = {"project", "campaign"})
-	Optional<Link> findByHostnameAndCode(String hostname, String code);
+	Optional<Link> findBySubdomainIsNullAndCode(String code);
+	@EntityGraph(attributePaths = {"project", "campaign"})
+	Optional<Link> findBySubdomainAndCode(String subdomain, String code);
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@EntityGraph(attributePaths = "project")
 	@Query("select l from Link l where l.code = :code and l.project is null")
@@ -34,7 +36,7 @@ public interface LinkRepository extends JpaRepository<Link, Long>, JpaSpecificat
 	List<Link> findByCampaignIdAndDeletedFalseOrderByIdDesc(Long campaignId, Pageable pageable);
 	List<Link> findByCampaignIdAndDeletedFalseAndIdLessThanOrderByIdDesc(Long campaignId, Long id, Pageable pageable);
 	Optional<Link> findByCampaignIdAndExternalId(Long campaignId, String externalId);
-	@EntityGraph(attributePaths = {"project", "campaign", "domain"})
+	@EntityGraph(attributePaths = {"project", "campaign"})
 	Optional<Link> findByProjectIdAndCode(Long projectId, String code);
 
 	@Modifying

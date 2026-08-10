@@ -564,7 +564,7 @@ class CampaignPostgreSqlIntegrationTest {
 		LoginResolution login = identityService.resolve(identity("owner-" + (++counter), "owner" + counter + "@example.com"));
 		ProjectMember membership = projectMemberRepository.findByIdUserId(login.user().getId()).getFirst();
 		Long projectId = membership.getProject().getId();
-		String host = membership.getProject().getSlug() + ".srrrg.link";
+		String host = "srrrg.link";
 		Cookie cookie = new Cookie("srrrg_access", sessionService.issue(login.user()).accessToken());
 		return new Owner(login.user().getId(), projectId, host, cookie);
 	}

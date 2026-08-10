@@ -17,7 +17,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import link.srrrg.common.ratelimit.RateLimitService;
 import link.srrrg.common.util.SecureRandomStringGenerator;
-import link.srrrg.domain.ProjectDomain;
 import link.srrrg.domain.ProjectDomainService;
 import link.srrrg.identity.User;
 import link.srrrg.identity.UserRepository;
@@ -54,7 +53,6 @@ class ProjectServiceTest {
 
 		service.ensurePersonalProject(2L);
 
-		verify(domains).create(project);
 		verify(members).save(any(ProjectMember.class));
 	}
 
@@ -147,7 +145,6 @@ class ProjectServiceTest {
 		ProjectMember editor = mock(ProjectMember.class);
 		Project project = mock(Project.class);
 		Link link = mock(Link.class);
-		ProjectDomain domain = mock(ProjectDomain.class);
 		User user = mock(User.class);
 		when(editor.getRole()).thenReturn(ProjectRole.EDITOR);
 		when(editor.getProject()).thenReturn(project);
@@ -157,12 +154,11 @@ class ProjectServiceTest {
 		when(link.getSecretKeyHash()).thenReturn("hash");
 		when(secretKeys.matches("srrrg_sk_secret", "hash")).thenReturn(true);
 		when(projects.findById(1L)).thenReturn(Optional.of(project));
-		when(domains.get(1L)).thenReturn(domain);
 		when(users.findById(2L)).thenReturn(Optional.of(user));
 
 		service.importAnonymousLink(2L, 1L, "aB3x9Q", "srrrg_sk_secret");
 
-		verify(link).assignToProject(project, domain, user);
+		verify(link).assignToProject(project, user);
 		verify(links).lockAnonymousByCode("aB3x9Q");
 		verify(links).flush();
 	}
@@ -256,7 +252,6 @@ class ProjectServiceTest {
 	void rejectsClaimWhenTargetDomainAlreadyHasTheCode() {
 		ProjectMember editor = mock(ProjectMember.class);
 		Project project = mock(Project.class);
-		ProjectDomain domain = mock(ProjectDomain.class);
 		Link link = mock(Link.class);
 		User user = mock(User.class);
 		when(editor.getRole()).thenReturn(ProjectRole.EDITOR);
@@ -266,7 +261,6 @@ class ProjectServiceTest {
 		when(link.getSecretKeyHash()).thenReturn("hash");
 		when(secretKeys.matches("secret", "hash")).thenReturn(true);
 		when(projects.findById(1L)).thenReturn(Optional.of(project));
-		when(domains.get(1L)).thenReturn(domain);
 		when(users.findById(2L)).thenReturn(Optional.of(user));
 		org.mockito.Mockito.doThrow(new DataIntegrityViolationException("duplicate code"))
 				.when(links).flush();
@@ -279,8 +273,8 @@ class ProjectServiceTest {
 	void rejectsReservedProjectSlug() {
 		when(members.countByIdUserIdAndRoleAndProjectArchivedAtIsNull(2L, ProjectRole.OWNER)).thenReturn(0L);
 		when(users.findById(2L)).thenReturn(Optional.of(mock(User.class)));
-		when(domains.isReservedSlug("admin")).thenReturn(true);
-		when(domains.isReservedSlug("cname")).thenReturn(true);
+		when(domains.isReservedSubdomain("admin")).thenReturn(true);
+		when(domains.isReservedSubdomain("cname")).thenReturn(true);
 
 		assertThatThrownBy(() -> service.create(2L, "관리", "admin"))
 				.isInstanceOf(IllegalArgumentException.class);
@@ -302,31 +296,29 @@ class ProjectServiceTest {
 	}
 
 	@Test
-	void ownerChangesProjectPlatformDomain() {
+	void ownerClaimsProjectSubdomain() {
 		Project project = mock(Project.class);
 		ProjectMember owner = mock(ProjectMember.class);
-		ProjectDomain domain = mock(ProjectDomain.class);
 		when(owner.getRole()).thenReturn(ProjectRole.OWNER);
 		when(owner.getProject()).thenReturn(project);
-		when(project.getSlug()).thenReturn("before");
+		when(project.getSubdomain()).thenReturn("before");
 		when(members.findByIdProjectIdAndIdUserId(1L, 2L)).thenReturn(Optional.of(owner));
-		when(domains.change(1L, 3L, "after-domain")).thenReturn(domain);
+		when(projects.saveAndFlush(project)).thenReturn(project);
 
-		assertThat(service.changeDomain(2L, 1L, 3L, " After-Domain ")).isSameAs(domain);
-		verify(project).changeSlug("after-domain");
-		verify(domains).change(1L, 3L, "after-domain");
+		assertThat(service.claimSubdomain(2L, 1L, " After-Domain ")).isSameAs(project);
+		verify(project).claimSubdomain("after-domain");
 	}
 
 	@Test
-	void viewerCannotChangeProjectPlatformDomain() {
+	void viewerCannotClaimProjectSubdomain() {
 		ProjectMember viewer = mock(ProjectMember.class);
 		when(viewer.getRole()).thenReturn(ProjectRole.VIEWER);
 		when(viewer.getProject()).thenReturn(mock(Project.class));
 		when(members.findByIdProjectIdAndIdUserId(1L, 2L)).thenReturn(Optional.of(viewer));
 
-		assertThatThrownBy(() -> service.changeDomain(2L, 1L, 3L, "after-domain"))
+		assertThatThrownBy(() -> service.claimSubdomain(2L, 1L, "after-domain"))
 				.isInstanceOf(SecurityException.class);
-		verify(domains, never()).change(any(), any(), any());
+		verify(projects, never()).saveAndFlush(any());
 	}
 
 	@Test
@@ -352,7 +344,7 @@ class ProjectServiceTest {
 
 		assertThatThrownBy(() -> service.create(2L, "프로젝트", "available"))
 				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessage("이미 사용 중인 프로젝트 slug입니다.");
+				.hasMessage("이미 사용 중인 서브도메인입니다.");
 		verify(projects, times(1)).saveAndFlush(any());
 	}
 }

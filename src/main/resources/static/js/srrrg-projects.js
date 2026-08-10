@@ -3,7 +3,7 @@
 	if (!app) return;
 
 	const base = document.querySelector('meta[name="context-path"]')?.content.replace(/\/$/, '') || '';
-	const state = { selected: null, domain: null, domainId: null, expiresOption: 'none', refreshing: null };
+	const state = { selected: null, subdomain: null, subdomainEnabled: false, expiresOption: 'none', refreshing: null };
 	const byId = (id) => document.getElementById(id);
 	const projectMessage = byId('project-message');
 	const linkMessage = byId('link-create-message');
@@ -96,7 +96,7 @@
 			button.type = 'button';
 			button.dataset.projectId = project.id;
 			button.setAttribute('aria-current', String(project.id === state.selected?.id));
-			button.append(element('strong', '', project.name), element('span', '', `${project.slug} · ${project.role}`));
+			button.append(element('strong', '', project.name), element('span', '', `${project.subdomain || '기본 도메인'} · ${project.role}`));
 			button.addEventListener('click', () => selectProject(project));
 			return button;
 		});
@@ -105,14 +105,17 @@
 
 	async function selectProject(project) {
 		state.selected = project;
-		state.domain = null;
-		state.domainId = null;
+		state.subdomain = project.subdomain;
+		state.subdomainEnabled = project.subdomainEnabled;
 		byId('project-empty').hidden = true;
 		byId('project-detail').hidden = false;
 		byId('project-name').textContent = project.name;
 		byId('project-role').textContent = project.role;
 		byId('rename-project-name').value = project.name;
-		byId('change-project-domain').value = project.slug;
+		byId('change-project-domain').value = project.subdomain || '';
+		byId('project-subdomain-enabled').checked = project.subdomainEnabled;
+		byId('project-subdomain-enabled').disabled = !project.subdomain;
+		byId('release-project-subdomain').disabled = !project.subdomain;
 		setMessage(byId('domain-change-message'), '');
 		byId('project-domain').textContent = '도메인을 불러오는 중...';
 		byId('copy-project-domain').disabled = true;
@@ -138,19 +141,22 @@
 	async function loadProjectData() {
 		if (!state.selected) return;
 		const projectId = state.selected.id;
-		const [overviewResponse, domainsResponse, membersResponse] = await Promise.all([
+		const [overviewResponse, subdomainResponse, membersResponse] = await Promise.all([
 			request(`${base}/api/web/projects/${projectId}/overview`),
-			request(`${base}/api/web/projects/${projectId}/domains`),
+			request(`${base}/api/web/projects/${projectId}/subdomain`),
 			request(`${base}/api/web/projects/${projectId}/members`)
 		]);
 		if (state.selected?.id !== projectId) return;
 
-		if (domainsResponse.ok) {
-			const domains = await domainsResponse.json();
-			state.domainId = domains[0]?.id || null;
-			state.domain = domains[0]?.hostname || null;
-			byId('project-domain').textContent = state.domain || '연결된 도메인이 없습니다.';
-			byId('copy-project-domain').disabled = !state.domain;
+		if (subdomainResponse.ok) {
+			const config = await subdomainResponse.json();
+			state.subdomain = config.subdomain;
+			state.subdomainEnabled = config.enabled;
+			byId('project-subdomain-enabled').checked = config.enabled;
+			byId('project-subdomain-enabled').disabled = !config.subdomain;
+			byId('release-project-subdomain').disabled = !config.subdomain;
+			byId('project-domain').textContent = projectOrigin(config.enabled ? config.subdomain : null);
+			byId('copy-project-domain').disabled = false;
 		}
 		if (overviewResponse.ok) {
 			const overview = await overviewResponse.json();
@@ -161,14 +167,13 @@
 		if (state.selected.role === 'OWNER') await loadInvitations(projectId);
 	}
 
-	function projectOrigin(hostname = state.domain) {
-		if (!hostname) return '';
+	function projectOrigin(subdomain = state.subdomainEnabled ? state.subdomain : null) {
 		const port = location.port ? `:${location.port}` : '';
-		return `${location.protocol}//${hostname}${port}`;
+		return `${location.protocol}//${subdomain ? `${subdomain}.` : ''}${location.hostname}${port}`;
 	}
 
-	function shortUrl(code, hostname = state.domain) {
-		return `${projectOrigin(hostname)}/${encodeURIComponent(code)}`;
+	function shortUrl(code, subdomain = state.subdomainEnabled ? state.subdomain : null) {
+		return `${projectOrigin(subdomain)}/${encodeURIComponent(code)}`;
 	}
 
 	function renderLinks(links) {
@@ -180,12 +185,10 @@
 		const rows = links.map((link) => {
 			const row = element('article', 'project-link-item');
 			const main = element('div', 'project-link-main');
-			const anchor = element('a', 'project-link-short-url', link.hostname ? shortUrl(link.code, link.hostname) : link.code);
-			if (link.hostname) {
-				anchor.href = shortUrl(link.code, link.hostname);
-				anchor.target = '_blank';
-				anchor.rel = 'noopener noreferrer';
-			}
+			const anchor = element('a', 'project-link-short-url', shortUrl(link.code, link.subdomain));
+			anchor.href = shortUrl(link.code, link.subdomain);
+			anchor.target = '_blank';
+			anchor.rel = 'noopener noreferrer';
 			const original = element('p', 'project-link-original', link.originalUrl);
 			original.title = link.originalUrl;
 			main.append(anchor, original);
@@ -477,21 +480,42 @@
 
 	byId('change-project-domain-form').addEventListener('submit', async (event) => {
 		event.preventDefault();
-		if (!state.selected || !state.domainId) return;
-		const slug = new FormData(event.target).get('slug')?.trim().toLowerCase();
+		if (!state.selected) return;
+		const subdomain = new FormData(event.target).get('subdomain')?.trim().toLowerCase();
 		const message = byId('domain-change-message');
-		if (!slug || !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])$/.test(slug) || slug.length < 3 || slug.length > 63) {
+		if (!subdomain || !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])$/.test(subdomain) || subdomain.length < 3 || subdomain.length > 63) {
 			return setMessage(message, '서브도메인은 영문 소문자, 숫자, 하이픈을 사용한 3~63자로 입력하세요.', true);
 		}
-		if (slug === state.selected.slug) return setMessage(message, '현재 사용 중인 서브도메인입니다.');
-		if (!confirm(`서브도메인을 “${slug}”로 변경할까요? 이후 생성하는 링크부터 새 주소를 사용합니다.`)) return;
-		const response = await request(`${base}/api/web/projects/${state.selected.id}/domains/${state.domainId}`, {
-			method: 'PATCH', body: JSON.stringify({ slug })
+		if (subdomain === state.subdomain) return setMessage(message, '이미 선점한 서브도메인입니다.');
+		const response = await request(`${base}/api/web/projects/${state.selected.id}/subdomain`, {
+			method: 'PUT', body: JSON.stringify({ subdomain })
 		});
 		const responseBody = await body(response);
 		if (!response.ok) return setMessage(message, responseBody.message || '서브도메인을 변경할 수 없습니다.', true);
 		await loadProjects(state.selected.id);
-		setMessage(byId('domain-change-message'), '서브도메인을 변경했습니다.');
+		setMessage(byId('domain-change-message'), '서브도메인을 선점했습니다. 활성화하면 신규 링크에 사용됩니다.');
+	});
+
+	byId('project-subdomain-enabled').addEventListener('change', async (event) => {
+		if (!state.selected) return;
+		const enabled = event.target.checked;
+		const response = await request(`${base}/api/web/projects/${state.selected.id}/subdomain/activation`, {
+			method: 'PATCH', body: JSON.stringify({ enabled })
+		});
+		if (!response.ok) {
+			event.target.checked = !enabled;
+			return setMessage(byId('domain-change-message'), (await body(response)).message || '활성화 상태를 변경할 수 없습니다.', true);
+		}
+		await loadProjects(state.selected.id);
+		setMessage(byId('domain-change-message'), enabled ? '신규 링크에 서브도메인을 사용합니다.' : '신규 링크에 기본 도메인을 사용합니다.');
+	});
+
+	byId('release-project-subdomain').addEventListener('click', async () => {
+		if (!state.selected || !state.subdomain || !confirm(`“${state.subdomain}” 서브도메인을 반납할까요? 기존 링크 주소는 유지됩니다.`)) return;
+		const response = await request(`${base}/api/web/projects/${state.selected.id}/subdomain`, { method: 'DELETE' });
+		if (!response.ok) return setMessage(byId('domain-change-message'), (await body(response)).message || '서브도메인을 반납할 수 없습니다.', true);
+		await loadProjects(state.selected.id);
+		setMessage(byId('domain-change-message'), '서브도메인을 반납했습니다.');
 	});
 
 	byId('delete-project-button').addEventListener('click', async () => {

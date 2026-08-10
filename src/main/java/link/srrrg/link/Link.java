@@ -15,7 +15,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import link.srrrg.campaign.Campaign;
 import link.srrrg.campaign.UtmTemplate;
-import link.srrrg.domain.ProjectDomain;
 import link.srrrg.project.Project;
 import link.srrrg.identity.User;
 import lombok.AccessLevel;
@@ -45,12 +44,8 @@ public class Link {
 	@JoinColumn(name = "project_id")
 	private Project project;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "domain_id")
-	private ProjectDomain domain;
-
-	@Column(length = 253)
-	private String hostname;
+	@Column(length = 63)
+	private String subdomain;
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "created_by_user_id")
@@ -107,18 +102,17 @@ public class Link {
 	}
 
 	public static Link createForProject(String code, String originalUrl, Instant expiresAt,
-			Project project, ProjectDomain domain, User createdBy, Long apiKeyId, String idempotencyKey, String requestHash) {
-		return createForCampaign(code, originalUrl, expiresAt, project, domain, createdBy, apiKeyId, idempotencyKey, requestHash,
+			Project project, String subdomain, User createdBy, Long apiKeyId, String idempotencyKey, String requestHash) {
+		return createForCampaign(code, originalUrl, expiresAt, project, subdomain, createdBy, apiKeyId, idempotencyKey, requestHash,
 				null, null, null);
 	}
 
 	public static Link createForCampaign(String code, String originalUrl, Instant expiresAt,
-			Project project, ProjectDomain domain, User createdBy, Long apiKeyId, String idempotencyKey, String requestHash,
+			Project project, String subdomain, User createdBy, Long apiKeyId, String idempotencyKey, String requestHash,
 			Campaign campaign, UtmTemplate utmTemplate, String externalId) {
 		Link link = new Link(code, originalUrl, null, expiresAt);
 		link.project = project;
-		link.domain = domain;
-		link.hostname = domain.getHostname();
+		link.subdomain = subdomain;
 		link.createdBy = createdBy;
 		link.idempotencyApiKeyId = apiKeyId;
 		link.idempotencyKey = idempotencyKey;
@@ -160,10 +154,8 @@ public class Link {
 		this.updatedAt = Instant.now();
 	}
 
-	public void assignToProject(Project project, ProjectDomain domain, User createdBy) {
+	public void assignToProject(Project project, User createdBy) {
 		this.project = project;
-		this.domain = domain;
-		this.hostname = domain.getHostname();
 		this.createdBy = createdBy;
 		this.secretKeyHash = null;
 		this.updatedAt = Instant.now();

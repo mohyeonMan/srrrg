@@ -12,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import link.srrrg.common.ratelimit.RateLimitService;
 import link.srrrg.common.util.SecureRandomStringGenerator;
-import link.srrrg.domain.ProjectDomain;
 import link.srrrg.domain.ProjectDomainService;
 import link.srrrg.identity.User;
 import link.srrrg.identity.UserRepository;
@@ -30,7 +29,6 @@ import link.srrrg.link.management.dto.UpdateLinkRequest;
 @Service
 public class ProjectService {
 	private static final String TOKEN_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-	private static final String SLUG_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
 	private final ProjectRepository projects;
 	private final ProjectMemberRepository members;
 	private final ProjectInvitationRepository invitations;
@@ -69,11 +67,10 @@ public class ProjectService {
 		User user = user(userId);
 		Project project;
 		try {
-			project = projects.saveAndFlush(Project.create(validName(name), slug(requestedSlug), user));
+			project = projects.saveAndFlush(Project.create(validName(name), optionalSubdomain(requestedSlug), user));
 		} catch (DataIntegrityViolationException exception) {
-			throw new IllegalArgumentException("이미 사용 중인 프로젝트 slug입니다.", exception);
+			throw new IllegalArgumentException("이미 사용 중인 서브도메인입니다.", exception);
 		}
-		domains.create(project);
 		members.save(new ProjectMember(project, user, ProjectRole.OWNER));
 		return project;
 	}
@@ -89,7 +86,7 @@ public class ProjectService {
 	@Transactional(readOnly = true)
 	public List<ProjectInvitation> projectInvitations(Long userId, Long projectId) { requireRole(userId, projectId, ProjectRole.OWNER); return invitations.findByProjectIdAndCancelledAtIsNullAndAcceptedAtIsNull(projectId); }
 	@Transactional(readOnly = true)
-	public ProjectDomain projectDomain(Long userId, Long projectId) { requireRole(userId, projectId, ProjectRole.VIEWER); return domains.get(projectId); }
+	public Project projectDomain(Long userId, Long projectId) { return requireRole(userId, projectId, ProjectRole.VIEWER).getProject(); }
 
 	@Transactional
 	public Project rename(Long userId, Long projectId, String name) {
@@ -99,18 +96,32 @@ public class ProjectService {
 	}
 
 	@Transactional
-	public ProjectDomain changeDomain(Long userId, Long projectId, Long domainId, String requestedSlug) {
+	public Project claimSubdomain(Long userId, Long projectId, String requestedSubdomain) {
 		Project project = requireRole(userId, projectId, ProjectRole.OWNER).getProject();
-		String slug = normalizedSlug(requestedSlug);
-		if (!slug.equals(project.getSlug()) && projects.existsBySlug(slug)) {
+		String subdomain = normalizedSubdomain(requestedSubdomain);
+		if (!subdomain.equals(project.getSubdomain()) && projects.existsBySubdomain(subdomain)) {
 			throw new IllegalArgumentException("이미 사용 중인 서브도메인입니다.");
 		}
-		project.changeSlug(slug);
+		project.claimSubdomain(subdomain);
 		try {
-			return domains.change(projectId, domainId, slug);
+			return projects.saveAndFlush(project);
 		} catch (DataIntegrityViolationException exception) {
 			throw new IllegalArgumentException("이미 사용 중인 서브도메인입니다.", exception);
 		}
+	}
+
+	@Transactional
+	public Project setSubdomainEnabled(Long userId, Long projectId, boolean enabled) {
+		Project project = requireRole(userId, projectId, ProjectRole.OWNER).getProject();
+		project.setSubdomainEnabled(enabled);
+		return project;
+	}
+
+	@Transactional
+	public Project releaseSubdomain(Long userId, Long projectId) {
+		Project project = requireRole(userId, projectId, ProjectRole.OWNER).getProject();
+		project.releaseSubdomain();
+		return project;
 	}
 
 	@Transactional
@@ -206,7 +217,7 @@ public class ProjectService {
 		requireRole(userId, projectId, ProjectRole.EDITOR);
 		Link link = links.lockAnonymousByCode(code).orElseThrow(() -> new IllegalArgumentException("링크를 찾을 수 없습니다."));
 		if (link.getProject() != null || link.getSecretKeyHash() == null || !secretKeys.matches(secret, link.getSecretKeyHash())) throw new IllegalArgumentException("링크를 찾을 수 없습니다.");
-		link.assignToProject(project(projectId), domains.get(projectId), user(userId));
+		link.assignToProject(project(projectId), user(userId));
 		try {
 			links.flush();
 		} catch (DataIntegrityViolationException exception) {
@@ -216,7 +227,7 @@ public class ProjectService {
 
 	public Link createProjectLink(Long userId, Long projectId, CreateLinkRequest request) {
 		ProjectMember membership = requireRole(userId, projectId, ProjectRole.EDITOR);
-		return linkManagement.createForProject(request, membership.getProject(), domains.get(projectId), membership.getUser());
+		return linkManagement.createForProject(request, membership.getProject(), membership.getUser());
 	}
 
 	public Link createProjectLink(Long apiKeyId, Long projectId, String idempotencyKey, CreateLinkRequest request) {
@@ -224,7 +235,7 @@ public class ProjectService {
 		String normalizedKey = validIdempotencyKey(idempotencyKey);
 		String requestHash = normalizedKey == null ? null : InvitationTokenHash.sha256(
 				String.valueOf(request.originalUrl()) + "\n" + String.valueOf(request.expiresAt()));
-		return linkManagement.createForProject(request, project(projectId), domains.get(projectId), null,
+		return linkManagement.createForProject(request, project(projectId), null,
 				normalizedKey == null ? null : apiKeyId, normalizedKey, requestHash);
 	}
 
@@ -262,23 +273,17 @@ public class ProjectService {
 	private User user(Long id) { return users.findById(id).orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다.")); }
 	private String validName(String value) { if (value == null || value.trim().isEmpty() || value.trim().length() > 100) throw new IllegalArgumentException("프로젝트 이름은 1~100자로 입력하세요."); return value.trim(); }
 	private String validIdempotencyKey(String value) { if (value == null) return null; if (!value.matches("[A-Za-z0-9._:-]{1,100}")) throw new IllegalArgumentException("Idempotency-Key가 올바르지 않습니다."); return value; }
-	private String slug(String requested) {
-		if (requested == null || requested.isBlank()) {
-			for (int attempt = 0; attempt < 5; attempt++) {
-				String generated = "p-" + random.generate(SLUG_CHARS, 8);
-				if (!projects.existsBySlug(generated)) return generated;
-			}
-			throw new IllegalStateException("프로젝트 slug를 생성하지 못했습니다.");
-		}
-		String normalized = normalizedSlug(requested);
-		if (projects.existsBySlug(normalized)) throw new IllegalArgumentException("이미 사용 중인 프로젝트 slug입니다.");
+	private String optionalSubdomain(String requested) {
+		if (requested == null || requested.isBlank()) return null;
+		String normalized = normalizedSubdomain(requested);
+		if (projects.existsBySubdomain(normalized)) throw new IllegalArgumentException("이미 사용 중인 서브도메인입니다.");
 		return normalized;
 	}
-	private String normalizedSlug(String requested) {
-		if (requested == null) throw new IllegalArgumentException("프로젝트 slug가 올바르지 않습니다.");
+	private String normalizedSubdomain(String requested) {
+		if (requested == null) throw new IllegalArgumentException("서브도메인이 올바르지 않습니다.");
 		String normalized = requested.trim().toLowerCase(Locale.ROOT);
 		if (normalized.length() < 3 || normalized.length() > 63 || !normalized.matches("[a-z0-9](?:[a-z0-9-]*[a-z0-9])")
-				|| domains.isReservedSlug(normalized)) throw new IllegalArgumentException("프로젝트 slug가 올바르지 않습니다.");
+				|| domains.isReservedSubdomain(normalized)) throw new IllegalArgumentException("서브도메인이 올바르지 않습니다.");
 		return normalized;
 	}
 	private String validEmail(String value) { if (value == null || !value.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$") || value.length() > 320) throw new IllegalArgumentException("올바른 이메일을 입력하세요."); return value.trim().toLowerCase(java.util.Locale.ROOT); }

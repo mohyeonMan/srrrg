@@ -204,8 +204,8 @@ public class RedirectService {
 
 	private Link findLink(HostRoute route, String code) {
 		Link link = (route.isBaseDomain()
-				? linkRepository.findByCodeAndProjectIsNull(code)
-				: linkRepository.findByHostnameAndCode(route.hostname(), code)).orElseThrow(() -> {
+				? linkRepository.findBySubdomainIsNullAndCode(code)
+				: linkRepository.findBySubdomainAndCode(route.subdomain(), code)).orElseThrow(() -> {
 			log.info("Link lookup failed: reason=NOT_FOUND, code={}", code);
 			return new LinkNotFoundException();
 		});
