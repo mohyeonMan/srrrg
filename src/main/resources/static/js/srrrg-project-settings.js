@@ -3,7 +3,7 @@
 	if (!app) return;
 
 	const base = SrrrgCommon.base;
-	const { request, body, setMessage } = SrrrgCommon;
+	const { request, body, setMessage, submitting, confirmAction } = SrrrgCommon;
 	const projectId = new URLSearchParams(location.search).get('projectId');
 	const byId = (id) => document.getElementById(id);
 	const settingsMessage = byId('settings-message');
@@ -52,11 +52,14 @@
 		event.preventDefault();
 		const name = new FormData(event.target).get('name')?.trim();
 		if (!name) return setMessage(settingsMessage, '프로젝트 이름을 입력하세요.', true);
-		const response = await request(`${base}/api/web/projects/${projectId}`, { method: 'PATCH', body: JSON.stringify({ name }) });
-		const responseBody = await body(response);
-		if (!response.ok) return setMessage(settingsMessage, responseBody.message || '프로젝트 이름을 변경할 수 없습니다.', true);
-		setMessage(settingsMessage, '프로젝트 이름을 변경했습니다.');
-		await loadProject();
+		await submitting(event.submitter, '저장 중...', async () => {
+			setMessage(settingsMessage, '프로젝트 이름을 저장하고 있습니다...');
+			const response = await request(`${base}/api/web/projects/${projectId}`, { method: 'PATCH', body: JSON.stringify({ name }) });
+			const responseBody = await body(response);
+			if (!response.ok) return setMessage(settingsMessage, responseBody.message || '프로젝트 이름을 변경할 수 없습니다.', true);
+			setMessage(settingsMessage, '프로젝트 이름을 변경했습니다.');
+			await loadProject();
+		});
 	});
 
 	byId('change-project-domain-form').addEventListener('submit', async (event) => {
@@ -66,11 +69,14 @@
 			return setMessage(domainMessage, '서브도메인은 영문 소문자, 숫자, 하이픈을 사용한 3~63자로 입력하세요.', true);
 		}
 		if (subdomain === project.subdomain) return setMessage(domainMessage, '이미 선점한 서브도메인입니다.');
-		const response = await request(`${base}/api/web/projects/${projectId}/subdomain`, { method: 'PUT', body: JSON.stringify({ subdomain }) });
-		const responseBody = await body(response);
-		if (!response.ok) return setMessage(domainMessage, responseBody.message || '서브도메인을 변경할 수 없습니다.', true);
-		await loadProject();
-		setMessage(domainMessage, '서브도메인을 선점했습니다. 활성화하면 신규 링크에 사용됩니다.');
+		await submitting(event.submitter, '선점 중...', async () => {
+			setMessage(domainMessage, '서브도메인을 선점하고 있습니다...');
+			const response = await request(`${base}/api/web/projects/${projectId}/subdomain`, { method: 'PUT', body: JSON.stringify({ subdomain }) });
+			const responseBody = await body(response);
+			if (!response.ok) return setMessage(domainMessage, responseBody.message || '서브도메인을 변경할 수 없습니다.', true);
+			await loadProject();
+			setMessage(domainMessage, '서브도메인을 선점했습니다. 활성화하면 신규 링크에 사용됩니다.');
+		});
 	});
 
 	byId('project-subdomain-enabled').addEventListener('change', async (event) => {
@@ -85,7 +91,11 @@
 	});
 
 	byId('release-project-subdomain').addEventListener('click', async () => {
-		if (!project.subdomain || !confirm(`"${project.subdomain}" 서브도메인을 반납할까요? 기존 링크 주소는 유지됩니다.`)) return;
+		if (!project.subdomain || !(await confirmAction({
+			title: `"${project.subdomain}" 서브도메인을 반납할까요?`,
+			body: '이미 만든 링크 주소는 그대로 동작합니다. 신규 링크에는 기본 도메인이 쓰이고, 반납한 서브도메인은 다른 프로젝트가 선점할 수 있습니다.',
+			confirmLabel: '반납'
+		}))) return;
 		const response = await request(`${base}/api/web/projects/${projectId}/subdomain`, { method: 'DELETE' });
 		if (!response.ok) return setMessage(domainMessage, (await body(response)).message || '서브도메인을 반납할 수 없습니다.', true);
 		await loadProject();
@@ -98,19 +108,31 @@
 		const code = data.get('code')?.trim();
 		const secretKey = data.get('secretKey')?.trim();
 		if (!code || !secretKey) return setMessage(settingsMessage, 'code와 secret key를 모두 입력하세요.', true);
-		const response = await request(`${base}/api/web/projects/${projectId}/links/${encodeURIComponent(code)}/claim`, {
-			method: 'POST', headers: { 'X-Srrrg-Secret-Key': secretKey }
+		const form = event.target;
+		await submitting(event.submitter, '편입 중...', async () => {
+			setMessage(settingsMessage, '링크를 프로젝트로 편입하고 있습니다...');
+			const response = await request(`${base}/api/web/projects/${projectId}/links/${encodeURIComponent(code)}/claim`, {
+				method: 'POST', headers: { 'X-Srrrg-Secret-Key': secretKey }
+			});
+			if (!response.ok) return setMessage(settingsMessage, (await body(response)).message || '링크를 프로젝트로 편입할 수 없습니다.', true);
+			form.reset();
+			setMessage(settingsMessage, '링크를 프로젝트로 편입했습니다. 기존 secret key는 더 이상 사용할 수 없습니다.');
 		});
-		if (!response.ok) return setMessage(settingsMessage, (await body(response)).message || '링크를 프로젝트로 편입할 수 없습니다.', true);
-		event.target.reset();
-		setMessage(settingsMessage, '링크를 프로젝트로 편입했습니다. 기존 secret key는 더 이상 사용할 수 없습니다.');
 	});
 
-	byId('delete-project-button').addEventListener('click', async () => {
-		if (!confirm(`"${project.name}" 프로젝트를 삭제할까요? 프로젝트 링크와 API key를 더 이상 사용할 수 없습니다.`)) return;
-		const response = await request(`${base}/api/web/projects/${projectId}`, { method: 'DELETE' });
-		if (!response.ok) return setMessage(settingsMessage, (await body(response)).message || '프로젝트를 삭제할 수 없습니다.', true);
-		location.href = `${base}/projects`;
+	byId('delete-project-button').addEventListener('click', async (event) => {
+		// currentTarget 은 await 을 지나면 null 이 되므로 먼저 잡아둔다.
+		const button = event.currentTarget;
+		if (!(await confirmAction({
+			title: `"${project.name}" 프로젝트를 삭제할까요?`,
+			body: '이 프로젝트의 링크와 API key를 더 이상 쓸 수 없게 됩니다. 캠페인과 UTM 템플릿도 함께 정리됩니다.',
+			confirmLabel: '프로젝트 삭제'
+		}))) return;
+		await submitting(button, '삭제 중...', async () => {
+			const response = await request(`${base}/api/web/projects/${projectId}`, { method: 'DELETE' });
+			if (!response.ok) return setMessage(settingsMessage, (await body(response)).message || '프로젝트를 삭제할 수 없습니다.', true);
+			location.href = `${base}/projects`;
+		});
 	});
 
 	loadProject();

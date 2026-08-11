@@ -120,6 +120,12 @@
 	background: rgba(15, 23, 42, 0.34);
 }
 
+/* 확인 대화상자는 취소를 왼쪽, 실행을 오른쪽에 둔다. 기본은 취소에 포커스가 간다. */
+.confirm-dialog-actions {
+	margin-top: var(--space-5);
+	justify-content: flex-end;
+}
+
 .project-dialog-heading {
 	display: flex;
 	align-items: center;
@@ -462,9 +468,14 @@
 	text-align: center;
 }
 
-.project-empty p:last-child {
+/* 빈 상태에 CTA 가 붙으면 설명 문단이 마지막 자식이 아니게 되므로 순서에 의존하지 않는다. */
+.project-empty p:not(.section-kicker) {
 	margin-top: var(--space-2);
 	color: var(--color-text-muted);
+}
+
+.project-empty .primary-button {
+	margin-top: var(--space-5);
 }
 
 .project-domain {
@@ -659,16 +670,19 @@
 }
 
 @media (max-width: 1023px) {
+	/* 아이콘 스트립. 필터·정렬 버튼이 세로로 들어갈 만큼만 폭을 준다.
+	   본문은 998px 기준 약 860px 를 확보한다. */
 	.projects-layout {
-		grid-template-columns: 64px minmax(0, 1fr);
+		grid-template-columns: 88px minmax(0, 1fr);
 	}
 
 	.project-rail {
 		padding: var(--space-3) var(--space-2);
-		align-items: center;
+		align-items: stretch;
 	}
 
-	/* 아이콘만 남기고 라벨은 접근성용으로 보존 */
+	/* 아이콘만 남기고 라벨은 접근성용으로 보존.
+	   보이는 라벨이 사라지므로 각 항목에 title 을 달아 마우스로도 뜻을 알 수 있게 한다. */
 	.project-rail-label,
 	.project-activity-heading > span {
 		position: absolute;
@@ -698,7 +712,21 @@
 		border: 0;
 	}
 
-	.project-activity-controls,
+	/* 필터·정렬은 태블릿에서도 유지한다. 숨기면 콘텐츠를 걸러낼 방법이 사라진다. */
+	.project-activity-heading {
+		display: grid;
+		gap: 2px;
+	}
+
+	.project-activity-controls {
+		display: grid;
+		gap: 2px;
+	}
+
+	.project-activity-controls button {
+		width: 100%;
+	}
+
 	.project-activity-scrollbar {
 		display: none;
 	}

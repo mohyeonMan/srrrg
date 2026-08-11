@@ -5,7 +5,7 @@
 	if (embeddedView?.hidden) return;
 
 	const base = SrrrgCommon.base;
-	const { request, body, element, replaceChildren, setMessage } = SrrrgCommon;
+	const { request, body, element, replaceChildren, setMessage, submitting, confirmAction } = SrrrgCommon;
 	const params = new URLSearchParams(location.search);
 	const state = {
 		projectId: params.get('projectId'),
@@ -27,14 +27,34 @@
 		return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 	}
 
+	// roving tabindex: 선택된 탭만 Tab 순서에 남기고 좌우 방향키로 이동한다.
+	// srrrg-management.js 의 탭 처리와 같은 방식이다.
 	function switchTab(tab) {
 		TABS.forEach((name) => {
-			byId(`campaign-tab-${name}`).setAttribute('aria-selected', String(name === tab));
-			byId(`campaign-panel-${name}`).hidden = name !== tab;
+			const isActive = name === tab;
+			const tabButton = byId(`campaign-tab-${name}`);
+			tabButton.setAttribute('aria-selected', String(isActive));
+			tabButton.tabIndex = isActive ? 0 : -1;
+			byId(`campaign-panel-${name}`).hidden = !isActive;
 		});
 	}
 
-	TABS.forEach((name) => byId(`campaign-tab-${name}`).addEventListener('click', () => switchTab(name)));
+	function handleTabKeydown(event) {
+		const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+		if (!step) return;
+		event.preventDefault();
+		const current = TABS.indexOf(event.currentTarget.id.replace('campaign-tab-', ''));
+		const next = TABS[(current + step + TABS.length) % TABS.length];
+		byId(`campaign-tab-${next}`).focus();
+		switchTab(next);
+	}
+
+	TABS.forEach((name) => {
+		const tabButton = byId(`campaign-tab-${name}`);
+		tabButton.addEventListener('click', () => switchTab(name));
+		tabButton.addEventListener('keydown', handleTabKeydown);
+	});
+	switchTab(TABS[0]);
 
 	if (!state.projectId) {
 		setMessage(campaignsMessage, '프로젝트를 먼저 선택하세요.', true);
@@ -101,33 +121,43 @@
 		const name = data.get('name')?.trim();
 		const description = data.get('description')?.trim() || null;
 		if (!name) return setMessage(byId('campaign-info-message'), '이름을 입력하세요.', true);
-		const response = await request(`${base}/api/web/campaigns/${state.campaignId}`, {
-			method: 'PATCH', body: JSON.stringify({ name, description })
+		await submitting(event.submitter, '저장 중...', async () => {
+			setMessage(byId('campaign-info-message'), '캠페인 정보를 저장하고 있습니다...');
+			const response = await request(`${base}/api/web/campaigns/${state.campaignId}`, {
+				method: 'PATCH', body: JSON.stringify({ name, description })
+			});
+			const responseBody = await body(response);
+			if (!response.ok) return setMessage(byId('campaign-info-message'), responseBody.message || '캠페인 정보를 저장할 수 없습니다.', true);
+			state.campaign = responseBody;
+			byId('campaign-name').textContent = state.campaign.name;
+			byId('campaign-description').textContent = state.campaign.description || '';
+			setMessage(byId('campaign-info-message'), '캠페인 정보를 저장했습니다.');
 		});
-		const responseBody = await body(response);
-		if (!response.ok) return setMessage(byId('campaign-info-message'), responseBody.message || '캠페인 정보를 저장할 수 없습니다.', true);
-		state.campaign = responseBody;
-		byId('campaign-name').textContent = state.campaign.name;
-		byId('campaign-description').textContent = state.campaign.description || '';
-		setMessage(byId('campaign-info-message'), '캠페인 정보를 저장했습니다.');
 	});
 
 	byId('default-destination-form').addEventListener('submit', async (event) => {
 		event.preventDefault();
+		const submitter = event.submitter;
 		const nextUrl = new FormData(event.target).get('defaultOriginalUrl')?.trim() || null;
-		if (state.campaign.defaultOriginalUrl && !nextUrl
-				&& !confirm('기본 목적지를 제거하면 자체 URL이 없는 링크는 410 Gone을 반환합니다. 계속할까요?')) return;
-		const response = await request(`${base}/api/web/campaigns/${state.campaignId}`, {
-			method: 'PATCH', body: JSON.stringify({ defaultOriginalUrl: nextUrl })
+		if (state.campaign.defaultOriginalUrl && !nextUrl && !(await confirmAction({
+			title: '기본 목적지를 제거할까요?',
+			body: '자체 URL이 없는 링크는 목적지가 사라져 이동하지 않습니다. 링크 주소는 그대로 남아 있고, 기본 목적지를 다시 설정하면 즉시 되살아납니다.',
+			confirmLabel: '제거'
+		}))) return;
+		await submitting(submitter, '저장 중...', async () => {
+			setMessage(byId('default-destination-message'), '기본 목적지를 저장하고 있습니다...');
+			const response = await request(`${base}/api/web/campaigns/${state.campaignId}`, {
+				method: 'PATCH', body: JSON.stringify({ defaultOriginalUrl: nextUrl })
+			});
+			const responseBody = await body(response);
+			if (!response.ok) return setMessage(byId('default-destination-message'), responseBody.message || '기본 목적지를 저장할 수 없습니다.', true);
+			state.campaign = responseBody;
+			byId('campaign-default-url').value = state.campaign.defaultOriginalUrl || '';
+			updateOriginalUrlPlaceholder();
+			setMessage(byId('default-destination-message'), nextUrl
+				? '기본 목적지를 저장했습니다. 자체 URL이 없는 링크에 즉시 적용됩니다.'
+				: '기본 목적지를 제거했습니다. 자체 URL이 없는 링크는 이동하지 않습니다.');
 		});
-		const responseBody = await body(response);
-		if (!response.ok) return setMessage(byId('default-destination-message'), responseBody.message || '기본 목적지를 저장할 수 없습니다.', true);
-		state.campaign = responseBody;
-		byId('campaign-default-url').value = state.campaign.defaultOriginalUrl || '';
-		updateOriginalUrlPlaceholder();
-		setMessage(byId('default-destination-message'), nextUrl
-			? '기본 목적지를 저장했습니다. 자체 URL이 없는 링크에 즉시 적용됩니다.'
-			: '기본 목적지를 제거했습니다. 자체 URL이 없는 링크는 410 Gone을 반환합니다.');
 	});
 
 	function updateOriginalUrlPlaceholder() {
@@ -174,7 +204,12 @@
 
 	byId('template-picker').addEventListener('change', async (event) => {
 		const value = event.target.value;
-		if (!confirm('템플릿을 변경하면 현재 필드 구성이 기존 링크의 리다이렉트와 통계에 즉시 적용됩니다. 계속할까요?')) {
+		if (!(await confirmAction({
+			title: 'UTM 템플릿을 바꿀까요?',
+			body: '새 필드 구성이 이 캠페인의 기존 링크와 통계에 바로 반영됩니다. 이미 입력한 값은 그대로 유지됩니다.',
+			confirmLabel: '템플릿 변경',
+			danger: false
+		}))) {
 			event.target.value = state.campaign.utmTemplateId ? String(state.campaign.utmTemplateId) : '';
 			return;
 		}
@@ -460,7 +495,10 @@
 
 	byId('delete-selected-links-button').addEventListener('click', async () => {
 		const codes = Array.from(state.selectedLinkCodes);
-		if (!codes.length || !confirm(`선택한 링크 ${codes.length}개를 삭제할까요? 삭제한 링크는 더 이상 이동하지 않습니다.`)) return;
+		if (!codes.length || !(await confirmAction({
+			title: `링크 ${codes.length}개를 삭제할까요?`,
+			body: '삭제한 링크는 더 이상 이동하지 않습니다. 이미 배포한 주소가 있다면 함께 정리해 주세요.'
+		}))) return;
 		const button = byId('delete-selected-links-button');
 		button.disabled = true;
 		setMessage(byId('campaign-links-message'), '선택한 링크를 삭제하고 있습니다...');
@@ -551,11 +589,19 @@
 		location.href = url.pathname + url.search;
 	});
 
-	byId('delete-campaign-button').addEventListener('click', async () => {
-		if (!state.campaign || !confirm(`"${state.campaign.name}" 캠페인을 삭제할까요? 소속된 링크도 함께 삭제되며 되돌릴 수 없습니다.`)) return;
-		const response = await request(`${base}/api/web/campaigns/${state.campaignId}`, { method: 'DELETE' });
-		if (!response.ok) return setMessage(campaignsMessage, (await body(response)).message || '캠페인을 삭제할 수 없습니다.', true);
-		location.href = `${base}/projects?projectId=${state.projectId}`;
+	byId('delete-campaign-button').addEventListener('click', async (event) => {
+		// currentTarget 은 await 을 지나면 null 이 되므로 먼저 잡아둔다.
+		const button = event.currentTarget;
+		if (!state.campaign || !(await confirmAction({
+			title: `"${state.campaign.name}" 캠페인을 삭제할까요?`,
+			body: '이 캠페인에 속한 링크도 함께 삭제되어 더 이상 이동하지 않습니다.',
+			confirmLabel: '캠페인 삭제'
+		}))) return;
+		await submitting(button, '삭제 중...', async () => {
+			const response = await request(`${base}/api/web/campaigns/${state.campaignId}`, { method: 'DELETE' });
+			if (!response.ok) return setMessage(campaignsMessage, (await body(response)).message || '캠페인을 삭제할 수 없습니다.', true);
+			location.href = `${base}/projects?projectId=${state.projectId}`;
+		});
 	});
 
 	loadCampaignPicker();

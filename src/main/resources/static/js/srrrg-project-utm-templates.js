@@ -3,7 +3,7 @@
 	if (!app) return;
 
 	const base = SrrrgCommon.base;
-	const { request, body, element, replaceChildren, setMessage } = SrrrgCommon;
+	const { request, body, element, replaceChildren, setMessage, submitting, confirmAction } = SrrrgCommon;
 	const projectId = new URLSearchParams(location.search).get('projectId');
 	const byId = (id) => document.getElementById(id);
 	const templatesMessage = byId('templates-message');
@@ -68,7 +68,10 @@
 	}
 
 	async function deleteField(templateId, fieldId) {
-		if (!confirm('이 필드를 삭제하면 이 템플릿을 사용하는 모든 캠페인에서 즉시 숨겨집니다. 기존 값과 통계는 보존됩니다.')) return;
+		if (!(await confirmAction({
+			title: '이 필드를 삭제할까요?',
+			body: '이 템플릿을 쓰는 모든 캠페인에서 바로 사라집니다. 이미 발행한 링크의 값과 통계는 그대로 남습니다.'
+		}))) return;
 		const response = await request(`${base}/api/web/projects/${projectId}/utm-templates/${templateId}/fields/${fieldId}`, { method: 'DELETE' });
 		if (!response.ok) return setMessage(detailMessage, (await body(response)).message || '필드를 삭제할 수 없습니다.', true);
 		setMessage(detailMessage, '필드를 삭제했습니다.');
@@ -79,12 +82,16 @@
 		event.preventDefault();
 		const name = new FormData(event.target).get('name')?.trim();
 		if (!name) return setMessage(templatesMessage, '템플릿 이름을 입력하세요.', true);
-		const response = await request(`${base}/api/web/projects/${projectId}/utm-templates`, { method: 'POST', body: JSON.stringify({ name }) });
-		const responseBody = await body(response);
-		if (!response.ok) return setMessage(templatesMessage, responseBody.message || '템플릿을 만들 수 없습니다.', true);
-		event.target.reset();
-		setMessage(templatesMessage, '템플릿을 만들었습니다.');
-		await loadTemplates(responseBody.id);
+		const form = event.target;
+		await submitting(event.submitter, '만드는 중...', async () => {
+			setMessage(templatesMessage, '템플릿을 만들고 있습니다...');
+			const response = await request(`${base}/api/web/projects/${projectId}/utm-templates`, { method: 'POST', body: JSON.stringify({ name }) });
+			const responseBody = await body(response);
+			if (!response.ok) return setMessage(templatesMessage, responseBody.message || '템플릿을 만들 수 없습니다.', true);
+			form.reset();
+			setMessage(templatesMessage, '템플릿을 만들었습니다.');
+			await loadTemplates(responseBody.id);
+		});
 	});
 
 	byId('template-picker').addEventListener('change', (event) => {
@@ -97,11 +104,15 @@
 		if (!state.selectedId) return;
 		const name = new FormData(event.target).get('name')?.trim();
 		if (!name) return setMessage(detailMessage, '필드 이름을 입력하세요.', true);
-		const response = await request(`${base}/api/web/projects/${projectId}/utm-templates/${state.selectedId}/fields`, { method: 'POST', body: JSON.stringify({ name }) });
-		if (!response.ok) return setMessage(detailMessage, (await body(response)).message || '필드를 추가할 수 없습니다.', true);
-		event.target.reset();
-		setMessage(detailMessage, '필드를 추가했습니다.');
-		await loadTemplates(state.selectedId);
+		const form = event.target;
+		await submitting(event.submitter, '추가 중...', async () => {
+			setMessage(detailMessage, '필드를 추가하고 있습니다...');
+			const response = await request(`${base}/api/web/projects/${projectId}/utm-templates/${state.selectedId}/fields`, { method: 'POST', body: JSON.stringify({ name }) });
+			if (!response.ok) return setMessage(detailMessage, (await body(response)).message || '필드를 추가할 수 없습니다.', true);
+			form.reset();
+			setMessage(detailMessage, '필드를 추가했습니다.');
+			await loadTemplates(state.selectedId);
+		});
 	});
 
 	loadTemplates();

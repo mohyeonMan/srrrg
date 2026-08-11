@@ -3,7 +3,7 @@
 	if (!app) return;
 
 	const base = SrrrgCommon.base;
-	const { csrf, send, request, body, element, replaceChildren, setMessage } = SrrrgCommon;
+	const { csrf, send, request, body, element, replaceChildren, setMessage, submitting } = SrrrgCommon;
 	const params = new URLSearchParams(location.search);
 	const selectedCampaignId = params.get('campaignId');
 	const selectedLinkCode = params.get('linkCode');
@@ -190,10 +190,13 @@
 				node.href = `${base}/projects?projectId=${state.selected.id}&campaignId=${item.value.id}`;
 				node.classList.toggle('is-active', String(item.value.id) === selectedCampaignId);
 				content.append(element('strong', '', item.value.name), element('small', '', `캠페인 · ${formatDate(item.createdAt)}`));
+				// 태블릿 폭에서는 아이콘만 보이므로 tooltip 으로 뜻을 알 수 있게 한다.
+				node.title = `캠페인 · ${item.value.name}`;
 			} else {
 				node.href = `${base}/projects?projectId=${state.selected.id}&linkCode=${encodeURIComponent(item.value.code)}`;
 				node.classList.toggle('is-active', item.value.code === selectedLinkCode);
 				content.append(element('strong', '', item.value.name || '이름없음'), element('small', '', `단일 링크 · ${formatDate(item.createdAt)}`));
+				node.title = `단일 링크 · ${item.value.name || '이름없음'}`;
 			}
 			node.append(element('span', `project-activity-kind ${item.type}`, item.type === 'campaign' ? 'C' : '↗'), content);
 			return node;
@@ -392,21 +395,29 @@
 
 	byId('create-project-form').addEventListener('submit', async (event) => {
 		event.preventDefault();
-		const name = new FormData(event.target).get('name')?.trim();
+		const form = event.target;
+		const name = new FormData(form).get('name')?.trim();
 		if (!name) return setMessage(createProjectMessage, '프로젝트 이름을 입력하세요.', true);
-		const response = await request(`${base}/api/web/projects`, { method: 'POST', body: JSON.stringify({ name }) });
-		const responseBody = await body(response);
-		if (!response.ok) return setMessage(createProjectMessage, responseBody.message || '프로젝트를 만들 수 없습니다.', true);
-		event.target.reset();
-		byId('create-project-dialog').close();
-		location.href = `${base}/projects?projectId=${responseBody.id}`;
+		await submitting(event.submitter, '만드는 중...', async () => {
+			setMessage(createProjectMessage, '프로젝트를 만들고 있습니다...');
+			const response = await request(`${base}/api/web/projects`, { method: 'POST', body: JSON.stringify({ name }) });
+			const responseBody = await body(response);
+			if (!response.ok) return setMessage(createProjectMessage, responseBody.message || '프로젝트를 만들 수 없습니다.', true);
+			form.reset();
+			byId('create-project-dialog').close();
+			location.href = `${base}/projects?projectId=${responseBody.id}`;
+		});
 	});
 
-	byId('open-create-project').addEventListener('click', () => {
+	// 제목 옆 + 버튼과 빈 상태의 "첫 프로젝트 만들기" 가 같은 다이얼로그를 연다.
+	function openCreateProject() {
 		setMessage(createProjectMessage, '');
 		byId('create-project-dialog').showModal();
 		byId('new-project-name').focus();
-	});
+	}
+
+	byId('open-create-project').addEventListener('click', openCreateProject);
+	byId('create-first-project').addEventListener('click', openCreateProject);
 	byId('close-create-project').addEventListener('click', () => byId('create-project-dialog').close());
 	byId('project-activity-filter').addEventListener('click', (event) => {
 		const filters = { all: ['campaign', '캠페인만'], campaign: ['link', '단일링크만'], link: ['all', '전체'] };
@@ -423,24 +434,31 @@
 	byId('create-campaign-form').addEventListener('submit', async (event) => {
 		event.preventDefault();
 		if (!state.selected) return;
-		const data = new FormData(event.target);
+		const form = event.target;
+		const data = new FormData(form);
 		const name = data.get('name')?.trim();
 		if (!name) return setMessage(byId('campaign-message'), '캠페인 이름을 입력하세요.', true);
 		const defaultOriginalUrl = data.get('defaultOriginalUrl')?.trim() || null;
 		const utmTemplateId = data.get('utmTemplateId') || null;
-		const response = await request(`${base}/api/web/projects/${state.selected.id}/campaigns`, {
-			method: 'POST', body: JSON.stringify({ name, defaultOriginalUrl })
-		});
-		const responseBody = await body(response);
-		if (!response.ok) return setMessage(byId('campaign-message'), responseBody.message || '캠페인을 만들 수 없습니다.', true);
-		if (utmTemplateId) {
-			await request(`${base}/api/web/campaigns/${responseBody.id}/utm-template`, {
-				method: 'PATCH', body: JSON.stringify({ utmTemplateId: Number(utmTemplateId) })
+		await submitting(event.submitter, '만드는 중...', async () => {
+			setMessage(byId('campaign-message'), '캠페인을 만들고 있습니다...');
+			const response = await request(`${base}/api/web/projects/${state.selected.id}/campaigns`, {
+				method: 'POST', body: JSON.stringify({ name, defaultOriginalUrl })
 			});
-		}
-		event.target.reset();
-		setMessage(byId('campaign-message'), '캠페인을 만들었습니다.');
-		location.href = `${base}/projects?projectId=${state.selected.id}&campaignId=${responseBody.id}`;
+			const responseBody = await body(response);
+			if (!response.ok) return setMessage(byId('campaign-message'), responseBody.message || '캠페인을 만들 수 없습니다.', true);
+			if (utmTemplateId) {
+				const applied = await request(`${base}/api/web/campaigns/${responseBody.id}/utm-template`, {
+					method: 'PATCH', body: JSON.stringify({ utmTemplateId: Number(utmTemplateId) })
+				});
+				if (!applied.ok) {
+					setMessage(byId('campaign-message'),
+						'캠페인은 만들었지만 UTM 템플릿을 연결하지 못했습니다. 캠페인 설정에서 다시 선택해 주세요.', true);
+				}
+			}
+			form.reset();
+			location.href = `${base}/projects?projectId=${state.selected.id}&campaignId=${responseBody.id}`;
+		});
 	});
 
 	// 모바일 레일 드로어. CSS 가 <768px 에서만 트리거를 노출하므로 여기선 상태만 토글합니다.
