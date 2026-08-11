@@ -16,20 +16,19 @@ class CampaignsPageAssetTest {
 		String script = Files.readString(Path.of("src/main/resources/static/js/srrrg-campaigns.js"));
 
 		assertThat(template).contains(
-				"id=\"campaign-utm-preview\"",
-				"id=\"campaign-utm-preview-list\"",
 				"id=\"campaign-link-select-all\"",
 				"id=\"delete-selected-links-button\"",
 				"class=\"campaign-link-table\"",
-				"현재 입력 기준 적용 예정 UTM",
 				"id=\"manage-utm-templates-link\"",
 				"템플릿 구조 변경은 UTM 템플릿 관리에서만");
+		// 적용 예정 UTM 은 템플릿 인라인 섹션이 아니라 링크별 팝오버로 렌더링한다.
 		assertThat(script).contains(
 				"state.utmDefaults[field.name]",
-				"items.flatMap(campaignLinkRows)",
+				"items.map(campaignLinkRows)",
 				"state.selectedLinkCodes",
 				"method: 'DELETE', body: JSON.stringify({ codes })",
-				"effectiveUtmPanel(values)",
+				"function showUtmPopover(anchor, values)",
+				"현재 적용 예정 UTM",
 				"value.source === 'INPUT' ? '개별 입력'",
 				"value.source === 'LINK' ? '링크 개별값' : '캠페인 기본값'",
 				"링크에서 직접 지정하지 않은 필드에 즉시 적용됩니다.");

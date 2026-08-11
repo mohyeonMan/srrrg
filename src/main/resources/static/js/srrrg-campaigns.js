@@ -4,7 +4,8 @@
 	const embeddedView = app.closest('#project-campaign-view');
 	if (embeddedView?.hidden) return;
 
-	const base = document.querySelector('meta[name="context-path"]')?.content.replace(/\/$/, '') || '';
+	const base = SrrrgCommon.base;
+	const { request, body, element, replaceChildren, setMessage } = SrrrgCommon;
 	const params = new URLSearchParams(location.search);
 	const state = {
 		projectId: params.get('projectId'),
@@ -14,90 +15,31 @@
 		utmDefaults: {},
 		selectedLinkCodes: new Set(),
 		linksCursor: null,
-		refreshing: null,
 		importPollHandle: null,
-		statisticsFrameLoaded: false
+		subdomain: null,
+		subdomainEnabled: false
 	};
-	let activeTab = 'overview';
-
 	const byId = (id) => document.getElementById(id);
 	const campaignsMessage = byId('campaigns-message');
-	const TABS = ['overview', 'links', 'utm', 'statistics'];
-
-	function csrf() {
-		return decodeURIComponent(document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]+)/)?.[1] || '');
-	}
-
-	function send(url, options = {}) {
-		const headers = { Accept: 'application/json', 'X-XSRF-TOKEN': csrf(), ...(options.headers || {}) };
-		if (options.body && !(options.body instanceof FormData) && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
-		return fetch(url, { ...options, headers });
-	}
-
-	async function request(url, options = {}) {
-		let response = await send(url, options);
-		if (response.status !== 401) return response;
-		if (!state.refreshing) {
-			state.refreshing = send(`${base}/api/web/auth/refresh`, { method: 'POST' }).finally(() => state.refreshing = null);
-		}
-		if (!(await state.refreshing).ok) {
-			location.href = `${base}/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`;
-			return response;
-		}
-		return send(url, options);
-	}
-
-	async function body(response) {
-		try {
-			return await response.json();
-		} catch (_) {
-			return {};
-		}
-	}
-
-	function element(tag, className, text) {
-		const node = document.createElement(tag);
-		if (className) node.className = className;
-		if (text !== undefined) node.textContent = text;
-		return node;
-	}
-
-	function replaceChildren(target, children) {
-		target.replaceChildren(...children);
-	}
-
-	function setMessage(target, text, error = false) {
-		target.textContent = text;
-		target.classList.toggle('error', error);
-	}
+	const TABS = ['overview', 'link-list', 'link-create', 'settings'];
 
 	function formatDate(value) {
 		return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 	}
 
 	function switchTab(tab) {
-		activeTab = tab;
 		TABS.forEach((name) => {
 			byId(`campaign-tab-${name}`).setAttribute('aria-selected', String(name === tab));
 			byId(`campaign-panel-${name}`).hidden = name !== tab;
 		});
-		if (tab === 'statistics') loadStatisticsFrame();
-	}
-
-	function loadStatisticsFrame() {
-		if (state.statisticsFrameLoaded || !state.campaignId) return;
-		state.statisticsFrameLoaded = true;
-		byId('campaign-statistics-frame').src = `${base}/statistics?projectId=${state.projectId}&campaignId=${state.campaignId}${periodSuffix()}`;
 	}
 
 	TABS.forEach((name) => byId(`campaign-tab-${name}`).addEventListener('click', () => switchTab(name)));
 
 	if (!state.projectId) {
 		setMessage(campaignsMessage, '프로젝트를 먼저 선택하세요.', true);
-		byId('back-to-project').href = `${base}/projects`;
 		return;
 	}
-	byId('back-to-project').href = `${base}/projects?projectId=${state.projectId}`;
 	byId('manage-utm-templates-link').href = `${base}/projects?projectId=${state.projectId}&view=utm-templates`;
 
 	async function loadCampaignPicker() {
@@ -140,16 +82,35 @@
 		byId('campaign-body').hidden = false;
 		byId('campaign-name').textContent = state.campaign.name;
 		byId('campaign-description').textContent = state.campaign.description || '';
+		byId('campaign-info-name').value = state.campaign.name;
+		byId('campaign-info-description').value = state.campaign.description || '';
 		byId('campaign-default-url').value = state.campaign.defaultOriginalUrl || '';
+		updateOriginalUrlPlaceholder();
 		byId('download-template-link').href = `${base}/api/web/campaigns/${campaignId}/links/template.csv`;
-		state.statisticsFrameLoaded = false;
-		if (activeTab === 'statistics') loadStatisticsFrame();
+		window.SrrrgStatistics?.reload(state.projectId, state.campaignId);
 
 		await loadTemplates();
 		await refreshTemplateSelection();
 		await loadLinks(null);
 		resetImportPanel();
 	}
+
+	byId('campaign-info-form').addEventListener('submit', async (event) => {
+		event.preventDefault();
+		const data = new FormData(event.target);
+		const name = data.get('name')?.trim();
+		const description = data.get('description')?.trim() || null;
+		if (!name) return setMessage(byId('campaign-info-message'), '이름을 입력하세요.', true);
+		const response = await request(`${base}/api/web/campaigns/${state.campaignId}`, {
+			method: 'PATCH', body: JSON.stringify({ name, description })
+		});
+		const responseBody = await body(response);
+		if (!response.ok) return setMessage(byId('campaign-info-message'), responseBody.message || '캠페인 정보를 저장할 수 없습니다.', true);
+		state.campaign = responseBody;
+		byId('campaign-name').textContent = state.campaign.name;
+		byId('campaign-description').textContent = state.campaign.description || '';
+		setMessage(byId('campaign-info-message'), '캠페인 정보를 저장했습니다.');
+	});
 
 	byId('default-destination-form').addEventListener('submit', async (event) => {
 		event.preventDefault();
@@ -163,10 +124,15 @@
 		if (!response.ok) return setMessage(byId('default-destination-message'), responseBody.message || '기본 목적지를 저장할 수 없습니다.', true);
 		state.campaign = responseBody;
 		byId('campaign-default-url').value = state.campaign.defaultOriginalUrl || '';
+		updateOriginalUrlPlaceholder();
 		setMessage(byId('default-destination-message'), nextUrl
 			? '기본 목적지를 저장했습니다. 자체 URL이 없는 링크에 즉시 적용됩니다.'
 			: '기본 목적지를 제거했습니다. 자체 URL이 없는 링크는 410 Gone을 반환합니다.');
 	});
+
+	function updateOriginalUrlPlaceholder() {
+		byId('campaign-original-url').placeholder = `기본값: ${state.campaign.defaultOriginalUrl || '없음'}`;
+	}
 
 	async function loadTemplates() {
 		const response = await request(`${base}/api/web/projects/${state.projectId}/utm-templates`);
@@ -269,29 +235,12 @@
 			const input = element('input', 'field-input');
 			input.name = field.name;
 			input.maxLength = 500;
-			input.placeholder = '캠페인 기본값 사용';
+			input.placeholder = `기본값: ${state.utmDefaults[field.name] || '없음'}`;
 			input.dataset.fieldName = field.name;
-			input.addEventListener('input', renderUtmPreview);
 			label.append(input);
 			return label;
 		});
 		replaceChildren(byId('campaign-utm-inputs'), rows);
-		renderUtmPreview();
-	}
-
-	function renderUtmPreview() {
-		const inputs = new Map(Array.from(byId('campaign-utm-inputs').querySelectorAll('input'))
-			.map((input) => [input.dataset.fieldName, input.value.trim()]));
-		const values = state.activeFields.flatMap((field) => {
-			const linkValue = inputs.get(field.name);
-			if (linkValue) return [{ name: field.name, value: linkValue, source: 'INPUT' }];
-			const defaultValue = state.utmDefaults[field.name];
-			return defaultValue ? [{ name: field.name, value: defaultValue, source: 'CAMPAIGN_DEFAULT' }] : [];
-		});
-		byId('campaign-utm-preview-count').textContent = `${values.length}개`;
-		replaceChildren(byId('campaign-utm-preview-list'), values.length
-			? values.map(utmValueRow)
-			: [element('p', 'campaign-utm-empty', '현재 적용될 UTM이 없습니다.')]);
 	}
 
 	byId('create-campaign-link-form').addEventListener('submit', async (event) => {
@@ -321,7 +270,6 @@
 				return;
 			}
 			form.reset();
-			renderUtmPreview();
 			setMessage(byId('create-campaign-link-message'), `단축 링크(${responseBody.code})를 만들었습니다.`);
 			await loadLinks(null);
 		} finally {
@@ -339,9 +287,9 @@
 		const items = page.items || [];
 		if (!cursor) {
 			state.selectedLinkCodes.clear();
-			replaceChildren(byId('campaign-link-list'), items.flatMap(campaignLinkRows));
+			replaceChildren(byId('campaign-link-list'), items.map(campaignLinkRows));
 		} else {
-			byId('campaign-link-list').append(...items.flatMap(campaignLinkRows));
+			byId('campaign-link-list').append(...items.map(campaignLinkRows));
 		}
 		const renderedCount = byId('campaign-link-list').querySelectorAll('.campaign-link-row').length;
 		byId('campaign-link-count').textContent = String(renderedCount);
@@ -382,29 +330,25 @@
 		const createdAtCell = tableCell('생성일', '', formatDate(link.createdAt));
 
 		const utmCell = tableCell('UTM');
-		const utmButton = element('button', 'campaign-utm-toggle', values.length ? `${values.length}개` : '없음');
-		utmButton.type = 'button';
-		utmButton.disabled = values.length === 0;
-		utmButton.setAttribute('aria-expanded', 'false');
-		utmCell.append(utmButton);
+		const utmBadge = element('button', 'campaign-utm-toggle', values.length ? `${values.length}개` : '없음');
+		utmBadge.type = 'button';
+		utmBadge.disabled = values.length === 0;
+		if (values.length) {
+			utmBadge.addEventListener('mouseenter', () => showUtmPopover(utmBadge, values));
+			utmBadge.addEventListener('mouseleave', hideUtmPopover);
+			utmBadge.addEventListener('focus', () => showUtmPopover(utmBadge, values));
+			utmBadge.addEventListener('blur', hideUtmPopover);
+		}
+		utmCell.append(utmBadge);
 
-		const actionCell = tableCell('관리', 'campaign-link-action');
-		actionCell.append(statisticsLink(link.code));
+		const actionCell = tableCell('복사', 'campaign-link-action');
+		const copyButton = element('button', 'copy-button', '복사');
+		copyButton.type = 'button';
+		copyButton.addEventListener('click', () => copyLink(shortUrl(link.code), copyButton));
+		actionCell.append(copyButton);
+
 		row.append(selectCell, nameCell, codeCell, destinationCell, externalIdCell, createdAtCell, utmCell, actionCell);
-
-		const detailRow = element('tr', 'campaign-link-utm-detail-row');
-		detailRow.hidden = true;
-		const detailCell = element('td', 'campaign-link-utm-detail-cell');
-		detailCell.colSpan = 8;
-		detailCell.append(effectiveUtmPanel(values));
-		detailRow.append(detailCell);
-		utmButton.addEventListener('click', () => {
-			const expanded = detailRow.hidden;
-			detailRow.hidden = !expanded;
-			utmButton.setAttribute('aria-expanded', String(expanded));
-			row.classList.toggle('utm-expanded', expanded);
-		});
-		return [row, detailRow];
+		return row;
 	}
 
 	function tableCell(label, className = '', text) {
@@ -413,15 +357,32 @@
 		return cell;
 	}
 
-	function effectiveUtmPanel(values) {
-		const panel = element('div', 'campaign-link-utm-panel');
+	let utmPopover = null;
+
+	function utmPopoverElement() {
+		if (!utmPopover) {
+			utmPopover = element('div', 'campaign-link-utm-panel');
+			document.body.append(utmPopover);
+		}
+		return utmPopover;
+	}
+
+	function showUtmPopover(anchor, values) {
+		const popover = utmPopoverElement();
 		const heading = element('div', 'campaign-link-utm-heading');
 		heading.append(element('strong', '', '현재 적용 예정 UTM'), element('span', 'status-badge', `${values.length}개`));
 		const list = element('div', 'campaign-utm-value-list');
 		list.append(...values.map(utmValueRow));
 		const note = element('p', 'help-text', '캠페인 기본값 변경 시 링크 개별값이 없는 필드는 즉시 바뀝니다.');
-		panel.append(heading, list, note);
-		return panel;
+		replaceChildren(popover, [heading, list, note]);
+		popover.classList.add('visible');
+		const rect = anchor.getBoundingClientRect();
+		popover.style.top = `${rect.bottom + 6}px`;
+		popover.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - popover.offsetWidth - 8))}px`;
+	}
+
+	function hideUtmPopover() {
+		if (utmPopover) utmPopover.classList.remove('visible');
 	}
 
 	function utmValueRow(value) {
@@ -438,12 +399,36 @@
 	function managementUrl(code) {
 		return `${base}/projects?projectId=${state.projectId}&campaignId=${state.campaignId}&linkCode=${encodeURIComponent(code)}`;
 	}
-	function periodSuffix() { return params.get('from') && params.get('to') ? `&from=${encodeURIComponent(params.get('from'))}&to=${encodeURIComponent(params.get('to'))}&bucket=${encodeURIComponent(params.get('bucket') || 'DAY')}` : ''; }
-
-	function statisticsLink(code) { const link = element('a', '', '상세보기'); link.href = managementUrl(code); return link; }
-
 	function openLinkDetail(code) {
 		location.href = managementUrl(code);
+	}
+
+	async function loadProjectDomain() {
+		const response = await request(`${base}/api/web/projects/${state.projectId}/subdomain`);
+		if (!response.ok) return;
+		const config = await body(response);
+		state.subdomain = config.subdomain;
+		state.subdomainEnabled = config.enabled;
+	}
+
+	function projectOrigin(subdomain = state.subdomainEnabled ? state.subdomain : null) {
+		const port = location.port ? `:${location.port}` : '';
+		return `${location.protocol}//${subdomain ? `${subdomain}.` : ''}${location.hostname}${port}`;
+	}
+
+	function shortUrl(code) {
+		return `${projectOrigin()}/${encodeURIComponent(code)}`;
+	}
+
+	async function copyLink(text, button) {
+		try {
+			await navigator.clipboard.writeText(text);
+			const label = button.textContent;
+			button.textContent = '복사됨';
+			setTimeout(() => button.textContent = label, 1500);
+		} catch (_) {
+			setMessage(campaignsMessage, '클립보드에 복사할 수 없습니다.', true);
+		}
 	}
 
 	function updateLinkSelectionControls() {
@@ -552,12 +537,13 @@
 		location.href = url.pathname + url.search;
 	});
 
-	byId('archive-campaign-button').addEventListener('click', async () => {
-		if (!state.campaign || !confirm(`"${state.campaign.name}" 캠페인을 보관할까요? 캠페인 목록에서 숨겨지며, 소속된 링크는 그대로 유지됩니다.`)) return;
+	byId('delete-campaign-button').addEventListener('click', async () => {
+		if (!state.campaign || !confirm(`"${state.campaign.name}" 캠페인을 삭제할까요? 소속된 링크도 함께 삭제되며 되돌릴 수 없습니다.`)) return;
 		const response = await request(`${base}/api/web/campaigns/${state.campaignId}`, { method: 'DELETE' });
-		if (!response.ok) return setMessage(campaignsMessage, (await body(response)).message || '캠페인을 보관할 수 없습니다.', true);
+		if (!response.ok) return setMessage(campaignsMessage, (await body(response)).message || '캠페인을 삭제할 수 없습니다.', true);
 		location.href = `${base}/projects?projectId=${state.projectId}`;
 	});
 
 	loadCampaignPicker();
+	loadProjectDomain();
 })();

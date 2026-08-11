@@ -7,10 +7,14 @@
 	<title>srrrg - 프로젝트</title>
 	<link rel="stylesheet" th:href="@{/css/srrrg.css}">
 	<link rel="stylesheet" th:href="@{/css/srrrg/management.css}">
+	<link rel="stylesheet" th:href="@{/css/srrrg/statistics.css}">
+	<script defer th:src="@{/js/srrrg-common.js}"></script>
 	<script defer th:src="@{/js/srrrg-projects.js}"></script>
+	<script defer th:src="@{/js/srrrg-statistics.js}"></script>
 	<script defer th:src="@{/js/srrrg-campaigns.js}"></script>
 	<script defer th:src="@{/js/srrrg-project-utm-templates.js}"></script>
 	<script defer th:src="@{/js/srrrg-project-settings.js}"></script>
+	<script defer th:src="@{/js/srrrg-project-members.js}"></script>
 	<script defer th:src="@{/js/srrrg-management.js}"></script>
 </head>
 <body>
@@ -22,6 +26,7 @@
 			<p class="section-kicker">PROJECTS</p>
 			<div class="project-heading-controls">
 				<h1><a id="project-heading-name" href="#">프로젝트</a></h1>
+				<span id="project-role" class="status-badge"></span>
 				<details class="project-picker-menu">
 					<summary aria-label="프로젝트 선택">▾</summary>
 					<div id="project-picker" class="project-picker-options" role="menu" aria-label="내 프로젝트"></div>
@@ -48,8 +53,15 @@
 		</form>
 	</dialog>
 
+	<button id="open-rail" class="rail-toggle" type="button" aria-expanded="false" aria-controls="project-rail">
+		<span aria-hidden="true">☰</span> 프로젝트 메뉴
+	</button>
+
+	<div id="rail-scrim" class="rail-scrim" hidden></div>
+
 	<div class="projects-layout">
-		<aside class="project-rail surface-panel" aria-label="프로젝트 탐색">
+		<aside id="project-rail" class="project-rail surface-panel" aria-label="프로젝트 탐색">
+			<button id="close-rail" class="rail-close" type="button">닫기</button>
 			<p class="project-rail-label">프로젝트 관리</p>
 			<nav class="project-rail-actions" aria-label="프로젝트 작업">
 				<a id="project-create-link-nav" class="project-activity-item" href="#">
@@ -84,7 +96,10 @@
 			</div>
 		</aside>
 
-		<section class="project-workspace" aria-live="polite">
+		<!-- 이 컨테이너에 aria-live 를 두면 내부 form-message 12개가 이중 announce 되고
+		     패널 전환 때 서브트리 전체가 읽힙니다. 개별 form-message 가 role="status" 를
+		     이미 갖고 있으므로 컨테이너 단위 라이브 리전은 두지 않습니다. -->
+		<section class="project-workspace">
 			<div id="project-empty" class="project-empty surface-panel">
 				<p class="section-kicker">GET STARTED</p>
 				<h2>프로젝트를 선택하세요</h2>
@@ -92,22 +107,6 @@
 			</div>
 
 			<div id="project-detail" class="project-detail" hidden>
-				<header class="project-detail-header surface-panel">
-					<div>
-						<div class="project-title-line">
-							<span id="project-role" class="status-badge"></span>
-						</div>
-						<p id="project-domain" class="project-domain">도메인을 불러오는 중...</p>
-					</div>
-					<div class="project-detail-header-actions">
-						<button id="copy-project-domain" class="copy-button" type="button" disabled>복사</button>
-					</div>
-					<nav class="project-context-nav" aria-label="선택한 프로젝트 보조 메뉴">
-						<a id="project-statistics-link" href="#">통계</a>
-						<a id="project-members-link" href="#">멤버</a>
-					</nav>
-				</header>
-
 				<section id="project-home-panel" class="project-card surface-panel" aria-labelledby="project-home-title">
 					<div class="project-card-heading">
 						<div>
@@ -119,6 +118,18 @@
 						<div><dt>단일링크</dt><dd id="project-link-count">0</dd></div>
 						<div><dt>캠페인</dt><dd id="campaign-count">0</dd></div>
 					</dl>
+					<div class="copy-row">
+						<p id="project-domain" class="project-domain">도메인을 불러오는 중...</p>
+						<button id="copy-project-domain" class="copy-button" type="button" disabled>복사</button>
+					</div>
+					<div th:if="${param.campaignId == null and param.linkCode == null and (param.view == null or (param.view[0] != 'utm-templates' and param.view[0] != 'project-settings'))}">
+						<div th:replace="~{statistics :: report}"></div>
+					</div>
+				</section>
+
+				<section id="project-members-panel" class="project-card surface-panel"
+					th:if="${param.campaignId == null and param.linkCode == null and (param.view == null or (param.view[0] != 'utm-templates' and param.view[0] != 'project-settings'))}">
+					<div th:replace="~{project-members :: report}"></div>
 				</section>
 
 				<section id="link-create-panel" class="project-card project-link-create surface-panel" aria-labelledby="link-create-title" hidden>
@@ -172,7 +183,7 @@
 					</section>
 				</section>
 
-				<section id="campaign-section" class="project-card surface-panel" aria-labelledby="campaign-create-title" hidden>
+				<section id="campaign-create-panel" class="project-card surface-panel" aria-labelledby="campaign-create-title" hidden>
 					<div class="project-card-heading">
 						<div>
 							<h2 id="campaign-create-title">캠페인 만들기</h2>
@@ -182,6 +193,11 @@
 					<form id="create-campaign-form" class="project-inline-form" novalidate>
 						<label class="field" for="new-campaign-name"><span class="field-label">새 캠페인 이름</span><input id="new-campaign-name" class="field-input" name="name" maxlength="100" required></label>
 						<label class="field" for="new-campaign-default-url"><span class="field-label">기본 목적지 URL (선택)</span><input id="new-campaign-default-url" class="field-input" name="defaultOriginalUrl" type="url" maxlength="2048"></label>
+						<label class="field" for="new-campaign-template"><span class="field-label">UTM 템플릿 (선택)</span>
+							<select id="new-campaign-template" class="field-input" name="utmTemplateId">
+								<option value="">템플릿 없음</option>
+							</select>
+						</label>
 						<button class="secondary-button" type="submit">캠페인 만들기</button>
 					</form>
 					<p id="campaign-message" class="form-message" role="status" aria-live="polite"></p>

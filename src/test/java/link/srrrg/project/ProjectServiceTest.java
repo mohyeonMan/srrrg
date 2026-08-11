@@ -15,6 +15,7 @@ import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import link.srrrg.campaign.UtmTemplateService;
 import link.srrrg.common.ratelimit.RateLimitService;
 import link.srrrg.common.util.SecureRandomStringGenerator;
 import link.srrrg.domain.ProjectDomainService;
@@ -36,16 +37,17 @@ class ProjectServiceTest {
 	private final LinkManagementService linkManagement = mock(LinkManagementService.class);
 	private final ProjectDomainService domains = mock(ProjectDomainService.class);
 	private final RateLimitService rateLimitService = mock(RateLimitService.class);
+	private final UtmTemplateService utmTemplates = mock(UtmTemplateService.class);
 	private final ProjectService service = new ProjectService(projects, members, invitations, users, links,
 			mock(SecureRandomStringGenerator.class), mock(InvitationEmailSender.class), secretKeys, linkManagement, domains,
-			rateLimitService, "https://srrrg.link");
+			rateLimitService, utmTemplates, "https://srrrg.link");
 
 	@Test
 	void createsPersonalProjectForUserWithoutMembership() {
 		User user = mock(User.class);
 		Project project = mock(Project.class);
-		when(members.findByIdUserId(2L)).thenReturn(java.util.List.of());
-		when(members.countByIdUserIdAndRole(2L, ProjectRole.OWNER)).thenReturn(0L);
+		when(members.findByIdUserIdAndProjectArchivedAtIsNull(2L)).thenReturn(java.util.List.of());
+		when(members.countByIdUserIdAndRoleAndProjectArchivedAtIsNull(2L, ProjectRole.OWNER)).thenReturn(0L);
 		when(users.findById(2L)).thenReturn(Optional.of(user));
 		when(projects.saveAndFlush(any(Project.class))).thenReturn(project);
 		when(user.getId()).thenReturn(2L);
@@ -54,6 +56,7 @@ class ProjectServiceTest {
 		service.ensurePersonalProject(2L);
 
 		verify(members).save(any(ProjectMember.class));
+		verify(utmTemplates).createDefault(project);
 	}
 
 	@Test

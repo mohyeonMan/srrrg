@@ -3,8 +3,8 @@
 	if (!app) return;
 	const base = (app.dataset.base || '/').replace(/\/$/, '');
 	const query = new URLSearchParams(location.search);
-	const projectId = query.get('projectId');
-	const campaignId = query.get('campaignId');
+	let projectId = query.get('projectId');
+	let campaignId = query.get('campaignId');
 	const formatter = new Intl.NumberFormat('ko-KR');
 	const from = byId('statistics-from');
 	const to = byId('statistics-to');
@@ -169,4 +169,12 @@
 	function message(value, error = false) { const node = byId('statistics-message'); node.textContent = value; node.classList.toggle('error', error); }
 	function escape(value) { return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;'); }
 	function byId(id) { return document.getElementById(id); }
+
+	window.SrrrgStatistics = {
+		reload(newProjectId, newCampaignId) {
+			projectId = newProjectId;
+			campaignId = newCampaignId;
+			load();
+		}
+	};
 })();

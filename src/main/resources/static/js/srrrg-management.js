@@ -591,7 +591,7 @@
 		return headers;
 	}
 	function isAuthorized() { return projectMode || Boolean(state.secretKey); }
-	function csrf() { return decodeURIComponent(document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]+)/)?.[1] || ''); }
+	const csrf = SrrrgCommon.csrf;
 	function returnToList() { location.href = requestedCampaignId ? `${contextPath}/projects?projectId=${encodeURIComponent(projectId)}&campaignId=${encodeURIComponent(requestedCampaignId)}` : `${contextPath}/projects?projectId=${encodeURIComponent(projectId)}`; }
 
 	function outcomeLabel(value) { return value === 'REDIRECTED' ? '실제 이동' : value === 'BLOCKED' ? '차단' : value === 'CHECK_FAILED' ? '검사 실패' : value === 'EXPIRED' ? '만료' : 'URL 변경'; }

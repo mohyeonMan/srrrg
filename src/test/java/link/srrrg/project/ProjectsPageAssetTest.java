@@ -61,20 +61,32 @@ class ProjectsPageAssetTest {
 				"state.activityFilter === 'all'",
 				"localeCompare",
 				"navigator.clipboard.writeText",
-				"replaceChildren(...children)");
+				// 공통 fetch/DOM 헬퍼는 srrrg-common.js 로 옮겨져 여기서는 가져다 쓴다.
+				"= SrrrgCommon",
+				"replaceChildren(");
 		assertThat(template).doesNotContain("workspace-sidebar", "workspace-shell :: sidebar");
 		assertThat(script).doesNotContain("innerHTML", "localStorage", "sessionStorage");
 		assertThat(script).doesNotContain("location.hash", "scrollIntoView");
 		assertThat(styles).contains(
 				"height: calc(100vh - 40px)",
 				"align-self: start",
-				"@media (max-width: 640px)",
-				"min-height: 120dvh",
 				".project-activity-list",
 				"align-content: start",
 				"scrollbar-width: none",
 				"height: 36px",
-				".project-template-view #utm-templates-app > .projects-heading");
+				// 레일 반응형 3단: 데스크톱 전체 / 태블릿 아이콘 스트립 / 모바일 드로어
+				"@media (max-width: 1023px)",
+				"@media (max-width: 767px)",
+				"grid-template-columns: 64px minmax(0, 1fr)",
+				".rail-scrim");
+		// 워크스페이스의 암시적 auto 트랙이 자식 min-content 로 늘어나 태블릿 폭에서
+		// 문서가 가로 스크롤되던 문제를 막는 클램프.
+		assertThat(styles).contains("grid-template-columns: minmax(0, 1fr)");
+		// 조각들이 페이지 껍데기를 들고 오지 않으므로 뷰별 억제 규칙도 없어야 한다.
+		assertThat(styles).doesNotContain(
+				"min-height: 120dvh",
+				".project-template-view #utm-templates-app > .projects-heading",
+				"#back-to-project");
 		assertThat(layout).contains("th:href=\"@{/projects}\">프로젝트</a>");
 	}
 }

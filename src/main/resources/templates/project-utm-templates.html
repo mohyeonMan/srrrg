@@ -1,27 +1,15 @@
-<!doctype html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<meta name="context-path" th:content="@{/}">
-	<title>srrrg - UTM 템플릿</title>
-	<link rel="stylesheet" th:href="@{/css/srrrg.css}">
-	<script defer th:src="@{/js/srrrg-project-utm-templates.js}"></script>
-</head>
-<body>
-<div th:replace="~{fragments/srrrg-layout :: header}"></div>
+<!--
+	프로젝트 내부 전용 조각입니다. 단독 페이지로 렌더링하지 않습니다.
+	포함하는 화면(projects.html)이 srrrg-common.js / srrrg-project-utm-templates.js 를 불러옵니다.
+-->
+<div xmlns:th="http://www.thymeleaf.org" id="utm-templates-app" th:fragment="workspace">
+	<div class="campaign-heading-row">
+		<h2>UTM 템플릿</h2>
+	</div>
+	<p class="help-text">프로젝트 전체에서 재사용하는 UTM 필드 구성을 관리합니다. 캠페인에서는 여기서 만든 템플릿을 선택합니다.</p>
 
-<main class="projects-shell" id="utm-templates-app" th:fragment="workspace">
-	<header class="projects-heading">
-		<div>
-			<p class="section-kicker">UTM TEMPLATES</p>
-			<h1>UTM 템플릿</h1>
-			<p>프로젝트 전체에서 재사용하는 UTM 필드 구성을 관리합니다. 캠페인에서는 여기서 만든 템플릿을 선택합니다.</p>
-		</div>
-		<a id="back-to-project" class="secondary-button" href="#">프로젝트로 돌아가기</a>
-	</header>
 	<section class="project-switcher surface-panel" aria-labelledby="template-picker-label">
-		<label class="field project-picker-field" for="template-picker">
+		<label class="field" for="template-picker">
 			<span id="template-picker-label" class="field-label">템플릿</span>
 			<select id="template-picker" class="field-input" aria-describedby="templates-message"></select>
 		</label>
@@ -38,33 +26,24 @@
 		<p id="templates-message" class="form-message" role="status" aria-live="polite"></p>
 	</section>
 
-	<div class="projects-layout">
-		<section class="project-workspace" aria-live="polite">
-			<div id="template-empty" class="project-empty surface-panel">
-				<p class="section-kicker">GET STARTED</p>
-				<h2>템플릿을 선택하세요</h2>
-				<p>위에서 템플릿을 선택하거나 새로 만들어 필드를 구성하세요.</p>
-			</div>
-
-			<div id="template-detail" class="project-card surface-panel" hidden>
-				<div class="project-card-heading">
-					<h2 id="template-detail-name" tabindex="-1"></h2>
-				</div>
-				<p class="help-text">필드 변경은 이 템플릿을 사용하는 모든 캠페인의 기존 링크와 통계에 즉시 반영됩니다.</p>
-
-				<div id="template-field-list" class="template-field-list"></div>
-				<form id="add-field-form" class="project-inline-form" novalidate>
-					<label class="field" for="new-field-name"><span class="field-label">필드 이름 (예: utm_source)</span>
-						<input id="new-field-name" class="field-input" name="name" maxlength="50" pattern="[a-z][a-z0-9_]{1,49}" required>
-					</label>
-					<button class="secondary-button" type="submit">필드 추가</button>
-				</form>
-				<p id="template-detail-message" class="form-message" role="status" aria-live="polite"></p>
-			</div>
-		</section>
+	<div id="template-empty" class="project-empty surface-panel">
+		<h3>템플릿을 선택하세요</h3>
+		<p>위에서 템플릿을 선택하거나 새로 만들어 필드를 구성하세요.</p>
 	</div>
-</main>
 
-<div th:replace="~{fragments/srrrg-layout :: footer}"></div>
-</body>
-</html>
+	<div id="template-detail" class="project-card surface-panel" hidden>
+		<div class="project-card-heading">
+			<h3 id="template-detail-name" tabindex="-1"></h3>
+		</div>
+		<p class="help-text">필드 변경은 이 템플릿을 사용하는 모든 캠페인의 기존 링크와 통계에 즉시 반영됩니다.</p>
+
+		<div id="template-field-list" class="template-field-list"></div>
+		<form id="add-field-form" class="project-inline-form" novalidate>
+			<label class="field" for="new-field-name"><span class="field-label">필드 이름 (예: utm_source)</span>
+				<input id="new-field-name" class="field-input" name="name" maxlength="50" pattern="[a-z][a-z0-9_]{1,49}" required>
+			</label>
+			<button class="secondary-button" type="submit">필드 추가</button>
+		</form>
+		<p id="template-detail-message" class="form-message" role="status" aria-live="polite"></p>
+	</div>
+</div>

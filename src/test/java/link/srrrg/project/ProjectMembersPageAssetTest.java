@@ -27,7 +27,9 @@ class ProjectMembersPageAssetTest {
 				"/api/web/projects/${projectId}/members",
 				"/api/web/projects/${projectId}/invitations",
 				"roleLabel(invitation.role)",
-				"replaceChildren(...children)");
+				// 공통 fetch/DOM 헬퍼는 srrrg-common.js 로 옮겨져 여기서는 가져다 쓴다.
+				"= SrrrgCommon",
+				"replaceChildren(byId(");
 		assertThat(script).doesNotContain("innerHTML", "localStorage", "sessionStorage");
 	}
 }

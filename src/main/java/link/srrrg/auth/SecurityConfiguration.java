@@ -56,6 +56,7 @@ class SecurityConfiguration {
 				.requestCache(AbstractHttpConfigurer::disable)
 				.formLogin(AbstractHttpConfigurer::disable)
 				.httpBasic(AbstractHttpConfigurer::disable)
+				.headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
 				.csrf(configurer -> configurer
 						.spa()
 						.csrfTokenRepository(csrf)

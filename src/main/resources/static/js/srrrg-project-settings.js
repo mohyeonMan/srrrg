@@ -2,54 +2,18 @@
 	const app = document.querySelector('#project-settings-app');
 	if (!app) return;
 
-	const base = document.querySelector('meta[name="context-path"]')?.content.replace(/\/$/, '') || '';
+	const base = SrrrgCommon.base;
+	const { request, body, setMessage } = SrrrgCommon;
 	const projectId = new URLSearchParams(location.search).get('projectId');
 	const byId = (id) => document.getElementById(id);
 	const settingsMessage = byId('settings-message');
 	const domainMessage = byId('domain-change-message');
-	let refreshing = null;
 	let project = null;
-
-	function csrf() {
-		return decodeURIComponent(document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]+)/)?.[1] || '');
-	}
-
-	function send(url, options = {}) {
-		const headers = { Accept: 'application/json', 'X-XSRF-TOKEN': csrf(), ...(options.headers || {}) };
-		if (options.body) headers['Content-Type'] = 'application/json';
-		return fetch(url, { ...options, headers });
-	}
-
-	async function request(url, options = {}) {
-		let response = await send(url, options);
-		if (response.status !== 401) return response;
-		if (!refreshing) refreshing = send(`${base}/api/web/auth/refresh`, { method: 'POST' }).finally(() => refreshing = null);
-		if (!(await refreshing).ok) {
-			location.href = `${base}/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`;
-			return response;
-		}
-		return send(url, options);
-	}
-
-	async function body(response) {
-		try {
-			return await response.json();
-		} catch (_) {
-			return {};
-		}
-	}
-
-	function setMessage(target, text, error = false) {
-		target.textContent = text;
-		target.classList.toggle('error', error);
-	}
 
 	if (!projectId) {
 		setMessage(settingsMessage, '프로젝트를 먼저 선택하세요.', true);
-		byId('back-to-project').href = `${base}/projects`;
 		return;
 	}
-	byId('back-to-project').href = `${base}/projects?projectId=${projectId}`;
 
 	function applyRoleVisibility() {
 		const isOwner = project.role === 'OWNER';

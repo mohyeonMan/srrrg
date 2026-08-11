@@ -10,6 +10,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import link.srrrg.campaign.UtmTemplateService;
 import link.srrrg.common.ratelimit.RateLimitService;
 import link.srrrg.common.util.SecureRandomStringGenerator;
 import link.srrrg.domain.ProjectDomainService;
@@ -40,15 +41,16 @@ public class ProjectService {
 	private final LinkManagementService linkManagement;
 	private final ProjectDomainService domains;
 	private final RateLimitService rateLimitService;
+	private final UtmTemplateService utmTemplates;
 	private final String baseUrl;
 
 	public ProjectService(ProjectRepository projects, ProjectMemberRepository members, ProjectInvitationRepository invitations,
 			UserRepository users, LinkRepository links, SecureRandomStringGenerator random, InvitationEmailSender emailSender, SecretKeyManager secretKeys,
 			LinkManagementService linkManagement, ProjectDomainService domains, RateLimitService rateLimitService,
-			@Value("${srrrg.base-url}") String baseUrl) {
+			UtmTemplateService utmTemplates, @Value("${srrrg.base-url}") String baseUrl) {
 		this.projects = projects; this.members = members; this.invitations = invitations; this.users = users; this.links = links;
 		this.random = random; this.emailSender = emailSender; this.secretKeys = secretKeys; this.linkManagement = linkManagement; this.domains = domains;
-		this.rateLimitService = rateLimitService; this.baseUrl = baseUrl;
+		this.rateLimitService = rateLimitService; this.utmTemplates = utmTemplates; this.baseUrl = baseUrl;
 	}
 
 	@Transactional
@@ -72,6 +74,7 @@ public class ProjectService {
 			throw new IllegalArgumentException("이미 사용 중인 서브도메인입니다.", exception);
 		}
 		members.save(new ProjectMember(project, user, ProjectRole.OWNER));
+		utmTemplates.createDefault(project);
 		return project;
 	}
 

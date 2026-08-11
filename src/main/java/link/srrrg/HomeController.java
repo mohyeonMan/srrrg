@@ -39,28 +39,9 @@ public class HomeController {
 		return "onboarding";
 	}
 
-	@GetMapping("/projects/members")
-	public String projectMembers() {
-		return "project-members";
-	}
-
-	@GetMapping("/projects/settings")
-	public String projectSettings() {
-		return "project-settings";
-	}
-
-	@GetMapping("/projects/utm-templates")
-	public String projectUtmTemplates() {
-		return "project-utm-templates";
-	}
-
-	@GetMapping("/campaigns")
-	public String campaigns() {
-		return "campaigns";
-	}
-
-	@GetMapping("/statistics")
-	public String statistics() { return "statistics"; }
+	// project-members / project-settings / project-utm-templates / campaigns / statistics 는
+	// projects.html 안에서만 쓰이는 조각입니다. 단독 라우트를 두면 프로젝트 컨텍스트(레일·projectId)가
+	// 없는 화면이 렌더링되므로 /projects?projectId=..&view=.. 로만 진입합니다.
 
 	@GetMapping("/test/utm")
 	public String utmTest() { return "utm-test"; }

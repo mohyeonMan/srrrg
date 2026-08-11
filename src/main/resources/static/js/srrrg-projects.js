@@ -2,14 +2,15 @@
 	const app = document.querySelector('#projects-app');
 	if (!app) return;
 
-	const base = document.querySelector('meta[name="context-path"]')?.content.replace(/\/$/, '') || '';
+	const base = SrrrgCommon.base;
+	const { csrf, send, request, body, element, replaceChildren, setMessage } = SrrrgCommon;
 	const params = new URLSearchParams(location.search);
 	const selectedCampaignId = params.get('campaignId');
 	const selectedLinkCode = params.get('linkCode');
 	const activeView = params.get('view') || 'home';
 	const showingTemplates = !selectedCampaignId && activeView === 'utm-templates';
 	const showingSettings = !selectedCampaignId && activeView === 'project-settings';
-	const state = { projects: [], selected: null, subdomain: null, subdomainEnabled: false, expiresOption: 'none', refreshing: null,
+	const state = { projects: [], selected: null, subdomain: null, subdomainEnabled: false, expiresOption: 'none',
 		activityLinks: [], activityCampaigns: [], activityFilter: 'all', activitySort: 'recent' };
 	const byId = (id) => document.getElementById(id);
 	const projectMessage = byId('project-message');
@@ -21,54 +22,6 @@
 	const activityList = byId('project-activity-list');
 	const activityScrollbar = byId('project-activity-scrollbar');
 	const activityScrollThumb = byId('project-activity-scroll-thumb');
-
-	function csrf() {
-		return decodeURIComponent(document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]+)/)?.[1] || '');
-	}
-
-	function send(url, options = {}) {
-		const headers = { Accept: 'application/json', 'X-XSRF-TOKEN': csrf(), ...(options.headers || {}) };
-		if (options.body) headers['Content-Type'] = 'application/json';
-		return fetch(url, { ...options, headers });
-	}
-
-	async function request(url, options = {}) {
-		let response = await send(url, options);
-		if (response.status !== 401) return response;
-		if (!state.refreshing) {
-			state.refreshing = send(`${base}/api/web/auth/refresh`, { method: 'POST' })
-				.finally(() => state.refreshing = null);
-		}
-		if (!(await state.refreshing).ok) {
-			location.href = `${base}/login?returnTo=${encodeURIComponent(location.pathname)}`;
-			return response;
-		}
-		return send(url, options);
-	}
-
-	async function body(response) {
-		try {
-			return await response.json();
-		} catch (_) {
-			return {};
-		}
-	}
-
-	function element(tag, className, text) {
-		const node = document.createElement(tag);
-		if (className) node.className = className;
-		if (text !== undefined) node.textContent = text;
-		return node;
-	}
-
-	function replaceChildren(target, children) {
-		target.replaceChildren(...children);
-	}
-
-	function setMessage(target, text, error = false) {
-		target.textContent = text;
-		target.classList.toggle('error', error);
-	}
 
 	function setFieldError(input, error, text) {
 		input.setAttribute('aria-invalid', 'true');
@@ -131,16 +84,29 @@
 		byId('project-templates-nav').classList.toggle('is-active', showingTemplates);
 		byId('project-settings-nav').href = `${base}/projects?projectId=${project.id}&view=project-settings`;
 		byId('project-settings-nav').classList.toggle('is-active', showingSettings);
-		byId('project-statistics-link').href = `${base}/statistics?projectId=${project.id}`;
-		byId('project-members-link').href = `${base}/projects/members?projectId=${project.id}`;
 		byId('project-domain').textContent = '도메인을 불러오는 중...';
 		byId('copy-project-domain').disabled = true;
 		byId('project-link-result').hidden = true;
 		setMessage(linkMessage, '');
 		setRoleVisibility(project.role);
 		await loadProjectData();
+		await loadCampaignTemplates();
 		byId('project-detail').hidden = Boolean(selectedCampaignId) || Boolean(selectedLinkCode) || showingTemplates || showingSettings;
 		showProjectPanel();
+	}
+
+	async function loadCampaignTemplates() {
+		const response = await request(`${base}/api/web/projects/${state.selected.id}/utm-templates`);
+		if (!response.ok) return;
+		const templates = await response.json();
+		const options = [element('option', '', '템플릿 없음')];
+		options[0].value = '';
+		for (const template of templates) {
+			const option = element('option', '', template.name);
+			option.value = String(template.id);
+			options.push(option);
+		}
+		replaceChildren(byId('new-campaign-template'), options);
 	}
 
 	function setRoleVisibility(role) {
@@ -155,8 +121,9 @@
 	function showProjectPanel() {
 		const panel = activeView === 'create-link' ? 'link' : activeView === 'create-campaign' ? 'campaign' : 'home';
 		byId('project-home-panel').hidden = panel !== 'home';
+		if (byId('project-members-panel')) byId('project-members-panel').hidden = panel !== 'home';
 		byId('link-create-panel').hidden = panel !== 'link' || !state.canEdit;
-		byId('campaign-section').hidden = panel !== 'campaign' || !state.canEdit;
+		byId('campaign-create-panel').hidden = panel !== 'campaign' || !state.canEdit;
 		byId('project-create-link-nav').classList.toggle('is-active', panel === 'link');
 		byId('project-create-campaign-nav').classList.toggle('is-active', panel === 'campaign');
 	}
@@ -457,14 +424,38 @@
 		const name = data.get('name')?.trim();
 		if (!name) return setMessage(byId('campaign-message'), '캠페인 이름을 입력하세요.', true);
 		const defaultOriginalUrl = data.get('defaultOriginalUrl')?.trim() || null;
+		const utmTemplateId = data.get('utmTemplateId') || null;
 		const response = await request(`${base}/api/web/projects/${state.selected.id}/campaigns`, {
 			method: 'POST', body: JSON.stringify({ name, defaultOriginalUrl })
 		});
 		const responseBody = await body(response);
 		if (!response.ok) return setMessage(byId('campaign-message'), responseBody.message || '캠페인을 만들 수 없습니다.', true);
+		if (utmTemplateId) {
+			await request(`${base}/api/web/campaigns/${responseBody.id}/utm-template`, {
+				method: 'PATCH', body: JSON.stringify({ utmTemplateId: Number(utmTemplateId) })
+			});
+		}
 		event.target.reset();
 		setMessage(byId('campaign-message'), '캠페인을 만들었습니다.');
 		location.href = `${base}/projects?projectId=${state.selected.id}&campaignId=${responseBody.id}`;
+	});
+
+	// 모바일 레일 드로어. CSS 가 <768px 에서만 트리거를 노출하므로 여기선 상태만 토글합니다.
+	const rail = byId('project-rail');
+	const railToggle = byId('open-rail');
+	const railScrim = byId('rail-scrim');
+	function setRailOpen(open) {
+		rail.dataset.open = String(open);
+		railScrim.hidden = !open;
+		railToggle.setAttribute('aria-expanded', String(open));
+		if (open) rail.querySelector('a, button')?.focus();
+		else railToggle.focus();
+	}
+	railToggle.addEventListener('click', () => setRailOpen(rail.dataset.open !== 'true'));
+	byId('close-rail').addEventListener('click', () => setRailOpen(false));
+	railScrim.addEventListener('click', () => setRailOpen(false));
+	document.addEventListener('keydown', (event) => {
+		if (event.key === 'Escape' && rail.dataset.open === 'true') setRailOpen(false);
 	});
 
 	selectExpiration('none');

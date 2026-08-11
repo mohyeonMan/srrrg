@@ -19,6 +19,7 @@ public class UtmTemplateService {
 
 	public static final int MAX_ACTIVE_FIELDS = 10;
 	private static final Pattern FIELD_NAME_PATTERN = Pattern.compile("^[a-z][a-z0-9_]{1,49}$");
+	private static final List<String> DEFAULT_FIELD_NAMES = List.of("utm_source", "utm_medium", "utm_campaign");
 
 	private final UtmTemplateRepository templates;
 	private final UtmTemplateFieldRepository fields;
@@ -44,6 +45,13 @@ public class UtmTemplateService {
 	@Transactional
 	public UtmTemplate createForApiKey(Long projectId, String name) {
 		return doCreate(project(projectId), name);
+	}
+
+	@Transactional
+	public UtmTemplate createDefault(Project project) {
+		UtmTemplate template = doCreate(project, "기본 템플릿");
+		DEFAULT_FIELD_NAMES.forEach(name -> fields.save(UtmTemplateField.create(template, name)));
+		return template;
 	}
 
 	@Transactional(readOnly = true)

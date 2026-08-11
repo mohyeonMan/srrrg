@@ -1,26 +1,15 @@
-<!doctype html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
-<head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<meta name="context-path" th:content="@{/}">
-	<title>srrrg - 설정</title>
-	<link rel="stylesheet" th:href="@{/css/srrrg.css}">
-	<script defer th:src="@{/js/srrrg-project-settings.js}"></script>
-</head>
-<body>
-<div th:replace="~{fragments/srrrg-layout :: header}"></div>
-
-<main class="page-shell" id="project-settings-app" th:fragment="workspace">
-	<p class="section-kicker">SETTINGS</p>
+<!--
+	프로젝트 내부 전용 조각입니다. 단독 페이지로 렌더링하지 않습니다.
+	포함하는 화면(projects.html)이 srrrg-common.js / srrrg-project-settings.js 를 불러옵니다.
+-->
+<div xmlns:th="http://www.thymeleaf.org" id="project-settings-app" th:fragment="workspace">
 	<div class="campaign-heading-row">
-		<h1 id="settings-project-name">프로젝트 설정</h1>
-		<a id="back-to-project" class="secondary-button" href="#">프로젝트로 돌아가기</a>
+		<h2 id="settings-project-name">프로젝트 설정</h2>
 	</div>
 	<p id="settings-message" class="form-message" role="status" aria-live="polite"></p>
 
 	<section class="surface-panel project-card" aria-labelledby="rename-title">
-		<h2 id="rename-title">프로젝트 이름</h2>
+		<h3 id="rename-title">프로젝트 이름</h3>
 		<form id="rename-project-form" class="project-inline-form" novalidate>
 			<label class="field" for="rename-project-name"><span class="field-label">프로젝트 이름</span><input id="rename-project-name" class="field-input" name="name" maxlength="100" required></label>
 			<button class="secondary-button" type="submit">이름 저장</button>
@@ -28,7 +17,7 @@
 	</section>
 
 	<section class="surface-panel project-card" aria-labelledby="domain-title">
-		<h2 id="domain-title">서브도메인</h2>
+		<h3 id="domain-title">서브도메인</h3>
 		<form id="change-project-domain-form" class="project-inline-form" novalidate>
 			<label class="field" for="change-project-domain"><span class="field-label">선점할 서브도메인</span><input id="change-project-domain" class="field-input" name="subdomain" minlength="3" maxlength="63" autocapitalize="none" autocomplete="off" spellcheck="false" required></label>
 			<button class="secondary-button" type="submit">선점하기</button>
@@ -40,7 +29,7 @@
 	</section>
 
 	<section id="import-section" class="surface-panel project-card" aria-labelledby="import-title">
-		<h2 id="import-title">기존 익명 링크 편입</h2>
+		<h3 id="import-title">기존 익명 링크 편입</h3>
 		<p class="help-text">기존 링크의 code와 secret key를 입력하면 프로젝트 링크로 전환됩니다.</p>
 		<form id="import-form" class="project-inline-form" novalidate>
 			<label class="field" for="import-code"><span class="field-label">code</span><input id="import-code" class="field-input" name="code" maxlength="6" autocomplete="off" required></label>
@@ -50,12 +39,8 @@
 	</section>
 
 	<section class="surface-panel project-card danger-zone" aria-labelledby="danger-zone-title">
-		<h2 id="danger-zone-title">프로젝트 삭제</h2>
-		<p class="help-text">삭제하면 프로젝트의 링크와 API key를 더 이상 사용할 수 없습니다. 이 작업은 되돌릴 수 없습니다.</p>
+		<h3 id="danger-zone-title">프로젝트 삭제</h3>
+		<p class="help-text">삭제하면 프로젝트의 링크와 API key를 더 이상 사용할 수 없습니다.</p>
 		<button id="delete-project-button" class="danger-button" type="button">프로젝트 삭제</button>
 	</section>
-</main>
-
-<div th:replace="~{fragments/srrrg-layout :: footer}"></div>
-</body>
-</html>
+</div>
