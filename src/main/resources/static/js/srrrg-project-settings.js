@@ -21,6 +21,10 @@
 		byId('domain-title').closest('.project-card').hidden = !isOwner;
 		byId('danger-zone-title').closest('.project-card').hidden = !isOwner;
 		byId('import-section').hidden = project.role === 'VIEWER';
+		// 조회 전용이면 모든 카드가 숨겨져 화면이 비어버리므로 이유를 알려준다.
+		if (project.role === 'VIEWER') {
+			setMessage(settingsMessage, '조회 전용 권한이라 변경할 수 있는 설정이 없습니다.');
+		}
 	}
 
 	function renderProject() {

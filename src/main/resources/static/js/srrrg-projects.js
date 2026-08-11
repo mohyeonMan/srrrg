@@ -119,7 +119,10 @@
 	}
 
 	function showProjectPanel() {
-		const panel = activeView === 'create-link' ? 'link' : activeView === 'create-campaign' ? 'campaign' : 'home';
+		let panel = activeView === 'create-link' ? 'link' : activeView === 'create-campaign' ? 'campaign' : 'home';
+		// 편집 권한이 없는 사람이 생성 화면 URL 로 들어오면(편집자가 공유한 링크 등)
+		// 모든 패널이 숨겨져 빈 화면이 된다. 개요로 되돌린다.
+		if (!state.canEdit && panel !== 'home') panel = 'home';
 		byId('project-home-panel').hidden = panel !== 'home';
 		if (byId('project-members-panel')) byId('project-members-panel').hidden = panel !== 'home';
 		byId('link-create-panel').hidden = panel !== 'link' || !state.canEdit;
