@@ -113,8 +113,9 @@
 					<label class="field" for="csv-file"><span class="field-label">CSV 파일 (UTF-8, 최대 10,000행·10MB)</span>
 						<input id="csv-file" class="field-input" name="file" type="file" accept=".csv,text/csv" required>
 					</label>
-					<label class="field" for="csv-idempotency-key"><span class="field-label">Idempotency-Key</span>
-						<input id="csv-idempotency-key" class="field-input" name="idempotencyKey" maxlength="100" required>
+					<label class="field" for="csv-idempotency-key"><span class="field-label">요청 식별자</span>
+						<input id="csv-idempotency-key" class="field-input" name="idempotencyKey" maxlength="100" required readonly aria-describedby="csv-idempotency-help">
+						<span id="csv-idempotency-help" class="help-text">같은 파일을 두 번 올려도 중복 생성되지 않도록 자동 발급됩니다.</span>
 					</label>
 					<button class="secondary-button" type="submit">업로드</button>
 				</form>

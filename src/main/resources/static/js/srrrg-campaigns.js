@@ -269,8 +269,11 @@
 				setMessage(byId('create-campaign-link-message'), responseBody.message || '링크를 만들 수 없습니다.', true);
 				return;
 			}
+			const noDestination = !data.get('originalUrl')?.trim() && !state.campaign?.defaultOriginalUrl;
 			form.reset();
-			setMessage(byId('create-campaign-link-message'), `단축 링크(${responseBody.code})를 만들었습니다.`);
+			setMessage(byId('create-campaign-link-message'), noDestination
+				? `단축 링크(${responseBody.code})를 만들었습니다. 아직 목적지가 없어 이동하지 않습니다 — 캠페인 기본 목적지나 링크 URL을 설정하세요.`
+				: `단축 링크(${responseBody.code})를 만들었습니다.`);
 			await loadLinks(null);
 		} finally {
 			button.disabled = false;
@@ -324,8 +327,12 @@
 		codeButton.addEventListener('click', () => openLinkDetail(link.code));
 		codeCell.append(codeButton);
 
+		// 캠페인 기본 목적지가 없으면 이 링크는 실제로 이동하지 않는다.
+		// 그런데도 "캠페인 기본 목적지 사용" 으로 표시하면 동작하는 링크로 오해하게 된다.
 		const destinationCell = tableCell('목적지', 'campaign-link-destination',
-			link.originalUrl || '캠페인 기본 목적지 사용');
+			link.originalUrl
+				|| (state.campaign?.defaultOriginalUrl ? '캠페인 기본 목적지 사용' : '목적지 없음 · 이동하지 않음'));
+		if (!link.originalUrl && !state.campaign?.defaultOriginalUrl) destinationCell.classList.add('is-missing');
 		const externalIdCell = tableCell('external_id', '', link.externalId || '없음');
 		const createdAtCell = tableCell('생성일', '', formatDate(link.createdAt));
 
@@ -483,6 +490,13 @@
 		if (state.importPollHandle) clearTimeout(state.importPollHandle);
 	}
 
+	// 요청 식별자는 HTTP 프로토콜 세부사항이라 사용자가 지어낼 값이 아니다.
+	// 업로드마다 새로 발급하고, 실패 후 재시도는 같은 값으로 보내 중복 생성을 막는다.
+	function issueIdempotencyKey() {
+		byId('csv-idempotency-key').value = crypto.randomUUID();
+	}
+	issueIdempotencyKey();
+
 	byId('csv-upload-form').addEventListener('submit', async (event) => {
 		event.preventDefault();
 		const form = event.target;
@@ -490,7 +504,6 @@
 		const file = data.get('file');
 		const idempotencyKey = data.get('idempotencyKey')?.trim();
 		if (!file || !file.size) return setMessage(byId('csv-message'), 'CSV 파일을 선택하세요.', true);
-		if (!idempotencyKey) return setMessage(byId('csv-message'), 'Idempotency-Key를 입력하세요.', true);
 		setMessage(byId('csv-message'), '업로드하고 있습니다...');
 		const uploadForm = new FormData();
 		uploadForm.append('file', file);
@@ -501,6 +514,7 @@
 		if (!response.ok) return setMessage(byId('csv-message'), responseBody.message || 'CSV를 업로드할 수 없습니다.', true);
 		setMessage(byId('csv-message'), 'CSV 업로드를 접수했습니다.');
 		form.reset();
+		issueIdempotencyKey();
 		pollImport(responseBody.id);
 	});
 
