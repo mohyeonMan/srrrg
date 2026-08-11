@@ -52,6 +52,26 @@ class JwtServiceTest {
 				.hasMessageContaining("HTTPS");
 	}
 
+	@Test
+	void readsSubjectFromExpiredTokenForDisplayButStillRejectsItForAuthentication() throws InterruptedException {
+		JwtService expiring = new JwtService(
+				new JwtProperties("current", NEW_KEY, "", ""), "https://srrrg.link", Duration.ofMillis(1));
+		String token = expiring.issue(99L);
+		Thread.sleep(10);
+
+		assertThatThrownBy(() -> expiring.verify(token)).isInstanceOf(IllegalArgumentException.class);
+		assertThat(expiring.readSubjectAllowingExpired(token)).isEqualTo(99L);
+	}
+
+	@Test
+	void rejectsTamperedTokenEvenOnTheDisplayOnlyPath() {
+		JwtService service = service(new JwtProperties("current", NEW_KEY, "", ""));
+		String tampered = service.issue(7L) + "tampered";
+
+		assertThatThrownBy(() -> service.readSubjectAllowingExpired(tampered))
+				.isInstanceOf(IllegalArgumentException.class);
+	}
+
 	private JwtService service(JwtProperties properties) {
 		return new JwtService(properties, "https://srrrg.link", Duration.ofMinutes(5));
 	}

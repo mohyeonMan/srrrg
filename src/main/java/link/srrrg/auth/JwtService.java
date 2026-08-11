@@ -64,6 +64,20 @@ public class JwtService {
 	}
 
 	public Long verify(String rawJwt) {
+		return verify(rawJwt, true);
+	}
+
+	/**
+	 * 만료만 무시하고 서명과 나머지 claim 은 그대로 검증한다.
+	 * access token 이 만료돼도 refresh token 으로 세션이 이어지는데, 페이지를 새로 열면
+	 * 서버가 이를 알 수 없어 헤더가 로그아웃으로 그려지던 문제를 해결하기 위한 표시 전용 경로다.
+	 * 인증에는 쓰지 않는다. {@link JwtAuthenticationFilter} 는 계속 {@link #verify(String)} 만 쓴다.
+	 */
+	public Long readSubjectAllowingExpired(String rawJwt) {
+		return verify(rawJwt, false);
+	}
+
+	private Long verify(String rawJwt, boolean rejectExpired) {
 		try {
 			SignedJWT jwt = SignedJWT.parse(rawJwt);
 			if (!JWSAlgorithm.HS256.equals(jwt.getHeader().getAlgorithm())) {
@@ -79,7 +93,7 @@ public class JwtService {
 					|| claims.getAudience() == null
 					|| !claims.getAudience().contains(AUDIENCE)
 					|| claims.getExpirationTime() == null
-					|| !claims.getExpirationTime().toInstant().isAfter(now)
+					|| (rejectExpired && !claims.getExpirationTime().toInstant().isAfter(now))
 					|| claims.getIssueTime() == null
 					|| claims.getIssueTime().toInstant().isAfter(now.plusSeconds(60))
 					|| claims.getJWTID() == null) {
