@@ -7,6 +7,7 @@ import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import link.srrrg.campaign.BatchIdempotencyConflictException;
 import link.srrrg.campaign.CampaignNotFoundException;
@@ -136,6 +137,15 @@ public class GlobalExceptionHandler {
 		return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
 				.header("Retry-After", String.valueOf(exception.getRetryAfterSeconds()))
 				.body(new ApiErrorResponse("RATE_LIMIT_EXCEEDED", exception.getMessage()));
+	}
+
+	// 매핑되지 않은 경로는 클라이언트 오류입니다. 아래 catch-all 이 이 예외를 삼켜
+	// 존재하지 않는 URL 이 전부 500 으로 보고되고 있었습니다.
+	@ExceptionHandler(NoResourceFoundException.class)
+	public ResponseEntity<ApiErrorResponse> handleNoResource(NoResourceFoundException exception) {
+		log.debug("No handler for request: path={}", exception.getResourcePath());
+		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+				.body(new ApiErrorResponse("NOT_FOUND", "요청한 경로를 찾을 수 없습니다."));
 	}
 
 	@ExceptionHandler(Exception.class)
