@@ -56,6 +56,12 @@
 	});
 	switchTab(TABS[0]);
 
+	// 링크가 0개인 빈 상태에서 바로 만들기로 넘어간다.
+	byId('go-create-campaign-link').addEventListener('click', () => {
+		switchTab('link-create');
+		byId('campaign-tab-link-create').focus();
+	});
+
 	if (!state.projectId) {
 		setMessage(campaignsMessage, '프로젝트를 먼저 선택하세요.', true);
 		return;
@@ -556,14 +562,27 @@
 		pollImport(responseBody.id);
 	});
 
+	// 상태 enum 을 그대로 보여주지 않는다.
+	function importStatusLabel(status) {
+		if (status === 'PENDING') return '대기 중입니다';
+		if (status === 'PROCESSING') return '처리 중입니다';
+		if (status === 'COMPLETED') return '완료했습니다';
+		if (status === 'FAILED') return '실패했습니다';
+		return status;
+	}
+
 	function pollImport(importId) {
-		byId('import-status-panel').hidden = false;
+		const panel = byId('import-status-panel');
+		const firstReveal = panel.hidden;
+		panel.hidden = false;
+		// #15 업로드 결과는 사용자가 기다리는 새 내용이라 처음 나타날 때 포커스를 옮긴다.
+		if (firstReveal) panel.focus();
 		const check = async () => {
 			const response = await request(`${base}/api/web/campaigns/${state.campaignId}/imports/${importId}`);
 			if (!response.ok) return;
 			const status = await response.json();
 			byId('import-status-text').textContent =
-				`상태: ${status.status} · 전체 ${status.totalRows} · 처리 ${status.processedRows} · 성공 ${status.succeededRows} · 실패 ${status.failedRows}`;
+				`${importStatusLabel(status.status)} · 전체 ${status.totalRows}행 · 처리 ${status.processedRows} · 성공 ${status.succeededRows} · 실패 ${status.failedRows}`;
 			if (status.failedRows > 0) {
 				const errorsLink = byId('download-errors-link');
 				errorsLink.href = `${base}/api/web/campaigns/${state.campaignId}/imports/${importId}/errors.csv`;

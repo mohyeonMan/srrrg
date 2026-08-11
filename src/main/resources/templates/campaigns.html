@@ -63,7 +63,10 @@
 						<tbody id="campaign-link-list"></tbody>
 					</table>
 				</div>
-				<p id="campaign-link-empty" class="project-empty-list">아직 만든 링크가 없습니다.</p>
+				<div id="campaign-link-empty" class="project-empty-list">
+						<p>아직 만든 링크가 없습니다.</p>
+						<button id="go-create-campaign-link" class="primary-button" type="button">링크 만들기</button>
+					</div>
 				<p id="campaign-links-message" class="form-message" role="status" aria-live="polite"></p>
 				<button id="load-more-links-button" class="secondary-button" type="button" hidden>더 보기</button>
 			</section>
@@ -119,7 +122,7 @@
 					</label>
 					<button class="primary-button" type="submit">업로드</button>
 				</form>
-				<div id="import-status-panel" hidden>
+				<div id="import-status-panel" tabindex="-1" hidden>
 					<p id="import-status-text"></p>
 					<a id="download-errors-link" href="#" hidden>오류 CSV 다운로드</a>
 				</div>

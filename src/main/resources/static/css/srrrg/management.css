@@ -112,7 +112,7 @@
 }
 
 .compact-action {
-	min-height: 38px;
+	min-height: var(--button-height);
 	padding: 8px 12px;
 	font-size: 13px;
 }
@@ -294,7 +294,7 @@
 }
 
 .period-control button {
-	min-height: 32px;
+	min-height: var(--button-height);
 	padding: 6px 8px;
 	color: var(--color-text-subtle);
 	background: transparent;
@@ -323,9 +323,10 @@
 	line-height: 1.5;
 }
 
+/* 지표가 6개라 3열이면 2줄이 정확히 채워진다. 4열은 둘째 줄에 빈칸 2개가 남았다. */
 .metric-grid {
 	display: grid;
-	grid-template-columns: repeat(4, minmax(0, 1fr));
+	grid-template-columns: repeat(3, minmax(0, 1fr));
 	gap: var(--space-3);
 	margin: 0;
 }
@@ -523,7 +524,10 @@
 	font-variant-numeric: tabular-nums;
 }
 
+/* position:relative 는 표 안의 절대위치 요소(.sr-only 등)가 클리핑을 벗어나지 않게 한다. */
 .data-table-wrap {
+	position: relative;
+	min-width: 0;
 	margin-top: var(--space-4);
 	overflow-x: auto;
 }

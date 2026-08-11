@@ -198,7 +198,13 @@
 	cursor: pointer;
 }
 
+/* 태블릿·모바일에서 링크 목록 탭이 화면을 가로로 넘던 문제를 두 가지로 막는다.
+   min-width:0 — grid 아이템이라 기본 min-width:auto 로 테이블의 min-content 폭까지 늘어났다.
+   position:relative — th 안의 .sr-only 가 절대위치인데 위치 지정 조상이 없어
+   이 스크롤 컨테이너의 클리핑을 벗어나 문서를 밀어냈다. 컨테이닝 블록을 여기로 잡는다. */
 .campaign-link-table-wrap {
+	position: relative;
+	min-width: 0;
 	overflow-x: auto;
 	border: 1px solid var(--color-border);
 	border-radius: var(--radius-md);

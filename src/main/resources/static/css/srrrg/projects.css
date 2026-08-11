@@ -42,8 +42,8 @@
 .project-picker-menu summary,
 .project-heading-button {
 	display: inline-flex;
-	width: 36px;
-	height: 36px;
+	width: var(--button-height);
+	height: var(--button-height);
 	align-items: center;
 	justify-content: center;
 	padding: 0;
@@ -204,8 +204,10 @@
 	gap: 4px;
 }
 
+/* 레일 안 보조 칩이라 주 버튼과 달리 32px 를 최소로 둔다. WCAG 2.5.8 의 24px 를 상회한다. */
 .project-activity-controls button {
-	padding: 4px 7px;
+	min-height: 32px;
+	padding: 4px 9px;
 	color: var(--color-text-muted);
 	background: var(--color-surface-muted);
 	border: 1px solid var(--color-border);
@@ -228,48 +230,17 @@
 	flex: 1;
 }
 
+/* 네이티브 스크롤바를 그대로 쓴다. 이전에는 이를 숨기고 JS 로 다시 구현했는데
+   드래그 핸들에 키보드 경로가 없어 접근성이 후퇴했다. */
 .project-activity-list {
 	display: grid;
 	height: 100%;
 	min-height: 0;
 	align-content: start;
 	gap: 2px;
-	padding: var(--space-3) var(--space-4) var(--space-3) var(--space-2);
+	padding: var(--space-3) var(--space-2);
 	overflow-y: auto;
-	scrollbar-width: none;
-}
-
-.project-activity-list::-webkit-scrollbar {
-	display: none;
-}
-
-.project-activity-scrollbar {
-	position: absolute;
-	top: 8px;
-	right: 5px;
-	bottom: 8px;
-	width: 4px;
-	background: var(--color-surface-rail);
-	border-radius: 999px;
-	cursor: pointer;
-}
-
-.project-activity-scrollbar[hidden] {
-	display: none;
-}
-
-.project-activity-scrollbar span {
-	display: block;
-	width: 100%;
-	height: 36px;
-	background: var(--color-text-placeholder);
-	border-radius: inherit;
-	cursor: grab;
-	touch-action: none;
-}
-
-.project-activity-scrollbar span:active {
-	cursor: grabbing;
+	scrollbar-width: thin;
 }
 
 .project-activity-item {
@@ -531,12 +502,19 @@
 }
 
 .project-empty-list {
+	display: grid;
+	gap: var(--space-4);
+	justify-items: center;
 	padding: var(--space-6);
 	color: var(--color-text-subtle);
 	background: var(--color-surface-muted);
 	border: 1px dashed var(--color-border-strong);
 	border-radius: var(--radius-md);
 	text-align: center;
+}
+
+.project-empty-list p {
+	margin: 0;
 }
 
 .project-admin {
@@ -725,10 +703,6 @@
 
 	.project-activity-controls button {
 		width: 100%;
-	}
-
-	.project-activity-scrollbar {
-		display: none;
 	}
 
 	.project-admin-content {

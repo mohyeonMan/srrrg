@@ -94,6 +94,13 @@
 		});
 	});
 
+	// 템플릿이 0개인 빈 상태에서 바로 만들기로 넘어간다.
+	byId('create-first-template').addEventListener('click', () => {
+		const disclosure = document.querySelector('.project-create-disclosure');
+		if (disclosure) disclosure.open = true;
+		byId('new-template-name').focus();
+	});
+
 	byId('template-picker').addEventListener('change', (event) => {
 		const template = state.templates.find(({ id }) => String(id) === event.target.value);
 		if (template) selectTemplate(template.id);

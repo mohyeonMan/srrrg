@@ -1,1 +1,59 @@
-.statistics-filter{display:flex;flex-wrap:wrap;align-items:end;gap:.75rem;margin-bottom:1.25rem}.statistics-filter label{display:grid;gap:.25rem;font-size:.85rem}.statistics-filter input,.statistics-filter select{min-height:2.5rem;border:1px solid var(--color-border,#ccd5df);border-radius:.5rem;padding:.4rem .6rem;background:#fff}.status-summary{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem}.status-summary span{padding:.45rem .7rem;border-radius:999px;background:#eef3f7}.activity-table a{font-weight:700}.breakdown-row a{color:inherit}@media(max-width:700px){.statistics-filter{align-items:stretch}.statistics-filter label{flex:1 1 8rem}}
+/* 통계 조각 전용 스타일.
+   이전에는 한 줄로 압축된 채 rem 값과 hex 를 직접 써서 나머지 화면과 토큰이 어긋났다. */
+
+.statistics-filter {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-3);
+	/* 라벨이 붙은 필드와 붙지 않은 컨트롤이 섞여 있어 아래쪽을 기준으로 맞춘다. */
+	align-items: end;
+	margin-bottom: var(--space-5);
+}
+
+.statistics-filter label {
+	display: grid;
+	gap: var(--space-1);
+	font-size: var(--text-small);
+}
+
+.statistics-filter input,
+.statistics-filter select {
+	/* 같은 행의 기간 칩·적용 버튼과 높이를 맞춘다. */
+	min-height: var(--control-height);
+	padding: 0 var(--space-3);
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius-xs);
+}
+
+.status-summary {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-3);
+	margin-bottom: var(--space-4);
+}
+
+.status-summary span {
+	padding: var(--space-2) var(--space-3);
+	background: var(--color-surface-rail);
+	border-radius: var(--radius-pill);
+	font-size: var(--text-small);
+}
+
+.activity-table a {
+	font-weight: 700;
+}
+
+.breakdown-row a {
+	color: inherit;
+}
+
+@media (max-width: 700px) {
+	.statistics-filter {
+		align-items: stretch;
+	}
+
+	.statistics-filter label {
+		flex: 1 1 8rem;
+	}
+}

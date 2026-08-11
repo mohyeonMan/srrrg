@@ -20,8 +20,6 @@
 	const expiresAtInput = byId('project-expires-at');
 	const createLinkButton = byId('create-project-link-button');
 	const activityList = byId('project-activity-list');
-	const activityScrollbar = byId('project-activity-scrollbar');
-	const activityScrollThumb = byId('project-activity-scroll-thumb');
 
 	function setFieldError(input, error, text) {
 		input.setAttribute('aria-invalid', 'true');
@@ -64,6 +62,11 @@
 		replaceChildren(byId('project-picker'), options);
 	}
 
+	// srrrg-project-members.js 와 같은 표기를 쓴다. 배지에 OWNER 같은 enum 을 그대로 보여주지 않는다.
+	function roleLabel(role) {
+		return role === 'EDITOR' ? '링크 편집 가능' : role === 'VIEWER' ? '조회 전용' : '소유자';
+	}
+
 	async function selectProject(project) {
 		state.selected = project;
 		state.subdomain = project.subdomain;
@@ -72,7 +75,7 @@
 		byId('project-detail').hidden = false;
 		byId('project-heading-name').textContent = project.name;
 		byId('project-heading-name').href = `${base}/projects?projectId=${project.id}`;
-		byId('project-role').textContent = project.role;
+		byId('project-role').textContent = roleLabel(project.role);
 		document.querySelectorAll('.project-picker-option').forEach((option) => {
 			option.classList.toggle('is-active', option.dataset.projectId === String(project.id));
 		});
@@ -93,6 +96,11 @@
 		await loadCampaignTemplates();
 		byId('project-detail').hidden = Boolean(selectedCampaignId) || Boolean(selectedLinkCode) || showingTemplates || showingSettings;
 		showProjectPanel();
+		// 통계 조각은 URL 파라미터만 읽으므로, projectId 없이 들어와 자동 선택된 경우
+		// 선택된 프로젝트를 알려주지 않으면 "지정되지 않았습니다" 상태로 남는다.
+		if (!selectedCampaignId && !selectedLinkCode) {
+			window.SrrrgStatistics?.reload(String(project.id), null);
+		}
 	}
 
 	async function loadCampaignTemplates() {
@@ -179,8 +187,7 @@
 			return state.activitySort === 'oldest' ? -difference : difference;
 		});
 		if (!items.length) {
-			replaceChildren(activityList, [element('p', 'project-activity-empty', '아직 만든 항목이 없습니다.')]);
-			requestAnimationFrame(updateActivityScrollbar);
+			replaceChildren(activityList, [element('p', 'project-activity-empty', '아직 캠페인이나 링크가 없습니다. 위 메뉴에서 만들어 보세요.')]);
 			return;
 		}
 		const nodes = items.map((item) => {
@@ -202,41 +209,7 @@
 			return node;
 		});
 		replaceChildren(activityList, nodes);
-		requestAnimationFrame(updateActivityScrollbar);
 	}
-
-	function updateActivityScrollbar() {
-		const maxScroll = activityList.scrollHeight - activityList.clientHeight;
-		activityScrollbar.hidden = maxScroll <= 0;
-		if (maxScroll <= 0) return;
-		const travel = Math.max(1, activityScrollbar.clientHeight - activityScrollThumb.offsetHeight);
-		activityScrollThumb.style.transform = `translateY(${activityList.scrollTop / maxScroll * travel}px)`;
-	}
-
-	activityList.addEventListener('scroll', updateActivityScrollbar, { passive: true });
-	new ResizeObserver(updateActivityScrollbar).observe(activityList);
-	activityScrollbar.addEventListener('click', (event) => {
-		if (event.target === activityScrollThumb) return;
-		const bounds = activityScrollbar.getBoundingClientRect();
-		const ratio = Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height));
-		activityList.scrollTop = ratio * (activityList.scrollHeight - activityList.clientHeight);
-	});
-	activityScrollThumb.addEventListener('pointerdown', (event) => {
-		const startY = event.clientY;
-		const startScroll = activityList.scrollTop;
-		const maxScroll = activityList.scrollHeight - activityList.clientHeight;
-		const travel = Math.max(1, activityScrollbar.clientHeight - activityScrollThumb.offsetHeight);
-		activityScrollThumb.setPointerCapture(event.pointerId);
-		const move = (moveEvent) => activityList.scrollTop = startScroll + (moveEvent.clientY - startY) / travel * maxScroll;
-		const stop = () => {
-			activityScrollThumb.removeEventListener('pointermove', move);
-			activityScrollThumb.removeEventListener('pointerup', stop);
-			activityScrollThumb.removeEventListener('pointercancel', stop);
-		};
-		activityScrollThumb.addEventListener('pointermove', move);
-		activityScrollThumb.addEventListener('pointerup', stop);
-		activityScrollThumb.addEventListener('pointercancel', stop);
-	});
 
 	function validateLinkForm() {
 		const urlError = byId('project-url-error');

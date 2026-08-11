@@ -24,8 +24,6 @@ class ProjectsPageAssetTest {
 				"id=\"open-create-project\"",
 				"id=\"create-project-dialog\"",
 				"id=\"project-activity-list\"",
-				"id=\"project-activity-scrollbar\"",
-				"id=\"project-activity-scroll-thumb\"",
 				"id=\"project-create-link-nav\"",
 				"id=\"project-create-campaign-nav\"",
 				"id=\"project-templates-nav\"",
@@ -72,8 +70,8 @@ class ProjectsPageAssetTest {
 				"align-self: start",
 				".project-activity-list",
 				"align-content: start",
-				"scrollbar-width: none",
-				"height: 36px",
+				// 네이티브 스크롤바를 그대로 쓴다.
+				"scrollbar-width: thin",
 				// 레일 반응형 3단: 데스크톱 전체 / 태블릿 아이콘 스트립 / 모바일 드로어
 				"@media (max-width: 1023px)",
 				"@media (max-width: 767px)",

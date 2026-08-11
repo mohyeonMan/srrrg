@@ -32,6 +32,10 @@
 }
 
 .srrrg-header-link {
+	display: inline-flex;
+	min-height: var(--button-height);
+	align-items: center;
+	padding: 0 var(--space-2);
 	flex: 0 0 auto;
 	color: var(--color-brand-strong);
 	font-size: 14px;
@@ -44,7 +48,10 @@
 }
 
 .srrrg-header-login {
-	padding: 8px 12px;
+	display: inline-flex;
+	min-height: var(--button-height);
+	align-items: center;
+	padding: 0 var(--space-4);
 	color: #fff;
 	background: var(--color-brand);
 	border-radius: var(--radius-xs);
