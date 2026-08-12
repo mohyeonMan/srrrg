@@ -285,18 +285,20 @@
 	line-height: 1.5;
 }
 
+/* 옆에 놓이는 날짜 입력이 40px 이라 이 그룹도 40px 로 맞춘다.
+   이전에는 padding 3px + 버튼 40px + 테두리 2px = 48px 라 같은 행의 컨트롤보다 8px 높았다. */
 .period-control {
 	display: grid;
-	grid-template-columns: repeat(3, 58px);
-	padding: 3px;
+	grid-template-columns: repeat(3, 56px);
+	padding: 2px;
 	background: var(--color-surface-rail);
 	border: 1px solid var(--color-border);
 	border-radius: var(--radius-xs);
 }
 
 .period-control button {
-	min-height: var(--button-height);
-	padding: 6px 8px;
+	min-height: 34px;
+	padding: 0 var(--space-2);
 	color: var(--color-text-subtle);
 	background: transparent;
 	border: 0;

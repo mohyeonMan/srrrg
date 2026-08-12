@@ -1,6 +1,22 @@
 /* 통계 조각 전용 스타일.
    이전에는 한 줄로 압축된 채 rem 값과 hex 를 직접 써서 나머지 화면과 토큰이 어긋났다. */
 
+/* 제목과 기간 표시는 한 덩어리다. 붙여 두고 기간 쪽을 메타데이터로 낮춘다.
+   이전에는 본문 크기·본문 색이라 데이터 문장처럼 읽혔고, p 기본 마진과 gap 이
+   더해져 제목과 35px 떨어져 있었다. */
+#statistics-app .console-header {
+	gap: var(--space-2);
+}
+
+#statistics-message {
+	color: var(--color-text-subtle);
+	font-size: var(--text-xs);
+}
+
+#statistics-message.error {
+	color: var(--color-danger);
+}
+
 .statistics-filter {
 	display: flex;
 	flex-wrap: wrap;

@@ -219,9 +219,14 @@ h2 { font-size: var(--text-xl); }
 h3 { font-size: var(--text-lg); }
 h4 { font-size: var(--text-sm); }
 
+/* 문단 간격은 레이아웃(grid/flex gap)이 정한다.
+   기본 1em 마진을 남겨 두면 컨테이너의 gap 과 더해져 의도한 간격의 두 배 가까이 벌어진다 —
+   통계 헤더에서 제목과 기간 표시 사이가 gap 20px + 마진 15px = 35px 로 벌어져 있었다. */
 p {
+	margin: 0;
 	overflow-wrap: break-word;
 	text-wrap: pretty;
+	word-break: keep-all;
 }
 
 /* 본문 문단은 한 줄이 너무 길어지지 않게 한다. 읽는 텍스트에만 적용한다. */

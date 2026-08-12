@@ -12,7 +12,9 @@
 			<label class="field" for="statistics-from"><span class="field-label">시작일</span><input id="statistics-from" class="field-input" type="date" required></label>
 			<label class="field" for="statistics-to"><span class="field-label">종료일</span><input id="statistics-to" class="field-input" type="date" required></label>
 			<label class="field" for="statistics-bucket"><span class="field-label">집계</span><select id="statistics-bucket" class="field-input"><option value="DAY">일</option><option value="MONTH">월</option><option value="YEAR">년</option></select></label>
-			<button class="primary-button compact-action" type="submit">적용</button>
+			<!-- 이 화면의 주 목적은 데이터를 읽는 것이다. 기간을 바꾸는 것은 그 수단이라
+			     브랜드 면을 채우면 지표보다 시선을 먼저 끈다. /manage 의 같은 버튼과도 맞춘다. -->
+			<button class="secondary-button compact-action" type="submit">적용</button>
 		</form>
 		<dl class="metric-grid" aria-label="기간 핵심 통계">
 			<div class="metric-item"><dt>전체 진입</dt><dd id="stat-entries">0</dd><p id="stat-entries-delta">-</p></div>

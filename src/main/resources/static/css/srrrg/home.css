@@ -39,7 +39,14 @@
 	box-shadow: var(--shadow-panel);
 }
 
+/* 입력 상태와 결과 상태가 같은 자리에서 교차 전환된다.
+   두 상태를 같은 grid cell 에 두면 행 높이가 둘 중 큰 쪽(결과 401px)으로 고정돼
+   입력 상태에서 패널 아래에 57px 빈 공간이 남았다(실측). 패널이 고장난 것처럼 보인다.
+   숨은 상태를 absolute 로 빼 높이가 보이는 상태를 따라가게 한다.
+   높이 변화는 사용자가 만들기를 눌러 내용이 실제로 바뀌는 순간에만 일어나므로
+   의미 없는 레이아웃 점프가 아니라 상태가 바뀌었다는 신호가 된다. */
 .create-stage {
+	position: relative;
 	display: grid;
 	min-width: 0;
 }
@@ -55,6 +62,10 @@
 }
 
 .create-state[aria-hidden="true"] {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
 	visibility: hidden;
 	opacity: 0;
 	transform: translateY(8px);

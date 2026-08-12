@@ -40,7 +40,10 @@
 						<button class="quick-expire-option" type="button" data-expires-option="1:years" aria-pressed="false">1년</button>
 						<button class="quick-expire-option" type="button" data-expires-option="custom" aria-pressed="false">직접 입력</button>
 					</fieldset>
-					<label id="expires-field" class="field expire-value-field" for="expires-at">
+					<!-- 선택한 만료가 정확히 몇 시 몇 분인지 알려주는 읽기 전용 표시다.
+					     기본값 "없음" 에는 알릴 시각이 없어 "-" 만 남으므로 처음에는 감춘다.
+					     초기 DOM 상태가 초기 선택 상태(없음)와 일치해야 한다. -->
+					<label id="expires-field" class="field expire-value-field" for="expires-at" hidden>
 						<input id="expires-at" class="field-input" name="expiresAt" type="text" value="-" aria-label="만료 시각" aria-describedby="create-expiration-error" disabled>
 					</label>
 					<span id="create-expiration-error" class="field-error" hidden></span>

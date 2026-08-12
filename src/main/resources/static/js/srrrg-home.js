@@ -21,6 +21,9 @@
 	const expiresAtInput = byId('expires-at');
 	const expirationDisclosure = byId('toggle-expiration-options');
 	const expirationSettings = byId('expiration-settings');
+	// 만료 시각 읽기 전용 표시. '없음' 이면 알릴 시각이 없어 행을 감춘다.
+	const expiresField = byId('expires-field');
+	const setExpiresFieldVisible = (option) => { if (expiresField) expiresField.hidden = option === 'none'; };
 	const expirationDisclosureValue = byId('expiration-disclosure-value');
 	const quickExpireOptions = form.querySelectorAll('.quick-expire-option');
 	const submitButton = byId('shortener-button');
@@ -168,6 +171,7 @@
 		state.selectedExpiresAtOption = option;
 		updateExpireOptionButtons(option);
 		updateExpirationDisclosure(option);
+		setExpiresFieldVisible(option);
 
 		if (option === 'none') {
 			setDateTimeInputMode(expiresAtInput, false, noExpirationDisplayValue);
@@ -209,6 +213,7 @@
 
 	function resetExpiresAt() {
 		state.selectedExpiresAtOption = 'none';
+		setExpiresFieldVisible('none');
 		setDateTimeInputMode(expiresAtInput, false, noExpirationDisplayValue);
 		updateExpireOptionButtons('none');
 		updateExpirationDisclosure('none');
