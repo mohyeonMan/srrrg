@@ -16,7 +16,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import link.srrrg.auth.WebAccountModel;
 import link.srrrg.link.LinkGoneException;
+import link.srrrg.link.LinkNotFoundException;
 import link.srrrg.link.UnsafeUrlException;
 import link.srrrg.link.UrlRiskCheckFailedException;
 import link.srrrg.link.access.ClientRequestInfoResolver;
@@ -25,13 +27,32 @@ class RedirectControllerTest {
 
 	private final RedirectService service = mock(RedirectService.class);
 	private final ClientRequestInfoResolver resolver = mock(ClientRequestInfoResolver.class);
+	private final WebAccountModel webAccountModel = mock(WebAccountModel.class);
 	private MockMvc mvc;
 
 	@BeforeEach
 	void setUp() {
 		mvc = MockMvcBuilders.standaloneSetup(new RedirectController(service, resolver))
-				.setControllerAdvice(new RedirectExceptionHandler())
+				.setControllerAdvice(new RedirectExceptionHandler(webAccountModel))
 				.build();
+	}
+
+	/**
+	 * @ControllerAdvice 의 @ModelAttribute 는 예외 핸들러가 렌더하는 뷰에 적용되지 않는다.
+	 * 그래서 오류 화면만 로그인 상태에서도 헤더가 로그아웃으로 보였다.
+	 * 핸들러가 계정 정보를 직접 채우는지 고정한다.
+	 */
+	@Test
+	void errorPagePopulatesHeaderAccountStateBecauseModelAttributeAdviceDoesNotRunHere() throws Exception {
+		// 코드는 정확히 6자여야 매핑에 걸린다(@GetMapping("/{code:[0-9A-Za-z]{6}}")).
+		when(service.redirect(eq("srrrg.link"), eq("zzzzzz"), any()))
+				.thenThrow(new LinkNotFoundException());
+
+		mvc.perform(get("/zzzzzz").header("Host", "srrrg.link"))
+				.andExpect(status().isNotFound())
+				.andExpect(view().name("redirect-error"));
+
+		verify(webAccountModel).apply(any(), any());
 	}
 
 	@Test

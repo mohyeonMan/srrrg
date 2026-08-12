@@ -758,52 +758,8 @@
 		height: 240px;
 	}
 
-	.data-table-wrap {
-		overflow: visible;
-	}
-
-	.activity-table {
-		min-width: 0;
-	}
-
-	.activity-table thead {
-		display: none;
-	}
-
-	.activity-table,
-	.activity-table tbody,
-	.activity-table tr,
-	.activity-table td {
-		display: block;
-		width: 100%;
-	}
-
-	.activity-table tr {
-		display: grid;
-		gap: var(--space-2);
-		padding: var(--space-3) 0;
-		border-bottom: 1px solid var(--color-border);
-	}
-
-	.activity-table tr:last-child {
-		border-bottom: 0;
-	}
-
-	.activity-table td {
-		display: grid;
-		grid-template-columns: 82px minmax(0, 1fr);
-		gap: var(--space-3);
-		padding: 0;
-		border: 0;
-		white-space: normal;
-	}
-
-	.activity-table td::before {
-		color: var(--color-text-subtle);
-		font-size: 11px;
-		font-weight: 800;
-		content: attr(data-label);
-	}
+	/* 표를 카드로 접는 규칙은 components.css 의 .stacking-table 로 옮겼습니다.
+	   .activity-table 과 .campaign-link-table 이 같은 규칙을 공유합니다. */
 
 	.breakdown-row {
 		grid-template-columns: minmax(76px, 0.8fr) minmax(88px, 1.4fr) auto;

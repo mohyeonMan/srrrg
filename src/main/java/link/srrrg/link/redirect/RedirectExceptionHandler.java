@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import link.srrrg.auth.WebAccountModel;
 import link.srrrg.link.LinkGoneException;
 import link.srrrg.link.LinkNotFoundException;
 import link.srrrg.link.UnsafeUrlException;
@@ -17,6 +18,12 @@ import link.srrrg.link.UrlRiskCheckFailedException;
 @ControllerAdvice(assignableTypes = RedirectController.class)
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class RedirectExceptionHandler {
+
+	private final WebAccountModel webAccountModel;
+
+	public RedirectExceptionHandler(WebAccountModel webAccountModel) {
+		this.webAccountModel = webAccountModel;
+	}
 
 	@ExceptionHandler(LinkNotFoundException.class)
 	public String handleLinkNotFound(
@@ -102,6 +109,9 @@ public class RedirectExceptionHandler {
 			HttpServletResponse response,
 			Model model
 	) {
+		// @ControllerAdvice 의 @ModelAttribute 는 예외 핸들러가 렌더하는 뷰에 적용되지 않는다.
+		// 직접 채워 주지 않으면 로그인 상태에서도 헤더가 로그아웃으로 보인다.
+		webAccountModel.apply(request, model);
 		response.setStatus(status.value());
 		// 리다이렉트 오류와 검증 결과가 브라우저나 중간 캐시에 남지 않게 함.
 		response.setHeader("Cache-Control", "no-store");

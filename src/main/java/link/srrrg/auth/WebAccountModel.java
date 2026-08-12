@@ -3,7 +3,9 @@ package link.srrrg.auth;
 import java.util.Optional;
 
 import org.springframework.ui.Model;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
@@ -11,7 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import link.srrrg.identity.UserRepository;
 
 @ControllerAdvice
-class WebAccountModel {
+public class WebAccountModel {
 	private final UserRepository users;
 	private final JwtService jwtService;
 
@@ -22,6 +24,21 @@ class WebAccountModel {
 
 	@ModelAttribute
 	void account(@AuthenticationPrincipal SrrrgPrincipal principal, HttpServletRequest request, Model model) {
+		populate(principal, request, model);
+	}
+
+	/**
+	 * @ExceptionHandler 가 렌더하는 뷰에는 @ModelAttribute 어드바이스가 적용되지 않는다.
+	 * 그래서 링크 오류 화면은 세션이 살아 있어도 헤더가 로그아웃 상태로 보였다.
+	 * 그 경로에서 직접 호출할 수 있게 열어 둔다.
+	 */
+	public void apply(HttpServletRequest request, Model model) {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		Object principal = authentication == null ? null : authentication.getPrincipal();
+		populate(principal instanceof SrrrgPrincipal sessionPrincipal ? sessionPrincipal : null, request, model);
+	}
+
+	private void populate(SrrrgPrincipal principal, HttpServletRequest request, Model model) {
 		sessionUserId(principal, request)
 				.flatMap(users::findById)
 				.ifPresent(user -> model.addAttribute("accountUser",

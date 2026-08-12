@@ -339,6 +339,82 @@
 	border-color: var(--color-danger-border);
 }
 
+/* 좁은 폭에서 카드로 접히는 표.
+   thead 를 감추고 각 셀이 자기 data-label 을 라벨로 쓴다. 가로 스크롤보다 읽기 쉽다.
+   행을 만드는 JS 가 모든 td 에 data-label 을 넣어 주는 표에만 이 클래스를 붙인다 —
+   빠뜨리면 라벨 없이 값만 쌓인다. */
+@media (max-width: 720px) {
+	.data-table-wrap,
+	.campaign-link-table-wrap {
+		overflow: visible;
+	}
+
+	.stacking-table {
+		min-width: 0;
+	}
+
+	.stacking-table thead {
+		display: none;
+	}
+
+	.stacking-table,
+	.stacking-table tbody,
+	.stacking-table tr,
+	.stacking-table td {
+		display: block;
+		width: 100%;
+	}
+
+	.stacking-table tr {
+		display: grid;
+		gap: var(--space-2);
+		padding: var(--space-3) 0;
+		border-bottom: 1px solid var(--color-border);
+	}
+
+	.stacking-table tr:last-child {
+		border-bottom: 0;
+	}
+
+	.stacking-table td {
+		display: grid;
+		grid-template-columns: 82px minmax(0, 1fr);
+		gap: var(--space-3);
+		padding: 0;
+		border: 0;
+		white-space: normal;
+	}
+
+	.stacking-table td::before {
+		color: var(--color-text-subtle);
+		font-size: 11px;
+		font-weight: 800;
+		content: attr(data-label);
+	}
+
+	/* 체크박스 칸은 라벨이 필요 없고, 셀 안에서 가로로 붙는다. */
+	.stacking-table .campaign-link-check-column {
+		grid-template-columns: 1fr;
+	}
+
+	.stacking-table .campaign-link-check-column::before {
+		content: none;
+	}
+
+	/* 카드에서는 폭 제약이 사라지므로 말줄임 대신 전체 값을 줄바꿈해 보여준다.
+	   표에서만 340px 로 잘라 뒤쪽 열을 지키던 규칙이다. */
+	.stacking-table .campaign-link-destination {
+		max-width: none;
+		overflow: visible;
+		text-overflow: clip;
+		overflow-wrap: anywhere;
+	}
+
+	.stacking-table .campaign-link-action {
+		text-align: left !important;
+	}
+}
+
 .login-shell {
 	display: grid;
 	place-items: center;
@@ -351,8 +427,8 @@
 	padding: clamp(24px, 6vw, 40px);
 	background: var(--color-surface);
 	border: 1px solid var(--color-border);
-	border-radius: var(--radius-xl);
-	box-shadow: var(--shadow-card);
+	border-radius: var(--radius-xs);
+	box-shadow: var(--shadow-panel);
 }
 
 .login-description {

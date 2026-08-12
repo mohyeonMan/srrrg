@@ -27,6 +27,12 @@
 		return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 	}
 
+	// 표 안에서는 축약형을 쓴다. 전체 시각(약 184px)이 열 하나를 다 먹어서
+	// 뒤쪽 열이 좁은 데스크톱에서 잘려 나갔다. 전체 시각은 title 로 남긴다.
+	function compactDate(value) {
+		return new Intl.DateTimeFormat('ko-KR', { month: '2-digit', day: '2-digit' }).format(new Date(value));
+	}
+
 	// roving tabindex: 선택된 탭만 Tab 순서에 남기고 좌우 방향키로 이동한다.
 	// srrrg-management.js 의 탭 처리와 같은 방식이다.
 	function switchTab(tab) {
@@ -375,7 +381,8 @@
 				|| (state.campaign?.defaultOriginalUrl ? '캠페인 기본 목적지 사용' : '목적지 없음 · 이동하지 않음'));
 		if (!link.originalUrl && !state.campaign?.defaultOriginalUrl) destinationCell.classList.add('is-missing');
 		const externalIdCell = tableCell('external_id', '', link.externalId || '없음');
-		const createdAtCell = tableCell('생성일', '', formatDate(link.createdAt));
+		const createdAtCell = tableCell('생성일', '', compactDate(link.createdAt));
+		createdAtCell.title = formatDate(link.createdAt);
 
 		const utmCell = tableCell('UTM');
 		const utmBadge = element('button', 'campaign-utm-toggle', values.length ? `${values.length}개` : '없음');
@@ -395,7 +402,8 @@
 		copyButton.addEventListener('click', () => copyLink(shortUrl(link.code), copyButton));
 		actionCell.append(copyButton);
 
-		row.append(selectCell, nameCell, codeCell, destinationCell, externalIdCell, createdAtCell, utmCell, actionCell);
+		// campaigns.html 의 thead 순서와 일치해야 한다.
+		row.append(selectCell, nameCell, codeCell, actionCell, utmCell, destinationCell, externalIdCell, createdAtCell);
 		return row;
 	}
 

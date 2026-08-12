@@ -27,7 +27,9 @@
 		load();
 	}));
 	bindMore('links'); bindMore('utm'); bindMore('campaigns');
-	load();
+	// 캠페인 뷰에서는 srrrg-campaigns.js 가 캠페인을 확정한 뒤 reload() 로 호출합니다.
+	// 여기서 또 부르면 가장 비싼 통계 쿼리가 두 번 실행됩니다.
+	if (!(campaignId && document.getElementById('campaigns-app'))) load();
 
 	function endpoint() {
 		if (campaignId) return `${base}/api/web/campaigns/${encodeURIComponent(campaignId)}/statistics`;
@@ -115,7 +117,7 @@
 			byId('link-status-summary').innerHTML = `<span>전체 ${formatter.format(lifetime.total)}</span><span>사람 유입 ${formatter.format(lifetime.humanAccessed)}</span><span>봇 유입만 ${formatter.format(lifetime.botOnly)}</span><span>유입 없음 ${formatter.format(lifetime.noAccess)}</span>${data.scope === 'PROJECT' ? `<span>단일 ${formatter.format(lifetime.standalone)}</span><span>캠페인 소속 ${formatter.format(lifetime.campaign)}</span>` : ''}`;
 		}
 		const page = data.links;
-		const rows = page.items.map((item) => `<tr><td><a href="${managementUrl(item.code)}">${escape(item.code)}</a></td><td>${escape(item.externalId || '-')}</td><td>${item.destinationSource === 'LINK' ? '개별 URL' : '캠페인 기본 URL'}</td><td>${status(item.lifetimeStatus)}</td><td>${formatter.format(item.period.humanEntries)}</td><td>${formatter.format(item.period.humanRedirects)}</td><td>${dateTime(item.lastAccessedAt)}</td></tr>`).join('');
+		const rows = page.items.map((item) => `<tr><td data-label="링크"><a href="${managementUrl(item.code)}">${escape(item.code)}</a></td><td data-label="external_id">${escape(item.externalId || '-')}</td><td data-label="목적지">${item.destinationSource === 'LINK' ? '개별 URL' : '캠페인 기본 URL'}</td><td data-label="상태">${status(item.lifetimeStatus)}</td><td data-label="사람 진입">${formatter.format(item.period.humanEntries)}</td><td data-label="사람 이동">${formatter.format(item.period.humanRedirects)}</td><td data-label="최근 유입">${dateTime(item.lastAccessedAt)}</td></tr>`).join('');
 		if (append) byId('statistics-links').insertAdjacentHTML('beforeend', rows); else byId('statistics-links').innerHTML = rows;
 		byId('statistics-links-wrap').hidden = !byId('statistics-links').children.length;
 		setNext('links', page.nextOffset);
@@ -130,7 +132,7 @@
 			const max = Math.max(1, ...page.items.map((item) => item.redirectedEvents));
 			bars(byId('utm-chart'), page.items.slice(0, 10).map((item) => ({ name: `${item.field}=${item.value}`, count: item.redirectedEvents, share: item.redirectedEvents / max * 100 })));
 		}
-		const rows = page.items.map((item) => `<tr><td>${escape(item.field)}</td><td>${escape(item.value)}</td><td>${formatter.format(item.configuredLinks)}</td><td>${formatter.format(item.lifetimeRedirectedLinks)}</td><td>${formatter.format(item.lifetimeBotOnlyRedirectedLinks)}</td><td>${formatter.format(item.redirectedEvents)}</td></tr>`).join('');
+		const rows = page.items.map((item) => `<tr><td data-label="필드">${escape(item.field)}</td><td data-label="값">${escape(item.value)}</td><td data-label="설정 링크">${formatter.format(item.configuredLinks)}</td><td data-label="이동 링크">${formatter.format(item.lifetimeRedirectedLinks)}</td><td data-label="봇 전용">${formatter.format(item.lifetimeBotOnlyRedirectedLinks)}</td><td data-label="기간 이동">${formatter.format(item.redirectedEvents)}</td></tr>`).join('');
 		if (append) byId('statistics-utm').insertAdjacentHTML('beforeend', rows); else byId('statistics-utm').innerHTML = rows;
 		setNext('utm', page.nextOffset);
 	}
@@ -144,7 +146,7 @@
 			const max = Math.max(1, ...page.items.map((item) => item.period.humanEntries));
 			bars(byId('campaign-chart'), page.items.map((item) => ({ name: item.name, count: item.period.humanEntries, share: item.period.humanEntries / max * 100 })));
 		}
-		const rows = page.items.map((item) => `<tr><td><a href="${campaignStatisticsUrl(item.id)}">${escape(item.name)}</a></td><td>${formatter.format(item.links)}</td><td>${formatter.format(item.period.humanEntries)}</td><td>${formatter.format(item.period.humanRedirects)}</td><td>${rate(item.period.humanRedirects, item.period.humanEntries)}</td></tr>`).join('');
+		const rows = page.items.map((item) => `<tr><td data-label="캠페인"><a href="${campaignStatisticsUrl(item.id)}">${escape(item.name)}</a></td><td data-label="링크">${formatter.format(item.links)}</td><td data-label="사람 진입">${formatter.format(item.period.humanEntries)}</td><td data-label="사람 이동">${formatter.format(item.period.humanRedirects)}</td><td data-label="이동률">${rate(item.period.humanRedirects, item.period.humanEntries)}</td></tr>`).join('');
 		if (append) byId('statistics-campaigns').insertAdjacentHTML('beforeend', rows); else byId('statistics-campaigns').innerHTML = rows;
 		setNext('campaigns', page.nextOffset);
 	}
@@ -156,8 +158,19 @@
 	}
 	function setNext(type, value) { nextOffsets[type] = value; byId(`load-more-statistics-${type}`).hidden = value === null; }
 	function setMoreDisabled(disabled) { Object.keys(nextOffsets).forEach((type) => { byId(`load-more-statistics-${type}`).disabled = disabled; }); }
-	function managementUrl(code) { return `${base}/manage?projectId=${encodeURIComponent(projectId)}&campaignId=${encodeURIComponent(campaignId)}&code=${encodeURIComponent(code)}&from=${from.value}&to=${to.value}&bucket=${bucket.value}`; }
-	function campaignStatisticsUrl(id) { return `${base}/statistics?projectId=${encodeURIComponent(projectId)}&campaignId=${encodeURIComponent(id)}&from=${from.value}&to=${to.value}&bucket=${bucket.value}`; }
+	// 통계에서 여는 링크·캠페인은 워크스페이스(/projects) 안에 머물러야 한다.
+	// /statistics 는 라우트가 없고(404), /manage 는 프로젝트 컨텍스트 없는 비회원 화면이다.
+	function workspaceUrl(extra) {
+		const url = new URL(`${base}/projects`, location.origin);
+		url.searchParams.set('projectId', projectId);
+		Object.entries(extra).forEach(([key, value]) => url.searchParams.set(key, value));
+		url.searchParams.set('from', from.value);
+		url.searchParams.set('to', to.value);
+		url.searchParams.set('bucket', bucket.value);
+		return url.pathname + url.search;
+	}
+	function managementUrl(code) { return workspaceUrl(campaignId ? { campaignId, linkCode: code } : { linkCode: code }); }
+	function campaignStatisticsUrl(id) { return workspaceUrl({ campaignId: id }); }
 	function updateLocation() { const url = new URL(location.href); url.searchParams.set('from', from.value); url.searchParams.set('to', to.value); url.searchParams.set('bucket', bucket.value); history.replaceState(null, '', url); }
 	function setPeriod(days) { const end = new Date(), start = new Date(); start.setDate(end.getDate() - days + 1); from.value = local(start); to.value = local(end); }
 	function delta(now, previous) { if (!previous) return now ? '신규 유입' : '변화 없음'; const value = (now - previous) / previous * 100; return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`; }

@@ -93,12 +93,16 @@
 		setMessage(linkMessage, '');
 		setRoleVisibility(project.role);
 		await loadProjectData();
-		await loadCampaignTemplates();
+		// 템플릿 목록은 "새 캠페인" 폼의 select 를 채우는 용도라, 그 폼이 없는
+		// 캠페인·링크·템플릿 뷰에서는 부를 필요가 없습니다(campaigns.js 가 따로 부릅니다).
+		if (!selectedCampaignId && !selectedLinkCode && !showingTemplates) await loadCampaignTemplates();
 		byId('project-detail').hidden = Boolean(selectedCampaignId) || Boolean(selectedLinkCode) || showingTemplates || showingSettings;
 		showProjectPanel();
 		// 통계 조각은 URL 파라미터만 읽으므로, projectId 없이 들어와 자동 선택된 경우
 		// 선택된 프로젝트를 알려주지 않으면 "지정되지 않았습니다" 상태로 남는다.
-		if (!selectedCampaignId && !selectedLinkCode) {
+		// 반대로 URL 에 projectId 가 있으면 통계 조각이 이미 그 값으로 불러왔으므로
+		// 여기서 또 알려주면 같은 통계를 두 번 조회한다.
+		if (!selectedCampaignId && !selectedLinkCode && !params.get('projectId')) {
 			window.SrrrgStatistics?.reload(String(project.id), null);
 		}
 	}

@@ -72,14 +72,14 @@ class ProjectsPageAssetTest {
 				"align-content: start",
 				// 네이티브 스크롤바를 그대로 쓴다.
 				"scrollbar-width: thin",
-				// 레일 반응형 3단: 데스크톱 전체 / 태블릿 아이콘 스트립 / 모바일 드로어
+				// 레일 반응형 2단: 데스크톱 전체 노출 / 1024px 아래는 드로어.
 				"@media (max-width: 1023px)",
-				"@media (max-width: 767px)",
-				// 태블릿 아이콘 스트립. 필터·정렬 버튼이 세로로 들어갈 만큼의 폭이다.
-				"grid-template-columns: 88px minmax(0, 1fr)",
 				".rail-scrim");
 		// 태블릿에서 필터·정렬을 숨기면 콘텐츠를 걸러낼 방법이 사라진다.
 		assertThat(styles).doesNotContain(".project-activity-controls,\n\t.project-activity-scrollbar {\n\t\tdisplay: none;");
+		// 태블릿 아이콘 스트립은 폐기했다. 콘텐츠 목록의 라벨을 clip 해서 캠페인이 여러 개면
+		// 같은 글리프만 쌓였고, 구분 수단인 title 툴팁은 터치 기기에서 뜨지 않았다.
+		assertThat(styles).doesNotContain("grid-template-columns: 88px minmax(0, 1fr)");
 		// 워크스페이스의 암시적 auto 트랙이 자식 min-content 로 늘어나 태블릿 폭에서
 		// 문서가 가로 스크롤되던 문제를 막는 클램프.
 		assertThat(styles).contains("grid-template-columns: minmax(0, 1fr)");

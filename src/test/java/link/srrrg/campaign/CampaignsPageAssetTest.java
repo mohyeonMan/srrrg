@@ -18,7 +18,8 @@ class CampaignsPageAssetTest {
 		assertThat(template).contains(
 				"id=\"campaign-link-select-all\"",
 				"id=\"delete-selected-links-button\"",
-				"class=\"campaign-link-table\"",
+				// 좁은 폭에서 가로 스크롤 대신 카드로 접히도록 공용 .stacking-table 을 함께 쓴다.
+				"class=\"campaign-link-table stacking-table\"",
 				"id=\"manage-utm-templates-link\"",
 				"템플릿 구조 변경은 UTM 템플릿 관리에서만");
 		// 적용 예정 UTM 은 템플릿 인라인 섹션이 아니라 링크별 팝오버로 렌더링한다.

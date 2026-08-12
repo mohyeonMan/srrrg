@@ -212,7 +212,11 @@
 
 .campaign-link-table {
 	width: 100%;
-	min-width: 900px;
+	/* 900px 이었을 때는 레일을 뺀 본문(1024~1200px 노트북에서 약 648px)에 들어가지 못해
+	   뒤쪽 세 열이 항상 잘려 있었습니다. 640px 이면 그 폭에 들어가고, 더 좁아지면
+	   wrap 의 overflow-x 가, 720px 아래로는 .stacking-table 이 이어받습니다.
+	   목적지처럼 긴 값은 잘리는 대신 줄바꿈됩니다. */
+	min-width: 640px;
 	border-collapse: collapse;
 	font-size: 12px;
 }
@@ -367,9 +371,7 @@ button.campaign-link-code {
 		align-items: stretch;
 	}
 
-	.campaign-link-table {
-		min-width: 760px;
-	}
+	/* 가로 스크롤 대신 .stacking-table(components.css)로 카드형으로 접힙니다. */
 
 	.campaign-utm-value-row {
 		grid-template-columns: 1fr;
