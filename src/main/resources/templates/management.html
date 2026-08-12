@@ -12,15 +12,20 @@
 <body>
 <div th:replace="~{fragments/srrrg-layout :: header}"></div>
 
-<div th:fragment="workspace">
-<main
+<!-- 이 조각은 projects.html 의 <main> 안에 삽입되기도 한다. 조각이 <main> 을 들고 가면
+     랜드마크가 중첩되고 h1 이 두 개가 되므로, <main> 은 단독 페이지 쪽에만 두고
+     조각 경계는 그 안쪽에 잡는다. 단독 페이지의 h1 은 아래 sr-only 제목이 담당한다. -->
+<main>
+	<h1 class="sr-only">링크 관리 및 통계</h1>
+<div
 		id="management-app"
 		class="management-shell"
+		th:fragment="workspace"
 		th:attr="data-api-url=@{/api/links},data-prefilled-code=${prefilledCode}"
 >
 	<section id="management-gate" class="management-gate" aria-labelledby="management-gate-title">
 		<div class="management-gate-heading">
-			<h1 id="management-gate-title">링크 관리 및 통계</h1>
+			<h2 id="management-gate-title">링크 관리 및 통계</h2>
 			<p>단축 URL과 발급 당시의 secret key로 링크 설정과 상세 통계를 확인합니다.</p>
 		</div>
 
@@ -75,7 +80,7 @@
 		<header class="console-header">
 			<div class="console-header-top">
 				<div>
-					<h1 id="managed-link-title" tabindex="-1">링크 관리 및 통계</h1>
+					<h2 id="managed-link-title" tabindex="-1">링크 관리 및 통계</h2>
 				</div>
 				<button id="change-managed-link" class="secondary-button compact-action" type="button">다른 링크 조회</button>
 			</div>
@@ -218,7 +223,6 @@
 			</section>
 		</section>
 	</section>
-</main>
 
 <dialog id="delete-link-dialog" class="confirmation-dialog" aria-labelledby="delete-dialog-title">
 	<form method="dialog">
@@ -242,6 +246,7 @@
 	</form>
 </dialog>
 </div>
+</main>
 
 <div th:replace="~{fragments/srrrg-layout :: footer}"></div>
 </body>

@@ -624,15 +624,27 @@
 	font-size: 12px;
 }
 
+/* 텍스트만 있는 보조 버튼도 터치 타깃은 지킨다. padding: 4px 만 두던 시절에는
+   UTM 필드 삭제가 22px, 서브도메인 반납이 25px 로 렌더돼 파괴적 동작인데도
+   제품이 스스로 정한 44px 기준(--button-height)에 한참 못 미쳤다.
+   글자 크기는 그대로 두고 클릭 영역만 넓힌다. */
 .text-button {
-	padding: 4px;
+	display: inline-flex;
+	min-height: var(--button-height);
+	align-items: center;
+	padding: 0 var(--space-2);
 	color: var(--color-brand-strong);
 	background: transparent;
 	border: 0;
+	border-radius: var(--radius-xs);
 	font: inherit;
 	font-size: 12px;
 	font-weight: 800;
 	cursor: pointer;
+}
+
+.text-button:hover {
+	background: var(--color-brand-soft);
 }
 
 /* ── 레일 반응형 2단 ────────────────────────────────────────────────

@@ -27,8 +27,10 @@
 	margin-bottom: var(--space-7);
 }
 
-.management-gate-heading h1,
-.console-header-top h1 {
+/* 이 제목들은 h1 이었는데, 조각이 projects.html 안에 삽입될 때 h1 이 두 개가 되어 h2 로 낮췄다.
+   시각 크기는 화면의 주 제목 그대로 유지한다. */
+.management-gate-heading h2,
+.console-header-top h2 {
 	margin: 0;
 	font-size: clamp(26px, 3vw, 32px);
 	font-weight: 880;

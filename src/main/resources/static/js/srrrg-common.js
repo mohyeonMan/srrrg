@@ -25,6 +25,19 @@
 		return send(url, options);
 	}
 
+	/**
+	 * 한 페이지 안에서 여러 스크립트가 같은 읽기 전용 값을 각각 받아오는 것을 막는다.
+	 * 진행 중 요청만 합치는 방식은 두 호출이 시간상 겹치지 않으면 소용이 없어서,
+	 * 호출한 쪽이 "이 값은 이 페이지에서 안 바뀐다"고 판단한 URL 만 명시적으로 넘긴다.
+	 * 값이 바뀔 수 있는 조회에는 쓰지 않는다.
+	 */
+	const shared = new Map();
+
+	function requestShared(url, options = {}) {
+		if (!shared.has(url)) shared.set(url, request(url, options));
+		return shared.get(url).then((response) => response.clone());
+	}
+
 	async function body(response) {
 		try {
 			return await response.json();
@@ -109,6 +122,6 @@
 	});
 
 	window.SrrrgCommon = {
-		base, csrf, send, request, body, element, replaceChildren, setMessage, submitting, confirmAction
+		base, csrf, send, request, requestShared, body, element, replaceChildren, setMessage, submitting, confirmAction
 	};
 })();

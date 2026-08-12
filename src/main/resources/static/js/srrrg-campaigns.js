@@ -5,7 +5,7 @@
 	if (embeddedView?.hidden) return;
 
 	const base = SrrrgCommon.base;
-	const { request, body, element, replaceChildren, setMessage, submitting, confirmAction } = SrrrgCommon;
+	const { request, requestShared, body, element, replaceChildren, setMessage, submitting, confirmAction } = SrrrgCommon;
 	const params = new URLSearchParams(location.search);
 	const state = {
 		projectId: params.get('projectId'),
@@ -284,11 +284,52 @@
 			input.maxLength = 500;
 			input.placeholder = `기본값: ${state.utmDefaults[field.name] || '없음'}`;
 			input.dataset.fieldName = field.name;
+			input.addEventListener('input', renderLinkPreview);
 			label.append(input);
 			return label;
 		});
 		replaceChildren(byId('campaign-utm-inputs'), rows);
+		renderLinkPreview();
 	}
+
+	/**
+	 * 링크를 만들기 전에 실제 이동 주소를 보여준다.
+	 * 목적지는 입력한 원본 URL, 없으면 캠페인 기본 목적지를 쓴다.
+	 * UTM 은 입력값이 우선이고 비워 두면 캠페인 기본값이 붙는다 — 서버의 계산과 같은 규칙이다.
+	 */
+	function effectiveUtmValues() {
+		const values = {};
+		for (const field of state.activeFields) {
+			const input = byId('campaign-utm-inputs').querySelector(`[data-field-name="${field.name}"]`);
+			const typed = input?.value.trim();
+			const value = typed || state.utmDefaults[field.name];
+			if (value) values[field.name] = value;
+		}
+		return values;
+	}
+
+	function renderLinkPreview() {
+		const panel = byId('campaign-link-preview');
+		const output = byId('campaign-link-preview-url');
+		const destination = byId('campaign-original-url').value.trim() || state.campaign?.defaultOriginalUrl;
+		if (!destination) {
+			output.textContent = '목적지가 없어 이동하지 않습니다. 링크 URL이나 캠페인 기본 목적지를 설정하세요.';
+			panel.hidden = false;
+			return;
+		}
+		const values = effectiveUtmValues();
+		try {
+			const url = new URL(destination);
+			Object.entries(values).forEach(([name, value]) => url.searchParams.set(name, value));
+			output.textContent = url.toString();
+		} catch (_) {
+			// 아직 URL 형태가 아니면 조립하지 않고 입력한 값을 그대로 보여준다.
+			output.textContent = destination;
+		}
+		panel.hidden = false;
+	}
+
+	byId('campaign-original-url').addEventListener('input', renderLinkPreview);
 
 	byId('create-campaign-link-form').addEventListener('submit', async (event) => {
 		event.preventDefault();
@@ -318,6 +359,7 @@
 			}
 			const noDestination = !data.get('originalUrl')?.trim() && !state.campaign?.defaultOriginalUrl;
 			form.reset();
+			renderLinkPreview();
 			setMessage(byId('create-campaign-link-message'), noDestination
 				? `단축 링크(${responseBody.code})를 만들었습니다. 아직 목적지가 없어 이동하지 않습니다 — 캠페인 기본 목적지나 링크 URL을 설정하세요.`
 				: `단축 링크(${responseBody.code})를 만들었습니다.`);
@@ -380,7 +422,7 @@
 			link.originalUrl
 				|| (state.campaign?.defaultOriginalUrl ? '캠페인 기본 목적지 사용' : '목적지 없음 · 이동하지 않음'));
 		if (!link.originalUrl && !state.campaign?.defaultOriginalUrl) destinationCell.classList.add('is-missing');
-		const externalIdCell = tableCell('external_id', '', link.externalId || '없음');
+		const externalIdCell = tableCell('우리 쪽 식별자', '', link.externalId || '없음');
 		const createdAtCell = tableCell('생성일', '', compactDate(link.createdAt));
 		createdAtCell.title = formatDate(link.createdAt);
 
@@ -460,7 +502,9 @@
 	}
 
 	async function loadProjectDomain() {
-		const response = await request(`${base}/api/web/projects/${state.projectId}/subdomain`);
+		// srrrg-projects.js 도 같은 값을 쓴다. 서브도메인은 이 화면에서 바뀌지 않으므로
+		// 둘 중 먼저 부른 쪽의 응답을 공유해 중복 요청을 없앤다.
+		const response = await requestShared(`${base}/api/web/projects/${state.projectId}/subdomain`);
 		if (!response.ok) return;
 		const config = await body(response);
 		state.subdomain = config.subdomain;

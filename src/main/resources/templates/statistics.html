@@ -5,11 +5,13 @@
 <div xmlns:th="http://www.thymeleaf.org" id="statistics-app" th:attr="data-base=@{/}" th:fragment="report">
 	<header class="console-header"><h3 id="statistics-title">통계</h3><p id="statistics-message" role="status">통계를 불러오는 중입니다.</p></header>
 	<section class="console-panel analytics-panel">
+		<!-- 기간 칩은 선택 상태를 aria-pressed 로 알린다(management.html 의 같은 컨트롤과 동일).
+		     날짜·집계는 제품 공통 폼 컴포넌트(.field / .field-label / .field-input)를 쓴다. -->
 		<form id="statistics-filter" class="statistics-filter">
-			<div class="period-control" role="group" aria-label="빠른 기간"><button type="button" data-days="7">7일</button><button type="button" data-days="30">30일</button><button type="button" data-days="90">90일</button></div>
-			<label>시작일 <input id="statistics-from" type="date" required></label>
-			<label>종료일 <input id="statistics-to" type="date" required></label>
-			<label>집계 <select id="statistics-bucket"><option value="DAY">일</option><option value="MONTH">월</option><option value="YEAR">년</option></select></label>
+			<div class="period-control" role="group" aria-label="빠른 기간"><button type="button" data-days="7" aria-pressed="false">7일</button><button type="button" data-days="30" aria-pressed="true">30일</button><button type="button" data-days="90" aria-pressed="false">90일</button></div>
+			<label class="field" for="statistics-from"><span class="field-label">시작일</span><input id="statistics-from" class="field-input" type="date" required></label>
+			<label class="field" for="statistics-to"><span class="field-label">종료일</span><input id="statistics-to" class="field-input" type="date" required></label>
+			<label class="field" for="statistics-bucket"><span class="field-label">집계</span><select id="statistics-bucket" class="field-input"><option value="DAY">일</option><option value="MONTH">월</option><option value="YEAR">년</option></select></label>
 			<button class="primary-button compact-action" type="submit">적용</button>
 		</form>
 		<dl class="metric-grid" aria-label="기간 핵심 통계">
@@ -22,7 +24,7 @@
 		</dl>
 		<section class="analytics-section"><div class="analytics-section-heading"><div><h4>접근 추이</h4><p>선택한 일·월·년 단위의 접근과 이동입니다.</p></div><div class="chart-legend" aria-hidden="true"><span class="entries">접근</span><span class="redirects">이동</span></div></div><div class="trend-chart-wrap"><svg id="statistics-trend" class="trend-chart" viewBox="0 0 960 300" role="img" aria-label="접근 및 이동 추이"></svg></div></section>
 		<div class="analytics-breakdowns"><section class="analytics-section"><div class="analytics-section-heading"><div><h4>결과</h4></div></div><div id="statistics-outcomes" class="breakdown-list"></div></section><section class="analytics-section"><div class="analytics-section-heading"><div><h4>유입 도메인</h4></div></div><div id="statistics-referrers" class="breakdown-list"></div></section></div>
-		<section id="link-status-section" class="analytics-section" hidden><div class="analytics-section-heading"><div><h4>링크 유입 상태</h4><p>상태와 최초·최근 유입은 전체 기간, 진입·이동은 선택 기간 기준입니다.</p></div></div><div id="link-status-summary" class="status-summary"></div><div id="statistics-links-wrap" class="data-table-wrap"><table class="activity-table stacking-table"><thead><tr><th>링크</th><th>external_id</th><th>목적지</th><th>전체 기간 상태</th><th>사람 진입</th><th>사람 이동</th><th>최근 유입</th></tr></thead><tbody id="statistics-links"></tbody></table></div><button id="load-more-statistics-links" class="secondary-button compact-action" type="button" hidden>링크 더 보기</button></section>
+		<section id="link-status-section" class="analytics-section" hidden><div class="analytics-section-heading"><div><h4>링크 유입 상태</h4><p>상태와 최초·최근 유입은 전체 기간, 진입·이동은 선택 기간 기준입니다.</p></div></div><div id="link-status-summary" class="status-summary"></div><div id="statistics-links-wrap" class="data-table-wrap"><table class="activity-table stacking-table"><thead><tr><th>링크</th><th>우리 쪽 식별자</th><th>목적지</th><th>전체 기간 상태</th><th>사람 진입</th><th>사람 이동</th><th>최근 유입</th></tr></thead><tbody id="statistics-links"></tbody></table></div><button id="load-more-statistics-links" class="secondary-button compact-action" type="button" hidden>링크 더 보기</button></section>
 		<section id="utm-section" class="analytics-section" hidden><div class="analytics-section-heading"><div><h4>UTM별 이동</h4><p>UTM 스냅샷은 실제 이동 이벤트에 저장됩니다. 링크 수는 전체 기간, 이동은 선택 기간 기준입니다.</p></div></div><div id="utm-chart" class="breakdown-list"></div><div class="data-table-wrap"><table class="activity-table stacking-table"><thead><tr><th>필드</th><th>값</th><th>현재 설정 링크</th><th>전체 기간 이동 링크</th><th>전체 기간 봇 전용</th><th>선택 기간 이동</th></tr></thead><tbody id="statistics-utm"></tbody></table></div><button id="load-more-statistics-utm" class="secondary-button compact-action" type="button" hidden>UTM 더 보기</button></section>
 		<section id="campaign-section" class="analytics-section" hidden><div class="analytics-section-heading"><div><h4>캠페인 비교</h4></div></div><div id="campaign-chart" class="breakdown-list"></div><div class="data-table-wrap"><table class="activity-table stacking-table"><thead><tr><th>캠페인</th><th>링크</th><th>사람 진입</th><th>사람 이동</th><th>이동률</th></tr></thead><tbody id="statistics-campaigns"></tbody></table></div><button id="load-more-statistics-campaigns" class="secondary-button compact-action" type="button" hidden>캠페인 더 보기</button></section>
 	</section>

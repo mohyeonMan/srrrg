@@ -8,12 +8,18 @@
 	</a>
 	<nav class="srrrg-header-nav" aria-label="주요 메뉴">
 		<a class="srrrg-header-link" th:href="@{/projects}">프로젝트</a>
-		<a class="srrrg-header-link" th:href="@{/manage}">링크 관리</a>
+		<!-- 비회원 링크 조회는 발급 당시의 secret key 로 들어가는 화면이다.
+		     로그인한 사용자의 프로젝트 링크에는 secret key 가 없어 쓸 일이 없고,
+		     남겨 두면 워크스페이스와 비회원 도구 두 층위가 헤더에서 섞인다.
+		     기존 익명 링크를 옮기는 경로는 프로젝트 설정의 편입 기능이 담당한다. -->
+		<a class="srrrg-header-link" th:if="${accountUser == null}" th:href="@{/manage}">링크 관리</a>
 		<a class="srrrg-header-login" th:if="${accountUser == null}"
 			th:href="@{/login(returnTo=${accountReturnTo})}">로그인</a>
 		<details class="srrrg-account-menu" th:if="${accountUser != null}">
 			<summary>
-				<span class="srrrg-account-avatar" aria-hidden="true">내</span>
+				<!-- 모두에게 "내" 를 보여주던 자리. 표시 이름의 첫 글자를 쓰면 계정이 구분된다. -->
+				<span class="srrrg-account-avatar" aria-hidden="true"
+					th:text="${#strings.isEmpty(accountUser.displayName) ? '내' : #strings.substring(accountUser.displayName, 0, 1)}">내</span>
 				<span th:text="${accountUser.displayName}">내 계정</span>
 			</summary>
 			<div class="srrrg-account-popover">

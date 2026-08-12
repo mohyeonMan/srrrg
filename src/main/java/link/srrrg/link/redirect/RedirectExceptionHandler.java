@@ -32,10 +32,12 @@ public class RedirectExceptionHandler {
 			HttpServletResponse response,
 			Model model
 	) {
+		// 예외 메시지는 제목과 같은 문장이라 화면에서는 설명이 제목을 되풀이했다.
+		// 설명 자리에는 원인과 다음 행동을 담는다. 예외 메시지는 로그와 API 응답용으로 그대로 둔다.
 		return errorPage(
 				HttpStatus.NOT_FOUND,
 				"링크를 찾을 수 없습니다",
-				exception.getMessage(),
+				"주소를 다시 확인해 주세요. 존재하지 않는 주소이거나 이미 삭제된 링크입니다.",
 				request,
 				response,
 				model

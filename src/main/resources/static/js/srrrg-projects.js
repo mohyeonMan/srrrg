@@ -3,7 +3,7 @@
 	if (!app) return;
 
 	const base = SrrrgCommon.base;
-	const { csrf, send, request, body, element, replaceChildren, setMessage, submitting } = SrrrgCommon;
+	const { csrf, send, request, requestShared, body, element, replaceChildren, setMessage, submitting } = SrrrgCommon;
 	const params = new URLSearchParams(location.search);
 	const selectedCampaignId = params.get('campaignId');
 	const selectedLinkCode = params.get('linkCode');
@@ -126,7 +126,10 @@
 		state.canEdit = canEdit;
 		byId('project-create-link-nav').hidden = !canEdit;
 		byId('project-create-campaign-nav').hidden = !canEdit;
-		byId('project-settings-nav').hidden = role !== 'OWNER';
+		// 설정 화면에는 편집자용 "기존 익명 링크 편입" 이 있는데 진입 경로가 소유자 전용이라
+		// 편집자는 직접 URL 을 입력하는 방법 말고는 도달할 수 없었다.
+		// 소유자 전용 카드는 srrrg-project-settings.js 가 계속 감춘다.
+		byId('project-settings-nav').hidden = !canEdit;
 		byId('create-campaign-form').hidden = !canEdit;
 	}
 
@@ -136,11 +139,49 @@
 		// 모든 패널이 숨겨져 빈 화면이 된다. 개요로 되돌린다.
 		if (!state.canEdit && panel !== 'home') panel = 'home';
 		byId('project-home-panel').hidden = panel !== 'home';
-		if (byId('project-members-panel')) byId('project-members-panel').hidden = panel !== 'home';
+		// 통계·멤버 탭은 요약과 함께 기본 화면에만 보인다.
+		const home = panel === 'home';
+		if (byId('project-view-tabs')) byId('project-view-tabs').hidden = !home;
+		if (byId('project-panel-statistics')) byId('project-panel-statistics').hidden = !home || activeProjectTab !== 'statistics';
+		if (byId('project-panel-members')) byId('project-panel-members').hidden = !home || activeProjectTab !== 'members';
 		byId('link-create-panel').hidden = panel !== 'link' || !state.canEdit;
 		byId('campaign-create-panel').hidden = panel !== 'campaign' || !state.canEdit;
 		byId('project-create-link-nav').classList.toggle('is-active', panel === 'link');
 		byId('project-create-campaign-nav').classList.toggle('is-active', panel === 'campaign');
+	}
+
+	// 통계·멤버 탭. roving tabindex 와 좌우 방향키는 srrrg-campaigns.js 의 탭 처리와 같은 방식이다.
+	const PROJECT_TABS = ['statistics', 'members'];
+	let activeProjectTab = 'statistics';
+
+	function switchProjectTab(tab) {
+		activeProjectTab = tab;
+		PROJECT_TABS.forEach((name) => {
+			const isActive = name === tab;
+			const tabButton = byId(`project-tab-${name}`);
+			if (!tabButton) return;
+			tabButton.setAttribute('aria-selected', String(isActive));
+			tabButton.tabIndex = isActive ? 0 : -1;
+			byId(`project-panel-${name}`).hidden = !isActive;
+		});
+	}
+
+	function bindProjectTabs() {
+		if (!byId('project-view-tabs')) return;
+		PROJECT_TABS.forEach((name) => {
+			const tabButton = byId(`project-tab-${name}`);
+			tabButton.addEventListener('click', () => switchProjectTab(name));
+			tabButton.addEventListener('keydown', (event) => {
+				const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+				if (!step) return;
+				event.preventDefault();
+				const current = PROJECT_TABS.indexOf(name);
+				const next = PROJECT_TABS[(current + step + PROJECT_TABS.length) % PROJECT_TABS.length];
+				byId(`project-tab-${next}`).focus();
+				switchProjectTab(next);
+			});
+		});
+		switchProjectTab(activeProjectTab);
 	}
 
 	async function loadProjectData() {
@@ -148,7 +189,8 @@
 		const projectId = state.selected.id;
 		const [overviewResponse, subdomainResponse] = await Promise.all([
 			request(`${base}/api/web/projects/${projectId}/overview`),
-			request(`${base}/api/web/projects/${projectId}/subdomain`)
+			// srrrg-campaigns.js 도 같은 값을 쓴다. 이 화면에서 바뀌지 않으므로 응답을 공유한다.
+			requestShared(`${base}/api/web/projects/${projectId}/subdomain`)
 		]);
 		if (state.selected?.id !== projectId) return;
 
@@ -442,10 +484,19 @@
 	const rail = byId('project-rail');
 	const railToggle = byId('open-rail');
 	const railScrim = byId('rail-scrim');
+	// 드로어가 열린 동안 본문은 스크림에 덮여 보이지 않는데도 Tab 으로 도달됐다.
+	// 네이티브 inert 로 형제 콘텐츠를 통째로 빼면 포커스도 포인터도 함께 막힌다.
+	// 비회원 생성 결과 패널에서 이미 쓰는 방식과 같다.
+	// 레일은 main 안에 있으므로 body 자식만 걸러도 본문이 남는다. 덮이는 영역을 직접 지정한다.
+	const coveredRegions = () => ['.srrrg-header', '.projects-heading', '#open-rail', '.project-workspace', '.srrrg-footer']
+		.map((selector) => document.querySelector(selector))
+		.filter(Boolean);
+
 	function setRailOpen(open) {
 		rail.dataset.open = String(open);
 		railScrim.hidden = !open;
 		railToggle.setAttribute('aria-expanded', String(open));
+		coveredRegions().forEach((node) => node.inert = open);
 		if (open) rail.querySelector('a, button')?.focus();
 		else railToggle.focus();
 	}
@@ -456,6 +507,27 @@
 		if (event.key === 'Escape' && rail.dataset.open === 'true') setRailOpen(false);
 	});
 
+	/**
+	 * 레일에서 항목을 고르면 전체 페이지 이동이 일어나 포커스가 body 로 떨어진다.
+	 * 키보드 사용자는 방금 고른 대상으로 가려고 Tab 을 처음부터 다시 밟아야 했다.
+	 *
+	 * "레일에서 왔는지" 를 저장해 두는 대신 URL 로 판단한다. 이 화면의 상태는 전부
+	 * 쿼리파라미터에 있고, 특정 하위 화면을 지목하는 파라미터가 있다는 것 자체가
+	 * 사용자가 그 화면을 열려고 했다는 뜻이다. 직접 링크와 새로고침에서도 똑같이 동작한다.
+	 */
+	function focusOpenedPanel() {
+		const opensSpecificView = selectedCampaignId || selectedLinkCode || params.get('view');
+		if (!opensSpecificView) return;
+		// tabindex="-1" 이 이미 있는 제목들을 재사용한다.
+		const heading = byId('campaign-name') || byId('managed-link-title')
+			|| byId('template-detail-name') || byId('settings-project-name')
+			|| byId('link-create-title') || byId('campaign-create-title');
+		if (!heading) return;
+		if (!heading.hasAttribute('tabindex')) heading.tabIndex = -1;
+		heading.focus();
+	}
+
 	selectExpiration('none');
-	loadProjects(new URLSearchParams(location.search).get('projectId'));
+	bindProjectTabs();
+	loadProjects(new URLSearchParams(location.search).get('projectId')).then(focusOpenedPanel);
 })();

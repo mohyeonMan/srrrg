@@ -119,10 +119,11 @@
 			</div>
 
 			<div id="project-detail" class="project-detail" hidden>
+				<!-- 링크·캠페인 수와 도메인은 작고 자주 쓰는 값이라 탭 뒤로 숨기지 않고 항상 보여 준다. -->
 				<section id="project-home-panel" class="project-card surface-panel" aria-labelledby="project-home-title">
 					<div class="project-card-heading">
 						<div>
-							<h2 id="project-home-title">프로젝트 개요</h2>
+							<h2 id="project-home-title">프로젝트 요약</h2>
 							<p>캠페인과 단축링크는 왼쪽 콘텐츠 목록에서 바로 열 수 있습니다.</p>
 						</div>
 					</div>
@@ -134,12 +135,25 @@
 						<p id="project-domain" class="project-domain">도메인을 불러오는 중...</p>
 						<button id="copy-project-domain" class="copy-button" type="button" disabled>복사</button>
 					</div>
-					<div th:if="${param.campaignId == null and param.linkCode == null and (param.view == null or (param.view[0] != 'utm-templates' and param.view[0] != 'project-settings'))}">
-						<div th:replace="~{statistics :: report}"></div>
-					</div>
 				</section>
 
-				<section id="project-members-panel" class="project-card surface-panel"
+				<!-- 이전에는 "프로젝트 개요" 카드 하나에 통계 리포트 전체와 멤버 관리가 함께 들어가
+				     카드 높이의 84%(2035px 중 1717px)를 통계가 차지하고, h2 개요 > h3 통계 > h4 5개로
+				     위계가 뒤집혀 있었다. 캠페인 상세와 같은 console-tabs 를 재사용해 나눈다.
+				     기본 탭은 통계다 — 워크스페이스에 들어오면 먼저 데이터가 보여야 한다.
+				     조각들이 이미 자기 surface-panel 을 들고 오므로 탭 패널에 카드 클래스를 겹치지 않는다. -->
+				<div id="project-view-tabs" class="console-tabs" role="tablist" aria-label="프로젝트 상세 화면"
+					th:if="${param.campaignId == null and param.linkCode == null and (param.view == null or (param.view[0] != 'utm-templates' and param.view[0] != 'project-settings'))}">
+					<button id="project-tab-statistics" class="console-tab" type="button" role="tab" aria-selected="true" aria-controls="project-panel-statistics">통계</button>
+					<button id="project-tab-members" class="console-tab" type="button" role="tab" aria-selected="false" aria-controls="project-panel-members">멤버</button>
+				</div>
+
+				<section id="project-panel-statistics" role="tabpanel" aria-labelledby="project-tab-statistics"
+					th:if="${param.campaignId == null and param.linkCode == null and (param.view == null or (param.view[0] != 'utm-templates' and param.view[0] != 'project-settings'))}">
+					<div th:replace="~{statistics :: report}"></div>
+				</section>
+
+				<section id="project-panel-members" role="tabpanel" aria-labelledby="project-tab-members" hidden
 					th:if="${param.campaignId == null and param.linkCode == null and (param.view == null or (param.view[0] != 'utm-templates' and param.view[0] != 'project-settings'))}">
 					<div th:replace="~{project-members :: report}"></div>
 				</section>

@@ -24,6 +24,9 @@
 		// 조회 전용이면 모든 카드가 숨겨져 화면이 비어버리므로 이유를 알려준다.
 		if (project.role === 'VIEWER') {
 			setMessage(settingsMessage, '조회 전용 권한이라 변경할 수 있는 설정이 없습니다.');
+		} else if (!isOwner) {
+			// 편집자는 편입만 쓸 수 있다. 나머지 카드가 안 보이는 이유를 밝힌다.
+			setMessage(settingsMessage, '이름·서브도메인·삭제는 프로젝트 소유자만 변경할 수 있습니다.');
 		}
 	}
 
@@ -34,6 +37,10 @@
 		byId('project-subdomain-enabled').checked = project.subdomainEnabled;
 		byId('project-subdomain-enabled').disabled = !project.subdomain;
 		byId('release-project-subdomain').disabled = !project.subdomain;
+		// 비활성 상태에는 이유를, 선점 상태에는 현재 값을 알려 준다.
+		byId('subdomain-availability').textContent = project.subdomain
+			? `현재 선점: ${project.subdomain}`
+			: '서브도메인을 먼저 선점하면 활성화와 반납을 쓸 수 있습니다.';
 		applyRoleVisibility();
 	}
 

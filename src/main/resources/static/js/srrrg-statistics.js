@@ -26,6 +26,10 @@
 		bucket.value = 'DAY';
 		load();
 	}));
+	// 날짜를 직접 고치면 어떤 칩에도 해당하지 않으므로 선택 표시를 지운다.
+	from.addEventListener('input', () => markActivePeriod(null));
+	to.addEventListener('input', () => markActivePeriod(null));
+	syncActivePeriodFromDates();
 	bindMore('links'); bindMore('utm'); bindMore('campaigns');
 	// 캠페인 뷰에서는 srrrg-campaigns.js 가 캠페인을 확정한 뒤 reload() 로 호출합니다.
 	// 여기서 또 부르면 가장 비싼 통계 쿼리가 두 번 실행됩니다.
@@ -46,9 +50,12 @@
 		message(append ? '다음 통계를 불러오는 중입니다.' : '통계를 불러오는 중입니다.');
 		setMoreDisabled(true);
 		try {
-			const response = await fetch(`${url}?${params}`, { headers: { Accept: 'application/json' } });
-			const data = await response.json();
-			if (!response.ok) throw new Error(response.status === 401 ? '로그인이 필요합니다. 프로젝트 화면에서 로그인해 주세요.' : data.message || '통계를 불러올 수 없습니다.');
+			// SrrrgCommon.request 를 쓴다. 맨 fetch 를 쓰던 동안에는 이 조각만 401 → refresh 재시도에
+			// 참여하지 못해서, access token 이 만료된 채 화면에 들어오면 나머지는 전부 살아나는데
+			// 통계만 "로그인이 필요합니다" 로 남았다. 그 안내 문구가 사실상 이 결함의 우회였다.
+			const response = await SrrrgCommon.request(`${url}?${params}`);
+			const data = await SrrrgCommon.body(response);
+			if (!response.ok) throw new Error(data.message || '통계를 불러올 수 없습니다.');
 			if (sequence !== requestSequence) return;
 			if (append) appendPage(data, append); else render(data);
 		} catch (error) {
@@ -117,7 +124,7 @@
 			byId('link-status-summary').innerHTML = `<span>전체 ${formatter.format(lifetime.total)}</span><span>사람 유입 ${formatter.format(lifetime.humanAccessed)}</span><span>봇 유입만 ${formatter.format(lifetime.botOnly)}</span><span>유입 없음 ${formatter.format(lifetime.noAccess)}</span>${data.scope === 'PROJECT' ? `<span>단일 ${formatter.format(lifetime.standalone)}</span><span>캠페인 소속 ${formatter.format(lifetime.campaign)}</span>` : ''}`;
 		}
 		const page = data.links;
-		const rows = page.items.map((item) => `<tr><td data-label="링크"><a href="${managementUrl(item.code)}">${escape(item.code)}</a></td><td data-label="external_id">${escape(item.externalId || '-')}</td><td data-label="목적지">${item.destinationSource === 'LINK' ? '개별 URL' : '캠페인 기본 URL'}</td><td data-label="상태">${status(item.lifetimeStatus)}</td><td data-label="사람 진입">${formatter.format(item.period.humanEntries)}</td><td data-label="사람 이동">${formatter.format(item.period.humanRedirects)}</td><td data-label="최근 유입">${dateTime(item.lastAccessedAt)}</td></tr>`).join('');
+		const rows = page.items.map((item) => `<tr><td data-label="링크"><a href="${managementUrl(item.code)}">${escape(item.code)}</a></td><td data-label="우리 쪽 식별자">${escape(item.externalId || '-')}</td><td data-label="목적지">${item.destinationSource === 'LINK' ? '개별 URL' : '캠페인 기본 URL'}</td><td data-label="상태">${status(item.lifetimeStatus)}</td><td data-label="사람 진입">${formatter.format(item.period.humanEntries)}</td><td data-label="사람 이동">${formatter.format(item.period.humanRedirects)}</td><td data-label="최근 유입">${dateTime(item.lastAccessedAt)}</td></tr>`).join('');
 		if (append) byId('statistics-links').insertAdjacentHTML('beforeend', rows); else byId('statistics-links').innerHTML = rows;
 		byId('statistics-links-wrap').hidden = !byId('statistics-links').children.length;
 		setNext('links', page.nextOffset);
@@ -172,7 +179,19 @@
 	function managementUrl(code) { return workspaceUrl(campaignId ? { campaignId, linkCode: code } : { linkCode: code }); }
 	function campaignStatisticsUrl(id) { return workspaceUrl({ campaignId: id }); }
 	function updateLocation() { const url = new URL(location.href); url.searchParams.set('from', from.value); url.searchParams.set('to', to.value); url.searchParams.set('bucket', bucket.value); history.replaceState(null, '', url); }
-	function setPeriod(days) { const end = new Date(), start = new Date(); start.setDate(end.getDate() - days + 1); from.value = local(start); to.value = local(end); }
+	function setPeriod(days) { const end = new Date(), start = new Date(); start.setDate(end.getDate() - days + 1); from.value = local(start); to.value = local(end); markActivePeriod(days); }
+	function markActivePeriod(days) {
+		document.querySelectorAll('[data-days]').forEach((button) => {
+			button.setAttribute('aria-pressed', String(Number(button.dataset.days) === days));
+		});
+	}
+	// URL 파라미터로 들어온 기간이 7·30·90일과 정확히 맞으면 그 칩을 선택 상태로 표시한다.
+	function syncActivePeriodFromDates() {
+		const start = new Date(from.value), end = new Date(to.value);
+		if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return markActivePeriod(null);
+		const days = Math.round((end - start) / 86_400_000) + 1;
+		markActivePeriod([7, 30, 90].includes(days) ? days : null);
+	}
 	function delta(now, previous) { if (!previous) return now ? '신규 유입' : '변화 없음'; const value = (now - previous) / previous * 100; return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`; }
 	function rate(numerator, denominator) { return denominator ? `${(numerator / denominator * 100).toFixed(1)}%` : '-'; }
 	function status(value) { return value === 'HUMAN_ACCESSED' ? '사람 유입 있음' : value === 'BOT_ONLY' ? '봇 유입만' : '유입 없음'; }

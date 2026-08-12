@@ -12,14 +12,10 @@
 	</header>
 	<p id="campaigns-message" class="form-message" role="status" aria-live="polite"></p>
 
-	<!-- 캠페인 전환은 왼쪽 레일이 담당합니다. 이 select 는 srrrg-campaigns.js 의
-	     loadCampaignPicker() 가 초기 캠페인을 고르는 데 쓰므로 숨긴 채 유지합니다. -->
-	<div id="campaign-picker-panel" class="surface-panel project-card campaign-card" hidden>
-		<h3>캠페인 선택</h3>
-		<label class="field" for="campaign-picker"><span class="field-label">이 프로젝트의 캠페인</span>
-			<select id="campaign-picker" class="field-input"></select>
-		</label>
-	</div>
+	<!-- 캠페인 전환은 왼쪽 레일이 담당합니다. 이 select 는 화면에 쓰지 않고
+	     srrrg-campaigns.js 의 loadCampaignPicker() 가 초기 캠페인을 고르는 데만 씁니다.
+	     보이지 않는 패널과 라벨 마크업은 필요가 없어 select 만 남깁니다. -->
+	<select id="campaign-picker" hidden aria-hidden="true"></select>
 
 	<div id="campaign-body" hidden>
 		<div class="console-tabs" role="tablist" aria-label="캠페인 상세 화면">
@@ -58,17 +54,20 @@
 							<th scope="col"><span class="sr-only">복사</span></th>
 							<th scope="col">UTM</th>
 							<th scope="col">목적지</th>
-							<th scope="col">external_id</th>
+							<th scope="col">우리 쪽 식별자</th>
 							<th scope="col">생성일</th>
 						</tr>
 						</thead>
 						<tbody id="campaign-link-list"></tbody>
 					</table>
 				</div>
-				<div id="campaign-link-empty" class="project-empty-list">
-						<p>아직 만든 링크가 없습니다.</p>
-						<button id="go-create-campaign-link" class="primary-button" type="button">링크 만들기</button>
-					</div>
+				<!-- 링크 목록이 확정되기 전에는 보이지 않는다. loadLinks() 가 결과를 받은 뒤에만
+				     빈 상태나 표 중 하나를 드러낸다. 그러지 않으면 링크가 있는 캠페인에서도
+				     "아직 만든 링크가 없습니다" 가 잠깐 스쳐 지나간다. -->
+				<div id="campaign-link-empty" class="project-empty-list" hidden>
+					<p>아직 만든 링크가 없습니다.</p>
+					<button id="go-create-campaign-link" class="primary-button" type="button">링크 만들기</button>
+				</div>
 				<p id="campaign-links-message" class="form-message" role="status" aria-live="polite"></p>
 				<button id="load-more-links-button" class="secondary-button" type="button" hidden>더 보기</button>
 			</section>
@@ -82,7 +81,7 @@
 					<label class="field" for="export-created-to"><span class="field-label">종료일</span>
 						<input id="export-created-to" class="field-input" type="datetime-local">
 					</label>
-					<label class="field" for="export-external-id"><span class="field-label">external_id 검색</span>
+					<label class="field" for="export-external-id"><span class="field-label">우리 쪽 식별자 검색</span>
 						<input id="export-external-id" class="field-input" maxlength="100">
 					</label>
 				</div>
@@ -100,10 +99,19 @@
 					<label class="field" for="campaign-original-url"><span class="field-label">원본 URL (선택)</span>
 						<input id="campaign-original-url" class="field-input" name="originalUrl" type="url" maxlength="2048">
 					</label>
-					<label class="field" for="campaign-external-id"><span class="field-label">external_id (선택, 이메일·이름·전화번호 금지)</span>
-						<input id="campaign-external-id" class="field-input" name="externalId" maxlength="100" autocomplete="off">
+					<!-- 라벨은 무엇을 넣는 칸인지만 말하고, 넣지 말아야 할 것은 도움말로 분리한다.
+					     API 와 CSV 양식에서는 계약대로 external_id 를 그대로 쓴다. -->
+					<label class="field" for="campaign-external-id"><span class="field-label">우리 쪽 식별자 (선택)</span>
+						<input id="campaign-external-id" class="field-input" name="externalId" maxlength="100" autocomplete="off" aria-describedby="campaign-external-id-help">
+						<span id="campaign-external-id-help" class="help-text">주문번호처럼 내부에서 쓰는 값을 넣어 성과를 구분합니다. 이메일·이름·전화번호는 넣지 마세요. API와 CSV에서는 <code>external_id</code> 입니다.</span>
 					</label>
 					<div id="campaign-utm-inputs" class="template-field-list"></div>
+					<!-- 링크를 만들기 전에 실제로 어떤 주소로 이동할지 보여준다.
+					     입력값과 캠페인 기본값이 이미 클라이언트에 있어 서버 왕복이 필요 없다. -->
+					<div id="campaign-link-preview" class="field" hidden>
+						<span class="field-label">이동할 주소 미리보기</span>
+						<p id="campaign-link-preview-url" class="url-box"></p>
+					</div>
 					<div class="project-form-actions">
 						<p id="create-campaign-link-message" class="form-message" role="status" aria-live="polite"></p>
 						<button id="create-campaign-link-button" class="primary-button" type="submit">링크 만들기</button>
@@ -118,10 +126,11 @@
 					<label class="field" for="csv-file"><span class="field-label">CSV 파일 (UTF-8, 최대 10,000행·10MB)</span>
 						<input id="csv-file" class="field-input" name="file" type="file" accept=".csv,text/csv" required>
 					</label>
-					<label class="field" for="csv-idempotency-key"><span class="field-label">요청 식별자</span>
-						<input id="csv-idempotency-key" class="field-input" name="idempotencyKey" maxlength="100" required readonly aria-describedby="csv-idempotency-help">
-						<span id="csv-idempotency-help" class="help-text">같은 파일을 두 번 올려도 중복 생성되지 않도록 자동 발급됩니다.</span>
-					</label>
+					<!-- 요청 식별자는 HTTP 재시도용 값이라 사용자가 읽거나 고칠 일이 없다.
+					     폼 한 줄을 차지하며 UUID 를 보여줄 이유가 없어 hidden 으로 옮기고,
+					     중복 생성이 막힌다는 사실만 설명으로 남긴다. -->
+					<input id="csv-idempotency-key" name="idempotencyKey" type="hidden">
+					<p class="help-text">같은 파일을 두 번 올려도 링크가 중복 생성되지 않습니다.</p>
 					<button class="primary-button" type="submit">업로드</button>
 				</form>
 				<div id="import-status-panel" tabindex="-1" hidden>
