@@ -40,7 +40,7 @@
 		// 비활성 상태에는 이유를, 선점 상태에는 현재 값을 알려 준다.
 		byId('subdomain-availability').textContent = project.subdomain
 			? `현재 선점: ${project.subdomain}`
-			: '서브도메인을 먼저 선점하면 활성화와 반납을 쓸 수 있습니다.';
+			: '먼저 서브도메인을 선점하세요.';
 		applyRoleVisibility();
 	}
 
@@ -82,7 +82,7 @@
 			const responseBody = await body(response);
 			if (!response.ok) return setMessage(domainMessage, responseBody.message || '서브도메인을 변경할 수 없습니다.', true);
 			await loadProject();
-			setMessage(domainMessage, '서브도메인을 선점했습니다. 활성화하면 신규 링크에 사용됩니다.');
+			setMessage(domainMessage, '서브도메인을 선점했습니다. 체크하면 새 링크에 적용됩니다.');
 		});
 	});
 

@@ -6,7 +6,8 @@
 	<div class="campaign-heading-row">
 		<h2>UTM 템플릿</h2>
 	</div>
-	<p class="help-text">프로젝트 전체에서 재사용하는 UTM 필드 구성을 관리합니다. 캠페인에서는 여기서 만든 템플릿을 선택합니다.</p>
+	<!-- 둘째 문장("캠페인에서는 여기서 만든 템플릿을 선택합니다")은 아래 빈 상태가 같은 말을 한다. -->
+	<p class="help-text">캠페인 링크에 붙일 UTM 필드 구성을 관리합니다.</p>
 
 	<section class="project-switcher surface-panel" aria-labelledby="template-picker-label">
 		<label class="field" for="template-picker">
@@ -55,7 +56,10 @@
 					<option value="utm_term">검색 키워드</option>
 					<option value="utm_content">소재 구분 (예: A안, B안)</option>
 				</datalist>
-				<span id="new-field-name-help" class="help-text">표준 이름을 쓰면 GA 같은 분석 도구가 그대로 인식합니다. 목록에서 고르거나 직접 입력하세요. 영문 소문자·숫자·밑줄만 쓸 수 있습니다.</span>
+				<!-- 세 문장이었다. datalist 가 목록을 이미 보여주므로 "고르거나 입력하세요" 는
+				     컴포넌트 사용법 설명이고, 허용 문자는 pattern 이 검증해 브라우저가 알려 준다.
+				     표준 이름을 쓸 이유 하나만 남긴다. -->
+				<span id="new-field-name-help" class="help-text">표준 이름을 쓰면 GA 같은 분석 도구가 그대로 인식합니다.</span>
 			</label>
 			<button class="primary-button" type="submit">필드 추가</button>
 		</form>

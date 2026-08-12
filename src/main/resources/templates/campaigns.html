@@ -36,7 +36,7 @@
 					<span id="campaign-link-count" class="status-badge">0</span>
 				</div>
 				<div class="campaign-link-toolbar">
-					<label class="campaign-link-select-all" for="campaign-link-select-all">
+					<label class="campaign-link-select-all checkbox-row" for="campaign-link-select-all">
 						<input id="campaign-link-select-all" type="checkbox">
 						<span id="campaign-link-selected-count">0개 선택</span>
 					</label>
@@ -103,7 +103,7 @@
 					     API 와 CSV 양식에서는 계약대로 external_id 를 그대로 쓴다. -->
 					<label class="field" for="campaign-external-id"><span class="field-label">우리 쪽 식별자 (선택)</span>
 						<input id="campaign-external-id" class="field-input" name="externalId" maxlength="100" autocomplete="off" aria-describedby="campaign-external-id-help">
-						<span id="campaign-external-id-help" class="help-text">주문번호처럼 내부에서 쓰는 값을 넣어 성과를 구분합니다. 이메일·이름·전화번호는 넣지 마세요. API와 CSV에서는 <code>external_id</code> 입니다.</span>
+						<span id="campaign-external-id-help" class="help-text">주문번호 같은 내부 식별자. 이메일·이름·전화번호는 넣지 마세요. API·CSV에서는 <code>external_id</code>.</span>
 					</label>
 					<div id="campaign-utm-inputs" class="template-field-list"></div>
 					<!-- 링크를 만들기 전에 실제로 어떤 주소로 이동할지 보여준다.

@@ -16,7 +16,9 @@
 
 	<section id="invitation-management" class="surface-panel project-card" aria-labelledby="invitation-title" hidden>
 		<h3 id="invitation-title">초대</h3>
-		<p class="invitation-help">이메일로 초대 링크를 보냅니다. 링크를 열어 로그인한 계정이 참여하므로 링크가 전달되지 않도록 안내하세요.</p>
+		<!-- "이메일로 초대 링크를 보냅니다" 는 바로 아래 폼(초대할 이메일 + 초대 보내기)이 이미 보여 준다.
+		     남길 것은 전달 위험 하나다. -->
+		<p class="invitation-help">초대 링크를 연 계정이 그대로 참여합니다. 링크를 다른 사람에게 전달하지 마세요.</p>
 		<form id="invite-form" class="project-inline-form">
 			<label class="field" for="invite-email"><span class="field-label">초대할 이메일</span><input id="invite-email" class="field-input" name="email" type="email" maxlength="320" autocomplete="email" aria-describedby="invite-message" required></label>
 			<label class="field" for="invite-role"><span class="field-label">권한</span><select id="invite-role" class="field-input" name="role"><option value="EDITOR">링크 편집 가능</option><option value="VIEWER">조회 전용</option></select></label>

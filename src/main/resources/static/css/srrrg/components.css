@@ -168,6 +168,38 @@
 	gap: var(--space-2);
 }
 
+/* 체크박스 한 줄. .field 는 grid 라서 그 안에 체크박스를 넣으면
+   라벨·체크박스·설명이 각자 행을 차지하며 찢어진다(실제로 그렇게 깨져 있었다).
+   체크박스는 상태와 설명이 한 덩어리로 읽혀야 하므로 별도 컴포넌트로 둔다.
+   label 이 input 을 감싸므로 글자를 눌러도 토글되고, min-height 로 터치 영역을 확보한다. */
+.checkbox-row {
+	display: flex;
+	gap: var(--space-2);
+	align-items: center;
+	min-height: var(--touch-min);
+	min-width: 0;
+	font-size: var(--text-sm);
+	cursor: pointer;
+}
+
+.checkbox-row input[type="checkbox"] {
+	width: 20px;
+	height: 20px;
+	margin: 0;
+	flex: 0 0 auto;
+	accent-color: var(--color-brand);
+	cursor: pointer;
+}
+
+.checkbox-row > span {
+	min-width: 0;
+}
+
+.checkbox-row:has(input:disabled) {
+	color: var(--color-text-subtle);
+	cursor: not-allowed;
+}
+
 /* 라벨은 입력값보다 약하게. 값이 읽는 대상이고 라벨은 안내다. */
 .field-label,
 .data-label {
@@ -424,10 +456,11 @@ select.field-input {
 		width: 100%;
 	}
 
+	/* 카드는 테두리 있는 래퍼 안에 놓이므로 좌우 여백이 없으면 값이 테두리에 붙는다. */
 	.stacking-table tr {
 		display: grid;
 		gap: var(--space-2);
-		padding: var(--space-3) 0;
+		padding: var(--space-3);
 		border-bottom: 1px solid var(--color-border);
 	}
 

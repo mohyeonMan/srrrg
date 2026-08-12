@@ -382,6 +382,20 @@ button.campaign-link-code {
 
 	/* 가로 스크롤 대신 .stacking-table(components.css)로 카드형으로 접힙니다. */
 
+	/* 열이 8개라 카드로 접으면 링크 하나가 8행 200px 을 넘는다.
+	   목록에서 하는 일은 "내 링크를 훑고 하나를 집어 가는 것" 이라
+	   이름·코드·복사·UTM·목적지만 남기고 생성일과 식별자는 링크 상세로 미룬다.
+	   둘 다 링크 상세 화면에서 그대로 볼 수 있어 정보가 사라지지는 않는다. */
+	.campaign-link-table td[data-label="생성일"],
+	.campaign-link-table td[data-label="우리 쪽 식별자"] {
+		display: none;
+	}
+
+	/* 목적지는 긴 URL 이 들어와도 카드 폭을 넘기지 않아야 한다. */
+	.campaign-link-table td[data-label="목적지"] {
+		overflow-wrap: anywhere;
+	}
+
 	.campaign-utm-value-row {
 		grid-template-columns: 1fr;
 		gap: var(--space-2);
