@@ -68,7 +68,7 @@
 
 .onboarding-shell {
 	display: grid;
-	width: min(560px, calc(100% - 32px));
+	width: min(560px, calc(100% - var(--shell-gutter) * 2));
 	place-items: start stretch;
 }
 

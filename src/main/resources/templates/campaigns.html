@@ -195,9 +195,12 @@
 				<p id="defaults-message" class="form-message" role="status" aria-live="polite"></p>
 			</section>
 
+			<!-- 제목과 설명을 한 덩어리로. 형제로 두면 flex 가 별개 칼럼으로 벌린다. -->
 			<section class="surface-panel project-card campaign-card danger-zone" aria-labelledby="campaign-danger-zone-title">
-				<h3 id="campaign-danger-zone-title">캠페인 삭제</h3>
-				<p class="help-text">삭제하면 캠페인과 소속 링크를 더 이상 사용할 수 없습니다.</p>
+				<div>
+					<h3 id="campaign-danger-zone-title">캠페인 삭제</h3>
+					<p class="help-text">삭제하면 캠페인과 소속 링크를 더 이상 사용할 수 없습니다.</p>
+				</div>
 				<button id="delete-campaign-button" class="danger-button" type="button">캠페인 삭제</button>
 			</section>
 		</section>

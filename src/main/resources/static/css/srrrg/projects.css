@@ -1,5 +1,5 @@
 .projects-shell {
-	width: min(1240px, calc(100% - 32px));
+	width: var(--shell-width);
 	margin: clamp(28px, 5vw, 56px) auto;
 }
 
@@ -108,7 +108,7 @@
 }
 
 .project-create-dialog {
-	width: min(420px, calc(100% - 32px));
+	width: min(420px, calc(100% - var(--shell-gutter) * 2));
 	padding: var(--space-5);
 	background: var(--color-surface);
 	border: 1px solid var(--color-border);
@@ -217,11 +217,13 @@
 	cursor: pointer;
 }
 
+/* outline 을 지우지 않는다. hover 와 한 규칙으로 묶어 outline:none 을 두던 동안
+   키보드 포커스가 1px 테두리 색 변화만으로 표시돼 WCAG 2.4.11 을 만족하지 못했다.
+   hover 는 :focus-visible 을 켜지 않으므로 이 규칙에서 outline 을 빼도 마우스에는 영향이 없다. */
 .project-activity-controls button:hover,
 .project-activity-controls button:focus-visible {
 	color: var(--color-brand-strong);
 	border-color: var(--color-brand);
-	outline: none;
 }
 
 .project-activity-scroll {
@@ -305,8 +307,7 @@
 
 /* #change-managed-link 은 숨기지 않는다. srrrg-management.js 가 캠페인 컨텍스트가 있을 때
    라벨을 "캠페인으로" 로 바꿔 주므로, 링크 상세에서 소속 캠페인으로 돌아가는 유일한 출구다. */
-.project-link-view #management-gate,
-.project-link-view .console-header .section-kicker {
+.project-link-view #management-gate {
 	display: none;
 }
 
@@ -314,8 +315,11 @@
    카드 세 개로 나누지 않고 한 면에 나란히 둔다.
    숫자는 통계 탭의 성과 지표와 경쟁하지 않도록 --text-lg 로 억제한다 —
    여기 숫자는 규모 파악용이고, 판단에 쓰는 수치는 통계 탭에 있다. */
+/* 좌우는 다른 판과 같은 축(--panel-padding)에, 위아래만 한 줄짜리라 좁게 둔다.
+   좌우가 --space-5(20px) 였던 동안 이 줄의 라벨만 x=21 에 서서
+   같은 화면의 다른 본문(x=25)과 4px 어긋났다(실측). */
 .project-summary {
-	padding: var(--space-4) var(--space-5);
+	padding: var(--space-4) var(--panel-padding);
 }
 
 .project-summary-facts {
@@ -390,13 +394,15 @@
 	text-align: center;
 }
 
+/* 다른 판과 같은 --panel-padding 을 쓴다. --space-5(20px) 였던 동안
+   이 판의 라벨만 x=21 에 서서 옆 카드 본문(x=25)과 4px 어긋났다(실측). */
 .project-switcher {
 	display: grid;
 	grid-template-columns: minmax(220px, 360px) auto minmax(0, 1fr);
 	gap: var(--space-4);
 	align-items: end;
 	margin-bottom: var(--space-5);
-	padding: var(--space-5);
+	padding: var(--panel-padding);
 }
 
 .project-card-heading,
@@ -790,8 +796,8 @@
 }
 
 @media (max-width: 520px) {
+	/* 폭은 --shell-gutter 가 responsive.css 에서 줄어들며 따라온다. 위 여백만 좁힌다. */
 	.projects-shell {
-		width: calc(100% - 20px);
 		margin: 20px auto;
 	}
 

@@ -1,11 +1,17 @@
 /* 헤더는 위치를 알리는 얇은 띠다. 이전에는 30px 워드마크에 태그라인까지 붙어
-   본문 제목보다 무거웠다. 높이를 낮추고 baseline 대신 center 정렬로 띠를 안정시킨다. */
+   본문 제목보다 무거웠다. 높이를 낮추고 baseline 대신 center 정렬로 띠를 안정시킨다.
+
+   좌우 여백은 본문 셸과 같은 식으로 계산해 워드마크가 본문 정렬축에 선다.
+   띠 자체는 화면 전체를 덮고(테두리가 끝까지 이어져야 한다) 안쪽 내용만 축에 맞춘다.
+   고정 패딩이던 시절에는 워드마크가 x=28 에 박혀 있어 본문이 가운데로 모이는
+   넓은 화면에서 축이 벌어졌다 — 1440px 에서 132px, 1920px 에서 372px 어긋났다(실측). */
 .srrrg-header {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: var(--space-4);
-	padding: var(--space-3) clamp(16px, 3vw, 28px);
+	padding-block: var(--space-3);
+	padding-inline: var(--shell-inset);
 	background: var(--color-surface);
 	border-bottom: 1px solid var(--color-border);
 }
@@ -44,6 +50,7 @@
 	font-size: var(--text-sm);
 	font-weight: var(--weight-medium);
 	text-decoration: none;
+	white-space: nowrap;
 	border-radius: var(--radius-sm);
 }
 
@@ -52,11 +59,14 @@
 	background: var(--color-surface-hover);
 }
 
+/* 라벨은 줄바꿈하지 않는다. 320px 에서 이 버튼의 내용 폭이 38px 로 눌려
+   "로그인"(약 39px)이 "로그 / 인" 두 줄로 쪼개졌다(캡처로 확인). */
 .srrrg-header-login {
 	display: inline-flex;
 	min-height: var(--button-height);
 	align-items: center;
 	padding: 0 var(--space-4);
+	white-space: nowrap;
 	color: #fff;
 	background: var(--color-brand);
 	border-radius: var(--radius-xs);
@@ -154,12 +164,15 @@
 	margin: 0 6px;
 }
 
+/* 워크스페이스 셸(.projects-shell / .management-shell)과 같은 축을 쓴다.
+   1120px 이던 동안에는 헤더·워크스페이스는 1240 축에, 홈·계정·온보딩은 1120 축에 서서
+   화면을 오갈 때 정렬축이 60px 씩 움직였다. 읽는 문단은 각자 max-width 로 이미 제한된다. */
 .page-shell {
-	width: min(1120px, calc(100% - 32px));
+	width: var(--shell-width);
 	margin: clamp(24px, 5vw, 56px) auto;
 }
 
 .decision-shell {
-	width: min(720px, calc(100% - 32px));
+	width: min(720px, calc(100% - var(--shell-gutter) * 2));
 	margin: clamp(24px, 6vw, 48px) auto;
 }

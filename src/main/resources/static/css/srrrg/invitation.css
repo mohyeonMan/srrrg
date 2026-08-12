@@ -1,7 +1,7 @@
 .invitation-shell {
 	display: grid;
 	place-items: center;
-	width: min(680px, calc(100% - 32px));
+	width: min(680px, calc(100% - var(--shell-gutter) * 2));
 	margin: clamp(32px, 7vw, 72px) auto;
 }
 
@@ -112,8 +112,8 @@
 }
 
 @media (max-width: 560px) {
+	/* 폭은 --shell-gutter 가 responsive.css 에서 줄어들며 따라온다. 위 여백만 좁힌다. */
 	.invitation-shell {
-		width: calc(100% - 20px);
 		margin: 20px auto;
 	}
 

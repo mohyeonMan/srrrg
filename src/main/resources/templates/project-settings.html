@@ -52,9 +52,13 @@
 		</form>
 	</section>
 
+	<!-- 제목과 설명은 한 덩어리로 묶는다. 형제로 두면 .danger-zone 의 flex 가
+	     둘을 별개 칼럼으로 벌려 제목과 그 설명 사이에 100px 가까운 빈칸이 생긴다. -->
 	<section class="surface-panel project-card danger-zone" aria-labelledby="danger-zone-title">
-		<h3 id="danger-zone-title">프로젝트 삭제</h3>
-		<p class="help-text">삭제하면 프로젝트의 링크와 API key를 더 이상 사용할 수 없습니다.</p>
+		<div>
+			<h3 id="danger-zone-title">프로젝트 삭제</h3>
+			<p class="help-text">삭제하면 프로젝트의 링크와 API key를 더 이상 사용할 수 없습니다.</p>
+		</div>
 		<button id="delete-project-button" class="danger-button" type="button">프로젝트 삭제</button>
 	</section>
 </div>

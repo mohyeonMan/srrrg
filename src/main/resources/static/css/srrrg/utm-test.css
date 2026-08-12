@@ -1,5 +1,5 @@
 .utm-test-shell {
-	width: min(920px, calc(100% - 32px));
+	width: min(920px, calc(100% - var(--shell-gutter) * 2));
 	margin: clamp(32px, 7vw, 72px) auto;
 }
 

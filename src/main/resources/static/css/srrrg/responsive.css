@@ -5,8 +5,9 @@
 }
 
 @media (max-width: 860px) {
+	/* 폭 상한(720px)을 여기서 따로 걸던 동안에는 홈만 좁은 축에 서서
+	   헤더 워드마크와 12px 어긋났다. 읽는 문단은 각자 max-width 로 이미 제한된다. */
 	.page-shell {
-		width: min(100% - 24px, 720px);
 		margin-top: var(--space-7);
 	}
 
@@ -23,8 +24,9 @@
 		padding-top: 0;
 	}
 
+	/* 좌우는 --shell-inset 이 축을 잡는다. 세로만 줄인다. */
 	.srrrg-header {
-		padding: 18px 24px;
+		padding-block: 18px;
 	}
 }
 
@@ -51,6 +53,14 @@
 	}
 }
 
+@media (max-width: 640px) {
+	/* 좁은 화면에서는 가장자리 여백을 10px 로 줄인다. 셸 폭과 헤더 좌우 여백이
+	   모두 이 값에서 나오므로 한 곳만 바꾸면 축이 함께 움직인다. */
+	:root {
+		--shell-gutter: 10px;
+	}
+}
+
 @media (max-width: 520px) {
 	.srrrg-header-nav { gap: 10px; }
 
@@ -62,7 +72,6 @@
 
 	.page-shell,
 	.decision-shell {
-		width: calc(100% - 20px);
 		margin: 20px auto;
 	}
 
@@ -164,7 +173,13 @@
 
 @media (max-width: 380px) {
 	.srrrg-header {
-		padding: 16px 20px;
+		padding-block: 16px;
+	}
+
+	/* 320px 에서 워드마크 45 + 내비 240 이 가용 300 을 넘어선다.
+	   줄바꿈 금지와 함께 이 버튼의 좌우 여백을 줄여 한 줄에 담는다. */
+	.srrrg-header-login {
+		padding: 0 var(--space-3);
 	}
 
 	.srrrg-logo {

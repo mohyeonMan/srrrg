@@ -17,8 +17,9 @@
 		th:attr="data-token=${token},data-available=${invitation.available}"
 >
 	<section class="invitation-card surface-panel" aria-labelledby="invitation-title">
+		<!-- "프로젝트 초대" 아이브로우를 없앴다. 두 갈래의 h1 이 모두 "초대" 를 말해
+		     아이브로우가 같은 단어를 한 번 더 반복했다. -->
 		<header class="invitation-heading">
-			<span class="section-eyebrow">프로젝트 초대</span>
 			<th:block th:if="${invitation.available}">
 				<h1 id="invitation-title"><span th:text="${invitation.projectName}">프로젝트</span>에 초대받았습니다</h1>
 				<p>초대 내용을 확인하고 현재 로그인한 계정으로 참여하세요.</p>
