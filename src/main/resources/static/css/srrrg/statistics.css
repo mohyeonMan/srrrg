@@ -1,6 +1,14 @@
 /* 통계 조각 전용 스타일.
    이전에는 한 줄로 압축된 채 rem 값과 hex 를 직접 써서 나머지 화면과 토큰이 어긋났다. */
 
+/* 제목 카드와 본문(필터·지표·섹션)은 형제라서 사이 간격이 0 이었다.
+   본문 내부는 .analytics-panel 의 gap 으로 전부 20px 리듬을 쓰는데
+   제목 카드 다음만 붙어 있어 리듬이 한 번 끊겼다(실측). 같은 20px 로 맞춘다. */
+#statistics-app {
+	display: grid;
+	gap: var(--space-5);
+}
+
 /* 제목과 기간 표시는 한 덩어리다. 붙여 두고 기간 쪽을 메타데이터로 낮춘다.
    이전에는 본문 크기·본문 색이라 데이터 문장처럼 읽혔고, p 기본 마진과 gap 이
    더해져 제목과 35px 떨어져 있었다. */
@@ -17,13 +25,21 @@
 	color: var(--color-danger);
 }
 
+/* 아래 간격은 .analytics-panel 의 grid gap(20px)이 이미 만든다.
+   margin-bottom 을 함께 두면 40px 가 되어 필터와 지표가 과하게 떨어져 있었다(실측). */
 .statistics-filter {
 	display: flex;
 	flex-wrap: wrap;
 	gap: var(--space-3);
 	/* 라벨이 붙은 필드와 붙지 않은 컨트롤이 섞여 있어 아래쪽을 기준으로 맞춘다. */
 	align-items: end;
-	margin-bottom: var(--space-5);
+}
+
+/* 컨트롤 5개가 한 줄에 다 들어가지 않는 폭에서는 적용 버튼만 다음 줄로 내려간다.
+   그때 왼쪽 끝에 홀로 놓이면 오른쪽에 700px 가 비어 버려진 것처럼 보였다.
+   오른쪽으로 밀어 필터 블록을 닫는 행동으로 읽히게 한다. */
+.statistics-filter button[type="submit"] {
+	margin-left: auto;
 }
 
 /* 필드는 .field / .field-label / .field-input 공통 컴포넌트를 쓴다.

@@ -484,7 +484,7 @@
 .project-card {
 	display: grid;
 	gap: var(--space-5);
-	padding: clamp(20px, 3vw, 28px);
+	padding: var(--panel-padding);
 }
 
 .project-link-create {

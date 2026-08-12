@@ -24,26 +24,24 @@
 	white-space: nowrap;
 }
 
-/* 상태색 배지는 좌측 3px 마커로 종류를 알린다. 색만으로 구분하지 않는다. */
+/* 좌측 3px 마커를 두었었는데, 6px 라운딩을 따라 inset 그림자가 휘어
+   괄호 조각처럼 렌더됐다(캡처 확인). 그리고 이 배지는 상태를 글자로 이미 말한다 —
+   "사용 가능", "만료됨" 처럼 라벨 자체가 구분자라 색은 보강이고 마커는 정보를 더하지 않는다.
+   정보가 없는 장식이 렌더까지 지저분하므로 뺀다. 색 대비만으로 판단하게 두지 않는다는
+   조건은 라벨 텍스트가 이미 충족한다. */
 .status-badge.success {
 	color: var(--color-success);
 	background: var(--color-success-soft);
-	box-shadow: inset 3px 0 0 var(--color-success);
-	padding-left: var(--space-3);
 }
 
 .status-badge.warning {
 	color: var(--color-warning);
 	background: var(--color-warning-soft);
-	box-shadow: inset 3px 0 0 var(--color-warning);
-	padding-left: var(--space-3);
 }
 
 .status-badge.danger {
 	color: var(--color-danger);
 	background: var(--color-danger-soft);
-	box-shadow: inset 3px 0 0 var(--color-danger);
-	padding-left: var(--space-3);
 }
 
 /* 눈썹 라벨. 이전에는 브랜드색 pill 이라 배지·버튼과 구분되지 않았다.
@@ -230,6 +228,8 @@ select.field-input {
 	box-shadow: 0 0 0 3px var(--color-danger-soft);
 }
 
+/* min-height 는 폼 안에서 메시지가 나타날 때 제출 버튼이 밀리지 않게 자리를 미리 잡아 둔다.
+   버튼 바로 옆에서는 20px 밀림이 오클릭으로 이어지므로 이 예약은 유지한다. */
 .field-error,
 .form-message {
 	min-height: 20px;
@@ -237,6 +237,17 @@ select.field-input {
 	font-size: var(--text-xs);
 	line-height: 1.5;
 	word-break: keep-all;
+}
+
+/* 다만 화면 최상위의 상태 줄은 사정이 다르다. 섹션 사이에 놓여 있어서
+   비어 있어도 20px 를 차지하고, 부모 grid 의 gap 이 위아래로 한 번씩 더 붙는다.
+   캠페인 화면에서는 헤더 카드와 탭 사이가 60px 로 벌어지고 그중 40px 가 순수 공백이었다(실측).
+   이 위치의 메시지는 버튼과 붙어 있지 않으므로 비었을 때 흐름에서 빠져도 오클릭 위험이 없다. */
+#projects-app > .form-message:empty,
+#campaigns-app > .form-message:empty,
+#project-settings-app > .form-message:empty,
+#project-members-app > .form-message:empty {
+	display: none;
 }
 
 .field-error {
