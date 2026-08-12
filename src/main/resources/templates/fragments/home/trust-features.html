@@ -2,18 +2,22 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <body>
 <section class="home-section service-facts" th:fragment="trustFeatures" aria-label="서비스 주요 기능">
+	<!--
+		판정의 한계("오탐이나 미탐이 있을 수 있습니다")는 실제로 차단이 일어난 화면에서
+		Safe Browsing 고지와 함께 읽어야 의미가 있다. 홈에서는 무엇을 해 주는지만 말한다.
+	-->
 	<dl>
 		<div>
 			<dt>위협 확인</dt>
-			<dd>등록과 이동 시 알려진 위협을 확인하며 판정에는 오탐이나 미탐이 있을 수 있습니다.</dd>
+			<dd>등록할 때와 이동할 때 알려진 위협을 확인합니다.</dd>
 		</div>
 		<div>
 			<dt>직접 관리</dt>
-			<dd>secret key로 링크를 조회, 수정, 삭제합니다.</dd>
+			<dd>secret key로 링크를 조회하고 수정하고 삭제합니다.</dd>
 		</div>
 		<div>
 			<dt>이동 통계</dt>
-			<dd>누적 클릭과 실제 이동 횟수를 확인합니다.</dd>
+			<dd>진입 수와 실제 이동 수를 나눠서 봅니다.</dd>
 		</div>
 	</dl>
 </section>

@@ -21,8 +21,8 @@
 
 .campaign-heading-row h2 {
 	margin: 0;
-	font-size: clamp(22px, 3vw, 26px);
-	font-weight: 900;
+	font-size: var(--text-2xl);
+	font-weight: var(--weight-bold);
 }
 
 .campaign-description {
@@ -50,12 +50,12 @@
 
 .campaign-card h2 {
 	margin: 0;
-	font-size: 19px;
+	font-size: var(--text-lg);
 }
 
 .campaign-card h3 {
 	margin: 0;
-	font-size: 15px;
+	font-size: var(--text-md);
 }
 
 .campaign-template-fields {
@@ -70,13 +70,13 @@
 	color: var(--color-brand-strong);
 	background: var(--color-brand-soft);
 	border-radius: 6px;
-	font-size: 12px;
+	font-size: var(--text-2xs);
 }
 
 .campaign-card > p {
 	margin: 0;
 	color: var(--color-text-subtle);
-	font-size: 13px;
+	font-size: var(--text-xs);
 }
 
 .campaign-inline-row {
@@ -106,7 +106,7 @@
 	border: 1px solid var(--color-border);
 	border-radius: var(--radius-sm);
 	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-	font-size: 13px;
+	font-size: var(--text-xs);
 }
 
 .campaign-link-utm-heading {
@@ -139,7 +139,7 @@
 
 .campaign-utm-name {
 	color: var(--color-brand-strong);
-	font-weight: 800;
+	font-weight: var(--weight-semibold);
 }
 
 .campaign-utm-value {
@@ -149,8 +149,8 @@
 .campaign-utm-source {
 	padding: 5px 8px;
 	border-radius: var(--radius-pill);
-	font-size: 11px;
-	font-weight: 800;
+	font-size: var(--text-2xs);
+	font-weight: var(--weight-semibold);
 	white-space: nowrap;
 }
 
@@ -167,7 +167,7 @@
 .campaign-link-utm-panel .help-text {
 	margin: 0;
 	color: var(--color-text-muted);
-	font-size: 12px;
+	font-size: var(--text-2xs);
 }
 
 .campaign-link-toolbar {
@@ -185,15 +185,19 @@
 	display: inline-flex;
 	align-items: center;
 	gap: var(--space-2);
-	font-size: 13px;
-	font-weight: 800;
+	font-size: var(--text-xs);
+	font-weight: var(--weight-semibold);
 	cursor: pointer;
 }
 
+/* 17px 였다. 20px 로 올리고 주변 여백을 확보해 WCAG 2.5.8 의 간격 예외를 만족시킨다
+   (24px 원을 각 타깃 중심에 놓아도 다른 타깃과 겹치지 않음).
+   표의 밀도를 유지해야 해서 24px 정사각형까지 키우지는 않았다. */
 .campaign-link-select-all input,
 .campaign-link-checkbox {
-	width: 17px;
-	height: 17px;
+	width: 20px;
+	height: 20px;
+	margin: 0;
 	accent-color: var(--color-brand);
 	cursor: pointer;
 }
@@ -218,7 +222,7 @@
 	   목적지처럼 긴 값은 잘리는 대신 줄바꿈됩니다. */
 	min-width: 640px;
 	border-collapse: collapse;
-	font-size: 12px;
+	font-size: var(--text-2xs);
 }
 
 .campaign-link-table th,
@@ -232,8 +236,8 @@
 .campaign-link-table th {
 	color: var(--color-text-subtle);
 	background: var(--color-surface-muted);
-	font-size: 11px;
-	font-weight: 850;
+	font-size: var(--text-2xs);
+	font-weight: var(--weight-semibold);
 	white-space: nowrap;
 }
 
@@ -254,15 +258,20 @@
 .campaign-link-code {
 	color: var(--color-brand-strong);
 	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-	font-size: 13px;
-	font-weight: 850;
+	font-size: var(--text-xs);
+	font-weight: var(--weight-semibold);
 	text-decoration: none;
 }
 
+/* 코드는 링크 상세로 가는 주 이동 수단이다. 표 안이라 버튼 면은 주지 않되
+   눌리는 영역은 확보한다. */
 button.campaign-link-code {
-	padding: 0;
+	min-height: 28px;
+	padding: 0 var(--space-1);
+	margin-left: calc(var(--space-1) * -1);
 	background: none;
 	border: 0;
+	border-radius: var(--radius-sm);
 	cursor: pointer;
 }
 
@@ -294,8 +303,8 @@ button.campaign-link-code {
 	background: var(--color-brand-soft);
 	border: 1px solid var(--color-brand-border);
 	border-radius: var(--radius-pill);
-	font-size: 11px;
-	font-weight: 850;
+	font-size: var(--text-2xs);
+	font-weight: var(--weight-semibold);
 	cursor: pointer;
 }
 
@@ -325,7 +334,7 @@ button.campaign-link-code {
 	border: 1px solid var(--color-border);
 	border-left: 3px solid var(--color-brand);
 	border-radius: var(--radius-md);
-	box-shadow: var(--shadow-panel);
+	box-shadow: var(--shadow-raised);
 	visibility: hidden;
 	opacity: 0;
 	transition: opacity 120ms ease;
@@ -339,7 +348,7 @@ button.campaign-link-code {
 }
 
 .campaign-link-utm-heading strong {
-	font-size: 13px;
+	font-size: var(--text-xs);
 }
 
 #import-status-panel {
@@ -353,7 +362,7 @@ button.campaign-link-code {
 
 #import-status-text {
 	margin: 0;
-	font-size: 13px;
+	font-size: var(--text-xs);
 }
 
 @media (max-width: 720px) {

@@ -29,11 +29,11 @@
 	padding: var(--space-2) var(--space-3);
 	background: var(--color-surface-rail);
 	border-radius: var(--radius-pill);
-	font-size: var(--text-small);
+	font-size: var(--text-xs);
 }
 
 .activity-table a {
-	font-weight: 700;
+	font-weight: var(--weight-semibold);
 }
 
 .breakdown-row a {

@@ -87,8 +87,7 @@
 		byId('project-templates-nav').classList.toggle('is-active', showingTemplates);
 		byId('project-settings-nav').href = `${base}/projects?projectId=${project.id}&view=project-settings`;
 		byId('project-settings-nav').classList.toggle('is-active', showingSettings);
-		byId('project-domain').textContent = '도메인을 불러오는 중...';
-		byId('copy-project-domain').disabled = true;
+		byId('project-domain').textContent = '불러오는 중';
 		byId('project-link-result').hidden = true;
 		setMessage(linkMessage, '');
 		setRoleVisibility(project.role);
@@ -199,7 +198,6 @@
 			state.subdomain = config.subdomain;
 			state.subdomainEnabled = config.enabled;
 			byId('project-domain').textContent = projectOrigin(config.enabled ? config.subdomain : null);
-			byId('copy-project-domain').disabled = false;
 		}
 		if (overviewResponse.ok) {
 			const overview = await overviewResponse.json();
@@ -407,9 +405,6 @@
 
 	byId('copy-created-project-link').addEventListener('click', () => {
 		copy(byId('created-project-link').textContent, byId('copy-created-project-link'), '단축 URL을 복사했습니다.');
-	});
-	byId('copy-project-domain').addEventListener('click', () => {
-		copy(projectOrigin(), byId('copy-project-domain'), '프로젝트 도메인을 복사했습니다.');
 	});
 
 	byId('create-project-form').addEventListener('submit', async (event) => {

@@ -28,8 +28,8 @@
 }
 
 .invitation-heading h1 {
-	font-size: clamp(26px, 5vw, 34px);
-	font-weight: 900;
+	font-size: var(--text-2xl);
+	font-weight: var(--weight-bold);
 	line-height: 1.2;
 }
 
@@ -58,12 +58,12 @@
 
 .invitation-facts span {
 	color: var(--color-text-subtle);
-	font-size: 12px;
-	font-weight: 800;
+	font-size: var(--text-2xs);
+	font-weight: var(--weight-semibold);
 }
 
 .invitation-facts strong {
-	font-size: 14px;
+	font-size: var(--text-sm);
 	line-height: 1.45;
 	overflow-wrap: anywhere;
 }
@@ -75,7 +75,7 @@
 	background: var(--color-warning-soft);
 	border: 1px solid var(--color-warning-border);
 	border-radius: var(--radius-md);
-	font-size: 13px;
+	font-size: var(--text-xs);
 	line-height: 1.6;
 }
 

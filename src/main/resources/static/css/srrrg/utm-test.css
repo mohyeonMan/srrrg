@@ -62,12 +62,12 @@
 
 .utm-test-table th {
 	color: var(--color-text-muted);
-	font-size: 13px;
+	font-size: var(--text-xs);
 }
 
 .utm-test-table td:first-child {
 	width: 34%;
-	font-weight: 800;
+	font-weight: var(--weight-semibold);
 }
 
 .utm-test-table tbody tr:last-child td {

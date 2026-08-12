@@ -6,7 +6,7 @@
 	border: 1px solid var(--color-border-strong);
 	border-top: 4px solid var(--color-text-subtle);
 	border-radius: var(--radius-xs);
-	box-shadow: 0 14px 36px rgba(15, 23, 42, 0.07);
+	box-shadow: var(--shadow-panel);
 }
 
 .decision-blocked .decision-panel {
@@ -35,14 +35,14 @@
 
 .decision-status-label {
 	color: var(--color-text-subtle);
-	font-size: 13px;
-	font-weight: 800;
+	font-size: var(--text-xs);
+	font-weight: var(--weight-semibold);
 }
 
 .page-title {
 	margin: 0;
-	font-size: clamp(26px, 4vw, 32px);
-	font-weight: 850;
+	font-size: var(--text-2xl);
+	font-weight: var(--weight-semibold);
 	line-height: 1.16;
 }
 
@@ -50,7 +50,7 @@
 	max-width: 560px;
 	margin: 0;
 	color: var(--color-text-muted);
-	font-size: 16px;
+	font-size: var(--text-md);
 	line-height: 1.65;
 	word-break: keep-all;
 }
@@ -75,8 +75,8 @@
 	background: var(--color-surface-rail);
 	border: 1px solid var(--color-border-strong);
 	border-radius: var(--radius-xs);
-	font-size: 13px;
-	font-weight: 800;
+	font-size: var(--text-xs);
+	font-weight: var(--weight-semibold);
 }
 
 .decision-blocked .status-code {
