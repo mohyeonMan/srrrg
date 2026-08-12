@@ -4,7 +4,8 @@
 
 	const base = SrrrgCommon.base;
 	const { request, body, element, replaceChildren, setMessage } = SrrrgCommon;
-	const projectId = new URLSearchParams(location.search).get('projectId');
+	let projectId = new URLSearchParams(location.search).get('projectId');
+	let loadSequence = 0;
 	const byId = (id) => document.getElementById(id);
 	const membersMessage = byId('members-message');
 	const inviteMessage = byId('invite-message');
@@ -15,11 +16,6 @@
 
 	function roleLabel(role) {
 		return role === 'EDITOR' ? '링크 편집 가능' : role === 'VIEWER' ? '조회 전용' : '소유자';
-	}
-
-	if (!projectId) {
-		setMessage(membersMessage, '프로젝트를 먼저 선택하세요.', true);
-		return;
 	}
 
 	function renderMembers(members) {
@@ -97,8 +93,12 @@
 		}
 	});
 
-	(async () => {
+	async function load(newProjectId = projectId) {
+		projectId = newProjectId;
+		const sequence = ++loadSequence;
+		setMessage(membersMessage, '멤버를 불러오는 중입니다.');
 		const projectResponse = await request(`${base}/api/web/projects/${projectId}`);
+		if (sequence !== loadSequence) return;
 		if (!projectResponse.ok) {
 			setMessage(membersMessage, (await body(projectResponse)).message || '프로젝트를 불러올 수 없습니다.', true);
 			return;
@@ -108,7 +108,13 @@
 		byId('invitation-management').hidden = project.role !== 'OWNER';
 
 		const membersResponse = await request(`${base}/api/web/projects/${projectId}/members`);
+		if (sequence !== loadSequence) return;
 		if (membersResponse.ok) renderMembers(await membersResponse.json());
 		if (project.role === 'OWNER') await loadInvitations();
-	})();
+		setMessage(membersMessage, '');
+	}
+
+	window.SrrrgProjectMembers = { reload: load };
+	if (projectId) load();
+	else setMessage(membersMessage, '프로젝트를 불러오는 중입니다.');
 })();

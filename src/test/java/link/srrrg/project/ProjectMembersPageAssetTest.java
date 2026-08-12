@@ -14,6 +14,7 @@ class ProjectMembersPageAssetTest {
 	void providesInvitationManagementAndRendersUserValuesAsText() throws IOException {
 		String template = Files.readString(Path.of("src/main/resources/templates/project-members.html"));
 		String script = Files.readString(Path.of("src/main/resources/static/js/srrrg-project-members.js"));
+		String projectsScript = Files.readString(Path.of("src/main/resources/static/js/srrrg-projects.js"));
 
 		assertThat(template).contains(
 				"id=\"project-members-app\"",
@@ -26,10 +27,12 @@ class ProjectMembersPageAssetTest {
 				"new URLSearchParams(location.search).get('projectId')",
 				"/api/web/projects/${projectId}/members",
 				"/api/web/projects/${projectId}/invitations",
+				"window.SrrrgProjectMembers = { reload: load }",
 				"roleLabel(invitation.role)",
 				// 공통 fetch/DOM 헬퍼는 srrrg-common.js 로 옮겨져 여기서는 가져다 쓴다.
 				"= SrrrgCommon",
 				"replaceChildren(byId(");
 		assertThat(script).doesNotContain("innerHTML", "localStorage", "sessionStorage");
+		assertThat(projectsScript).contains("window.SrrrgProjectMembers?.reload(String(project.id))");
 	}
 }

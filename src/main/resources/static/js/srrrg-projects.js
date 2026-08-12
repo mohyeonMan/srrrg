@@ -103,6 +103,7 @@
 		// 여기서 또 알려주면 같은 통계를 두 번 조회한다.
 		if (!selectedCampaignId && !selectedLinkCode && !params.get('projectId')) {
 			window.SrrrgStatistics?.reload(String(project.id), null);
+			window.SrrrgProjectMembers?.reload(String(project.id));
 		}
 	}
 
