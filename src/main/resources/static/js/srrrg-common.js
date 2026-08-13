@@ -121,7 +121,62 @@
 		if (event.key === 'Escape' && settleConfirm) settleConfirm(false);
 	});
 
+	/* 탭 묶음. srrrg-campaigns.js 와 srrrg-projects.js 가 같은 코드를 각자 갖고 있었다 —
+	   `{prefix}-tab-{name}` / `{prefix}-panel-{name}`, roving tabindex, 좌우 순환 방향키까지 동일.
+
+	   srrrg-management.js 의 탭은 여기 넣지 않는다. ID 규칙이 다르고(analytics-tab),
+	   비활성 탭을 건너뛰며, 저장 안 된 변경이 있으면 확인 대화상자를 띄우는
+	   requestTab 게이트가 있다. 그 화면은 secret key 게이트 뒤라 주소를 공유해도
+	   열리지 않으므로 URL 동기화의 이득도 없다. 억지로 합치면 옵션만 늘고 얻는 게 없다.
+
+	   URL 은 사용자가 탭을 누를 때만 쓴다. 초기 bind 에서 쓰지 않는 이유:
+	   #project-view-tabs 는 캠페인을 보는 중에도 hidden 으로 남아 있어 두 묶음이 함께
+	   초기화된다. 초기화 때 URL 을 쓰면 서로를 덮어써 엉뚱한 값이 남는다.
+	   보이지 않는 묶음은 클릭될 수 없으므로, 쓰기를 클릭으로 한정하면 경합이 사라진다. */
+	function tabs({ list, prefix, param, initial }) {
+		let active = list.includes(initial) ? initial : list[0];
+
+		function paint() {
+			list.forEach((name) => {
+				const button = document.getElementById(`${prefix}-tab-${name}`);
+				const panel = document.getElementById(`${prefix}-panel-${name}`);
+				if (!button || !panel) return;
+				const isActive = name === active;
+				button.setAttribute('aria-selected', String(isActive));
+				button.tabIndex = isActive ? 0 : -1;
+				panel.hidden = !isActive;
+			});
+		}
+
+		function switchTo(name, fromUser = false) {
+			if (!list.includes(name)) return;
+			active = name;
+			paint();
+			if (!fromUser || !param) return;
+			const url = new URL(location.href);
+			url.searchParams.set(param, name);
+			history.replaceState(null, '', url);
+		}
+
+		list.forEach((name) => {
+			const button = document.getElementById(`${prefix}-tab-${name}`);
+			if (!button) return;
+			button.addEventListener('click', () => switchTo(name, true));
+			button.addEventListener('keydown', (event) => {
+				const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+				if (!step) return;
+				event.preventDefault();
+				const next = list[(list.indexOf(name) + step + list.length) % list.length];
+				document.getElementById(`${prefix}-tab-${next}`)?.focus();
+				switchTo(next, true);
+			});
+		});
+		paint();
+
+		return { switchTo, active: () => active };
+	}
+
 	window.SrrrgCommon = {
-		base, csrf, send, request, requestShared, body, element, replaceChildren, setMessage, submitting, confirmAction
+		base, csrf, send, request, requestShared, body, element, replaceChildren, setMessage, submitting, confirmAction, tabs
 	};
 })();

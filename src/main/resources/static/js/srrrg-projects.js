@@ -142,46 +142,29 @@
 		// 통계·멤버 탭은 요약과 함께 기본 화면에만 보인다.
 		const home = panel === 'home';
 		if (byId('project-view-tabs')) byId('project-view-tabs').hidden = !home;
-		if (byId('project-panel-statistics')) byId('project-panel-statistics').hidden = !home || activeProjectTab !== 'statistics';
-		if (byId('project-panel-members')) byId('project-panel-members').hidden = !home || activeProjectTab !== 'members';
+		if (byId('project-panel-statistics')) byId('project-panel-statistics').hidden = !home || activeProjectTab() !== 'statistics';
+		if (byId('project-panel-members')) byId('project-panel-members').hidden = !home || activeProjectTab() !== 'members';
 		byId('link-create-panel').hidden = panel !== 'link' || !state.canEdit;
 		byId('campaign-create-panel').hidden = panel !== 'campaign' || !state.canEdit;
 		byId('project-create-link-nav').classList.toggle('is-active', panel === 'link');
 		byId('project-create-campaign-nav').classList.toggle('is-active', panel === 'campaign');
 	}
 
-	// 통계·멤버 탭. roving tabindex 와 좌우 방향키는 srrrg-campaigns.js 의 탭 처리와 같은 방식이다.
+	// 통계·멤버 탭. 묶음 자체는 SrrrgCommon.tabs 가 처리한다(캠페인 탭과 같은 구현).
 	const PROJECT_TABS = ['statistics', 'members'];
-	let activeProjectTab = 'statistics';
+	let projectTabs = null;
 
-	function switchProjectTab(tab) {
-		activeProjectTab = tab;
-		PROJECT_TABS.forEach((name) => {
-			const isActive = name === tab;
-			const tabButton = byId(`project-tab-${name}`);
-			if (!tabButton) return;
-			tabButton.setAttribute('aria-selected', String(isActive));
-			tabButton.tabIndex = isActive ? 0 : -1;
-			byId(`project-panel-${name}`).hidden = !isActive;
-		});
+	function activeProjectTab() {
+		return projectTabs ? projectTabs.active() : PROJECT_TABS[0];
 	}
 
+	// #project-view-tabs 는 캠페인·링크·설정·템플릿 뷰에서 렌더되지 않는다(projects.html 의 th:if).
+	// 즉 이 묶음이 존재할 때는 캠페인 탭 묶음이 없으므로, ?tab= 을 그대로 읽어도 서로 섞이지 않는다.
 	function bindProjectTabs() {
 		if (!byId('project-view-tabs')) return;
-		PROJECT_TABS.forEach((name) => {
-			const tabButton = byId(`project-tab-${name}`);
-			tabButton.addEventListener('click', () => switchProjectTab(name));
-			tabButton.addEventListener('keydown', (event) => {
-				const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
-				if (!step) return;
-				event.preventDefault();
-				const current = PROJECT_TABS.indexOf(name);
-				const next = PROJECT_TABS[(current + step + PROJECT_TABS.length) % PROJECT_TABS.length];
-				byId(`project-tab-${next}`).focus();
-				switchProjectTab(next);
-			});
+		projectTabs = SrrrgCommon.tabs({
+			list: PROJECT_TABS, prefix: 'project', param: 'tab', initial: params.get('tab')
 		});
-		switchProjectTab(activeProjectTab);
 	}
 
 	async function loadProjectData() {

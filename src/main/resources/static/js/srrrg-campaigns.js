@@ -33,38 +33,16 @@
 		return new Intl.DateTimeFormat('ko-KR', { month: '2-digit', day: '2-digit' }).format(new Date(value));
 	}
 
-	// roving tabindex: 선택된 탭만 Tab 순서에 남기고 좌우 방향키로 이동한다.
-	// srrrg-management.js 의 탭 처리와 같은 방식이다.
-	function switchTab(tab) {
-		TABS.forEach((name) => {
-			const isActive = name === tab;
-			const tabButton = byId(`campaign-tab-${name}`);
-			tabButton.setAttribute('aria-selected', String(isActive));
-			tabButton.tabIndex = isActive ? 0 : -1;
-			byId(`campaign-panel-${name}`).hidden = !isActive;
-		});
-	}
-
-	function handleTabKeydown(event) {
-		const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
-		if (!step) return;
-		event.preventDefault();
-		const current = TABS.indexOf(event.currentTarget.id.replace('campaign-tab-', ''));
-		const next = TABS[(current + step + TABS.length) % TABS.length];
-		byId(`campaign-tab-${next}`).focus();
-		switchTab(next);
-	}
-
-	TABS.forEach((name) => {
-		const tabButton = byId(`campaign-tab-${name}`);
-		tabButton.addEventListener('click', () => switchTab(name));
-		tabButton.addEventListener('keydown', handleTabKeydown);
+	// 탭 묶음(roving tabindex, 좌우 순환 방향키)은 SrrrgCommon.tabs 가 처리한다.
+	// 이 조각은 campaignId 가 있고 뷰가 보일 때만 실행되므로(위 가드) ?tab= 을 그대로 읽는다.
+	const campaignTabs = SrrrgCommon.tabs({
+		list: TABS, prefix: 'campaign', param: 'tab', initial: params.get('tab')
 	});
-	switchTab(TABS[0]);
 
-	// 링크가 0개인 빈 상태에서 바로 만들기로 넘어간다.
+	// 링크가 0개인 빈 상태에서 바로 만들기로 넘어간다. 사용자가 누른 이동이므로
+	// 탭을 직접 클릭한 것과 같이 주소에도 반영한다.
 	byId('go-create-campaign-link').addEventListener('click', () => {
-		switchTab('link-create');
+		campaignTabs.switchTo('link-create', true);
 		byId('campaign-tab-link-create').focus();
 	});
 

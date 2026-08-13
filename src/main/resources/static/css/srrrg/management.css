@@ -777,7 +777,11 @@
 		grid-template-columns: 1fr;
 	}
 
+	/* 탭이 flex: 1 로 균등 분할되는 폭에서는 24px 갭이 과하다.
+	   320px 에서 스트립 276px 중 4탭이면 갭만 72px(26%)를 먹어 라벨 예산이 51px 로 눌렸다.
+	   8px 로 줄이면 같은 조건에서 63px 이 된다. */
 	.console-tabs {
+		gap: var(--space-2);
 		padding: 0 var(--space-3);
 	}
 
