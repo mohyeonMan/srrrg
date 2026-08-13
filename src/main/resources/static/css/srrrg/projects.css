@@ -3,8 +3,12 @@
 	margin: clamp(28px, 5vw, 56px) auto;
 }
 
+/* 생성 CTA 가 오른쪽에 붙는다. 좁은 폭에서 제목을 눌러 줄이지 않고 아래로 내려가도록
+   wrap 을 허용하고, 내려갔을 때 붙지 않도록 gap 을 준다. */
 .projects-heading {
 	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-3);
 	align-items: end;
 	justify-content: space-between;
 	margin-bottom: var(--space-7);
@@ -105,6 +109,14 @@
 .project-picker-option.is-active {
 	color: var(--color-text);
 	background: var(--color-surface-muted);
+}
+
+/* 만료 옵션은 .expire-options 기본값이 6열이고, 열 수를 줄이는 미디어쿼리는
+   뷰포트를 보므로 데스크톱에서 420px 대화상자 안이라는 걸 알 수 없다.
+   그대로 두면 버튼 하나에 57px 만 돌아가 "직접 입력"(테두리·여백 포함 약 74px 필요)이 넘친다.
+   컨테이너 폭에 맞춰 열이 접히도록 auto-fit 으로 바꾼다 — 이 대화상자 안에서만. */
+#create-link-dialog .expire-options {
+	grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));
 }
 
 .project-create-dialog {
@@ -272,9 +284,42 @@
 	background: var(--color-brand-soft);
 }
 
+/* 레일 하단 shortcut. 이전에는 .project-activity-item 이라 캠페인 항목과 완전히 같은
+   옷(26px 글리프 배지 + 굵은 라벨)을 입고 있었고, 그 위에 있던 "만들기" 두 개도 같은 옷이었다.
+   동작·섹션·객체가 한 열에서 구분되지 않았다.
+   생성은 헤딩 CTA 로 옮겼고, 남은 둘은 배지를 버려 "이동 수단" 으로만 읽히게 한다. */
+.project-rail-shortcut {
+	display: flex;
+	min-height: var(--touch-min);
+	align-items: center;
+	padding: 0 var(--space-4);
+	color: var(--color-text-muted);
+	border-radius: var(--radius-xs);
+	font-size: var(--text-xs);
+	font-weight: var(--weight-medium);
+	text-decoration: none;
+}
+
+.project-rail-shortcut:hover {
+	color: var(--color-text);
+	background: var(--color-surface-muted);
+}
+
+.project-rail-shortcut.is-active {
+	color: var(--color-brand-strong);
+	background: var(--color-brand-soft);
+}
+
+/* 헤딩의 생성 CTA. 좁은 폭에서는 제목을 압박하지 않고 아래 줄로 내려간다. */
+.project-create-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-2);
+}
+
 /* 레일 글리프. 항목 구성과 동작은 그대로 두고 색만 팔레트에 맞춘다.
-   이전에는 template 만 보라색(#7c3aed)이라 네 종류 중 하나가 팔레트 밖에 있었다.
-   종류는 글리프 문자가 구분하므로 색은 "캠페인=브랜드, 나머지=중립" 두 갈래로 충분하다. */
+   콘텐츠 목록이 내보내는 종류는 campaign 과 link 둘뿐이다(srrrg-projects.js).
+   template·settings 변형은 레일 shortcut 이 배지를 안 쓰게 되면서 죽은 선택자라 지웠다. */
 .project-activity-kind {
 	display: inline-flex;
 	width: 26px;
@@ -289,9 +334,7 @@
 	font-weight: var(--weight-semibold);
 }
 
-.project-activity-kind.link,
-.project-activity-kind.template,
-.project-activity-kind.settings {
+.project-activity-kind.link {
 	color: var(--color-text-muted);
 	background: var(--color-surface-rail);
 }
@@ -491,10 +534,6 @@
 	display: grid;
 	gap: var(--space-5);
 	padding: var(--panel-padding);
-}
-
-.project-link-create {
-	border-top: 4px solid var(--color-brand);
 }
 
 .project-card-heading > div > p:last-child {

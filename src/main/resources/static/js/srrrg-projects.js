@@ -79,10 +79,6 @@
 		document.querySelectorAll('.project-picker-option').forEach((option) => {
 			option.classList.toggle('is-active', option.dataset.projectId === String(project.id));
 		});
-		byId('project-create-link-nav').href = `${base}/projects?projectId=${project.id}&view=create-link`;
-		byId('project-create-link-nav').classList.toggle('is-active', !selectedCampaignId && !selectedLinkCode && activeView === 'create-link');
-		byId('project-create-campaign-nav').href = `${base}/projects?projectId=${project.id}&view=create-campaign`;
-		byId('project-create-campaign-nav').classList.toggle('is-active', !selectedCampaignId && !selectedLinkCode && activeView === 'create-campaign');
 		byId('project-templates-nav').href = `${base}/projects?projectId=${project.id}&view=utm-templates`;
 		byId('project-templates-nav').classList.toggle('is-active', showingTemplates);
 		byId('project-settings-nav').href = `${base}/projects?projectId=${project.id}&view=project-settings`;
@@ -96,7 +92,6 @@
 		// 캠페인·링크·템플릿 뷰에서는 부를 필요가 없습니다(campaigns.js 가 따로 부릅니다).
 		if (!selectedCampaignId && !selectedLinkCode && !showingTemplates) await loadCampaignTemplates();
 		byId('project-detail').hidden = Boolean(selectedCampaignId) || Boolean(selectedLinkCode) || showingTemplates || showingSettings;
-		showProjectPanel();
 		// 통계 조각은 URL 파라미터만 읽으므로, projectId 없이 들어와 자동 선택된 경우
 		// 선택된 프로젝트를 알려주지 않으면 "지정되지 않았습니다" 상태로 남는다.
 		// 반대로 URL 에 projectId 가 있으면 통계 조각이 이미 그 값으로 불러왔으므로
@@ -123,32 +118,16 @@
 
 	function setRoleVisibility(role) {
 		const canEdit = role === 'OWNER' || role === 'EDITOR';
-		state.canEdit = canEdit;
-		byId('project-create-link-nav').hidden = !canEdit;
-		byId('project-create-campaign-nav').hidden = !canEdit;
+		byId('project-create-actions').hidden = !canEdit;
 		// 설정 화면에는 편집자용 "기존 익명 링크 편입" 이 있는데 진입 경로가 소유자 전용이라
 		// 편집자는 직접 URL 을 입력하는 방법 말고는 도달할 수 없었다.
 		// 소유자 전용 카드는 srrrg-project-settings.js 가 계속 감춘다.
 		byId('project-settings-nav').hidden = !canEdit;
-		byId('create-campaign-form').hidden = !canEdit;
 	}
 
-	function showProjectPanel() {
-		let panel = activeView === 'create-link' ? 'link' : activeView === 'create-campaign' ? 'campaign' : 'home';
-		// 편집 권한이 없는 사람이 생성 화면 URL 로 들어오면(편집자가 공유한 링크 등)
-		// 모든 패널이 숨겨져 빈 화면이 된다. 개요로 되돌린다.
-		if (!state.canEdit && panel !== 'home') panel = 'home';
-		byId('project-home-panel').hidden = panel !== 'home';
-		// 통계·멤버 탭은 요약과 함께 기본 화면에만 보인다.
-		const home = panel === 'home';
-		if (byId('project-view-tabs')) byId('project-view-tabs').hidden = !home;
-		if (byId('project-panel-statistics')) byId('project-panel-statistics').hidden = !home || activeProjectTab() !== 'statistics';
-		if (byId('project-panel-members')) byId('project-panel-members').hidden = !home || activeProjectTab() !== 'members';
-		byId('link-create-panel').hidden = panel !== 'link' || !state.canEdit;
-		byId('campaign-create-panel').hidden = panel !== 'campaign' || !state.canEdit;
-		byId('project-create-link-nav').classList.toggle('is-active', panel === 'link');
-		byId('project-create-campaign-nav').classList.toggle('is-active', panel === 'campaign');
-	}
+	// showProjectPanel() 은 사라졌다. 생성이 대화상자로 옮겨지면서
+	// "개요 / 링크 생성 / 캠페인 생성" 세 상태를 오가며 요약·탭 바를 숨길 일이 없어졌고,
+	// 남은 것은 템플릿에 이미 적힌 기본 상태와 탭 컨트롤러가 관리하는 패널 표시뿐이다.
 
 	// 통계·멤버 탭. 묶음 자체는 SrrrgCommon.tabs 가 처리한다(캠페인 탭과 같은 구현).
 	const PROJECT_TABS = ['statistics', 'members'];
@@ -417,6 +396,22 @@
 	byId('open-create-project').addEventListener('click', openCreateProject);
 	byId('create-first-project').addEventListener('click', openCreateProject);
 	byId('close-create-project').addEventListener('click', () => byId('create-project-dialog').close());
+
+	// 링크·캠페인 생성. 열 때마다 지난 메시지와 결과를 지운다 —
+	// 남겨 두면 두 번째로 열었을 때 이전 링크가 새로 만든 것처럼 보인다.
+	byId('open-create-link').addEventListener('click', () => {
+		setMessage(linkMessage, '');
+		byId('project-link-result').hidden = true;
+		byId('create-link-dialog').showModal();
+		originalUrlInput.focus();
+	});
+	byId('close-create-link').addEventListener('click', () => byId('create-link-dialog').close());
+	byId('open-create-campaign').addEventListener('click', () => {
+		setMessage(byId('campaign-message'), '');
+		byId('create-campaign-dialog').showModal();
+		byId('new-campaign-name').focus();
+	});
+	byId('close-create-campaign').addEventListener('click', () => byId('create-campaign-dialog').close());
 	byId('project-activity-filter').addEventListener('click', (event) => {
 		const filters = { all: ['campaign', '캠페인만'], campaign: ['link', '단일링크만'], link: ['all', '전체'] };
 		[state.activityFilter, event.currentTarget.textContent] = filters[state.activityFilter];
@@ -498,9 +493,11 @@
 		const opensSpecificView = selectedCampaignId || selectedLinkCode || params.get('view');
 		if (!opensSpecificView) return;
 		// tabindex="-1" 이 이미 있는 제목들을 재사용한다.
+		// 생성 대화상자의 제목(link-create-title, campaign-create-title)은 뺐다.
+		// 대화상자는 항상 DOM 에 있으므로 여기 두면 알 수 없는 view 값에서
+		// 숨어 있는 제목으로 포커스가 가고, 포커스 관리는 <dialog> 가 알아서 한다.
 		const heading = byId('campaign-name') || byId('managed-link-title')
-			|| byId('template-detail-name') || byId('settings-project-name')
-			|| byId('link-create-title') || byId('campaign-create-title');
+			|| byId('template-detail-name') || byId('settings-project-name');
 		if (!heading) return;
 		if (!heading.hasAttribute('tabindex')) heading.tabIndex = -1;
 		heading.focus();

@@ -24,8 +24,14 @@ class ProjectsPageAssetTest {
 				"id=\"open-create-project\"",
 				"id=\"create-project-dialog\"",
 				"id=\"project-activity-list\"",
-				"id=\"project-create-link-nav\"",
-				"id=\"project-create-campaign-nav\"",
+				// 생성은 헤딩 CTA + 대화상자다. 레일에는 섹션 shortcut 둘만 남는다 —
+				// 넷 다 .project-activity-item 이던 동안 동작과 캠페인 객체가 같은 옷이었다.
+				"id=\"project-create-actions\"",
+				"id=\"open-create-link\"",
+				"id=\"open-create-campaign\"",
+				"id=\"create-link-dialog\"",
+				"id=\"create-campaign-dialog\"",
+				"class=\"project-rail-shortcut\"",
 				"id=\"project-templates-nav\"",
 				"id=\"project-settings-nav\"",
 				"id=\"project-activity-filter\"",
@@ -63,6 +69,15 @@ class ProjectsPageAssetTest {
 				"= SrrrgCommon",
 				"replaceChildren(");
 		assertThat(template).doesNotContain("workspace-sidebar", "workspace-shell :: sidebar");
+		// 생성이 다시 인라인 판으로 돌아가면 열 때마다 요약·통계·탭 바가 숨겨진다.
+		assertThat(template).doesNotContain("id=\"link-create-panel\"", "id=\"campaign-create-panel\"");
+		// 생성 대화상자는 #project-detail 바깥(페이지 수준)에 있어야 한다.
+		// 안에 두면 캠페인·링크·설정 화면에서 #project-detail 이 hidden 이 되어
+		// display:none 조상 아래의 <dialog> 가 되고, showModal() 해도 렌더되지 않는다.
+		assertThat(template.indexOf("id=\"create-link-dialog\""))
+				.isLessThan(template.indexOf("id=\"project-detail\""));
+		assertThat(template.indexOf("id=\"create-campaign-dialog\""))
+				.isLessThan(template.indexOf("id=\"project-detail\""));
 		assertThat(script).doesNotContain("innerHTML", "localStorage", "sessionStorage");
 		assertThat(script).doesNotContain("location.hash", "scrollIntoView");
 		assertThat(styles).contains(

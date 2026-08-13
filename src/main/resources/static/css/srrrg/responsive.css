@@ -62,6 +62,17 @@
 }
 
 @media (max-width: 520px) {
+	/* 생성 CTA 는 이 폭에서 제목 아래 줄로 내려간다. 그때 컨테이너 폭이 content 기준이라
+	   두 버튼이 필요 폭보다 1px 모자라 우연히 2줄로 쌓였다 — 라벨이 조금만 바뀌어도
+	   한 줄/두 줄이 뒤집힌다. 한 줄을 채우고 버튼이 폭을 나누도록 명시한다. */
+	.project-create-actions {
+		width: 100%;
+	}
+
+	.project-create-actions button {
+		flex: 1;
+	}
+
 	.srrrg-header-nav { gap: 10px; }
 
 	.srrrg-account-menu summary > span:last-child { display: none; }
