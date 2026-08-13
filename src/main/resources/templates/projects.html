@@ -90,7 +90,10 @@
 			<h2 id="link-create-title">링크 만들기</h2>
 			<button id="close-create-link" type="button" aria-label="닫기">×</button>
 		</div>
-		<p class="help-text">이 프로젝트의 전용 도메인으로 단축 URL을 만듭니다.</p>
+		<!-- 무엇이 만들어지는지 밝힌다. 프로젝트 레벨과 캠페인 레벨의 "링크 만들기" 가
+		     서로 다른 것을 만드는데(단일링크 vs 캠페인 링크) 문구가 그 차이를 말하지 않았다.
+		     "단일링크" 는 레일 필터와 프로젝트 요약이 이미 쓰는 표현이다. -->
+		<p class="help-text">캠페인에 속하지 않는 단일링크를 이 프로젝트 도메인으로 만듭니다.</p>
 
 		<form id="create-project-link-form" class="form-grid" novalidate>
 			<label class="field" for="project-link-name">
@@ -120,7 +123,10 @@
 
 			<div class="project-form-actions">
 				<p id="link-create-message" class="form-message" role="status" aria-live="polite"></p>
-				<button id="create-project-link-button" class="primary-button" type="submit" disabled>단축 URL 만들기</button>
+				<!-- CTA·제목이 "링크 만들기" 인데 제출만 "단축 URL 만들기" 여서
+				     한 흐름에서 같은 대상을 두 이름으로 불렀다. 캠페인 대화상자와 같이 제목과 맞춘다.
+				     홈의 익명 단축기는 자기 맥락이 있어 "단축 URL 만들기" 를 그대로 둔다. -->
+				<button id="create-project-link-button" class="primary-button" type="submit" disabled>링크 만들기</button>
 			</div>
 		</form>
 
