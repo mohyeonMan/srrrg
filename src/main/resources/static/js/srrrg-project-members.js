@@ -104,7 +104,7 @@
 			return;
 		}
 		const project = await projectResponse.json();
-		byId('member-project-name').textContent = `${project.name} · 멤버 및 초대`;
+		// 제목은 정적 sr-only 텍스트로 충분하다. 프로젝트 이름은 페이지 제목이 이미 말한다.
 		byId('invitation-management').hidden = project.role !== 'OWNER';
 
 		const membersResponse = await request(`${base}/api/web/projects/${projectId}/members`);
@@ -114,7 +114,9 @@
 		setMessage(membersMessage, '');
 	}
 
+	// 멤버도 기본 탭이 아니므로 즉시 부르지 않는다. srrrg-projects.js 가 멤버 탭을
+	// 처음 열 때 reload() 로 부른다 — 이전에는 여기서 한 번, 자동 선택 경로에서 또 한 번
+	// 불러 같은 목록을 두 번 조회하기도 했다.
 	window.SrrrgProjectMembers = { reload: load };
-	if (projectId) load();
-	else setMessage(membersMessage, '프로젝트를 불러오는 중입니다.');
+	if (!projectId) setMessage(membersMessage, '프로젝트를 불러오는 중입니다.');
 })();

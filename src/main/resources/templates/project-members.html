@@ -4,9 +4,9 @@
 	#member-project-name 은 srrrg-project-members.js 가 참조하므로 반드시 조각 안에 있어야 합니다.
 -->
 <div xmlns:th="http://www.thymeleaf.org" id="project-members-app" th:fragment="report">
-	<div class="campaign-heading-row">
-		<h2 id="member-project-name">멤버 및 초대</h2>
-	</div>
+	<!-- 활성 탭("멤버")이 패널 이름이고, 아래 h3 가 "멤버"·"초대" 를 각각 말한다.
+	     프로젝트 이름은 페이지 제목에 있다. 제목 위계만 sr-only 로 남긴다. -->
+	<h2 id="member-project-name" class="sr-only">멤버 및 초대</h2>
 	<p id="members-message" class="form-message" role="status" aria-live="polite"></p>
 
 	<section class="surface-panel project-card" aria-labelledby="member-list-title">

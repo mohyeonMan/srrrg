@@ -133,8 +133,15 @@
 	   #project-view-tabs 는 캠페인을 보는 중에도 hidden 으로 남아 있어 두 묶음이 함께
 	   초기화된다. 초기화 때 URL 을 쓰면 서로를 덮어써 엉뚱한 값이 남는다.
 	   보이지 않는 묶음은 클릭될 수 없으므로, 쓰기를 클릭으로 한정하면 경합이 사라진다. */
-	function tabs({ list, prefix, param, initial }) {
+	/* onSwitch 는 초기 표시를 포함해 활성 탭이 정해질 때마다 부른다.
+	   "처음 한 번만" 이 필요한 쪽(패널 데이터 지연 조회)과 "매번" 이 필요한 쪽
+	   (레일 shortcut 활성 표시)이 함께 있어서, 한 번만 부르는 훅으로 만들면 후자가 깨진다.
+	   매번 부르는 쪽이 더 일반적이고, 한 번만 필요한 호출자가 자기 쪽에서 걸러 쓰면 된다. */
+	function tabs({ list, prefix, param, initial, onSwitch }) {
 		let active = list.includes(initial) ? initial : list[0];
+		function notify() {
+			if (onSwitch) onSwitch(active);
+		}
 
 		function paint() {
 			list.forEach((name) => {
@@ -152,6 +159,7 @@
 			if (!list.includes(name)) return;
 			active = name;
 			paint();
+			notify();
 			if (!fromUser || !param) return;
 			const url = new URL(location.href);
 			url.searchParams.set(param, name);
@@ -172,6 +180,7 @@
 			});
 		});
 		paint();
+		notify();
 
 		return { switchTo, active: () => active };
 	}

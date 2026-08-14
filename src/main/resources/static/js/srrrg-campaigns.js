@@ -50,7 +50,7 @@
 		setMessage(campaignsMessage, '프로젝트를 먼저 선택하세요.', true);
 		return;
 	}
-	byId('manage-utm-templates-link').href = `${base}/projects?projectId=${state.projectId}&view=utm-templates`;
+	byId('manage-utm-templates-link').href = `${base}/projects?projectId=${state.projectId}&tab=utm`;
 
 	async function loadCampaignPicker() {
 		const response = await request(`${base}/api/web/projects/${state.projectId}/campaigns?limit=100`);

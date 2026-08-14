@@ -3,15 +3,19 @@
 	포함하는 화면(projects.html)이 srrrg-common.js / srrrg-project-settings.js 를 불러옵니다.
 -->
 <div xmlns:th="http://www.thymeleaf.org" id="project-settings-app" th:fragment="workspace">
-	<div class="campaign-heading-row">
-		<h2 id="settings-project-name">프로젝트 설정</h2>
-	</div>
+	<!-- 활성 탭("설정")이 이미 이 패널의 이름이고, 프로젝트 이름은 페이지 제목에 있다.
+	     예전에는 별도 화면이라 "내 프로젝트 · 설정" 이 필요했지만, 탭 패널이 된 뒤로는
+	     탭 라벨과 페이지 제목을 한 번 더 말하는 셈이 된다.
+	     제목 위계(h1 > h2)는 스크린리더에 필요하므로 sr-only 로 남긴다. -->
+	<h2 id="settings-project-name" class="sr-only">설정</h2>
 	<p id="settings-message" class="form-message" role="status" aria-live="polite"></p>
 
 	<section class="surface-panel project-card" aria-labelledby="rename-title">
 		<h3 id="rename-title">프로젝트 이름</h3>
 		<form id="rename-project-form" class="project-inline-form" novalidate>
-			<label class="field" for="rename-project-name"><span class="field-label">프로젝트 이름</span><input id="rename-project-name" class="field-input" name="name" maxlength="100" required></label>
+			<!-- 카드 제목이 "프로젝트 이름" 이고 필드가 하나뿐이라 라벨이 같은 말을 반복했다.
+		     입력의 접근 가능한 이름은 필요하므로 지우지 않고 sr-only 로 둔다. -->
+		<label class="field" for="rename-project-name"><span class="field-label sr-only">프로젝트 이름</span><input id="rename-project-name" class="field-input" name="name" maxlength="100" required></label>
 			<button class="primary-button" type="submit">이름 저장</button>
 		</form>
 	</section>
@@ -20,7 +24,8 @@
 		<h3 id="domain-title">서브도메인</h3>
 		<form id="change-project-domain-form" class="project-inline-form" novalidate>
 			<!-- 버튼이 "선점" 이라고 말하므로 라벨에서 동작을 되풀이하지 않는다. -->
-			<label class="field" for="change-project-domain"><span class="field-label">서브도메인</span><input id="change-project-domain" class="field-input" name="subdomain" minlength="3" maxlength="63" autocapitalize="none" autocomplete="off" spellcheck="false" required></label>
+			<!-- 카드 제목과 같은 말이라 라벨은 sr-only 로 둔다(입력 이름은 유지). -->
+			<label class="field" for="change-project-domain"><span class="field-label sr-only">서브도메인</span><input id="change-project-domain" class="field-input" name="subdomain" minlength="3" maxlength="63" autocapitalize="none" autocomplete="off" spellcheck="false" required></label>
 			<button class="primary-button" type="submit">선점</button>
 		</form>
 

@@ -4,18 +4,17 @@
 
 	const base = SrrrgCommon.base;
 	const { request, body, element, replaceChildren, setMessage, submitting, confirmAction } = SrrrgCommon;
-	const projectId = new URLSearchParams(location.search).get('projectId');
+	// 주소에 projectId 가 없어도(자동 선택된 프로젝트) UTM 탭에 들어올 수 있으므로
+	// 여기서 조각 전체를 return 으로 끝내면 안 된다 — 그러면 reload 조차 노출되지 않아
+	// 탭이 죽는다. 프로젝트는 srrrg-projects.js 가 reload(id) 로 알려 준다.
+	let projectId = new URLSearchParams(location.search).get('projectId');
 	const byId = (id) => document.getElementById(id);
 	const templatesMessage = byId('templates-message');
 	const detailMessage = byId('template-detail-message');
 	const state = { templates: [], selectedId: null };
 
-	if (!projectId) {
-		setMessage(templatesMessage, '프로젝트를 먼저 선택하세요.', true);
-		return;
-	}
-
 	async function loadTemplates(preferredId = state.selectedId) {
+		if (!projectId) return setMessage(templatesMessage, '프로젝트를 먼저 선택하세요.', true);
 		const response = await request(`${base}/api/web/projects/${projectId}/utm-templates`);
 		if (!response.ok) {
 			setMessage(templatesMessage, (await body(response)).message || '템플릿을 불러올 수 없습니다.', true);
@@ -122,5 +121,13 @@
 		});
 	});
 
-	loadTemplates();
+	// 이 조각은 이제 프로젝트의 UTM 탭 패널이라 페이지를 열 때 항상 DOM 에 있다.
+	// 여기서 바로 불러오면 UTM 탭을 보지 않는 사람도 매번 목록을 조회한다.
+	// srrrg-projects.js 가 그 탭을 처음 열 때 reload() 로 부른다.
+	window.SrrrgProjectUtmTemplates = {
+		reload(newProjectId) {
+			if (newProjectId) projectId = newProjectId;
+			return loadTemplates();
+		}
+	};
 })();

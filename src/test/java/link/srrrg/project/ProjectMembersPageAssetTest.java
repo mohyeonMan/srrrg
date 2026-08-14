@@ -33,6 +33,10 @@ class ProjectMembersPageAssetTest {
 				"= SrrrgCommon",
 				"replaceChildren(byId(");
 		assertThat(script).doesNotContain("innerHTML", "localStorage", "sessionStorage");
-		assertThat(projectsScript).contains("window.SrrrgProjectMembers?.reload(String(project.id))");
+		// 멤버는 기본 탭이 아니므로 조각이 스스로 부르지 않는다. 그러면 주소에 projectId 가
+		// 없는(자동 선택) 경우 어떤 프로젝트인지 알 수 없으므로, 탭을 처음 열 때
+		// srrrg-projects.js 가 프로젝트를 알려 주어야 한다.
+		assertThat(projectsScript).contains("window.SrrrgProjectMembers", "target.reload(String(state.selected.id))");
+		assertThat(script).doesNotContain("if (projectId) load();");
 	}
 }

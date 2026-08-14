@@ -7,9 +7,11 @@
 	const params = new URLSearchParams(location.search);
 	const selectedCampaignId = params.get('campaignId');
 	const selectedLinkCode = params.get('linkCode');
-	const activeView = params.get('view') || 'home';
-	const showingTemplates = !selectedCampaignId && activeView === 'utm-templates';
-	const showingSettings = !selectedCampaignId && activeView === 'project-settings';
+	// UTM·설정은 이제 별도 뷰가 아니라 프로젝트 탭이다.
+	// 예전 주소(view=utm-templates / view=project-settings)로 저장해 둔 링크·북마크가
+	// 빈 개요로 떨어지지 않도록 해당 탭으로 넘겨 준다.
+	const LEGACY_VIEW_TABS = { 'utm-templates': 'utm', 'project-settings': 'settings' };
+	const initialProjectTab = params.get('tab') || LEGACY_VIEW_TABS[params.get('view')] || null;
 	const state = { projects: [], selected: null, subdomain: null, subdomainEnabled: false, expiresOption: 'none',
 		activityLinks: [], activityCampaigns: [], activityFilter: 'all', activitySort: 'recent' };
 	const byId = (id) => document.getElementById(id);
@@ -79,27 +81,30 @@
 		document.querySelectorAll('.project-picker-option').forEach((option) => {
 			option.classList.toggle('is-active', option.dataset.projectId === String(project.id));
 		});
-		byId('project-templates-nav').href = `${base}/projects?projectId=${project.id}&view=utm-templates`;
-		byId('project-templates-nav').classList.toggle('is-active', showingTemplates);
-		byId('project-settings-nav').href = `${base}/projects?projectId=${project.id}&view=project-settings`;
-		byId('project-settings-nav').classList.toggle('is-active', showingSettings);
+		// shortcut 은 해당 탭으로 가는 주소를 가리킨다. 활성 표시는 탭이 바뀔 때마다
+		// paintRailActive() 가 다시 칠하므로 여기서는 주소만 정한다.
+		byId('project-templates-nav').href = `${base}/projects?projectId=${project.id}&tab=utm`;
+		byId('project-settings-nav').href = `${base}/projects?projectId=${project.id}&tab=settings`;
 		byId('project-domain').textContent = '불러오는 중';
 		byId('project-link-result').hidden = true;
 		setMessage(linkMessage, '');
 		setRoleVisibility(project.role);
 		await loadProjectData();
-		// 템플릿 목록은 "새 캠페인" 폼의 select 를 채우는 용도라, 그 폼이 없는
-		// 캠페인·링크·템플릿 뷰에서는 부를 필요가 없습니다(campaigns.js 가 따로 부릅니다).
-		if (!selectedCampaignId && !selectedLinkCode && !showingTemplates) await loadCampaignTemplates();
-		byId('project-detail').hidden = Boolean(selectedCampaignId) || Boolean(selectedLinkCode) || showingTemplates || showingSettings;
+		// 템플릿 목록은 "캠페인 만들기" 대화상자의 select 를 채우는 용도다.
+		// 그 대화상자는 이제 모든 프로젝트 화면에 있으므로 캠페인·링크 뷰가 아니면 채운다
+		// (캠페인 뷰에서는 campaigns.js 가 따로 부른다).
+		if (!selectedCampaignId && !selectedLinkCode) await loadCampaignTemplates();
+		byId('project-detail').hidden = Boolean(selectedCampaignId) || Boolean(selectedLinkCode);
 		// 통계 조각은 URL 파라미터만 읽으므로, projectId 없이 들어와 자동 선택된 경우
 		// 선택된 프로젝트를 알려주지 않으면 "지정되지 않았습니다" 상태로 남는다.
 		// 반대로 URL 에 projectId 가 있으면 통계 조각이 이미 그 값으로 불러왔으므로
 		// 여기서 또 알려주면 같은 통계를 두 번 조회한다.
 		if (!selectedCampaignId && !selectedLinkCode && !params.get('projectId')) {
 			window.SrrrgStatistics?.reload(String(project.id), null);
-			window.SrrrgProjectMembers?.reload(String(project.id));
 		}
+		// 탭은 프로젝트가 정해진 뒤에 묶는다. 그래야 첫 활성 탭의 지연 조회가
+		// state.selected 를 갖고 시작하고, 조회 경로가 하나로 유지된다.
+		bindProjectTabs();
 	}
 
 	async function loadCampaignTemplates() {
@@ -130,19 +135,51 @@
 	// 남은 것은 템플릿에 이미 적힌 기본 상태와 탭 컨트롤러가 관리하는 패널 표시뿐이다.
 
 	// 통계·멤버 탭. 묶음 자체는 SrrrgCommon.tabs 가 처리한다(캠페인 탭과 같은 구현).
-	const PROJECT_TABS = ['statistics', 'members'];
+	const PROJECT_TABS = ['overview', 'members', 'utm', 'settings'];
+	// 레일 shortcut 이 가리키는 탭. 활성 표시를 탭과 일치시키는 데 쓴다.
+	const RAIL_SHORTCUT_TABS = { utm: 'project-templates-nav', settings: 'project-settings-nav' };
 	let projectTabs = null;
+	const loadedTabs = new Set();
 
-	function activeProjectTab() {
-		return projectTabs ? projectTabs.active() : PROJECT_TABS[0];
+	// 레일 shortcut 과 탭은 같은 곳을 가리키므로 활성 표시가 어긋나면 중복으로 읽힌다.
+	function paintRailActive(tab) {
+		Object.entries(RAIL_SHORTCUT_TABS).forEach(([name, id]) => {
+			byId(id)?.classList.toggle('is-active', name === tab);
+		});
 	}
 
-	// #project-view-tabs 는 캠페인·링크·설정·템플릿 뷰에서 렌더되지 않는다(projects.html 의 th:if).
+	// 조각들이 상시 렌더되므로 패널 데이터는 그 탭을 처음 볼 때만 불러온다.
+	// 개요(통계)는 srrrg-statistics.js 가 스스로 초기 조회를 하므로 여기서 부르지 않는다 —
+	// 기본 탭이라 지연시킬 이득이 없고, 부르면 같은 통계를 두 번 조회한다.
+	function loadTabOnce(tab) {
+		if (loadedTabs.has(tab) || !state.selected) return;
+		if (tab === 'overview') return;
+		const target = tab === 'members' ? window.SrrrgProjectMembers
+			: tab === 'utm' ? window.SrrrgProjectUtmTemplates
+			: tab === 'settings' ? window.SrrrgProjectSettings : null;
+		// 조각이 아직 실려 있지 않으면 "불러왔다" 고 표시하지 않는다.
+		// 표시해 버리면 다시 시도할 길이 없어 그 패널이 영구히 빈 상태로 남는다.
+		if (!target) return;
+		loadedTabs.add(tab);
+		target.reload(String(state.selected.id));
+	}
+
+	// #project-view-tabs 는 캠페인·링크 뷰에서 렌더되지 않는다(projects.html 의 th:if).
 	// 즉 이 묶음이 존재할 때는 캠페인 탭 묶음이 없으므로, ?tab= 을 그대로 읽어도 서로 섞이지 않는다.
 	function bindProjectTabs() {
-		if (!byId('project-view-tabs')) return;
+		if (!byId('project-view-tabs') || projectTabs) return;
+		// 패널 조각 스크립트들은 이 파일보다 뒤에 defer 로 실려 아직 실행되지 않았을 수 있다.
+		// localhost 에서는 /api/web/projects 응답이 그 스크립트 다운로드보다 먼저 끝나기도 해서,
+		// 그 상태로 첫 탭을 활성화하면 window.SrrrgProjectX 가 없어 ?. 가 조용히 넘어가고
+		// loadedTabs 에는 이미 표시돼 다시 시도하지도 않는다(?tab=members 로 들어오면 빈 패널).
+		// defer 스크립트는 DOMContentLoaded 전에 모두 실행되므로 그 시점까지 미룬다.
+		if (document.readyState === 'loading') {
+			document.addEventListener('DOMContentLoaded', bindProjectTabs, { once: true });
+			return;
+		}
 		projectTabs = SrrrgCommon.tabs({
-			list: PROJECT_TABS, prefix: 'project', param: 'tab', initial: params.get('tab')
+			list: PROJECT_TABS, prefix: 'project', param: 'tab', initial: initialProjectTab,
+			onSwitch: (tab) => { paintRailActive(tab); loadTabOnce(tab); }
 		});
 	}
 
@@ -489,21 +526,24 @@
 	 * 쿼리파라미터에 있고, 특정 하위 화면을 지목하는 파라미터가 있다는 것 자체가
 	 * 사용자가 그 화면을 열려고 했다는 뜻이다. 직접 링크와 새로고침에서도 똑같이 동작한다.
 	 */
+	// 캠페인·링크처럼 화면 자체가 바뀌는 진입에만 제목으로 포커스를 옮긴다.
+	// UTM·설정은 탭 패널이 되어 항상 DOM 에 있으므로 여기서 찾으면
+	// 활성 탭이 아닐 때도 숨은 제목으로 포커스가 간다. 탭 전환의 포커스는
+	// WAI-ARIA 대로 탭 버튼에 머무는 것이 맞다.
 	function focusOpenedPanel() {
-		const opensSpecificView = selectedCampaignId || selectedLinkCode || params.get('view');
-		if (!opensSpecificView) return;
+		if (!selectedCampaignId && !selectedLinkCode) return;
 		// tabindex="-1" 이 이미 있는 제목들을 재사용한다.
 		// 생성 대화상자의 제목(link-create-title, campaign-create-title)은 뺐다.
 		// 대화상자는 항상 DOM 에 있으므로 여기 두면 알 수 없는 view 값에서
 		// 숨어 있는 제목으로 포커스가 가고, 포커스 관리는 <dialog> 가 알아서 한다.
-		const heading = byId('campaign-name') || byId('managed-link-title')
-			|| byId('template-detail-name') || byId('settings-project-name');
+		const heading = byId('campaign-name') || byId('managed-link-title');
 		if (!heading) return;
 		if (!heading.hasAttribute('tabindex')) heading.tabIndex = -1;
 		heading.focus();
 	}
 
 	selectExpiration('none');
-	bindProjectTabs();
+	// bindProjectTabs() 는 renderSelectedProject 안에서 부른다. 여기서 먼저 묶으면
+	// state.selected 가 없는 상태로 첫 탭이 정해져 그 패널의 지연 조회가 일어나지 않는다.
 	loadProjects(new URLSearchParams(location.search).get('projectId')).then(focusOpenedPanel);
 })();

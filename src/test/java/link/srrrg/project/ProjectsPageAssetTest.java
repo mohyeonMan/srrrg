@@ -38,8 +38,16 @@ class ProjectsPageAssetTest {
 				"id=\"project-activity-sort\"",
 				"id=\"project-campaign-view\"",
 				"id=\"project-link-view\"",
-				"id=\"project-template-view\"",
-				"id=\"project-settings-view\"",
+				// UTM·설정은 별도 뷰가 아니라 프로젝트 탭 패널이다. 네 탭이 한 축(?tab=)에 있어야
+				// 프로젝트가 캠페인·링크 레벨과 같은 문법을 갖는다.
+				"id=\"project-tab-overview\"",
+				"id=\"project-tab-members\"",
+				"id=\"project-tab-utm\"",
+				"id=\"project-tab-settings\"",
+				"id=\"project-panel-overview\"",
+				"id=\"project-panel-members\"",
+				"id=\"project-panel-utm\"",
+				"id=\"project-panel-settings\"",
 				"~{campaigns :: workspace}",
 				"~{management :: workspace}",
 				"~{project-utm-templates :: workspace}",
@@ -67,7 +75,18 @@ class ProjectsPageAssetTest {
 				"navigator.clipboard.writeText",
 				// 공통 fetch/DOM 헬퍼는 srrrg-common.js 로 옮겨져 여기서는 가져다 쓴다.
 				"= SrrrgCommon",
-				"replaceChildren(");
+				"replaceChildren(",
+				// 프로젝트의 네 면이 한 축(?tab=)에 있어야 캠페인·링크 레벨과 문법이 같다.
+				"const PROJECT_TABS = ['overview', 'members', 'utm', 'settings']",
+				// 레일 shortcut 은 별도 뷰가 아니라 해당 탭으로 간다.
+				"&tab=utm",
+				"&tab=settings",
+				// 예전 주소로 저장된 링크·북마크가 빈 개요로 떨어지지 않아야 한다.
+				"LEGACY_VIEW_TABS",
+				// 조각이 상시 렌더되므로 패널 데이터는 그 탭을 처음 볼 때만 불러온다.
+				"function loadTabOnce",
+				// shortcut 활성 표시는 탭이 바뀔 때마다 다시 칠해야 중복으로 읽히지 않는다.
+				"function paintRailActive");
 		assertThat(template).doesNotContain("workspace-sidebar", "workspace-shell :: sidebar");
 		// 생성이 다시 인라인 판으로 돌아가면 열 때마다 요약·통계·탭 바가 숨겨진다.
 		assertThat(template).doesNotContain("id=\"link-create-panel\"", "id=\"campaign-create-panel\"");

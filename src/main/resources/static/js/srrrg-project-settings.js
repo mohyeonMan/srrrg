@@ -4,16 +4,14 @@
 
 	const base = SrrrgCommon.base;
 	const { request, body, setMessage, submitting, confirmAction } = SrrrgCommon;
-	const projectId = new URLSearchParams(location.search).get('projectId');
+	// 주소에 projectId 가 없어도(자동 선택된 프로젝트) 설정 탭에 들어올 수 있으므로
+	// 조각 전체를 return 으로 끝내면 안 된다 — reload 조차 노출되지 않아 탭이 죽는다.
+	// 프로젝트는 srrrg-projects.js 가 reload(id) 로 알려 준다.
+	let projectId = new URLSearchParams(location.search).get('projectId');
 	const byId = (id) => document.getElementById(id);
 	const settingsMessage = byId('settings-message');
 	const domainMessage = byId('domain-change-message');
 	let project = null;
-
-	if (!projectId) {
-		setMessage(settingsMessage, '프로젝트를 먼저 선택하세요.', true);
-		return;
-	}
 
 	function applyRoleVisibility() {
 		const isOwner = project.role === 'OWNER';
@@ -31,7 +29,7 @@
 	}
 
 	function renderProject() {
-		byId('settings-project-name').textContent = `${project.name} · 설정`;
+		// 제목은 정적 sr-only 텍스트로 충분하다. 프로젝트 이름은 페이지 제목이 이미 말한다.
 		byId('rename-project-name').value = project.name;
 		byId('change-project-domain').value = project.subdomain || '';
 		byId('project-subdomain-enabled').checked = project.subdomainEnabled;
@@ -45,6 +43,10 @@
 	}
 
 	async function loadProject() {
+		if (!projectId) {
+			setMessage(settingsMessage, '프로젝트를 먼저 선택하세요.', true);
+			return false;
+		}
 		const response = await request(`${base}/api/web/projects/${projectId}`);
 		if (!response.ok) {
 			setMessage(settingsMessage, (await body(response)).message || '프로젝트를 불러올 수 없습니다.', true);
@@ -142,5 +144,13 @@
 		});
 	});
 
-	loadProject();
+	// 설정도 프로젝트 탭 패널이 되어 항상 DOM 에 있다. 즉시 부르면 설정을 열지 않는 사람도
+	// 매번 프로젝트를 조회하고, 그 데이터는 srrrg-projects.js 가 이미 갖고 있는 것과 같다.
+	// srrrg-projects.js 가 설정 탭을 처음 열 때 reload() 로 부른다.
+	window.SrrrgProjectSettings = {
+		reload(newProjectId) {
+			if (newProjectId) projectId = newProjectId;
+			return loadProject();
+		}
+	};
 })();
