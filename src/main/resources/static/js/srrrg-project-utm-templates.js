@@ -49,6 +49,8 @@
 		byId('template-detail').hidden = false;
 		byId('template-detail-name').textContent = template.name;
 		byId('template-picker').value = template.id;
+		// 다른 템플릿으로 옮기면 열려 있던 이름 입력칸은 닫는다(이전 이름이 남아 헷갈린다).
+		byId('rename-template-form').hidden = true;
 		setMessage(detailMessage, '');
 		renderFields(template);
 	}
@@ -76,6 +78,57 @@
 		setMessage(detailMessage, '필드를 삭제했습니다.');
 		await loadTemplates(templateId);
 	}
+
+	// 이름 변경은 누를 때만 입력칸을 연다. 항상 열어 두면 제목과 같은 값이 두 번 보인다.
+	function openRename(open) {
+		byId('rename-template-form').hidden = !open;
+		if (!open) return;
+		const template = state.templates.find((candidate) => candidate.id === state.selectedId);
+		byId('rename-template-name').value = template ? template.name : '';
+		byId('rename-template-name').focus();
+	}
+
+	byId('rename-template').addEventListener('click', () => openRename(true));
+	byId('cancel-rename-template').addEventListener('click', () => {
+		openRename(false);
+		byId('rename-template').focus();
+	});
+
+	byId('rename-template-form').addEventListener('submit', async (event) => {
+		event.preventDefault();
+		const name = new FormData(event.target).get('name')?.trim();
+		if (!name) return setMessage(detailMessage, '템플릿 이름을 입력하세요.', true);
+		const templateId = state.selectedId;
+		await submitting(event.submitter, '저장 중...', async () => {
+			setMessage(detailMessage, '이름을 바꾸고 있습니다...');
+			const response = await request(`${base}/api/web/projects/${projectId}/utm-templates/${templateId}`,
+				{ method: 'PATCH', body: JSON.stringify({ name }) });
+			if (!response.ok) return setMessage(detailMessage, (await body(response)).message || '이름을 바꿀 수 없습니다.', true);
+			openRename(false);
+			await loadTemplates(templateId);
+			setMessage(detailMessage, '템플릿 이름을 바꿨습니다.');
+			byId('rename-template').focus();
+		});
+	});
+
+	byId('delete-template').addEventListener('click', async () => {
+		const template = state.templates.find((candidate) => candidate.id === state.selectedId);
+		if (!template) return;
+		if (!(await confirmAction({
+			title: `"${template.name}" 템플릿을 삭제할까요?`,
+			// 사용 중인 캠페인이 있으면 서버가 거부한다. 여기서는 이미 발행된 링크가 안전하다는 점만 알린다.
+			body: '이미 만든 링크의 UTM 값과 통계는 그대로 남습니다. 앞으로 이 템플릿을 고를 수 없게 됩니다.',
+			confirmLabel: '템플릿 삭제'
+		}))) return;
+		const response = await request(`${base}/api/web/projects/${projectId}/utm-templates/${template.id}`, { method: 'DELETE' });
+		if (!response.ok) {
+			// "사용 중인 캠페인이 있어 삭제할 수 없습니다..." 같은 서버 문구를 그대로 보여 준다.
+			return setMessage(detailMessage, (await body(response)).message || '템플릿을 삭제할 수 없습니다.', true);
+		}
+		state.selectedId = null;
+		await loadTemplates();
+		setMessage(templatesMessage, '템플릿을 삭제했습니다.');
+	});
 
 	byId('create-template-form').addEventListener('submit', async (event) => {
 		event.preventDefault();

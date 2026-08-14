@@ -35,9 +35,25 @@
 	</div>
 
 	<div id="template-detail" class="project-card surface-panel" hidden>
-		<div class="project-card-heading">
+		<!-- 템플릿 자체를 다루는 두 동작. 이전에는 필드만 더하고 지울 수 있어서
+		     한 번 만든 템플릿은 이름도 못 바꾸고 지울 수도 없었다(서버에는 둘 다 있었다). -->
+		<div class="template-detail-heading">
 			<h3 id="template-detail-name" tabindex="-1"></h3>
+			<div class="template-detail-actions">
+				<button id="rename-template" class="text-button" type="button">이름 변경</button>
+				<button id="delete-template" class="text-button danger" type="button">삭제</button>
+			</div>
 		</div>
+
+		<!-- 이름을 항상 입력칸으로 두면 제목과 같은 값이 두 번 보인다. 누를 때만 연다. -->
+		<form id="rename-template-form" class="project-inline-form" novalidate hidden>
+			<label class="field" for="rename-template-name"><span class="field-label sr-only">템플릿 이름</span>
+				<input id="rename-template-name" class="field-input" name="name" maxlength="50" autocomplete="off" required>
+			</label>
+			<button class="primary-button" type="submit">저장</button>
+			<button id="cancel-rename-template" class="secondary-button" type="button">취소</button>
+		</form>
+
 		<p class="help-text">필드 변경은 이 템플릿을 사용하는 모든 캠페인의 기존 링크와 통계에 즉시 반영됩니다.</p>
 
 		<div id="template-field-list" class="template-field-list"></div>
