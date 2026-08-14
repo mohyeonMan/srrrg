@@ -718,15 +718,6 @@
 	background: var(--color-brand-soft);
 }
 
-/* 되돌리기 어려운 동작의 텍스트 버튼. 면을 칠하지 않고 글자색만 바꿔
-   같은 행의 일반 동작과 무게를 맞춘다 — 확인 대화상자가 실제 방어선이다. */
-.text-button.danger {
-	color: var(--color-danger);
-}
-
-.text-button.danger:hover {
-	background: var(--color-danger-soft);
-}
 
 /* ── 레일 반응형 2단 ────────────────────────────────────────────────
    데스크톱 ≥1024px : 레일 전체 노출 (라벨 + 콘텐츠 목록)

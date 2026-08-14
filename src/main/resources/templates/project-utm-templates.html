@@ -38,21 +38,22 @@
 		<!-- 템플릿 자체를 다루는 두 동작. 이전에는 필드만 더하고 지울 수 있어서
 		     한 번 만든 템플릿은 이름도 못 바꾸고 지울 수도 없었다(서버에는 둘 다 있었다). -->
 		<div class="template-detail-heading">
-			<h3 id="template-detail-name" tabindex="-1"></h3>
-			<div class="template-detail-actions">
-				<button id="rename-template" class="text-button" type="button">이름 변경</button>
-				<button id="delete-template" class="text-button danger" type="button">삭제</button>
+			<!-- 이름은 제자리에서 고친다. 아래에 따로 폼을 두면 같은 값이 두 군데 보이고
+			     무엇을 고치는 중인지 시선이 갈린다. 이름 자리를 입력칸이 그대로 차지한다. -->
+			<div id="template-name-view" class="template-name-row">
+				<h3 id="template-detail-name" tabindex="-1"></h3>
+				<button id="rename-template" class="project-heading-button" type="button"
+						aria-label="템플릿 이름 변경" title="이름 변경">✎</button>
 			</div>
-		</div>
-
-		<!-- 이름을 항상 입력칸으로 두면 제목과 같은 값이 두 번 보인다. 누를 때만 연다. -->
-		<form id="rename-template-form" class="project-inline-form" novalidate hidden>
-			<label class="field" for="rename-template-name"><span class="field-label sr-only">템플릿 이름</span>
+			<form id="rename-template-form" class="template-name-edit" novalidate hidden>
+				<label class="sr-only" for="rename-template-name">템플릿 이름</label>
 				<input id="rename-template-name" class="field-input" name="name" maxlength="50" autocomplete="off" required>
-			</label>
-			<button class="primary-button" type="submit">저장</button>
-			<button id="cancel-rename-template" class="secondary-button" type="button">취소</button>
-		</form>
+				<button class="primary-button compact-action" type="submit">저장</button>
+				<button id="cancel-rename-template" class="secondary-button compact-action" type="button">취소</button>
+			</form>
+
+			<button id="delete-template" class="danger-button compact-action" type="button">템플릿 삭제</button>
+		</div>
 
 		<p class="help-text">필드 변경은 이 템플릿을 사용하는 모든 캠페인의 기존 링크와 통계에 즉시 반영됩니다.</p>
 

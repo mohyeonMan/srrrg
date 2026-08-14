@@ -50,7 +50,7 @@
 		byId('template-detail-name').textContent = template.name;
 		byId('template-picker').value = template.id;
 		// 다른 템플릿으로 옮기면 열려 있던 이름 입력칸은 닫는다(이전 이름이 남아 헷갈린다).
-		byId('rename-template-form').hidden = true;
+		openRename(false);
 		setMessage(detailMessage, '');
 		renderFields(template);
 	}
@@ -59,8 +59,10 @@
 		const rows = template.activeFields.map((field) => {
 			const row = element('div', 'template-field-row');
 			row.append(element('span', '', field.name));
-			const deleteButton = element('button', 'text-button', '삭제');
+			// 텍스트 링크처럼 보이면 되돌리기 어려운 동작인지 읽히지 않는다. 버튼 면을 준다.
+			const deleteButton = element('button', 'danger-button compact-action', '삭제');
 			deleteButton.type = 'button';
+			deleteButton.setAttribute('aria-label', `${field.name} 필드 삭제`);
 			deleteButton.addEventListener('click', () => deleteField(template.id, field.id));
 			row.append(deleteButton);
 			return row;
@@ -79,8 +81,9 @@
 		await loadTemplates(templateId);
 	}
 
-	// 이름 변경은 누를 때만 입력칸을 연다. 항상 열어 두면 제목과 같은 값이 두 번 보인다.
+	// 제목 자리를 입력칸이 대신한다. 둘을 함께 두면 같은 값이 두 군데 보인다.
 	function openRename(open) {
+		byId('template-name-view').hidden = open;
 		byId('rename-template-form').hidden = !open;
 		if (!open) return;
 		const template = state.templates.find((candidate) => candidate.id === state.selectedId);

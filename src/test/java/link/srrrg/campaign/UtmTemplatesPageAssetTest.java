@@ -33,8 +33,15 @@ class UtmTemplatesPageAssetTest {
 		// 무엇을 먼저 해야 하는지 알 수 있다("먼저 캠페인의 템플릿을 변경하세요").
 		assertThat(script).contains("(await body(response)).message || '템플릿을 삭제할 수 없습니다.'");
 
-		// 이름 입력칸을 항상 열어 두면 제목과 같은 값이 두 번 보인다. 누를 때만 연다.
-		assertThat(template).contains("id=\"rename-template-form\" class=\"project-inline-form\" novalidate hidden");
+		// 이름은 제자리에서 고친다. 제목과 입력칸이 함께 보이면 같은 값이 두 군데 있게 된다.
+		assertThat(template).contains(
+				"id=\"template-name-view\"",
+				"class=\"template-name-edit\"",
+				"novalidate hidden");
+		// 삭제는 텍스트가 아니라 버튼 면을 갖는다 — 되돌리기 어려운 동작임이 읽혀야 한다.
+		assertThat(template).contains("id=\"delete-template\" class=\"danger-button compact-action\"");
+		assertThat(script).contains("element('button', 'danger-button compact-action', '삭제')");
+		assertThat(template).doesNotContain("class=\"text-button\" type=\"button\">삭제");
 
 		// 조각이 스스로 초기 조회를 하면 UTM 탭을 보지 않는 사람도 매번 목록을 부른다.
 		assertThat(script).contains("window.SrrrgProjectUtmTemplates");

@@ -96,7 +96,8 @@
 	gap: var(--space-3);
 }
 
-/* 템플릿 제목 행. 제목 왼쪽, 템플릿 자체를 다루는 동작(이름 변경·삭제) 오른쪽. */
+/* 템플릿 제목 행. 이름(+수정 버튼) 왼쪽, 삭제 오른쪽.
+   이름을 고치는 동안에는 .template-name-row 가 숨고 .template-name-edit 가 같은 자리를 쓴다. */
 .template-detail-heading {
 	display: flex;
 	flex-wrap: wrap;
@@ -105,10 +106,32 @@
 	justify-content: space-between;
 }
 
-.template-detail-actions {
+.template-name-row {
 	display: flex;
+	min-width: 0;
 	gap: var(--space-1);
 	align-items: center;
+}
+
+.template-name-row h3 {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+/* 이름만 바꾸는 자리라 라벨 없이 입력칸과 두 버튼만 둔다.
+   입력칸이 남는 폭을 먹고, 좁아지면 버튼이 아래 줄로 내려간다. */
+.template-name-edit {
+	display: flex;
+	flex: 1;
+	flex-wrap: wrap;
+	min-width: 0;
+	gap: var(--space-2);
+	align-items: center;
+}
+
+.template-name-edit .field-input {
+	flex: 1;
+	min-width: 140px;
 }
 
 .template-field-row {
