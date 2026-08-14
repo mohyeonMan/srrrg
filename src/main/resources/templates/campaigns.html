@@ -20,8 +20,12 @@
 	<div id="campaign-body" hidden>
 		<div class="console-tabs" role="tablist" aria-label="캠페인 상세 화면">
 			<button id="campaign-tab-overview" class="console-tab" type="button" role="tab" aria-selected="true" aria-controls="campaign-panel-overview">개요</button>
-			<button id="campaign-tab-link-list" class="console-tab" type="button" role="tab" aria-selected="false" aria-controls="campaign-panel-link-list">링크 목록</button>
-			<button id="campaign-tab-link-create" class="console-tab" type="button" role="tab" aria-selected="false" aria-controls="campaign-panel-link-create">링크 생성</button>
+			<!-- 320px 에서 탭 하나에 63px 이 돌아가는데 "링크 목록"·"링크 생성" 은 61px 이라
+			     여유가 2px 뿐이었다. 라벨이 조금만 길어지거나 폰트가 달라지면 줄바꿈된다.
+			     탭 안이 목록이라는 것과 무엇을 만드는지는 각 패널의 제목이 말한다
+			     ("캠페인 링크", "개인화 링크 만들기"). 프로젝트 탭과 같은 축약 원칙이다. -->
+			<button id="campaign-tab-link-list" class="console-tab" type="button" role="tab" aria-selected="false" aria-controls="campaign-panel-link-list">링크</button>
+			<button id="campaign-tab-link-create" class="console-tab" type="button" role="tab" aria-selected="false" aria-controls="campaign-panel-link-create">만들기</button>
 			<button id="campaign-tab-settings" class="console-tab" type="button" role="tab" aria-selected="false" aria-controls="campaign-panel-settings">설정</button>
 		</div>
 
