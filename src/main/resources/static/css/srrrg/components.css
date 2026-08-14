@@ -414,13 +414,16 @@ select.field-input {
 
    .project-card 없이 단독으로 쓰이는 곳(management.html)이 있어 판 속성을 스스로 갖는다.
    management.css 에도 같은 클래스가 있었는데, 그 파일이 srrrg.css 뒤에 따로 실려서
-   사방을 danger 색으로 두르는 쪽이 이겼다 — 위 주석이 설명하는 디자인이 지고 있었다. */
+   사방을 danger 색으로 두르는 쪽이 이겼다 — 위 주석이 설명하는 디자인이 지고 있었다.
+
+   폭 상한(820px)은 두지 않는다. 어디서든 형제 판과 같은 폭이어야 한다 —
+   프로젝트 설정에서는 옆 카드가 1050px 인데 이것만 820px 이라 오른쪽이 230px 짧았고,
+   /manage 에서도 형제인 .settings-form 에는 상한이 없어 혼자 좁았다(실측). */
 .danger-zone {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) auto;
 	gap: var(--space-5);
 	align-items: center;
-	max-width: 820px;
 	padding: var(--panel-padding);
 	background: var(--color-surface);
 	border: 1px solid var(--color-border);
