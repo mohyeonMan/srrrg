@@ -148,8 +148,8 @@ public class PublicCampaignController {
 		campaigns.findForApiKey(projectId, campaignId);
 		int boundedLimit = boundedLimit(limit);
 		List<Link> page = cursor == null
-				? links.findByCampaignIdAndDeletedFalseOrderByIdDesc(campaignId, PageRequest.of(0, boundedLimit + 1))
-				: links.findByCampaignIdAndDeletedFalseAndIdLessThanOrderByIdDesc(campaignId, cursor, PageRequest.of(0, boundedLimit + 1));
+				? links.findByCampaignIdOrderByIdDesc(campaignId, PageRequest.of(0, boundedLimit + 1))
+				: links.findByCampaignIdAndIdLessThanOrderByIdDesc(campaignId, cursor, PageRequest.of(0, boundedLimit + 1));
 		return CampaignLinkPageResponse.of(page, boundedLimit);
 	}
 

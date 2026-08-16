@@ -29,7 +29,8 @@ import lombok.NoArgsConstructor;
 public class ProjectApiKey {
 	@Id @GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
-	@ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "project_id", nullable = false)
+	// @SoftDelete 엔티티를 가리키는 to-one 연관은 LAZY로 둘 수 없다.
+	@ManyToOne(fetch = FetchType.EAGER) @JoinColumn(name = "project_id", nullable = false)
 	private Project project;
 	@Column(nullable = false, length = 100)
 	private String name;

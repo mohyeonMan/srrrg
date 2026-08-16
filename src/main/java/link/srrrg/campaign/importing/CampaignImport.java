@@ -34,7 +34,8 @@ public class CampaignImport {
 	@JoinColumn(name = "campaign_id", nullable = false)
 	private Campaign campaign;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	// @SoftDelete 엔티티를 가리키는 to-one 연관은 LAZY로 둘 수 없다.
+	@ManyToOne(fetch = FetchType.EAGER, optional = false)
 	@JoinColumn(name = "project_id", nullable = false)
 	private Project project;
 

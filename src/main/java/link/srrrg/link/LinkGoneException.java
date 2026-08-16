@@ -19,15 +19,17 @@ public class LinkGoneException extends RuntimeException {
 	private static String messageFor(Reason reason) {
 		return switch (reason) {
 			case EXPIRED -> "이 단축 링크는 설정된 만료 시각이 지나 더 이상 이동할 수 없습니다.";
-			case DELETED -> "이 단축 링크는 생성자가 삭제해 더 이상 이동할 수 없습니다.";
 			case NO_DESTINATION -> "이 단축 링크에 사용할 목적지 URL이 없습니다.";
-			case UNKNOWN -> "삭제되었거나 만료된 링크입니다.";
+			case UNKNOWN -> "사용할 수 없는 링크입니다.";
 		};
 	}
 
+	/**
+	 * 삭제는 여기 없다. 삭제된 링크는 {@code @SoftDelete}로 조회되지 않아 404가 된다.
+	 * 410은 "존재하지만 더 이상 이동할 수 없는" 상태에만 쓴다.
+	 */
 	public enum Reason {
 		EXPIRED,
-		DELETED,
 		NO_DESTINATION,
 		UNKNOWN
 	}

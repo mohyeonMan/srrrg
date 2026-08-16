@@ -13,6 +13,8 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.SoftDelete;
+import org.hibernate.annotations.SoftDeleteType;
 import link.srrrg.identity.User;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -20,6 +22,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "projects")
+@SoftDelete(strategy = SoftDeleteType.TIMESTAMP, columnName = "deleted_at")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Project {
@@ -43,8 +46,6 @@ public class Project {
 	private Instant createdAt;
 	@Column(name = "updated_at", nullable = false)
 	private Instant updatedAt;
-	@Column(name = "archived_at")
-	private Instant archivedAt;
 
 	private Project(String name, String subdomain, User createdBy) {
 		this.name = name;
@@ -62,7 +63,6 @@ public class Project {
 		this.subdomainEnabled = enabled;
 	}
 	public String activeSubdomain() { return subdomainEnabled ? subdomain : null; }
-	public void archive() { this.archivedAt = Instant.now(); }
 
 	@PrePersist void onCreate() { createdAt = updatedAt = Instant.now(); }
 	@PreUpdate void onUpdate() { updatedAt = Instant.now(); }

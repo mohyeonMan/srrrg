@@ -53,7 +53,6 @@ public class RedirectExceptionHandler {
 	) {
 		String title = switch (exception.getReason()) {
 			case EXPIRED -> "만료된 링크입니다";
-			case DELETED -> "삭제된 링크입니다";
 			case NO_DESTINATION -> "목적지가 없는 링크입니다";
 			case UNKNOWN -> "사용할 수 없는 링크입니다";
 		};

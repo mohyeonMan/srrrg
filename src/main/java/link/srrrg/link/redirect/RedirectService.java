@@ -77,18 +77,18 @@ public class RedirectService {
 		try {
 			HostRoute route = domains.resolve(host).orElseThrow(LinkNotFoundException::new);
 			Link initialLink = findLink(route, code);
-			if (isDeleted(initialLink)) throw unavailable(code, initialLink, false);
+			if (belongsToDeletedProject(initialLink)) throw projectDeleted(code);
 			if (initialLink.isExpiredAt(accessedAt)) {
 				recordAccess(initialLink, accessedAt, Outcome.EXPIRED, requestInfo);
-				throw unavailable(code, initialLink, true);
+				throw expired(code);
 			}
 			String rawUrl = effectiveOriginalUrl(initialLink);
-			String checkedUrl = initialLink.getProject() == null
+			String checkedUrl = initialLink.isAnonymous()
 					? DestinationUrlMerger.merge(rawUrl, utmValuesFor(initialLink))
 					: rawUrl;
 			urlValidator.validate(checkedUrl);
 
-			if (initialLink.getProject() == null) {
+			if (initialLink.isAnonymous()) {
 				RiskVerdict verdict = riskVerificationService.verify(checkedUrl).verdict();
 				if (verdict == RiskVerdict.THREAT) {
 					recordAccess(initialLink, accessedAt, Outcome.BLOCKED, requestInfo);
@@ -141,7 +141,7 @@ public class RedirectService {
 				}
 				Map<String, String> effectiveUtm = currentLink.getCampaign() == null ? Map.of() : utmValuesFor(currentLink);
 				accessEventRecorder.record(currentLink, accessedAt, Outcome.REDIRECTED, requestInfo, effectiveUtm);
-				if (currentLink.getProject() == null) return checkedMergedUrl;
+				if (currentLink.isAnonymous()) return checkedMergedUrl;
 				String currentUrl = effectiveOriginalUrl(currentLink);
 				return currentLink.getCampaign() == null
 						? currentUrl
@@ -197,18 +197,28 @@ public class RedirectService {
 
 	private Link findAvailableLink(HostRoute route, String code, Instant accessedAt) {
 		Link link = findLink(route, code);
-		if (isDeleted(link)) throw unavailable(code, link, false);
-		if (link.isExpiredAt(accessedAt)) throw unavailable(code, link, true);
+		if (belongsToDeletedProject(link)) throw projectDeleted(code);
+		if (link.isExpiredAt(accessedAt)) throw expired(code);
 		return link;
 	}
 
-	private boolean isDeleted(Link link) {
-		return link.isDeleted() || link.getProject() != null && link.getProject().getArchivedAt() != null;
+	/**
+	 * 삭제된 링크 자체는 {@code @SoftDelete}가 조회에서 걸러내므로 여기서는 프로젝트만 본다.
+	 * 프로젝트가 삭제되면 연관이 비어 오는데, 익명 링크는 원래 project가 없으므로
+	 * secret key 보유 여부({@link Link#isAnonymous()})로 구분해야 한다.
+	 */
+	private boolean belongsToDeletedProject(Link link) {
+		return !link.isAnonymous() && link.getProject() == null;
 	}
 
-	private LinkGoneException unavailable(String code, Link link, boolean expired) {
-		log.info("Link unavailable: code={}, deleted={}, expired={}", code, isDeleted(link), expired);
-		return new LinkGoneException(expired ? LinkGoneException.Reason.EXPIRED : LinkGoneException.Reason.DELETED);
+	private LinkNotFoundException projectDeleted(String code) {
+		log.info("Link unavailable: reason=PROJECT_DELETED, code={}", code);
+		return new LinkNotFoundException();
+	}
+
+	private LinkGoneException expired(String code) {
+		log.info("Link unavailable: reason=EXPIRED, code={}", code);
+		return new LinkGoneException(LinkGoneException.Reason.EXPIRED);
 	}
 
 	private long elapsedMillis(long startedAt) {

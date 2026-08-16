@@ -48,7 +48,7 @@ public class CampaignLinkCreationService {
 	@Transactional
 	public Link createForUser(Long userId, Long campaignId, CreateCampaignLinkRequest request) {
 		Campaign campaign = campaignService.requireEditableCampaign(userId, campaignId);
-		User createdBy = members.findByIdProjectIdAndIdUserId(campaign.getProject().getId(), userId)
+		User createdBy = members.findActiveByProjectAndUser(campaign.getProject().getId(), userId)
 				.orElseThrow(() -> new SecurityException("프로젝트 접근 권한이 없습니다."))
 				.getUser();
 		return create(campaign, campaign.getProject(), createdBy, null, null, null, request);

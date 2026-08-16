@@ -14,6 +14,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.SoftDelete;
+import org.hibernate.annotations.SoftDeleteType;
 import link.srrrg.identity.User;
 import link.srrrg.project.Project;
 import lombok.AccessLevel;
@@ -22,14 +23,15 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "campaigns")
-@SoftDelete(columnName = "is_deleted")
+@SoftDelete(strategy = SoftDeleteType.TIMESTAMP, columnName = "deleted_at")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Campaign {
 	@Id @GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	// @SoftDelete 엔티티를 가리키는 to-one 연관은 LAZY로 둘 수 없다.
+	@ManyToOne(fetch = FetchType.EAGER, optional = false)
 	@JoinColumn(name = "project_id", nullable = false)
 	private Project project;
 

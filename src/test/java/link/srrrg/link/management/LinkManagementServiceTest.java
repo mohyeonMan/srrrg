@@ -317,12 +317,12 @@ class LinkManagementServiceTest {
 	}
 
 	@Test
-	void rejectsDeletedManagedLink() {
-		Link link = managedLink("https://example.com");
-		when(link.isDeleted()).thenReturn(true);
+	void rejectsDeletedManagedLinkAsNotFound() {
+		// @SoftDelete가 조회 단계에서 걸러내므로 삭제된 링크는 410이 아니라 404가 된다.
+		when(repository.findByCodeAndProjectIsNull("aB3x9Q")).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> service.getManagedLink("aB3x9Q", "secret"))
-				.isInstanceOf(LinkGoneException.class);
+				.isInstanceOf(LinkNotFoundException.class);
 	}
 
 	private Link managedLink(String url) {
@@ -338,7 +338,6 @@ class LinkManagementServiceTest {
 		when(link.getCode()).thenReturn("aB3x9Q");
 		when(link.getOriginalUrl()).thenReturn(url);
 		when(link.getSecretKeyHash()).thenReturn("link-secret-hash");
-		when(link.isDeleted()).thenReturn(false);
 		when(link.isExpiredAt(any(Instant.class))).thenReturn(false);
 		return link;
 	}

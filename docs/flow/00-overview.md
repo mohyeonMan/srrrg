@@ -188,26 +188,13 @@ ProjectService.requireRole(userId, projectId, minimumRole)
 
 **"보관(archive)"이라는 개념은 이 서비스에 없다.** 삭제만 있고 그것이 soft delete일 뿐이다. UI 문구도 전부 "삭제"다 (`프로젝트 삭제`, `캠페인 삭제`).
 
-다만 구현 표현이 엔티티마다 갈려 있다.
-
 | 대상 | 컬럼 | 메커니즘 | 표시 |
 |---|---|---|---|
-| Link | `is_deleted` boolean | 수동 플래그 `Link.delete()` | — |
-| Campaign | `is_deleted` boolean | Hibernate `@SoftDelete(columnName = "is_deleted")` | — |
-| Project | `archived_at` timestamp | 수동 타임스탬프 `Project.archive()` | 코드에 `archive` 이름이 남음 |
+| Link | `deleted_at` timestamp | Hibernate `@SoftDelete(strategy = TIMESTAMP)` | 삭제된 링크는 조회되지 않음 |
+| Campaign | `deleted_at` timestamp | Hibernate `@SoftDelete(strategy = TIMESTAMP)` | 삭제된 캠페인은 조회되지 않음 |
+| Project | `deleted_at` timestamp | Hibernate `@SoftDelete(strategy = TIMESTAMP)` | 활성 부모를 fetch join한 조회에서 제외 |
 
-`Project`만 옛 이름을 쓴다. 캠페인은 [V32__soft_delete_campaigns.sql](../../src/main/resources/db/migration/V32__soft_delete_campaigns.sql)에서 `archived_at` → `is_deleted`로 이미 옮겼고, 프로젝트는 그 전환이 되지 않은 상태다. 따라서 아래 식별자들은 전부 **"삭제"로 읽으면 된다.**
-
-```
-Project.archivedAt / Project.archive()
-ProjectController.archive                                      (DELETE /api/web/projects/{id})
-ProjectService.archive
-ProjectMemberRepository.findByIdUserIdAndProjectArchivedAtIsNull
-                       countByIdUserIdAndRoleAndProjectArchivedAtIsNull
-projects.archived_at                                           (DB 컬럼, V15)
-```
-
-`getArchivedAt() != null` 검사는 8곳에 흩어져 있다 — `ProjectService`(4), `CampaignService`, `UtmTemplateService`, `ApiKeyService`, `StatisticsController`, `RedirectService`.
+[V37__unify_soft_delete_columns.sql](../../src/main/resources/db/migration/V37__unify_soft_delete_columns.sql)이 세 엔티티의 삭제 표현을 통일한다. 삭제는 `repository.delete(...)` 또는 soft-delete bulk query로 실행되고, Hibernate가 `deleted_at`에 시각을 기록한다. 삭제된 링크는 존재하지 않는 링크와 같이 404로 응답한다.
 
 일부 옛 설계 문서(`docs/design/v3/`)가 캠페인에 대해 `보관됨` 용어와 `보관됨 보기` 토글을 제안하지만, **코드는 그 용어를 채택했다가 되돌렸고 토글도 구현되지 않았다.** 현재 코드 기준으로는 무효한 문서다.
 

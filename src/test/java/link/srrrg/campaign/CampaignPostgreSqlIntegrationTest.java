@@ -392,16 +392,24 @@ class CampaignPostgreSqlIntegrationTest {
 		Owner owner = newOwner();
 		Long campaignId = createCampaign(owner, "중복 방지 캠페인", null);
 
-		mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+		String firstCode = readJson(mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
 					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
 					.content("{\"originalUrl\":\"https://example.com/a\",\"externalId\":\"dup-1\"}"))
-				.andExpect(status().isCreated());
+				.andExpect(status().isCreated()).andReturn(), "code");
 
 		mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
 					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
 					.content("{\"originalUrl\":\"https://example.com/b\",\"externalId\":\"dup-1\"}"))
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.code").value("EXTERNAL_ID_CONFLICT"));
+
+		mockMvc.perform(delete("/api/web/projects/{projectId}/links/{code}", owner.projectId, firstCode)
+					.with(csrf()).cookie(owner.cookie))
+				.andExpect(status().isNoContent());
+		mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/reused\",\"externalId\":\"dup-1\"}"))
+				.andExpect(status().isCreated());
 	}
 
 	@Test
@@ -419,7 +427,7 @@ class CampaignPostgreSqlIntegrationTest {
 	}
 
 	@Test
-	void deletingCampaignSoftDeletesCampaignAndLinksReturningGoneOnRedirect() throws Exception {
+	void deletingCampaignSoftDeletesCampaignAndLinksReturningNotFoundOnRedirect() throws Exception {
 		Owner owner = newOwner();
 		Long campaignId = createCampaign(owner, "삭제될 캠페인", null);
 		MvcResult created = mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
@@ -431,13 +439,13 @@ class CampaignPostgreSqlIntegrationTest {
 
 		mockMvc.perform(delete("/api/web/campaigns/{id}", campaignId).with(csrf()).cookie(owner.cookie))
 				.andExpect(status().isNoContent());
-		assertThat(jdbcTemplate.queryForObject("SELECT is_deleted FROM campaigns WHERE id=?", Boolean.class, campaignId)).isTrue();
+		assertThat(jdbcTemplate.queryForObject("SELECT deleted_at IS NOT NULL FROM campaigns WHERE id=?", Boolean.class, campaignId)).isTrue();
 		mockMvc.perform(get("/api/web/campaigns/{id}", campaignId).cookie(owner.cookie))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.code").value("CAMPAIGN_NOT_FOUND"));
 
 		mockMvc.perform(get("/{code}", code).header("Host", owner.host))
-				.andExpect(status().isGone());
+				.andExpect(status().isNotFound());
 	}
 
 	@Test
@@ -473,7 +481,7 @@ class CampaignPostgreSqlIntegrationTest {
 				.andExpect(status().isNoContent());
 
 		mockMvc.perform(get("/{code}", code).header("Host", owner.host))
-				.andExpect(status().isGone());
+				.andExpect(status().isNotFound());
 		mockMvc.perform(get("/api/web/campaigns/{id}/links", campaignId).cookie(owner.cookie))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.items").isEmpty());
@@ -511,8 +519,8 @@ class CampaignPostgreSqlIntegrationTest {
 
 		mockMvc.perform(get("/api/web/campaigns/{id}/links", campaignId).cookie(owner.cookie))
 				.andExpect(status().isOk()).andExpect(jsonPath("$.items").isEmpty());
-		mockMvc.perform(get("/{code}", firstCode).header("Host", owner.host)).andExpect(status().isGone());
-		mockMvc.perform(get("/{code}", secondCode).header("Host", owner.host)).andExpect(status().isGone());
+		mockMvc.perform(get("/{code}", firstCode).header("Host", owner.host)).andExpect(status().isNotFound());
+		mockMvc.perform(get("/{code}", secondCode).header("Host", owner.host)).andExpect(status().isNotFound());
 		mockMvc.perform(get("/{code}", otherCode).header("Host", owner.host)).andExpect(status().isFound());
 	}
 
@@ -556,6 +564,16 @@ class CampaignPostgreSqlIntegrationTest {
 					.content("{\"originalUrl\":\"https://example.com/DIFFERENT\"}"))
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.code").value("IDEMPOTENCY_CONFLICT"));
+
+		mockMvc.perform(delete("/api/web/projects/{projectId}/links/{code}", owner.projectId, firstCode)
+					.with(csrf()).cookie(owner.cookie))
+				.andExpect(status().isNoContent());
+		mockMvc.perform(post("/api/v1/campaigns/{id}/links", campaignId)
+					.header("Authorization", auth).header("Idempotency-Key", "req-1")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/one\"}"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.code").value(org.hamcrest.Matchers.not(firstCode)));
 	}
 
 	@Test

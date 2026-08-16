@@ -72,12 +72,12 @@ RedirectController.redirect(code, host, request)
             LinkRepository.findBySubdomainIsNullAndCode(code)        [베이스 도메인]
             LinkRepository.findBySubdomainAndCode(subdomain, code)   [서브도메인]
                 @EntityGraph로 project·campaign을 fetch join. 뒤에서 바로 쓰므로 N+1을 미리 제거.
+                삭제된 링크는 Link의 @SoftDelete가 조회에서 제외한다.
                 → 없으면 LinkNotFoundException (404)
 
-        isDeleted(link)
-            링크 자체의 삭제 플래그 + 소속 프로젝트의 삭제 여부를 함께 본다.
-            프로젝트 삭제가 링크로 전파된다.
-            → LinkGoneException(DELETED) (410) · 이 경우 접근 이벤트는 남기지 않는다
+        belongsToDeletedProject(link)
+            익명 링크가 아닌데 project fetch join 결과가 null이면 삭제된 프로젝트의 링크다.
+            → LinkNotFoundException (404) · 이 경우 접근 이벤트는 남기지 않는다
 
         Link.isExpiredAt(accessedAt)
             expiresAt이 accessedAt 이후가 아니면 만료. 만료 시각 정각도 만료로 본다.
@@ -237,8 +237,7 @@ LinkController.getManagedLink(code, secretKey)
                 불일치도 404로 응답한다 — 코드의 존재 여부를 흘리지 않기 위해.
                 → LinkNotFoundException (404)
 
-            Link.isDeleted()
-                → LinkGoneException (410)
+            삭제된 링크는 @SoftDelete 때문에 조회되지 않아 404가 된다.
 
         toManagementResponse(link, editable = true, shortUrl = null)
 ```
@@ -339,9 +338,8 @@ ProjectController.link(principal, projectId, code)
 
         projectLink(projectId, code)                 [private 헬퍼]
             LinkRepository.findByProjectIdAndCode(projectId, code)
+                삭제된 링크는 @SoftDelete가 제외한다.
                 → 없으면 LinkNotFoundException (404)
-            Link.isDeleted()
-                → LinkGoneException(DELETED) (410)
 
         LinkManagementService.projectManagementResponse(link, editable)
             editable = 내 역할이 VIEWER가 아닌지. 화면이 수정 UI를 켤지 결정하는 값.
@@ -393,8 +391,9 @@ ProjectController.deleteLink(principal, projectId, code)
     ProjectService.deleteProjectLink(userId, projectId, code)
         @Transactional
         requireRole(userId, projectId, EDITOR)
-        projectLink(projectId, code).delete()
-            조회 헬퍼가 이미 삭제된 링크를 410으로 막으므로 이중 삭제가 되지 않는다.
+        LinkRepository.delete(projectLink(projectId, code))
+            Hibernate가 DELETE를 deleted_at UPDATE로 번역한다.
+            이미 삭제된 링크는 조회되지 않으므로 다시 삭제하면 404가 된다.
 ```
 
 ---
@@ -525,9 +524,9 @@ PublicProjectLinkController.list(request, projectId, cursor, limit)
         1~100.
         → PublicApiException 400 INVALID_REQUEST
 
-    LinkRepository.findByProjectIdAndCampaignIsNullAndDeletedFalseOrderByIdDesc(projectId, PageRequest.of(0, limit + 1))
+    LinkRepository.findByProjectIdAndCampaignIsNullOrderByIdDesc(projectId, PageRequest.of(0, limit + 1))
         [cursor 없음] 첫 페이지.
-    LinkRepository.findByProjectIdAndCampaignIsNullAndDeletedFalseAndIdLessThanOrderByIdDesc(projectId, cursor, PageRequest.of(0, limit + 1))
+    LinkRepository.findByProjectIdAndCampaignIsNullAndIdLessThanOrderByIdDesc(projectId, cursor, PageRequest.of(0, limit + 1))
         [cursor 있음] id 내림차순이므로 "cursor보다 작은 id"가 다음 페이지.
 
         limit + 1 개를 읽는 이유: 다음 페이지 존재 여부를 별도 count 쿼리 없이 판정하기 위해.

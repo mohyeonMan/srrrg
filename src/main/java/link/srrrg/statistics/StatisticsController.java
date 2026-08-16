@@ -108,15 +108,11 @@ public class StatisticsController {
 	}
 
 	private ProjectMember member(Long userId, Long projectId) {
-		ProjectMember member = members.findByIdProjectIdAndIdUserId(projectId, userId)
+		return members.findActiveByProjectAndUser(projectId, userId)
 				.orElseThrow(() -> new SecurityException("프로젝트 접근 권한이 없습니다."));
-		if (member.getProject().getArchivedAt() != null) throw new SecurityException("프로젝트 접근 권한이 없습니다.");
-		return member;
 	}
 	private Link projectLink(Long projectId, String code) {
-		Link link = links.findByProjectIdAndCode(projectId, code).orElseThrow(LinkNotFoundException::new);
-		if (link.isDeleted()) throw new LinkNotFoundException();
-		return link;
+		return links.findByProjectIdAndCode(projectId, code).orElseThrow(LinkNotFoundException::new);
 	}
 	private Campaign campaign(Long campaignId) {
 		return campaigns.findById(campaignId)

@@ -108,6 +108,7 @@ class RedirectServiceTest {
 	@Test
 	void projectDomainRoutesByHostnameAndCode() {
 		Link link = link("https://project.example");
+		when(link.isAnonymous()).thenReturn(false);
 		when(link.getProject()).thenReturn(mock(Project.class));
 		when(domains.resolve("acme.srrrg.link")).thenReturn(Optional.of(new HostRoute("acme")));
 		when(repository.findBySubdomainAndCode("acme", "aB3x9Q")).thenReturn(Optional.of(link));
@@ -121,6 +122,7 @@ class RedirectServiceTest {
 	@Test
 	void campaignLinkWithoutOwnUrlUsesCurrentCampaignDefault() {
 		Link link = link(null);
+		when(link.isAnonymous()).thenReturn(false);
 		Campaign campaign = mock(Campaign.class);
 		when(campaign.getDefaultOriginalUrl()).thenReturn("https://current.example/default");
 		when(link.getCampaign()).thenReturn(campaign);
@@ -230,15 +232,25 @@ class RedirectServiceTest {
 	}
 
 	@Test
-	void deletedLinkDoesNotCreateStatisticsEvent() {
+	void deletedLinkIsNotFoundAndCreatesNoStatisticsEvent() {
+		// @SoftDelete가 조회 단계에서 걸러내므로 삭제된 링크는 410이 아니라 404가 된다.
+		when(repository.findBySubdomainIsNullAndCode("aB3x9Q")).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> service.redirect("srrrg.link", "aB3x9Q", requestInfo))
+				.isInstanceOf(link.srrrg.link.LinkNotFoundException.class);
+		verify(accessRecorder, never()).record(any(), any(), any(), eq(requestInfo));
+	}
+
+	@Test
+	void linkOfDeletedProjectIsNotFound() {
 		Link link = link("https://example.com");
-		when(link.isDeleted()).thenReturn(true);
+		// 프로젝트가 삭제되면 연관이 비어 온다. 익명 링크가 아니므로 삭제된 프로젝트의 링크로 판정해야 한다.
+		when(link.isAnonymous()).thenReturn(false);
+		when(link.getProject()).thenReturn(null);
 		when(repository.findBySubdomainIsNullAndCode("aB3x9Q")).thenReturn(Optional.of(link));
 
 		assertThatThrownBy(() -> service.redirect("srrrg.link", "aB3x9Q", requestInfo))
-				.isInstanceOf(LinkGoneException.class)
-				.extracting(exception -> ((LinkGoneException) exception).getReason())
-				.isEqualTo(LinkGoneException.Reason.DELETED);
+				.isInstanceOf(link.srrrg.link.LinkNotFoundException.class);
 		verify(accessRecorder, never()).record(eq(link), any(), any(), eq(requestInfo));
 	}
 
@@ -263,7 +275,8 @@ class RedirectServiceTest {
 		when(link.getCode()).thenReturn("aB3x9Q");
 		when(link.getId()).thenReturn(7L);
 		when(link.getOriginalUrl()).thenReturn(url);
-		when(link.isDeleted()).thenReturn(false);
+		// 이 테스트들의 대상은 익명 링크다. project가 null이어도 삭제된 프로젝트로 오인되지 않아야 한다.
+		when(link.isAnonymous()).thenReturn(true);
 		when(link.isExpiredAt(any(Instant.class))).thenReturn(false);
 		return link;
 	}

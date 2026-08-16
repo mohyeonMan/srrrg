@@ -16,6 +16,10 @@ import org.springframework.data.repository.query.Param;
 
 import jakarta.persistence.LockModeType;
 
+/**
+ * Link는 {@code @SoftDelete}가 걸려 있어 삭제된 링크는 모든 조회에서 자동으로 빠진다.
+ * 아래 메서드에 삭제 조건을 따로 적지 않는 이유다.
+ */
 public interface LinkRepository extends JpaRepository<Link, Long>, JpaSpecificationExecutor<Link> {
 
 	@EntityGraph(attributePaths = {"project", "campaign"})
@@ -29,28 +33,23 @@ public interface LinkRepository extends JpaRepository<Link, Long>, JpaSpecificat
 	@Query("select l from Link l where l.code = :code and l.project is null")
 	Optional<Link> lockAnonymousByCode(@Param("code") String code);
 	Optional<Link> findByIdempotencyApiKeyIdAndIdempotencyKey(Long apiKeyId, String idempotencyKey);
-	List<Link> findByProjectIdAndCampaignIsNullAndDeletedFalseOrderByIdDesc(Long projectId);
-	List<Link> findByProjectIdAndCampaignIsNullAndDeletedFalseOrderByIdDesc(Long projectId, Pageable pageable);
-	List<Link> findByProjectIdAndCampaignIsNullAndDeletedFalseAndIdLessThanOrderByIdDesc(Long projectId, Long id, Pageable pageable);
+	List<Link> findByProjectIdAndCampaignIsNullOrderByIdDesc(Long projectId);
+	List<Link> findByProjectIdAndCampaignIsNullOrderByIdDesc(Long projectId, Pageable pageable);
+	List<Link> findByProjectIdAndCampaignIsNullAndIdLessThanOrderByIdDesc(Long projectId, Long id, Pageable pageable);
 
-	List<Link> findByCampaignIdAndDeletedFalseOrderByIdDesc(Long campaignId, Pageable pageable);
-	List<Link> findByCampaignIdAndDeletedFalseAndIdLessThanOrderByIdDesc(Long campaignId, Long id, Pageable pageable);
-	Optional<Link> findByCampaignIdAndExternalId(Long campaignId, String externalId);
+	List<Link> findByCampaignIdOrderByIdDesc(Long campaignId, Pageable pageable);
+	List<Link> findByCampaignIdAndIdLessThanOrderByIdDesc(Long campaignId, Long id, Pageable pageable);
 	@EntityGraph(attributePaths = {"project", "campaign"})
 	Optional<Link> findByProjectIdAndCode(Long projectId, String code);
 
+	// @SoftDelete 엔티티의 bulk delete는 Hibernate가 soft delete UPDATE로 번역한다.
+	// 이미 삭제된 링크는 자동으로 제외되므로 조건을 따로 걸지 않는다.
 	@Modifying
-	@Query("update Link l set l.deleted = true, l.updatedAt = CURRENT_TIMESTAMP where l.campaign.id = :campaignId and l.deleted = false")
+	@Query("delete from Link l where l.campaign.id = :campaignId")
 	int softDeleteByCampaignId(@Param("campaignId") Long campaignId);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
-	@Query("""
-			update Link l
-			   set l.deleted = true, l.updatedAt = CURRENT_TIMESTAMP
-			 where l.campaign.id = :campaignId
-			   and l.code in :codes
-			   and l.deleted = false
-			""")
+	@Query("delete from Link l where l.campaign.id = :campaignId and l.code in :codes")
 	int softDeleteByCampaignIdAndCodeIn(@Param("campaignId") Long campaignId, @Param("codes") List<String> codes);
 
 }

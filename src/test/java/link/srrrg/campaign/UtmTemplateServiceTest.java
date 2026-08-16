@@ -37,7 +37,7 @@ class UtmTemplateServiceTest {
 		Project project = mock(Project.class);
 		when(project.getId()).thenReturn(1L);
 		ProjectMember membership = mockMembership(project, ProjectRole.EDITOR);
-		when(members.findByIdProjectIdAndIdUserId(1L, 5L)).thenReturn(Optional.of(membership));
+		when(members.findActiveByProjectAndUser(1L, 5L)).thenReturn(Optional.of(membership));
 
 		UtmTemplate template = mock(UtmTemplate.class);
 		when(template.isDeleted()).thenReturn(false);
@@ -54,7 +54,7 @@ class UtmTemplateServiceTest {
 		Project project = mock(Project.class);
 		when(project.getId()).thenReturn(1L);
 		ProjectMember membership = mockMembership(project, ProjectRole.EDITOR);
-		when(members.findByIdProjectIdAndIdUserId(1L, 5L)).thenReturn(Optional.of(membership));
+		when(members.findActiveByProjectAndUser(1L, 5L)).thenReturn(Optional.of(membership));
 
 		UtmTemplate template = mock(UtmTemplate.class);
 		when(template.isDeleted()).thenReturn(false);
@@ -70,7 +70,7 @@ class UtmTemplateServiceTest {
 		Project project = mock(Project.class);
 		when(project.getId()).thenReturn(1L);
 		ProjectMember membership = mockMembership(project, ProjectRole.EDITOR);
-		when(members.findByIdProjectIdAndIdUserId(1L, 5L)).thenReturn(Optional.of(membership));
+		when(members.findActiveByProjectAndUser(1L, 5L)).thenReturn(Optional.of(membership));
 
 		UtmTemplate template = mock(UtmTemplate.class);
 		when(template.isDeleted()).thenReturn(false);
@@ -87,7 +87,7 @@ class UtmTemplateServiceTest {
 		Project project = mock(Project.class);
 		when(project.getId()).thenReturn(1L);
 		ProjectMember membership = mockMembership(project, ProjectRole.VIEWER);
-		when(members.findByIdProjectIdAndIdUserId(1L, 5L)).thenReturn(Optional.of(membership));
+		when(members.findActiveByProjectAndUser(1L, 5L)).thenReturn(Optional.of(membership));
 
 		assertThatThrownBy(() -> service.addField(5L, 1L, 10L, "utm_source"))
 				.isInstanceOf(SecurityException.class);

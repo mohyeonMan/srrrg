@@ -60,8 +60,8 @@ public class PublicProjectLinkController {
 		principal(request, projectId, ApiKeyScope.LINKS_READ);
 		if (limit < 1 || limit > 100) throw new PublicApiException(400, "INVALID_REQUEST", "limit은 1~100 사이여야 합니다.");
 		List<Link> results = cursor == null
-				? links.findByProjectIdAndCampaignIsNullAndDeletedFalseOrderByIdDesc(projectId, org.springframework.data.domain.PageRequest.of(0, limit + 1))
-				: links.findByProjectIdAndCampaignIsNullAndDeletedFalseAndIdLessThanOrderByIdDesc(projectId, cursor, org.springframework.data.domain.PageRequest.of(0, limit + 1));
+				? links.findByProjectIdAndCampaignIsNullOrderByIdDesc(projectId, org.springframework.data.domain.PageRequest.of(0, limit + 1))
+				: links.findByProjectIdAndCampaignIsNullAndIdLessThanOrderByIdDesc(projectId, cursor, org.springframework.data.domain.PageRequest.of(0, limit + 1));
 		List<Link> page = results.size() > limit ? results.subList(0, limit) : results;
 		Long nextCursor = results.size() > limit ? page.getLast().getId() : null;
 		return new LinkPageResponse(page.stream().map(LinkResponse::from).toList(), nextCursor);

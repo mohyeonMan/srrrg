@@ -123,8 +123,8 @@ public class CampaignController {
 		campaigns.get(principal.userId(), campaignId);
 		int boundedLimit = boundedLimit(limit);
 		List<Link> page = cursor == null
-				? links.findByCampaignIdAndDeletedFalseOrderByIdDesc(campaignId, org.springframework.data.domain.PageRequest.of(0, boundedLimit + 1))
-				: links.findByCampaignIdAndDeletedFalseAndIdLessThanOrderByIdDesc(campaignId, cursor, org.springframework.data.domain.PageRequest.of(0, boundedLimit + 1));
+				? links.findByCampaignIdOrderByIdDesc(campaignId, org.springframework.data.domain.PageRequest.of(0, boundedLimit + 1))
+				: links.findByCampaignIdAndIdLessThanOrderByIdDesc(campaignId, cursor, org.springframework.data.domain.PageRequest.of(0, boundedLimit + 1));
 		List<Link> visibleLinks = page.size() > boundedLimit ? page.subList(0, boundedLimit) : page;
 		List<EffectiveUtmValueByLink> effectiveUtm = visibleLinks.isEmpty() ? List.of()
 				: linkUtmValues.findEffectiveByLinkIds(visibleLinks.stream().map(Link::getId).toList());
@@ -147,7 +147,7 @@ public class CampaignController {
 	public ResponseEntity<ImportResponse> uploadCsv(@AuthenticationPrincipal SrrrgPrincipal principal, @PathVariable Long campaignId,
 			@RequestHeader("Idempotency-Key") String idempotencyKey, @RequestParam("file") MultipartFile file) throws java.io.IOException {
 		Campaign campaign = campaigns.requireEditableCampaign(principal.userId(), campaignId);
-		var uploader = members.findByIdProjectIdAndIdUserId(campaign.getProject().getId(), principal.userId())
+		var uploader = members.findActiveByProjectAndUser(campaign.getProject().getId(), principal.userId())
 				.orElseThrow(() -> new SecurityException("프로젝트 접근 권한이 없습니다."))
 				.getUser();
 		CampaignImport created = csv.startImport(campaign, file.getBytes(), idempotencyKey, uploader, null);

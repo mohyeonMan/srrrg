@@ -337,7 +337,7 @@ class WebAuthPostgreSqlIntegrationTest {
 		mockMvc.perform(post("/api/web/invitations/{token}/accept", rawToken)
 					.with(csrf()).cookie(inviteeCookie))
 				.andExpect(status().isOk());
-		assertThat(projectMemberRepository.findByIdProjectIdAndIdUserId(projectId, invitee.user().getId())
+		assertThat(projectMemberRepository.findActiveByProjectAndUser(projectId, invitee.user().getId())
 				.orElseThrow().getRole()).isEqualTo(ProjectRole.EDITOR);
 
 		jakarta.servlet.http.Cookie outsiderCookie = new jakarta.servlet.http.Cookie(
@@ -505,7 +505,7 @@ class WebAuthPostgreSqlIntegrationTest {
 				.andExpect(status().isOk())
 				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.standaloneLinks[0].code").value(anonymous.code()))
 				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.campaigns").isEmpty());
-		ApiKeyService.CreatedKey apiKey = apiKeyService.create(owner.user().getId(), projectId, "before archive",
+		ApiKeyService.CreatedKey apiKey = apiKeyService.create(owner.user().getId(), projectId, "before delete",
 				java.util.Set.of(ApiKeyScope.LINKS_READ, ApiKeyScope.LINKS_WRITE), null);
 		String apiCode = com.jayway.jsonpath.JsonPath.read(mockMvc.perform(post("/api/v1/projects/{projectId}/links", projectId)
 					.header("Authorization", "Bearer " + apiKey.rawKey())
@@ -536,14 +536,17 @@ class WebAuthPostgreSqlIntegrationTest {
 					"/api/web/projects/{projectId}", projectId).with(csrf()).cookie(cookie))
 				.andExpect(status().isNoContent());
 		assertThat(jdbcTemplate.queryForObject(
-				"SELECT archived_at IS NOT NULL FROM projects WHERE id = ?", Boolean.class, projectId)).isTrue();
+				"SELECT deleted_at IS NOT NULL FROM projects WHERE id = ?", Boolean.class, projectId)).isTrue();
 		mockMvc.perform(get("/api/web/projects").cookie(cookie))
 				.andExpect(status().isOk())
 				.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$").isEmpty());
 		mockMvc.perform(get("/api/v1/projects/{projectId}/links", projectId)
 					.header("Authorization", "Bearer " + apiKey.rawKey()))
 				.andExpect(status().isUnauthorized());
-		mockMvc.perform(get("/{code}", anonymous.code()).header("Host", previousProjectHost)).andExpect(status().isGone());
+		assertThatThrownBy(() -> apiKeyService.create(owner.user().getId(), projectId, "after delete",
+				java.util.Set.of(ApiKeyScope.LINKS_READ), null))
+				.isInstanceOf(SecurityException.class);
+		mockMvc.perform(get("/{code}", anonymous.code()).header("Host", previousProjectHost)).andExpect(status().isNotFound());
 	}
 
 	@Test

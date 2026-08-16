@@ -158,7 +158,8 @@ public class LinkManagementService {
 
 	@Transactional
 	public DeleteLinkResponse deleteManagedLink(String code, String secretKey) {
-		findManagedLink(code, secretKey).delete();
+		// @SoftDelete가 걸려 있어 delete()는 deleted_at을 찍는 UPDATE로 번역된다.
+		linkRepository.delete(findManagedLink(code, secretKey));
 		log.info("Managed link deleted: code={}", code);
 		return new DeleteLinkResponse(true);
 	}
@@ -185,10 +186,7 @@ public class LinkManagementService {
 			log.warn("Managed link authentication failed: code={}", code);
 			throw new LinkNotFoundException();
 		}
-		if (link.isDeleted()) {
-			log.info("Managed link unavailable: reason=DELETED, code={}", code);
-			throw new LinkGoneException();
-		}
+		// 삭제된 링크는 @SoftDelete가 조회 단계에서 걸러내므로 여기 도달하지 않는다.
 		return link;
 	}
 

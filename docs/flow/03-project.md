@@ -8,7 +8,7 @@
 | POST | `/api/web/projects` | `ProjectController.create` | — |
 | GET | `/api/web/projects/{projectId}` | `ProjectController.detail` | VIEWER |
 | PATCH | `/api/web/projects/{projectId}` | `ProjectController.rename` | OWNER |
-| DELETE | `/api/web/projects/{projectId}` | `ProjectController.archive` | OWNER |
+| DELETE | `/api/web/projects/{projectId}` | `ProjectController.deleteProject` | OWNER |
 | GET | `/api/web/projects/{projectId}/overview` | `ProjectController.overview` | VIEWER |
 | GET | `/api/web/projects/{projectId}/subdomain` | `ProjectController.subdomain` | VIEWER |
 | PUT | `/api/web/projects/{projectId}/subdomain` | `ProjectController.claimSubdomain` | OWNER |
@@ -24,13 +24,10 @@ ProjectService.requireRole(userId, projectId, minimum)
     프로젝트 범위 연산의 첫 줄에 거의 항상 등장한다. 통과하면 ProjectMember를 돌려주므로
     호출부가 project·user를 다시 조회하지 않아도 된다.
 
-    ProjectMemberRepository.findByIdProjectIdAndIdUserId(projectId, userId)
+    ProjectMemberRepository.findActiveByProjectAndUser(projectId, userId)
         멤버십이 없으면 프로젝트의 존재 여부조차 알려주지 않는다.
+        project를 fetch join하므로 삭제된 프로젝트의 멤버십도 조회되지 않는다.
         → SecurityException (403 PROJECT_ACCESS_DENIED)
-
-    (프로젝트 삭제 검사)
-        삭제된 프로젝트는 멤버여도 접근 불가.
-        → SecurityException
 
     (역할 비교)
         membership.getRole().ordinal() > minimum.ordinal() 이면 거부.
@@ -45,7 +42,7 @@ ProjectService.requireRole(userId, projectId, minimum)
 |---|---|
 | `subdomain` | 선점한 슬러그. **DB `unique` 제약**이 걸려 있다 |
 | `subdomainEnabled` | 선점과 별개로 실제 라우팅 활성 여부 |
-| `archivedAt` | 삭제 시각. null이 아니면 삭제된 프로젝트 |
+| `deleted_at` | Hibernate가 관리하는 soft-delete 시각. 엔티티 필드로 직접 노출하지 않는다 |
 
 `activeSubdomain()`은 `subdomainEnabled`일 때만 값을 준다. **선점과 활성이 분리돼 있다** — 슬러그를 미리 잡아두고 나중에 켤 수 있다.
 
@@ -61,8 +58,9 @@ ProjectController.myProjects(principal)
     ProjectService.myMemberships(userId)
         @Transactional(readOnly = true)
 
-        ProjectMemberRepository.findByIdUserIdAndProjectArchivedAtIsNull(userId)
+        ProjectMemberRepository.findActiveByUserId(userId)
             삭제된 프로젝트는 목록에서 제외한다.
+            project를 fetch join해 별도 로딩 중 예외도 막는다.
             멤버십을 돌려주므로 각 프로젝트에서의 내 역할이 함께 실린다.
 
     → List<ProjectResponse>
@@ -82,7 +80,7 @@ ProjectController.create(principal, request)
     ProjectService.create(userId, name, requestedSlug)
         @Transactional
 
-        ProjectMemberRepository.countByIdUserIdAndRoleAndProjectArchivedAtIsNull(userId, OWNER)
+        ProjectMemberRepository.countActiveByUserIdAndRole(userId, OWNER)
             소유 프로젝트 5개 상한. 삭제된 것은 세지 않으므로 지운 뒤 새로 만들 수 있다.
             → IllegalStateException (500) — 이 예외만 GlobalExceptionHandler의 catch-all로 떨어진다
 
@@ -158,21 +156,20 @@ ProjectController.rename(principal, projectId, request)
 삭제. soft delete이며 행은 남는다. UI 문구도 "프로젝트 삭제"다.
 
 ```
-ProjectController.archive(principal, projectId)
-    핸들러 이름은 archive지만 이 서비스에 "보관" 개념은 없다. soft delete의 옛 이름이 남은 것.
+ProjectController.deleteProject(principal, projectId)
     → 204 No Content
 
-    ProjectService.archive(userId, projectId)
+    ProjectService.delete(userId, projectId)
         @Transactional
         requireRole(userId, projectId, OWNER)
-        Project.archive()
-            archivedAt에 현재 시각을 찍는다. 이 타임스탬프가 곧 "삭제됨" 표시다.
+        ProjectRepository.softDeleteById(projectId)
+            Hibernate가 DELETE를 deleted_at UPDATE로 번역한다.
 ```
 
 **핵심 2가지**
 
-- **삭제가 전 도메인으로 전파된다.** `requireRole`이 삭제된 프로젝트를 거부하고, `RedirectService.isDeleted()`가 `project.getArchivedAt() != null`을 확인해 리다이렉트도 즉시 410이 된다. 링크 행은 하나도 건드리지 않는다.
-- **삭제 표현이 엔티티마다 다르다.** Link는 `is_deleted` 수동 플래그, Campaign은 Hibernate `@SoftDelete(columnName = "is_deleted")`, Project만 `archived_at` 타임스탬프다. 캠페인은 [V32__soft_delete_campaigns.sql](../../src/main/resources/db/migration/V32__soft_delete_campaigns.sql)에서 `archived_at` → `is_deleted`로 이미 옮겼고, 프로젝트만 그 전환이 남아 있다.
+- **삭제가 전 도메인으로 전파된다.** 멤버십·API 키·초대 조회가 활성 프로젝트를 fetch join하므로 삭제된 프로젝트의 접근 권한은 사라진다. 프로젝트 링크도 리다이렉트에서 404가 된다.
+- **하위 행은 보존한다.** 프로젝트 행과 링크·캠페인 데이터는 남고, 활성 프로젝트를 요구하는 조회에서만 보이지 않는다.
 
 ---
 
@@ -192,7 +189,7 @@ ProjectController.overview(principal, projectId)
         @Transactional(readOnly = true)
         requireRole(userId, projectId, VIEWER)
 
-        LinkRepository.findByProjectIdAndCampaignIsNullAndDeletedFalseOrderByIdDesc(projectId)
+        LinkRepository.findByProjectIdAndCampaignIsNullOrderByIdDesc(projectId)
             캠페인에 속하지 않은 링크만. 캠페인 링크는 캠페인 화면에서 따로 본다.
             페이징이 없어 링크가 많은 프로젝트에서는 전량을 읽는다.
 

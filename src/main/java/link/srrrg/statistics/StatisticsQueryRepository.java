@@ -131,7 +131,7 @@ class StatisticsQueryRepository {
 	PageResult<LinkRow> campaignLinks(long campaignId, StatisticsPeriod period, int offset, int limit) {
 		String sql = """
 				WITH scoped_links AS (
-				 SELECT * FROM links WHERE campaign_id=? AND NOT is_deleted
+				 SELECT * FROM links WHERE campaign_id=? AND deleted_at IS NULL
 				), lifetime AS (
 				 SELECT e.link_id,COUNT(*) events,COUNT(*) FILTER (WHERE NOT e.is_bot) humans,
 				        MIN(e.accessed_at) first_at,MAX(e.accessed_at) last_at
@@ -165,12 +165,12 @@ class StatisticsQueryRepository {
 	PageResult<UtmRow> campaignUtm(long campaignId, StatisticsPeriod period, int offset, int limit) {
 		String sql = """
 				WITH campaign_scope AS (
-				 SELECT id,utm_template_id FROM campaigns WHERE id=? AND NOT is_deleted
+				 SELECT id,utm_template_id FROM campaigns WHERE id=? AND deleted_at IS NULL
 				), active_fields AS (
 				 SELECT field.name FROM campaign_scope campaign
 				 JOIN utm_template_fields field ON field.utm_template_id=campaign.utm_template_id AND field.deleted_at IS NULL
 				), scoped_links AS (
-				 SELECT link.* FROM links link JOIN campaign_scope campaign ON campaign.id=link.campaign_id WHERE NOT link.is_deleted
+				 SELECT link.* FROM links link JOIN campaign_scope campaign ON campaign.id=link.campaign_id WHERE link.deleted_at IS NULL
 				), current_config AS (
 				 SELECT field.name field_name,COALESCE(value.value,defaults.default_value,'(없음)') field_value,COUNT(*) links
 				 FROM scoped_links link CROSS JOIN active_fields field
@@ -216,9 +216,9 @@ class StatisticsQueryRepository {
 				 COUNT(e.id) FILTER (WHERE e.outcome='REDIRECTED' AND NOT e.is_bot),
 				 COUNT(e.id) FILTER (WHERE e.is_bot),
 				 COUNT(e.id) FILTER (WHERE e.outcome='REDIRECTED' AND e.is_bot),COUNT(*) OVER() total
-				FROM campaigns c LEFT JOIN links l ON l.campaign_id=c.id AND NOT l.is_deleted
+				FROM campaigns c LEFT JOIN links l ON l.campaign_id=c.id AND l.deleted_at IS NULL
 				LEFT JOIN link_access_events e ON e.link_id=l.id AND e.accessed_at>=? AND e.accessed_at<?
-				WHERE c.project_id=? AND NOT c.is_deleted GROUP BY c.id
+				WHERE c.project_id=? AND c.deleted_at IS NULL GROUP BY c.id
 				ORDER BY 4 DESC,c.id DESC LIMIT ? OFFSET ?
 				""";
 		List<CampaignPageRow> rows = jdbc.query(sql, (rs,row) -> new CampaignPageRow(new CampaignRow(rs.getLong(1),rs.getString(2),rs.getLong(3),

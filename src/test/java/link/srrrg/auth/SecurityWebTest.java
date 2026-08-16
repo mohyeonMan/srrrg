@@ -188,7 +188,7 @@ class SecurityWebTest {
 	void allowsProjectLinksOnlyForMatchingKeyProjectAndScope() throws Exception {
 		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
 				.thenReturn(new ApiKeyService.ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_READ)));
-		when(linkRepository.findByProjectIdAndCampaignIsNullAndDeletedFalseOrderByIdDesc(eq(7L), any())).thenReturn(java.util.List.of());
+		when(linkRepository.findByProjectIdAndCampaignIsNullOrderByIdDesc(eq(7L), any())).thenReturn(java.util.List.of());
 
 		mockMvc.perform(get("/api/v1/projects/7/links").header("Authorization", "Bearer srrrg_pk_prefix_secret"))
 				.andExpect(status().isOk()).andExpect(jsonPath("$.items").isArray())
@@ -199,7 +199,7 @@ class SecurityWebTest {
 	void appliesApiKeyFilterBehindContextPath() throws Exception {
 		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
 				.thenReturn(new ApiKeyService.ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_READ)));
-		when(linkRepository.findByProjectIdAndCampaignIsNullAndDeletedFalseOrderByIdDesc(eq(7L), any())).thenReturn(java.util.List.of());
+		when(linkRepository.findByProjectIdAndCampaignIsNullOrderByIdDesc(eq(7L), any())).thenReturn(java.util.List.of());
 
 		mockMvc.perform(get("/srrrg-dev/api/v1/projects/7/links")
 					.contextPath("/srrrg-dev")
@@ -241,7 +241,7 @@ class SecurityWebTest {
 		when(second.getId()).thenReturn(9L);
 		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
 				.thenReturn(new ApiKeyService.ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_READ)));
-		when(linkRepository.findByProjectIdAndCampaignIsNullAndDeletedFalseOrderByIdDesc(eq(7L), any())).thenReturn(java.util.List.of(first, second));
+		when(linkRepository.findByProjectIdAndCampaignIsNullOrderByIdDesc(eq(7L), any())).thenReturn(java.util.List.of(first, second));
 
 		mockMvc.perform(get("/api/v1/projects/7/links").param("limit", "1").header("Authorization", "Bearer srrrg_pk_prefix_secret"))
 				.andExpect(status().isOk()).andExpect(jsonPath("$.items.length()").value(1)).andExpect(jsonPath("$.nextCursor").value(10));

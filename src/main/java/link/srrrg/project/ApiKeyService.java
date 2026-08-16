@@ -52,13 +52,14 @@ public class ApiKeyService {
 	}
 	@Transactional
 	public ApiKeyPrincipal authenticate(String raw) {
-		ProjectApiKey key = keys.findByKeyHash(hash(raw)).orElseThrow(ApiKeyUnauthorizedException::new);
-		if (!key.isUsableAt(Instant.now()) || key.getProject().getArchivedAt() != null) throw new ApiKeyUnauthorizedException();
+		ProjectApiKey key = keys.findActiveByKeyHash(hash(raw)).orElseThrow(ApiKeyUnauthorizedException::new);
+		if (!key.isUsableAt(Instant.now())) throw new ApiKeyUnauthorizedException();
 		key.recordUse();
 		return new ApiKeyPrincipal(key.getId(), key.getProject().getId(), Set.copyOf(key.getScopes()));
 	}
+	// findActiveByProjectAndUser가 프로젝트를 조인하므로 삭제된 프로젝트에서는 키를 발급·조회·폐기할 수 없다.
 	private void requireOwner(Long userId, Long projectId) {
-		ProjectMember member = members.findByIdProjectIdAndIdUserId(projectId, userId).orElseThrow(() -> new SecurityException("프로젝트 접근 권한이 없습니다."));
+		ProjectMember member = members.findActiveByProjectAndUser(projectId, userId).orElseThrow(() -> new SecurityException("프로젝트 접근 권한이 없습니다."));
 		if (member.getRole() != ProjectRole.OWNER) throw new SecurityException("프로젝트 접근 권한이 없습니다.");
 	}
 	private Project project(Long id) { return projects.findById(id).orElseThrow(() -> new IllegalArgumentException("프로젝트를 찾을 수 없습니다.")); }

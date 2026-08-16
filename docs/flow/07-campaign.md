@@ -488,8 +488,8 @@ CampaignController.links(principal, campaignId, cursor, limit)
 
     boundedLimit(limit)                          1~100
 
-    LinkRepository.findByCampaignIdAndDeletedFalseOrderByIdDesc(campaignId, PageRequest.of(0, limit+1))
-    LinkRepository.findByCampaignIdAndDeletedFalseAndIdLessThanOrderByIdDesc(campaignId, cursor, ...)
+    LinkRepository.findByCampaignIdOrderByIdDesc(campaignId, PageRequest.of(0, limit+1))
+    LinkRepository.findByCampaignIdAndIdLessThanOrderByIdDesc(campaignId, cursor, ...)
         커서 페이징.
 
     LinkUtmValueRepository.findEffectiveByLinkIds(linkIds)

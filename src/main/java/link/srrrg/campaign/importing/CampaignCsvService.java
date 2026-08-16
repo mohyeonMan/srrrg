@@ -222,8 +222,8 @@ public class CampaignCsvService {
 	private Specification<Link> exportSpecification(Long campaignId, Instant createdFrom, Instant createdTo, String externalIdPattern) {
 		return (root, query, criteriaBuilder) -> {
 			List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
+			// 삭제된 링크는 @SoftDelete가 자동으로 걸러내므로 술어를 따로 걸지 않는다.
 			predicates.add(criteriaBuilder.equal(root.get("campaign").get("id"), campaignId));
-			predicates.add(criteriaBuilder.isFalse(root.get("deleted")));
 			if (createdFrom != null) {
 				predicates.add(criteriaBuilder.greaterThanOrEqualTo(root.get("createdAt"), createdFrom));
 			}

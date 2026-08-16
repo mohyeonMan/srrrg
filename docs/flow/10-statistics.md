@@ -176,7 +176,7 @@ StatisticsService.report(scope, name, requestedFrom, requestedTo, bucket, offset
 
 - **한 요청에 쿼리가 10개 안팎 나간다.** totals, lifetime, trend, outcomes, breakdown ×4, recent, 그리고 스코프별 목록 1~2개. 병렬화나 캐싱은 없다.
 - **스코프는 SQL 술어 한 줄로 구현된다.** `StatisticsQueryScope.predicate()`가 `l.id = ?` / `l.campaign_id = ?` / `l.project_id = ?` 중 하나를 돌려주고, 모든 쿼리가 이 문자열을 `%s`로 끼워 넣는다. 세 스코프가 같은 쿼리 집합을 공유하는 방식.
-- **삭제된 링크는 모든 집계에서 빠진다.** 술어에 `AND NOT l.is_deleted`가 붙어 있다. 이벤트 행은 남아 있지만 통계에는 절대 나타나지 않는다.
+- **삭제된 링크는 모든 집계에서 빠진다.** 술어에 `AND l.deleted_at IS NULL`이 붙어 있다. 이벤트 행은 남아 있지만 통계에는 절대 나타나지 않는다.
 
 ---
 

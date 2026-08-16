@@ -183,7 +183,7 @@ class CampaignServiceTest {
 		ProjectMember membership = mock(ProjectMember.class);
 		when(membership.getProject()).thenReturn(project);
 		when(membership.getRole()).thenReturn(role);
-		when(members.findByIdProjectIdAndIdUserId(projectId, 5L)).thenReturn(Optional.of(membership));
+		when(members.findActiveByProjectAndUser(projectId, 5L)).thenReturn(Optional.of(membership));
 		return campaign;
 	}
 }

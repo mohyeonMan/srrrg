@@ -40,7 +40,9 @@ public class LinkAccessEvent {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	// @SoftDelete 엔티티를 가리키는 to-one 연관은 LAZY로 둘 수 없다.
+	// 이 엔티티는 적재 전용이고 통계는 네이티브 SQL로 읽으므로 조회 비용에 영향이 없다.
+	@ManyToOne(fetch = FetchType.EAGER, optional = false)
 	@JoinColumn(name = "link_id", nullable = false)
 	private Link link;
 

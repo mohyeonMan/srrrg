@@ -200,9 +200,8 @@ public class UtmTemplateService {
 	}
 
 	private ProjectMember requireRole(Long userId, Long projectId, ProjectRole minimum) {
-		ProjectMember membership = members.findByIdProjectIdAndIdUserId(projectId, userId)
+		ProjectMember membership = members.findActiveByProjectAndUser(projectId, userId)
 				.orElseThrow(() -> new SecurityException("프로젝트 접근 권한이 없습니다."));
-		if (membership.getProject().getArchivedAt() != null) throw new SecurityException("프로젝트 접근 권한이 없습니다.");
 		if (membership.getRole().ordinal() > minimum.ordinal()) throw new SecurityException("프로젝트 접근 권한이 없습니다.");
 		return membership;
 	}

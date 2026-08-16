@@ -13,6 +13,8 @@ import jakarta.persistence.Table;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import org.hibernate.annotations.SoftDelete;
+import org.hibernate.annotations.SoftDeleteType;
 import link.srrrg.campaign.Campaign;
 import link.srrrg.campaign.UtmTemplate;
 import link.srrrg.project.Project;
@@ -23,6 +25,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "links")
+@SoftDelete(strategy = SoftDeleteType.TIMESTAMP, columnName = "deleted_at")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Link {
@@ -43,7 +46,8 @@ public class Link {
 	@Column(name = "secret_key_hash", length = 100)
 	private String secretKeyHash;
 
-	@ManyToOne(fetch = FetchType.LAZY)
+	// @SoftDelete 엔티티를 가리키는 to-one 연관은 LAZY로 둘 수 없다(Hibernate가 부팅 시 거부).
+	@ManyToOne(fetch = FetchType.EAGER)
 	@JoinColumn(name = "project_id")
 	private Project project;
 
@@ -75,9 +79,6 @@ public class Link {
 	@Column(name = "expires_at")
 	private Instant expiresAt;
 
-	@Column(name = "is_deleted", nullable = false)
-	private boolean deleted;
-
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
 
@@ -89,7 +90,6 @@ public class Link {
 		this.originalUrl = originalUrl;
 		this.secretKeyHash = secretKeyHash;
 		this.expiresAt = expiresAt;
-		this.deleted = false;
 	}
 
 	public static Link create(String code, String originalUrl, String secretKeyHash, Instant expiresAt) {
@@ -157,9 +157,13 @@ public class Link {
 		this.updatedAt = Instant.now();
 	}
 
-	public void delete() {
-		this.deleted = true;
-		this.updatedAt = Instant.now();
+	/**
+	 * 익명 링크인지 판별한다. secret key는 익명 링크에만 발급되고
+	 * {@link #assignToProject}로 프로젝트에 편입되면 지워지므로 이것이 정확한 기준이다.
+	 * project가 null인지로 판별하면 프로젝트가 삭제돼 연관이 비었을 때 익명 링크로 오인한다.
+	 */
+	public boolean isAnonymous() {
+		return secretKeyHash != null;
 	}
 
 	public void assignToProject(Project project, User createdBy) {
