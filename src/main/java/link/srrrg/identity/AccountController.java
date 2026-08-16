@@ -2,7 +2,6 @@ package link.srrrg.identity;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Locale;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,7 +14,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
 import link.srrrg.auth.SrrrgPrincipal;
 
@@ -50,7 +48,7 @@ public class AccountController {
 	public AccountResponse completeOnboarding(@AuthenticationPrincipal SrrrgPrincipal principal,
 			@Valid @RequestBody CompleteOnboardingRequest request) {
 		User user = user(principal.userId());
-		user.completeOnboarding(request.displayName().trim(), request.email().trim().toLowerCase(Locale.ROOT));
+		user.completeOnboarding(request.displayName().trim());
 		return response(user);
 	}
 
@@ -66,8 +64,6 @@ public class AccountController {
 	}
 
 	public record UpdateAccountRequest(@NotBlank @Size(max = 100) String displayName) { }
-	public record CompleteOnboardingRequest(
-			@NotBlank @Size(max = 100) String displayName,
-			@NotBlank @Email @Size(max = 320) String email) { }
+	public record CompleteOnboardingRequest(@NotBlank @Size(max = 100) String displayName) { }
 	public record AccountResponse(Long id, String email, String displayName, List<String> providers, Instant createdAt) { }
 }

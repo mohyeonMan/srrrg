@@ -161,7 +161,6 @@ class WebAuthPostgreSqlIntegrationTest {
 
 		assertThat(missing.requiresLink()).isFalse();
 		assertThat(missing.user().getEmail()).isNull();
-		assertThat(missing.user().getEmailVerifiedAt()).isNull();
 		assertThat(missing.user().getDisplayName()).isEqualTo("srrrg 사용자");
 		assertThat(repeated.user().getId()).isEqualTo(missing.user().getId());
 		assertThat(unverified.requiresLink()).isFalse();

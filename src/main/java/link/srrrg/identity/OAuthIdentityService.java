@@ -50,7 +50,7 @@ public class OAuthIdentityService {
 		if (verifiedEmail == null) {
 			return createUser(identity, null);
 		}
-		return userRepository.findByEmailAndEmailVerifiedAtIsNotNull(verifiedEmail)
+		return userRepository.findByEmail(verifiedEmail)
 				.<LoginResolution>map(user -> LoginResolution.linkRequired(user, identity))
 				.orElseGet(() -> createUser(identity, verifiedEmail));
 	}

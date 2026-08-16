@@ -1,6 +1,7 @@
 package link.srrrg.identity;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -32,7 +33,7 @@ class AccountControllerTest {
 	}
 
 	@Test
-	void completesFirstLoginProfile() {
+	void completesFirstLoginProfileWithoutTouchingEmail() {
 		UserRepository users = mock(UserRepository.class);
 		OAuthAccountRepository accounts = mock(OAuthAccountRepository.class);
 		User user = User.create(null, "srrrg 사용자");
@@ -40,10 +41,10 @@ class AccountControllerTest {
 		when(accounts.findByUserIdOrderByCreatedAtAsc(null)).thenReturn(List.of());
 
 		new AccountController(users, accounts).completeOnboarding(new SrrrgPrincipal(1L),
-				new AccountController.CompleteOnboardingRequest("  첫 사용자  ", " USER@Example.COM "));
+				new AccountController.CompleteOnboardingRequest("  첫 사용자  "));
 
 		assertEquals("첫 사용자", user.getDisplayName());
-		assertEquals("user@example.com", user.getEmail());
+		assertNull(user.getEmail());
 		assertEquals(false, user.needsOnboarding());
 	}
 }

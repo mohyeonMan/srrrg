@@ -138,7 +138,7 @@ public class ProjectService {
 		if (role == ProjectRole.OWNER) throw new IllegalArgumentException("초대 역할은 EDITOR 또는 VIEWER여야 합니다.");
 		String normalizedEmail = validEmail(email);
 		Project project = project(projectId);
-		users.findByEmailAndEmailVerifiedAtIsNotNull(normalizedEmail)
+		users.findByEmail(normalizedEmail)
 				.filter(user -> members.findByIdProjectIdAndIdUserId(projectId, user.getId()).isPresent())
 				.ifPresent(user -> { throw new IllegalArgumentException("이미 프로젝트 멤버인 이메일입니다."); });
 		invitations.findByProjectIdAndEmailAndCancelledAtIsNullAndAcceptedAtIsNull(projectId, normalizedEmail)

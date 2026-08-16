@@ -4,8 +4,6 @@
 
 	const form = document.getElementById('onboarding-form');
 	const name = document.getElementById('onboarding-name');
-	const email = document.getElementById('onboarding-email');
-	const help = document.getElementById('onboarding-email-help');
 	const submit = form.querySelector('button[type="submit"]');
 	const message = document.getElementById('onboarding-message');
 	const csrf = () => decodeURIComponent(document.cookie.split('; ')
@@ -34,13 +32,7 @@
 
 	request(app.dataset.accountUrl).then(account => {
 		name.value = account.displayName;
-		email.value = account.email || '';
-		email.readOnly = Boolean(account.email);
-		help.textContent = account.email
-			? '로그인 계정에서 확인된 이메일입니다.'
-			: '로그인 계정에서 이메일을 받지 못해 직접 입력이 필요합니다.';
 		name.disabled = false;
-		email.disabled = false;
 		submit.disabled = false;
 	}).catch(error => {
 		message.textContent = error.message;
@@ -57,7 +49,7 @@
 			await request(app.dataset.completeUrl, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ displayName: name.value, email: email.value })
+				body: JSON.stringify({ displayName: name.value })
 			});
 			window.location.assign(returnTo());
 		} catch (error) {

@@ -24,11 +24,9 @@ public class User {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
+	/** OAuth 공급자가 검증한 주소만 담는다. 공급자가 이메일을 주지 않으면 null. */
 	@Column(length = 320)
 	private String email;
-
-	@Column(name = "email_verified_at")
-	private Instant emailVerifiedAt;
 
 	@Column(name = "display_name", nullable = false, length = 100)
 	private String displayName;
@@ -44,7 +42,6 @@ public class User {
 
 	private User(String email, String displayName) {
 		this.email = email;
-		this.emailVerifiedAt = email == null ? null : Instant.now();
 		this.displayName = displayName;
 	}
 
@@ -56,11 +53,8 @@ public class User {
 		this.displayName = displayName;
 	}
 
-	public void completeOnboarding(String displayName, String email) {
+	public void completeOnboarding(String displayName) {
 		this.displayName = displayName;
-		if (this.email == null) {
-			this.email = email;
-		}
 		this.onboardingCompletedAt = Instant.now();
 	}
 
