@@ -14,7 +14,7 @@
 
 ```
 ApiKeyService.requireOwner(userId, projectId)
-    ProjectMemberRepository.findByIdProjectIdAndIdUserId(projectId, userId)
+    ProjectMemberRepository.findActiveByProjectAndUser(projectId, userId)
         → 없으면 SecurityException (403)
     (역할이 정확히 OWNER인지)
         requireRole과 달리 ordinal 비교가 아니라 동등 비교다. 결과는 같지만
@@ -22,7 +22,28 @@ ApiKeyService.requireOwner(userId, projectId)
         → SecurityException (403)
 ```
 
-`requireRole`과 달리 **프로젝트 삭제 여부를 확인하지 않는다.** 삭제된 프로젝트에서도 키 목록 조회·발급·폐기가 가능하다. 다만 그 키로 실제 API를 호출하면 `authenticate`가 삭제 여부를 확인해 막는다.
+`findActiveByProjectAndUser`가 삭제되지 않은 프로젝트까지 함께 확인한다. 따라서 **삭제된 프로젝트에서는 키 목록 조회·발급·폐기가 모두 불가능하다.**
+
+## 화면 구성
+
+API 키는 멤버 관리와 같은 프로젝트 수준의 관리 기능이므로 별도 페이지가 아니라 `/projects`의 **API 탭**에 둔다.
+
+```
+/projects?projectId={projectId}&tab=api
+    OWNER
+        → 상단 API 탭과 좌측 API 키 바로가기 노출
+        → project-api-keys.html 조각 표시
+
+    EDITOR / VIEWER
+        → API 탭과 바로가기 미노출
+        → URL로 tab=api에 진입해도 기본 탭으로 교정
+```
+
+- 목록은 이름·prefix·상태·마지막 사용 시각만 요약해 보여준다
+- 각 행은 native `<details>`이며 열면 scope, 생성·만료·폐기 시각과 폐기 버튼을 보여준다
+- 활성 키 목록은 최대 높이와 내부 스크롤을 사용해 키 수가 늘어도 페이지 전체가 길어지지 않는다
+- 폐기·만료 키는 접힌 이력 영역에 남긴다
+- 새 키 대화상자는 이름, scope, 만료 시각을 받고 발급 직후 원문을 한 번만 표시한다. 대화상자를 닫으면 원문을 DOM에서 지운다
 
 ## 키 형식
 
@@ -160,7 +181,7 @@ ApiKeyAuthenticationFilter.doFilterInternal(...)
             → ApiKeyUnauthorizedException (401)
 
         (프로젝트 삭제 검사)
-            삭제된 프로젝트의 키는 쓸 수 없다. 발급·조회와 달리 여기서는 확인한다.
+            삭제된 프로젝트의 키는 쓸 수 없다. 관리 API와 실제 인증 양쪽에서 막는다.
             → ApiKeyUnauthorizedException (401)
 
         ProjectApiKey.recordUse()

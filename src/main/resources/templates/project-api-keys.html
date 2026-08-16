@@ -1,0 +1,83 @@
+<!--
+	프로젝트 내부 OWNER 전용 조각입니다. 단독 페이지로 렌더링하지 않습니다.
+	포함하는 화면(projects.html)이 srrrg-common.js / srrrg-project-api-keys.js 를 불러옵니다.
+-->
+<div xmlns:th="http://www.thymeleaf.org" id="project-api-keys-app" th:fragment="workspace">
+	<h2 class="sr-only">API</h2>
+	<p id="api-keys-message" class="form-message" role="status" aria-live="polite"></p>
+
+	<section class="surface-panel api-keys-panel" aria-labelledby="api-keys-title">
+		<header class="api-keys-heading">
+			<div>
+				<h3 id="api-keys-title">API 키</h3>
+				<p class="help-text">프로젝트 API 호출에 사용하는 자격 증명입니다. 키 원문은 발급 직후 한 번만 표시됩니다.</p>
+			</div>
+			<div class="api-keys-heading-actions">
+				<a class="text-link" th:href="@{/docs/api}">API 문서 보기</a>
+				<button id="open-create-api-key" class="primary-button" type="button">새 키 발급</button>
+			</div>
+		</header>
+
+		<div id="api-key-scroll" class="api-key-scroll" aria-busy="true">
+			<div id="api-key-active-list" class="api-key-list"></div>
+			<p id="api-key-empty" class="api-key-empty">아직 사용 가능한 API 키가 없습니다.</p>
+			<details id="api-key-history" class="api-key-history" hidden>
+				<summary>폐기·만료된 키 <span id="api-key-history-count">0</span>개</summary>
+				<div id="api-key-history-list" class="api-key-list"></div>
+			</details>
+		</div>
+	</section>
+
+	<dialog id="create-api-key-dialog" class="project-create-dialog api-key-dialog" aria-labelledby="create-api-key-title">
+		<div class="project-dialog-heading">
+			<h3 id="create-api-key-title">새 API 키 발급</h3>
+			<button id="close-create-api-key" type="button" aria-label="닫기">×</button>
+		</div>
+
+		<form id="create-api-key-form" class="form-grid" novalidate>
+			<label class="field" for="api-key-name">
+				<span class="field-label">이름</span>
+				<input id="api-key-name" class="field-input" name="name" maxlength="100" placeholder="예: 운영 서버" autocomplete="off" required>
+				<span class="help-text">키를 사용하는 시스템을 구분할 이름입니다.</span>
+			</label>
+
+			<fieldset class="api-key-scope-options" aria-describedby="api-key-scope-help">
+				<legend>권한</legend>
+				<p id="api-key-scope-help" class="help-text">필요한 권한만 선택하세요.</p>
+				<label class="api-key-scope-option"><input type="checkbox" name="scope" value="links:read"><span><strong>링크 조회</strong><code>links:read</code></span></label>
+				<label class="api-key-scope-option"><input type="checkbox" name="scope" value="links:write"><span><strong>링크 생성</strong><code>links:write</code></span></label>
+				<label class="api-key-scope-option"><input type="checkbox" name="scope" value="campaigns:read"><span><strong>캠페인 조회</strong><code>campaigns:read</code><small>캠페인·UTM 설정과 가져오기 상태 조회</small></span></label>
+				<label class="api-key-scope-option"><input type="checkbox" name="scope" value="campaigns:write"><span><strong>캠페인 관리</strong><code>campaigns:write</code><small>캠페인 생성·수정, UTM 템플릿과 기본값 관리</small></span></label>
+				<label class="api-key-scope-option"><input type="checkbox" name="scope" value="stats:read"><span><strong>통계 조회</strong><code>stats:read</code></span></label>
+			</fieldset>
+
+			<label class="field" for="api-key-expires-at">
+				<span class="field-label">만료 시각</span>
+				<input id="api-key-expires-at" class="field-input" name="expiresAt" type="datetime-local" required>
+			</label>
+			<label class="checkbox-row" for="api-key-no-expiration">
+				<input id="api-key-no-expiration" type="checkbox">
+				<span>만료 없이 발급</span>
+			</label>
+
+			<p id="create-api-key-message" class="form-message" role="status" aria-live="polite"></p>
+			<div class="project-form-actions">
+				<button id="cancel-create-api-key" class="secondary-button" type="button">취소</button>
+				<button class="primary-button" type="submit">발급</button>
+			</div>
+		</form>
+
+		<section id="created-api-key-result" class="api-key-result" aria-labelledby="created-api-key-title" hidden>
+			<span class="status-badge success">발급 완료</span>
+			<h3 id="created-api-key-title" tabindex="-1">API 키가 발급되었습니다</h3>
+			<p id="created-api-key-name" class="help-text"></p>
+			<div class="api-key-secret-row">
+				<code id="created-api-key"></code>
+				<button id="copy-created-api-key" class="copy-button" type="button">복사</button>
+			</div>
+			<p class="help-text">이 키는 지금 한 번만 확인할 수 있습니다. 안전한 비밀 저장소에 보관하세요.</p>
+			<p id="created-api-key-message" class="form-message" role="status" aria-live="polite"></p>
+			<button id="finish-create-api-key" class="primary-button" type="button">완료</button>
+		</section>
+	</dialog>
+</div>

@@ -84,6 +84,7 @@
 		// shortcut 은 해당 탭으로 가는 주소를 가리킨다. 활성 표시는 탭이 바뀔 때마다
 		// paintRailActive() 가 다시 칠하므로 여기서는 주소만 정한다.
 		byId('project-templates-nav').href = `${base}/projects?projectId=${project.id}&tab=utm`;
+		byId('project-api-nav').href = `${base}/projects?projectId=${project.id}&tab=api`;
 		byId('project-settings-nav').href = `${base}/projects?projectId=${project.id}&tab=settings`;
 		byId('project-domain').textContent = '불러오는 중';
 		byId('project-link-result').hidden = true;
@@ -123,11 +124,16 @@
 
 	function setRoleVisibility(role) {
 		const canEdit = role === 'OWNER' || role === 'EDITOR';
+		const isOwner = role === 'OWNER';
 		byId('project-create-actions').hidden = !canEdit;
 		// 설정 화면에는 편집자용 "기존 익명 링크 편입" 이 있는데 진입 경로가 소유자 전용이라
 		// 편집자는 직접 URL 을 입력하는 방법 말고는 도달할 수 없었다.
 		// 소유자 전용 카드는 srrrg-project-settings.js 가 계속 감춘다.
 		byId('project-settings-nav').hidden = !canEdit;
+		// API 키는 목록 조회부터 OWNER 전용이다. 탭과 레일 진입점을 함께 감춰
+		// 권한 없는 사용자가 빈 관리 화면에 들어가지 않게 한다.
+		byId('project-tab-api').hidden = !isOwner;
+		byId('project-api-nav').hidden = !isOwner;
 	}
 
 	// showProjectPanel() 은 사라졌다. 생성이 대화상자로 옮겨지면서
@@ -135,9 +141,11 @@
 	// 남은 것은 템플릿에 이미 적힌 기본 상태와 탭 컨트롤러가 관리하는 패널 표시뿐이다.
 
 	// 통계·멤버 탭. 묶음 자체는 SrrrgCommon.tabs 가 처리한다(캠페인 탭과 같은 구현).
-	const PROJECT_TABS = ['overview', 'members', 'utm', 'settings'];
+	const PROJECT_TABS = ['overview', 'members', 'utm', 'api', 'settings'];
+	const availableProjectTabs = () => state.selected?.role === 'OWNER'
+		? PROJECT_TABS : PROJECT_TABS.filter((tab) => tab !== 'api');
 	// 레일 shortcut 이 가리키는 탭. 활성 표시를 탭과 일치시키는 데 쓴다.
-	const RAIL_SHORTCUT_TABS = { utm: 'project-templates-nav', settings: 'project-settings-nav' };
+	const RAIL_SHORTCUT_TABS = { utm: 'project-templates-nav', api: 'project-api-nav', settings: 'project-settings-nav' };
 	let projectTabs = null;
 	const loadedTabs = new Set();
 
@@ -156,6 +164,7 @@
 		if (tab === 'overview') return;
 		const target = tab === 'members' ? window.SrrrgProjectMembers
 			: tab === 'utm' ? window.SrrrgProjectUtmTemplates
+			: tab === 'api' ? window.SrrrgProjectApiKeys
 			: tab === 'settings' ? window.SrrrgProjectSettings : null;
 		// 조각이 아직 실려 있지 않으면 "불러왔다" 고 표시하지 않는다.
 		// 표시해 버리면 다시 시도할 길이 없어 그 패널이 영구히 빈 상태로 남는다.
@@ -178,7 +187,7 @@
 			return;
 		}
 		projectTabs = SrrrgCommon.tabs({
-			list: PROJECT_TABS, prefix: 'project', param: 'tab', initial: initialProjectTab,
+			list: availableProjectTabs(), prefix: 'project', param: 'tab', initial: initialProjectTab,
 			onSwitch: (tab) => { paintRailActive(tab); loadTabOnce(tab); }
 		});
 	}

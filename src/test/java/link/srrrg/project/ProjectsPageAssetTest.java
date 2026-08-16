@@ -24,7 +24,7 @@ class ProjectsPageAssetTest {
 				"id=\"open-create-project\"",
 				"id=\"create-project-dialog\"",
 				"id=\"project-activity-list\"",
-				// 생성은 헤딩 CTA + 대화상자다. 레일에는 섹션 shortcut 둘만 남는다 —
+				// 생성은 헤딩 CTA + 대화상자다. 레일에는 섹션 shortcut 셋만 남는다 —
 				// 넷 다 .project-activity-item 이던 동안 동작과 캠페인 객체가 같은 옷이었다.
 				"id=\"project-create-actions\"",
 				"id=\"open-create-link\"",
@@ -33,24 +33,28 @@ class ProjectsPageAssetTest {
 				"id=\"create-campaign-dialog\"",
 				"class=\"project-rail-shortcut\"",
 				"id=\"project-templates-nav\"",
+				"id=\"project-api-nav\"",
 				"id=\"project-settings-nav\"",
 				"id=\"project-activity-filter\"",
 				"id=\"project-activity-sort\"",
 				"id=\"project-campaign-view\"",
 				"id=\"project-link-view\"",
-				// UTM·설정은 별도 뷰가 아니라 프로젝트 탭 패널이다. 네 탭이 한 축(?tab=)에 있어야
+				// UTM·API·설정은 별도 뷰가 아니라 프로젝트 탭 패널이다. 다섯 탭이 한 축(?tab=)에 있어야
 				// 프로젝트가 캠페인·링크 레벨과 같은 문법을 갖는다.
 				"id=\"project-tab-overview\"",
 				"id=\"project-tab-members\"",
 				"id=\"project-tab-utm\"",
+				"id=\"project-tab-api\"",
 				"id=\"project-tab-settings\"",
 				"id=\"project-panel-overview\"",
 				"id=\"project-panel-members\"",
 				"id=\"project-panel-utm\"",
+				"id=\"project-panel-api\"",
 				"id=\"project-panel-settings\"",
 				"~{campaigns :: workspace}",
 				"~{management :: workspace}",
 				"~{project-utm-templates :: workspace}",
+				"~{project-api-keys :: workspace}",
 				"~{project-settings :: workspace}",
 				"id=\"project-home-panel\"",
 				"id=\"create-project-link-form\"",
@@ -76,10 +80,13 @@ class ProjectsPageAssetTest {
 				// 공통 fetch/DOM 헬퍼는 srrrg-common.js 로 옮겨져 여기서는 가져다 쓴다.
 				"= SrrrgCommon",
 				"replaceChildren(",
-				// 프로젝트의 네 면이 한 축(?tab=)에 있어야 캠페인·링크 레벨과 문법이 같다.
-				"const PROJECT_TABS = ['overview', 'members', 'utm', 'settings']",
+				// 프로젝트의 다섯 면이 한 축(?tab=)에 있어야 캠페인·링크 레벨과 문법이 같다.
+				"const PROJECT_TABS = ['overview', 'members', 'utm', 'api', 'settings']",
+				"state.selected?.role === 'OWNER'",
+				"window.SrrrgProjectApiKeys",
 				// 레일 shortcut 은 별도 뷰가 아니라 해당 탭으로 간다.
 				"&tab=utm",
+				"&tab=api",
 				"&tab=settings",
 				// 예전 주소로 저장된 링크·북마크가 빈 개요로 떨어지지 않아야 한다.
 				"LEGACY_VIEW_TABS",

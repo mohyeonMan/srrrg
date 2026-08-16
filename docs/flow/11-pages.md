@@ -86,12 +86,13 @@ HomeController.management(code, model)
 ```
 HomeController.projects()
     → "projects"
-       실제 화면은 /projects?projectId=..&view=.. 형태로 진입한다.
+       실제 화면은 /projects?projectId=..&tab=.. 형태로 진입한다.
 ```
 
 **핵심 1가지**
 
-- **하위 화면에 단독 라우트를 두지 않았다.** 코드 주석이 이유를 밝힌다 — `project-members`, `project-settings`, `project-utm-templates`, `campaigns`, `statistics`는 `projects.html` 안의 조각이라 단독 라우트로 들어오면 프로젝트 컨텍스트(레일·projectId) 없이 렌더된다.
+- **하위 화면에 단독 라우트를 두지 않았다.** 코드 주석이 이유를 밝힌다 — `project-members`, `project-settings`, `project-utm-templates`, `project-api-keys`, `campaigns`, `statistics`는 `projects.html` 안의 조각이라 단독 라우트로 들어오면 프로젝트 컨텍스트(레일·projectId) 없이 렌더된다.
+- 프로젝트 탭은 `overview`, `members`, `utm`, `api`, `settings`다. 기본값은 `overview`이며 `api`는 OWNER에게만 노출된다. 캠페인·링크 상세은 각각 `campaignId`, `linkCode` 파라미터로 같은 셸 안에서 연다.
 
 ---
 
@@ -139,13 +140,19 @@ HomeController.favicon()
 
 ### GET /docs/api
 
-API 문서 뷰어 페이지.
+사람이 읽는 공개 API 문서.
 
 ```
 ApiDocumentationController.documentation()
     → "api-docs"
-       페이지의 JS가 /openapi.json을 읽어 렌더한다.
+       인증과 scope, 공통 규칙, 엔드포인트 목록, 오류 형식, 요청 한도를
+       정적 HTML로 설명한다.
 ```
+
+**핵심 2가지**
+
+- **OpenAPI JSON을 화면에 그대로 렌더하지 않는다.** `/docs/api`는 사용 순서와 의미를 설명하고, 정확한 요청·응답 schema가 필요할 때만 `/openapi.json`을 연다.
+- 별도 문서용 JS나 Swagger UI를 쓰지 않는다. 전역 헤더의 `API` 링크로 진입하며, 랜딩 페이지에 같은 링크를 중복 배치하지 않는다.
 
 ---
 
