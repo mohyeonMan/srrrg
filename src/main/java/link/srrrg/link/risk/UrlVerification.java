@@ -16,6 +16,13 @@ import lombok.NoArgsConstructor;
  * DB에 저장된 SAFE 또는 THREAT 검증 결과.
  * expiresAt은 Google이 내려준 캐시 기간을 verifiedAt에 더한 시각이다.
  */
+/**
+ * DB에 저장된 SAFE 또는 THREAT 검증 결과.
+ * expiresAt은 Google이 내려준 캐시 기간을 verifiedAt에 더한 시각이다.
+ *
+ * <p>{@code originalUrl}을 함께 두는 것은 해시 충돌 확인용이다. 기본 키가 URL 해시라
+ * 원문 대조 없이는 다른 URL의 판정을 물려받을 수 있다.</p>
+ */
 @Entity
 @Table(name = "url_verifications")
 @Getter

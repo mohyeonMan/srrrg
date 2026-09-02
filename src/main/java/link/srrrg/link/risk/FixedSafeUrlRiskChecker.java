@@ -21,6 +21,13 @@ import lombok.extern.slf4j.Slf4j;
 )
 @RequiredArgsConstructor
 @Slf4j
+/**
+ * 외부 호출 없이 항상 안전으로 답하는 개발·테스트용 구현. 설정으로 명시해야만 활성화된다.
+ *
+ * <p>이 구현이 켜져 있으면 위협 URL도 그대로 통과하므로, 기동 시 경고 로그를 남겨
+ * 운영에 잘못 배포된 상태를 알아차릴 수 있게 한다. 지연 설정은 외부 검사가 느릴 때의
+ * 동작을 재현하기 위한 것이다.</p>
+ */
 public class FixedSafeUrlRiskChecker implements UrlRiskChecker {
 
 	private final UrlRiskCheckerProperties properties;
@@ -58,6 +65,10 @@ public class FixedSafeUrlRiskChecker implements UrlRiskChecker {
 		return properties.fixedSafe();
 	}
 
+	/**
+	 * 설정된 지연만큼 기다린다. 중단되면 인터럽트 상태를 되살리고 거짓을 돌려주며,
+	 * 호출자는 이를 판정 불가로 처리한다. 인터럽트를 삼키면 종료 중인 스레드가 계속 돈다.
+	 */
 	private boolean waitFor(Duration delay) {
 		if (delay.isZero()) {
 			return true;

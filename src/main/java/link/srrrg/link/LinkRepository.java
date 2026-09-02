@@ -28,10 +28,15 @@ public interface LinkRepository extends JpaRepository<Link, Long>, JpaSpecificat
 	Optional<Link> findBySubdomainIsNullAndCode(String code);
 	@EntityGraph(attributePaths = {"project", "campaign"})
 	Optional<Link> findBySubdomainAndCode(String subdomain, String code);
+	/**
+	 * 익명 링크를 행 잠금으로 조회한다. 프로젝트 편입처럼 링크의 소유권을 바꾸는 처리에서
+	 * 두 요청이 같은 링크를 동시에 가져가지 못하게 한다.
+	 */
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@EntityGraph(attributePaths = "project")
 	@Query("select l from Link l where l.code = :code and l.project is null")
 	Optional<Link> lockAnonymousByCode(@Param("code") String code);
+	// 멱등 키 조회. API key 단위로 구분하므로 다른 프로젝트가 같은 키 문자열을 써도 서로 간섭하지 않는다.
 	Optional<Link> findByIdempotencyApiKeyIdAndIdempotencyKey(Long apiKeyId, String idempotencyKey);
 	List<Link> findByProjectIdAndCampaignIsNullOrderByIdDesc(Long projectId);
 	List<Link> findByProjectIdAndCampaignIsNullOrderByIdDesc(Long projectId, Pageable pageable);

@@ -1,5 +1,9 @@
 package link.srrrg.link;
 
+/**
+ * 링크는 존재하지만 더 이상 이동할 수 없는 상태. 404와 달리 존재 자체는 인정하므로,
+ * 이 예외를 쓰는 경우는 존재를 감출 필요가 없는 상황으로 한정한다.
+ */
 public class LinkGoneException extends RuntimeException {
 	private final Reason reason;
 

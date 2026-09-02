@@ -15,6 +15,17 @@ import link.srrrg.link.LinkNotFoundException;
 import link.srrrg.link.UnsafeUrlException;
 import link.srrrg.link.UrlRiskCheckFailedException;
 
+/**
+ * 리다이렉트 실패를 JSON이 아니라 사람이 읽는 오류 화면으로 바꾼다.
+ *
+ * <p>이 경로는 브라우저 주소창으로 직접 열리므로 오류 응답도 HTML이어야 한다.
+ * {@code assignableTypes}로 리다이렉트 컨트롤러만 대상으로 삼고, {@code @Order}로 가장 높은
+ * 우선순위를 선언해 전역 처리기보다 먼저 잡는다. 이 우선순위 선언이 빠지면 같은 예외를 처리하는
+ * {@code GlobalExceptionHandler}와 순서를 다투게 된다.</p>
+ *
+ * <p>화면 문구는 예외 메시지를 그대로 쓰지 않는다. 예외 메시지는 API 응답과 로그용이라
+ * 제목과 겹치거나 사용자가 무엇을 해야 할지 알려주지 못하기 때문이다.</p>
+ */
 @ControllerAdvice(assignableTypes = RedirectController.class)
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class RedirectExceptionHandler {
@@ -102,6 +113,14 @@ public class RedirectExceptionHandler {
 		);
 	}
 
+	/**
+	 * 오류 화면에 필요한 모델을 채우고 상태 코드를 설정한다.
+	 *
+	 * @param status 응답 상태 코드. 503만 재시도 가능으로 표시해 화면이 다시 시도 안내를 보여준다
+	 * @param title 화면 제목
+	 * @param message 원인과 다음 행동을 담은 설명. 제목을 되풀이하지 않는다
+	 * @return 렌더할 뷰 이름
+	 */
 	private String errorPage(
 			HttpStatus status,
 			String title,
@@ -127,6 +146,9 @@ public class RedirectExceptionHandler {
 		return "redirect-error";
 	}
 
+	/**
+	 * 상태 코드를 화면 스타일 구분자로 바꾼다. 템플릿과 CSS가 이 값으로 차단·종료·일시 오류를 다르게 표현한다.
+	 */
 	private String statusKind(HttpStatus status) {
 		return switch (status) {
 			case FORBIDDEN -> "blocked";

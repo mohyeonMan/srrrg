@@ -22,12 +22,25 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * 리다이렉트 요청 한 건의 기록. 통계의 원천이며 집계 결과가 아니라 개별 접근을 그대로 남긴다.
+ *
+ * <p>성공한 리다이렉트만 남기지 않는 것이 핵심이다. 만료·차단·검사 실패도 각각 다른 {@code Outcome}으로
+ * 기록하므로, 유입은 있는데 이동하지 못한 링크를 구분해 볼 수 있다.</p>
+ *
+ * <p>{@code effectiveUtm}은 그 시점에 실제로 적용된 UTM 값이다. 캠페인 기본값은 나중에 바뀔 수 있어
+ * 지금 다시 계산하면 당시 값과 달라지므로, 집계 기준을 보존하려면 기록 시점에 함께 남겨야 한다.</p>
+ */
 @Entity
 @Table(name = "link_access_events")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class LinkAccessEvent {
 
+	/**
+	 * 접근이 어떻게 끝났는지. REDIRECTED만 실제 이동이고, 나머지는 요청은 도달했지만 이동하지 못한 경우다.
+	 * URL_CHANGED는 위험 검사 뒤 목적지가 바뀌어 검사 결과를 재사용할 수 없었던 경쟁 상황을 뜻한다.
+	 */
 	public enum Outcome {
 		REDIRECTED,
 		BLOCKED,

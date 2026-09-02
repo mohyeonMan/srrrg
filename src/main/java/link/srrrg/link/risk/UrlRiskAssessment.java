@@ -14,6 +14,10 @@ public record UrlRiskAssessment(
 		return new UrlRiskAssessment(RiskVerdict.UNKNOWN, verifiedAt, null);
 	}
 
+	/**
+	 * UNKNOWN은 판정이 아니라 검사 실패이므로 저장하지 않는다. 저장하면 외부 검사가 복구된 뒤에도
+	 * 만료 전까지 실패 상태를 계속 돌려주게 된다.
+	 */
 	public boolean isCacheable() {
 		return verdict != RiskVerdict.UNKNOWN && expiresAt != null;
 	}

@@ -27,6 +27,15 @@ import link.srrrg.link.management.dto.LinkManagementResponse;
 import link.srrrg.link.management.dto.UpdateLinkRequest;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * 비회원용 링크 관리 API. 로그인 없이 링크를 만들고, 발급받은 secret key로 다시 접근한다.
+ *
+ * <p>세션이 없으므로 인증 수단은 {@code X-Srrrg-Secret-Key} 헤더뿐이다.
+ * 이 표면은 CSRF에서 면제되는데, 쿠키가 아니라 헤더로 인증하므로 다른 사이트가 사용자의 브라우저를 빌려
+ * 요청해도 자격증명이 실리지 않기 때문이다.</p>
+ *
+ * <p>인증 실패와 링크 없음은 모두 404로 합쳐 나간다. 어떤 코드가 실재하는지 알려주지 않기 위해서다.</p>
+ */
 @RestController
 @RequestMapping("/api/links")
 @Tag(name = "Links", description = "단축 링크 관리 API")
@@ -46,6 +55,10 @@ public class LinkController {
 			@ApiResponse(responseCode = "429", description = "요청 한도 초과"),
 			@ApiResponse(responseCode = "503", description = "URL 안전 검사 불가")
 	})
+	/**
+	 * 링크를 만든다. 인증이 없는 경로라 IP 기준 레이트리밋을 먼저 건다.
+	 * 이 제한이 없으면 자동화된 대량 생성으로 코드 공간과 저장소가 소모된다.
+	 */
 	public ResponseEntity<CreateLinkResponse> create(@Valid @RequestBody CreateLinkRequest request, HttpServletRequest servletRequest) {
 		rateLimitService.checkAnonymousLinkCreation(requestInfoResolver.resolve(servletRequest).ipAddress());
 		return ResponseEntity.status(HttpStatus.CREATED).body(linkService.create(request));

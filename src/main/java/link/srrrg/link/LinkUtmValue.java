@@ -17,6 +17,11 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * 링크에 직접 지정된 UTM 값 하나. 여기 없는 필드는 리다이렉트 시점의 캠페인 기본값을 따라간다.
+ * 생성 시점의 기본값을 복사해 두지 않는 것이 중요하다. 복사해 두면 캠페인 기본값을 고쳐도
+ * 이미 만든 링크는 옛 값에 묶인다.
+ */
 @Entity
 @Table(name = "link_utm_values")
 @Getter
