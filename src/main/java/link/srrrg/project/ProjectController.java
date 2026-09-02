@@ -31,6 +31,19 @@ import link.srrrg.link.management.dto.LinkManagementResponse;
 import link.srrrg.link.management.dto.UpdateLinkRequest;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * 화면이 호출하는 프로젝트 관리 API. 프로젝트, 서브도메인, 링크, 멤버, 초대, API 키가 모두 여기 모여 있다.
+ *
+ * <p>이 클래스는 요청을 서비스로 넘기고 응답 형태만 만든다. 권한 확인은 하지 않고 전부
+ * {@code ProjectService}와 {@code ApiKeyService}가 수행하므로, 새 엔드포인트를 추가할 때
+ * 여기에 검사를 넣는 것이 아니라 서비스 메서드가 역할을 요구하는지 확인해야 한다.</p>
+ *
+ * <p>주체는 항상 {@code @AuthenticationPrincipal}에서 온다. 요청 본문이나 경로로 사용자 id를 받지 않으므로
+ * 남의 계정을 지정할 수 없다.</p>
+ *
+ * <p>API 키를 쓰는 같은 기능의 경로가 {@code PublicProjectLinkController}에 따로 있다.
+ * 링크 생성 정책을 바꿀 때는 두 경로를 함께 확인한다.</p>
+ */
 @RestController
 @RequestMapping("/api/web")
 @RequiredArgsConstructor
@@ -45,6 +58,9 @@ public class ProjectController {
 		return projects.myMemberships(p.userId()).stream().map(ProjectResponse::from).toList();
 	}
 
+	/**
+	 * 프로젝트를 만든다. 만든 사람이 곧 OWNER이므로 응답 역할을 조회 없이 고정으로 채운다.
+	 */
 	@PostMapping("/projects")
 	public ResponseEntity<ProjectResponse> create(@AuthenticationPrincipal SrrrgPrincipal p,
 			@Valid @RequestBody CreateProjectRequest request) {
@@ -69,6 +85,11 @@ public class ProjectController {
 		return ResponseEntity.noContent().build();
 	}
 
+	/**
+	 * 프로젝트 첫 화면에 필요한 단일 링크와 캠페인 목록을 한 번에 돌려준다.
+	 * 화면이 두 번 호출하지 않게 묶은 것이며, 캠페인은 상한을 두고 잘라 온다.
+	 * 두 조회가 각각 권한을 확인하므로 여기서 따로 검사하지 않는다.
+	 */
 	@GetMapping("/projects/{projectId}/overview")
 	public ProjectOverviewResponse overview(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId) {
 		List<CampaignResponse> campaignSummaries = campaigns.list(p.userId(), projectId, null, 100).stream()
@@ -83,6 +104,10 @@ public class ProjectController {
 		return SubdomainResponse.from(projects.projectDomain(p.userId(), projectId));
 	}
 
+	/**
+	 * 서브도메인을 선점한다. 선점만으로는 링크가 그 호스트로 발급되지 않으며,
+	 * 아래 활성화 엔드포인트를 따로 호출해야 실제로 쓰인다.
+	 */
 	@PutMapping("/projects/{projectId}/subdomain")
 	public SubdomainResponse claimSubdomain(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId,
 			@Valid @RequestBody ChangeSubdomainRequest request) {
@@ -95,6 +120,9 @@ public class ProjectController {
 		return SubdomainResponse.from(projects.setSubdomainEnabled(p.userId(), projectId, request.enabled()));
 	}
 
+	/**
+	 * 선점을 해제한다. 그 호스트로 이미 발급된 링크는 열리지 않게 되므로 되돌리기 어려운 변경이다.
+	 */
 	@DeleteMapping("/projects/{projectId}/subdomain")
 	public SubdomainResponse releaseSubdomain(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId) {
 		return SubdomainResponse.from(projects.releaseSubdomain(p.userId(), projectId));
@@ -144,6 +172,10 @@ public class ProjectController {
 				.body(InvitationResponse.from(projects.invite(p.userId(), projectId, request.email(), request.role())));
 	}
 
+	/**
+	 * 초대를 수락한다. 인증이 필요하므로 로그인 후에만 호출되며, 초대 화면은 로그인 전에도 열린다.
+	 * 이미 멤버인 경우도 성공으로 처리하고 그 사실을 응답에 담아, 화면이 안내 문구를 고를 수 있게 한다.
+	 */
 	@PostMapping("/invitations/{token}/accept")
 	public AcceptInvitationResponse accept(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable String token) {
 		ProjectService.AcceptedInvitation result = projects.accept(p.userId(), token);
@@ -175,6 +207,10 @@ public class ProjectController {
 		return ResponseEntity.noContent().build();
 	}
 
+	/**
+	 * 비회원으로 만든 링크를 이 프로젝트로 옮긴다. 로그인 세션만으로는 부족하고,
+	 * 그 링크의 secret key를 헤더로 함께 제시해야 한다. 소유권을 넘기는 처리라 두 자격을 모두 요구한다.
+	 */
 	@PostMapping("/projects/{projectId}/links/{code}/claim")
 	public ResponseEntity<Void> claimLink(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId,
 			@PathVariable String code,
@@ -188,6 +224,11 @@ public class ProjectController {
 		return apiKeys.list(p.userId(), projectId).stream().map(ApiKeyResponse::from).toList();
 	}
 
+	/**
+	 * API 키를 발급한다. 요청의 scope 문자열을 enum으로 바꾸면서 알 수 없는 값은 예외가 되므로,
+	 * 오타가 난 scope가 조용히 빠진 채 키가 만들어지지 않는다.
+	 * 응답에 담기는 키 원문은 이 한 번만 나간다.
+	 */
 	@PostMapping("/projects/{projectId}/api-keys")
 	public ResponseEntity<CreatedApiKeyResponse> createApiKey(@AuthenticationPrincipal SrrrgPrincipal p,
 			@PathVariable Long projectId, @Valid @RequestBody CreateApiKeyRequest request) {

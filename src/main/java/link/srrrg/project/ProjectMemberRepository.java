@@ -33,6 +33,8 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Pr
 			where m.id.userId = :userId and m.role = :role
 			  and exists (select 1 from Project p where p.id = m.id.projectId)
 			""")
+	// 소유 프로젝트 수 상한 검사용. exists 절이 삭제된 프로젝트를 세지 않게 해,
+	// 프로젝트를 지운 뒤에도 상한에 걸려 새로 만들지 못하는 상황을 막는다.
 	long countActiveByUserIdAndRole(@Param("userId") Long userId, @Param("role") ProjectRole role);
 
 	// requireRole이 이미 프로젝트 상태를 통과시킨 뒤에만 호출되므로 여기서는 프로젝트를 조인하지 않는다.

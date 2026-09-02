@@ -5,6 +5,10 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+/**
+ * 프로젝트 조회와 soft delete를 담당한다. 서브도메인 중복 확인은 사전 검사일 뿐이며,
+ * 최종 판정은 컬럼의 유일 제약이다.
+ */
 public interface ProjectRepository extends JpaRepository<Project, Long> {
 	boolean existsBySubdomain(String subdomain);
 

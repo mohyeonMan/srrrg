@@ -22,6 +22,13 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * 발급된 프로젝트 API 키 한 건. 사용자가 아니라 프로젝트에 묶이므로, 키를 만든 사람이 프로젝트를 떠나도
+ * 키는 계속 동작한다.
+ *
+ * <p>{@code keyPrefix}는 목록에서 키를 식별하기 위한 평문이고, 비밀은 {@code keyHash}뿐이다.
+ * scope를 즉시 로딩하는 것은 인증 때마다 함께 필요하기 때문이다.</p>
+ */
 @Entity
 @Table(name = "project_api_keys")
 @Getter
@@ -78,6 +85,9 @@ public class ProjectApiKey {
 		createdAt = Instant.now();
 	}
 
+	/**
+	 * 폐기되지 않았고 만료 전이어야 쓸 수 있다. 만료 시각이 없으면 무기한 유효한 키다.
+	 */
 	public boolean isUsableAt(Instant now) {
 		return revokedAt == null && (expiresAt == null || expiresAt.isAfter(now));
 	}
@@ -86,6 +96,9 @@ public class ProjectApiKey {
 		lastUsedAt = Instant.now();
 	}
 
+	/**
+	 * 최초 폐기 시각을 보존한다. 다시 폐기해도 시각을 갱신하지 않아, 언제부터 무효였는지가 유지된다.
+	 */
 	public void revoke() {
 		if (revokedAt == null)
 			revokedAt = Instant.now();

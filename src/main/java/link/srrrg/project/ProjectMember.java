@@ -17,6 +17,10 @@ import link.srrrg.identity.User;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * 사용자와 프로젝트의 소속 관계이자 권한 판정의 근거. 이 행이 없으면 프로젝트 자원에 접근할 수 없다.
+ * 복합 키를 쓰므로 한 사용자가 같은 프로젝트에 두 역할로 존재할 수 없다.
+ */
 @Entity
 @Table(name = "project_members")
 @Getter

@@ -27,6 +27,20 @@ import link.srrrg.link.management.dto.CreateLinkRequest;
 import link.srrrg.link.management.dto.LinkManagementResponse;
 import link.srrrg.link.management.dto.UpdateLinkRequest;
 
+/**
+ * 프로젝트와 그 구성원, 초대, 프로젝트 소속 링크를 다룬다. 이 서비스의 실질적인 책임은 인가다.
+ *
+ * <p>거의 모든 공개 메서드가 {@link #requireRole}로 시작한다. 프로젝트 자원은 멤버십이 있어야 접근할 수
+ * 있고 역할에 따라 허용 범위가 다르므로, 조회 전에 권한을 확인하는 이 순서를 지켜야 한다.
+ * 먼저 조회한 뒤 권한을 보면 존재 여부가 응답 차이로 새어 나간다.</p>
+ *
+ * <p>웹 경로와 API key 경로가 짝을 이룬다. 웹은 사용자 id로 멤버십을 확인하지만, API key는 키 자체가
+ * 프로젝트에 묶여 있어 멤버십이 없다. 그래서 API key용 메서드는 역할 검사 대신 호출자
+ * (컨트롤러)가 키의 프로젝트와 scope를 확인한 뒤 부른다. 한쪽만 고치면 두 경로의 정책이 어긋난다.</p>
+ *
+ * <p>삭제된 프로젝트는 {@code @SoftDelete}와 조회 시 fetch join으로 걸러진다. 멤버십을 찾을 때
+ * 프로젝트를 함께 조인하므로, 프로젝트가 삭제되면 멤버십 자체가 조회되지 않아 모든 접근이 권한 없음이 된다.</p>
+ */
 @Service
 public class ProjectService {
 	private static final String TOKEN_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
@@ -65,6 +79,11 @@ public class ProjectService {
 		this.baseUrl = baseUrl;
 	}
 
+	/**
+	 * 소속 프로젝트가 하나도 없는 사용자에게 기본 프로젝트를 만들어 준다. 로그인이 확정된 직후 호출되며,
+	 * 프로젝트가 없으면 링크를 만들 곳이 없어 첫 화면이 비어 버리기 때문이다.
+	 * 이미 어느 프로젝트에든 속해 있으면 아무것도 하지 않는다.
+	 */
 	@Transactional
 	public void ensurePersonalProject(Long userId) {
 		if (members.findActiveByUserId(userId).isEmpty())
@@ -76,13 +95,24 @@ public class ProjectService {
 		return create(userId, name, null);
 	}
 
+	/**
+	 * 프로젝트를 만들고 요청자를 OWNER로 등록한 뒤 기본 UTM 템플릿까지 함께 만든다.
+	 * 세 가지가 한 트랜잭션에 묶여 있어야 템플릿 없는 프로젝트가 남지 않는다.
+	 *
+	 * @param requestedSlug 원하는 서브도메인. {@code null}이면 서브도메인 없이 만든다
+	 * @throws IllegalStateException 소유 프로젝트 수 상한을 넘은 경우
+	 * @throws IllegalArgumentException 이름이나 서브도메인이 올바르지 않거나 이미 사용 중인 경우
+	 */
 	@Transactional
 	public Project create(Long userId, String name, String requestedSlug) {
+		// 한 사람이 소유할 수 있는 프로젝트 수를 제한한다. 서브도메인을 무제한 선점하는 것을 막기 위한 상한이다.
 		if (members.countActiveByUserIdAndRole(userId, ProjectRole.OWNER) >= 5)
 			throw new IllegalStateException("소유 프로젝트는 최대 5개까지 만들 수 있습니다.");
 		User user = user(userId);
 		Project project;
 		try {
+			// 사전 중복 확인과 저장 사이에 다른 요청이 같은 서브도메인을 가져갈 수 있다.
+			// 최종 판정은 아래 catch가 받는 DB 유일 제약이며, 그 실패를 사용자 오류 메시지로 바꾼다.
 			project = projects.saveAndFlush(Project.create(validName(name), optionalSubdomain(requestedSlug), user));
 		} catch (DataIntegrityViolationException exception) {
 			throw new IllegalArgumentException("이미 사용 중인 서브도메인입니다.", exception);
@@ -114,6 +144,9 @@ public class ProjectService {
 		return members.findByIdProjectId(projectId);
 	}
 
+	/**
+	 * 대기 중인 초대 목록. 초대받은 이메일 주소가 드러나므로 조회 권한을 OWNER로 제한한다.
+	 */
 	@Transactional(readOnly = true)
 	public List<ProjectInvitation> projectInvitations(Long userId, Long projectId) {
 		requireRole(userId, projectId, ProjectRole.OWNER);
@@ -132,6 +165,13 @@ public class ProjectService {
 		return project;
 	}
 
+	/**
+	 * 서브도메인을 선점한다. 선점만 하고 활성화는 따로 하는 것은, 도메인 설정이 실제로 준비되기 전에
+	 * 링크가 그 호스트로 발급되는 것을 막기 위해서다.
+	 *
+	 * <p>중복 확인을 미리 하고도 저장 실패를 다시 잡는 것은 그 사이 다른 요청이 끼어들 수 있어서다.
+	 * 자기 자신이 이미 가진 값이면 중복으로 보지 않는다.</p>
+	 */
 	@Transactional
 	public Project claimSubdomain(Long userId, Long projectId, String requestedSubdomain) {
 		Project project = requireRole(userId, projectId, ProjectRole.OWNER).getProject();
@@ -154,6 +194,10 @@ public class ProjectService {
 		return project;
 	}
 
+	/**
+	 * 서브도메인 선점을 푼다. 그 호스트로 이미 발급된 링크는 접근 경로를 잃으므로,
+	 * 되돌릴 수 없는 변경으로 보고 OWNER만 실행할 수 있다.
+	 */
 	@Transactional
 	public Project releaseSubdomain(Long userId, Long projectId) {
 		Project project = requireRole(userId, projectId, ProjectRole.OWNER).getProject();
@@ -161,6 +205,11 @@ public class ProjectService {
 		return project;
 	}
 
+	/**
+	 * 프로젝트를 soft delete한다. 링크와 멤버십을 지우지 않는 것이 중요하다.
+	 * 조회 경로가 모두 프로젝트를 조인하므로, 프로젝트 한 행만 지워도 소속 자원 전체가 접근 불가가 된다.
+	 * 통계 이벤트가 링크를 참조하고 있어 물리 삭제도 하지 않는다.
+	 */
 	@Transactional
 	public void delete(Long userId, Long projectId) {
 		requireRole(userId, projectId, ProjectRole.OWNER);
@@ -168,6 +217,18 @@ public class ProjectService {
 		projects.softDeleteById(projectId);
 	}
 
+	/**
+	 * 이메일로 프로젝트 초대를 보낸다.
+	 *
+	 * <p>OWNER 역할로는 초대할 수 없다. 소유권 부여는 초대가 아니라 기존 멤버의 역할 변경으로만 가능해야
+	 * 통제 지점이 하나로 유지된다.</p>
+	 *
+	 * <p>토큰 원문은 메일 링크에만 담기고 DB에는 해시만 남는다. 같은 이메일로 살아 있는 초대가 있으면 거부하고,
+	 * 만료된 초대가 남아 있으면 취소 처리한 뒤 새로 만든다. 유일 제약이 있어 정리하지 않으면 저장이 실패한다.</p>
+	 *
+	 * <p>메일 발송이 트랜잭션 안에서 일어난다. 발송이 실패하면 초대 행도 롤백되어 흔적이 남지 않지만,
+	 * 반대로 발송에 성공한 뒤 커밋이 실패하면 열 수 없는 링크가 담긴 메일이 나간다.</p>
+	 */
 	@Transactional
 	public ProjectInvitation invite(Long userId, Long projectId, String email, ProjectRole role) {
 		requireRole(userId, projectId, ProjectRole.OWNER);
@@ -198,6 +259,10 @@ public class ProjectService {
 		return invitation;
 	}
 
+	/**
+	 * 기존 초대를 취소하고 같은 조건으로 새로 보낸다. 토큰이 새로 발급되므로 이전 메일의 링크는 무효가 된다.
+	 * 이미 수락된 초대는 다시 보낼 수 없다.
+	 */
 	@Transactional
 	public ProjectInvitation resend(Long userId, Long invitationId) {
 		ProjectInvitation old = invitation(invitationId);
@@ -215,6 +280,14 @@ public class ProjectService {
 		invitation.cancel();
 	}
 
+	/**
+	 * 초대를 수락해 멤버로 등록한다. 토큰 해시로 초대를 찾으므로 원문을 가진 사람만 수락할 수 있다.
+	 *
+	 * <p>초대에 적힌 이메일과 로그인한 계정이 같은지는 확인하지 않는다. 토큰 자체를 자격으로 보는 설계이며,
+	 * 그래서 메일 링크가 유출되면 다른 계정으로도 수락된다. 유효기간을 짧게 두는 것이 이 위험에 대한 완화책이다.</p>
+	 *
+	 * @return 편입된 프로젝트 id와, 이미 멤버였는지 여부. 이미 멤버면 역할을 덮어쓰지 않고 초대만 소비한다
+	 */
 	@Transactional
 	public AcceptedInvitation accept(Long userId, String rawToken) {
 		ProjectInvitation invitation = invitations.findActiveByTokenHash(InvitationTokenHash.sha256(rawToken))
@@ -231,6 +304,10 @@ public class ProjectService {
 		return new AcceptedInvitation(projectId, false);
 	}
 
+	/**
+	 * 로그인 전에 초대 화면에 보여줄 정보를 만든다. 쓸 수 없는 토큰은 예외 대신 비어 있는 결과를 돌려주어
+	 * 유효한 토큰인지 여부만 알리고 프로젝트 정보는 노출하지 않는다.
+	 */
 	@Transactional(readOnly = true)
 	public InvitationPreview invitationPreview(String rawToken) {
 		return invitations.findActiveByTokenHash(InvitationTokenHash.sha256(rawToken))
@@ -240,6 +317,13 @@ public class ProjectService {
 				.orElseGet(() -> new InvitationPreview(false, null, null, null));
 	}
 
+	/**
+	 * 멤버 역할을 바꾼다. 마지막 OWNER의 강등을 막는 것이 핵심이다. 아무도 OWNER가 아닌 프로젝트는
+	 * 멤버 관리와 삭제가 불가능해져 되돌릴 방법이 없다.
+	 *
+	 * <p>대상 멤버를 행 잠금으로 읽는 이유는 이 검사 때문이다. 두 OWNER가 서로를 동시에 강등하면
+	 * 각자 다른 하나가 남아 있다고 보고 둘 다 통과해 OWNER가 사라진다.</p>
+	 */
 	@Transactional
 	public void changeMemberRole(Long actorId, Long projectId, Long memberId, ProjectRole role) {
 		requireRole(actorId, projectId, ProjectRole.OWNER);
@@ -251,6 +335,9 @@ public class ProjectService {
 		member.changeRole(role);
 	}
 
+	/**
+	 * 멤버를 제거한다. 역할 변경과 같은 이유로 마지막 OWNER는 제거할 수 없고, 같은 경쟁 조건을 행 잠금으로 막는다.
+	 */
 	@Transactional
 	public void removeMember(Long actorId, Long projectId, Long memberId) {
 		requireRole(actorId, projectId, ProjectRole.OWNER);
@@ -262,6 +349,15 @@ public class ProjectService {
 		members.delete(member);
 	}
 
+	/**
+	 * 비회원으로 만든 링크를 프로젝트로 옮긴다. 소유권을 넘기는 처리라 두 자격을 함께 요구한다.
+	 * 프로젝트에 대한 EDITOR 권한과, 그 링크의 secret key다.
+	 *
+	 * <p>링크를 행 잠금으로 읽어 두 요청이 같은 링크를 동시에 가져가지 못하게 한다. 이미 프로젝트에 속했거나
+	 * secret key가 맞지 않으면 링크 없음과 같은 문구로 거부해, 어떤 코드가 실재하는지 알려주지 않는다.</p>
+	 *
+	 * <p>편입 후 코드가 프로젝트 서브도메인 공간에서 충돌할 수 있어 flush 실패를 별도 예외로 바꾼다.</p>
+	 */
 	@Transactional
 	public void importAnonymousLink(Long userId, Long projectId, String code, String secret) {
 		requireRole(userId, projectId, ProjectRole.EDITOR);
@@ -277,11 +373,23 @@ public class ProjectService {
 		}
 	}
 
+	/**
+	 * 웹에서 프로젝트 링크를 만든다. EDITOR 이상이어야 하며, 생성자는 확인된 멤버십의 사용자로 기록된다.
+	 */
 	public Link createProjectLink(Long userId, Long projectId, CreateLinkRequest request) {
 		ProjectMember membership = requireRole(userId, projectId, ProjectRole.EDITOR);
 		return linkManagement.createForProject(request, membership.getProject(), membership.getUser());
 	}
 
+	/**
+	 * API key로 프로젝트 링크를 만든다. 위 웹 경로와 짝을 이루지만 인가 방식이 다르다.
+	 * 키가 이 프로젝트의 것인지와 scope 확인은 컨트롤러가 이미 끝냈다고 보고 여기서는 다시 검사하지 않으므로,
+	 * 확인 없이 이 메서드를 부르면 다른 프로젝트에 링크가 생긴다.
+	 *
+	 * <p>쓰기 레이트리밋을 여기서 거는 것은 이 경로가 자동화된 대량 호출의 대상이기 때문이다.</p>
+	 *
+	 * <p>멱등 키가 있으면 요청 내용의 해시를 함께 저장한다. 같은 키로 다른 내용을 보내면 충돌로 거부하기 위한 지문이다.</p>
+	 */
 	public Link createProjectLink(Long apiKeyId, Long projectId, String idempotencyKey, CreateLinkRequest request) {
 		rateLimitService.checkApiKeyWrite(apiKeyId);
 		String normalizedKey = validIdempotencyKey(idempotencyKey);
@@ -299,6 +407,11 @@ public class ProjectService {
 		links.delete(projectLink(projectId, code));
 	}
 
+	/**
+	 * 프로젝트 링크 상세를 돌려준다. VIEWER도 볼 수 있지만 수정은 못 하므로,
+	 * 역할에 따라 편집 가능 여부를 응답에 담아 화면이 버튼 표시를 결정하게 한다.
+	 * 이 값은 표시용일 뿐이며 실제 차단은 수정 경로의 권한 검사가 담당한다.
+	 */
 	@Transactional(readOnly = true)
 	public LinkManagementResponse projectLink(Long userId, Long projectId, String code) {
 		ProjectMember member = requireRole(userId, projectId, ProjectRole.VIEWER);
@@ -319,6 +432,18 @@ public class ProjectService {
 	}
 
 	// findActiveByProjectAndUser가 프로젝트를 조인하므로 삭제된 프로젝트의 멤버십은 애초에 조회되지 않는다.
+	/**
+	 * 프로젝트 접근 권한을 확인하고 멤버십을 돌려준다. 이 클래스 인가의 단일 통로다.
+	 *
+	 * <p>역할 비교에 {@code ordinal()}을 쓰므로 {@link ProjectRole}의 선언 순서가 곧 권한 서열이다.
+	 * 상수를 재배열하거나 중간에 끼워 넣으면 이 비교가 조용히 달라진다.</p>
+	 *
+	 * <p>멤버십이 없는 경우와 역할이 모자란 경우를 같은 예외와 같은 문구로 합친다.
+	 * 구분하면 프로젝트가 실재하는지가 응답으로 드러난다.</p>
+	 *
+	 * @param minimum 필요한 최소 역할
+	 * @throws SecurityException 멤버가 아니거나 역할이 모자란 경우. 전역 처리기가 403으로 바꾼다
+	 */
 	private ProjectMember requireRole(Long userId, Long projectId, ProjectRole minimum) {
 		ProjectMember membership = members.findActiveByProjectAndUser(projectId, userId)
 				.orElseThrow(() -> new SecurityException("프로젝트 접근 권한이 없습니다."));
@@ -341,6 +466,10 @@ public class ProjectService {
 		return value.trim();
 	}
 
+	/**
+	 * 멱등 키의 문자와 길이를 제한한다. 이 값이 조회 키로 쓰이므로 임의 문자열을 그대로 받지 않는다.
+	 * 값을 보내지 않은 경우는 멱등 처리를 하지 않겠다는 뜻이라 그대로 통과시킨다.
+	 */
 	private String validIdempotencyKey(String value) {
 		if (value == null)
 			return null;
@@ -358,6 +487,11 @@ public class ProjectService {
 		return normalized;
 	}
 
+	/**
+	 * 서브도메인 후보를 정규화하고 검증한다. 여기 규칙이 곧 호스트 이름의 제약이다.
+	 * 소문자 영숫자와 하이픈만 허용하고 하이픈으로 시작하거나 끝날 수 없으며, 점이 없어 항상 한 단계다.
+	 * 예약어는 {@code ProjectDomainService}가 판단한다.
+	 */
 	private String normalizedSubdomain(String requested) {
 		if (requested == null)
 			throw new IllegalArgumentException("서브도메인이 올바르지 않습니다.");
@@ -368,6 +502,10 @@ public class ProjectService {
 		return normalized;
 	}
 
+	/**
+	 * 초대 이메일을 검증하고 소문자로 맞춘다. 정규화하지 않으면 대소문자만 다른 같은 주소로
+	 * 중복 초대가 만들어지고, 수락 시 기존 사용자와도 이어지지 않는다.
+	 */
 	private String validEmail(String value) {
 		if (value == null || !value.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$") || value.length() > 320)
 			throw new IllegalArgumentException("올바른 이메일을 입력하세요.");
@@ -378,6 +516,9 @@ public class ProjectService {
 		return invitations.findById(id).orElseThrow(() -> new IllegalArgumentException("초대를 찾을 수 없습니다."));
 	}
 
+	/**
+	 * 초대 수락 결과. {@code alreadyMember}는 화면이 새로 합류했다는 안내를 띄울지 정하는 데 쓴다.
+	 */
 	public record AcceptedInvitation(Long projectId, boolean alreadyMember) {
 	}
 
