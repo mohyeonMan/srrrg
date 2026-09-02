@@ -35,7 +35,8 @@ import lombok.RequiredArgsConstructor;
  * 화면이 호출하는 프로젝트 관리 API. 프로젝트, 서브도메인, 링크, 멤버, 초대, API 키가 모두 여기 모여 있다.
  *
  * <p>이 클래스는 요청을 서비스로 넘기고 응답 형태만 만든다. 권한 확인은 하지 않고 전부
- * {@code ProjectService}, {@code ProjectInvitationService}, {@code ApiKeyService}가 수행하므로, 새 엔드포인트를 추가할 때
+ * {@code ProjectService}, {@code ProjectMemberService}, {@code ProjectInvitationService}, {@code ApiKeyService}가
+ * 수행하므로, 새 엔드포인트를 추가할 때
  * 여기에 검사를 넣는 것이 아니라 서비스 메서드가 역할을 요구하는지 확인해야 한다.</p>
  *
  * <p>주체는 항상 {@code @AuthenticationPrincipal}에서 온다. 요청 본문이나 경로로 사용자 id를 받지 않으므로
@@ -50,13 +51,14 @@ import lombok.RequiredArgsConstructor;
 public class ProjectController {
 	private static final String SECRET_KEY_HEADER = "X-Srrrg-Secret-Key";
 	private final ProjectService projects;
+	private final ProjectMemberService projectMembers;
 	private final ProjectInvitationService projectInvitations;
 	private final ApiKeyService apiKeys;
 	private final CampaignService campaigns;
 
 	@GetMapping("/projects")
 	public List<ProjectResponse> myProjects(@AuthenticationPrincipal SrrrgPrincipal p) {
-		return projects.myMemberships(p.userId()).stream().map(ProjectResponse::from).toList();
+		return projectMembers.myMemberships(p.userId()).stream().map(ProjectResponse::from).toList();
 	}
 
 	/**
@@ -157,7 +159,7 @@ public class ProjectController {
 
 	@GetMapping("/projects/{projectId}/members")
 	public List<MemberResponse> members(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId) {
-		return projects.projectMembers(p.userId(), projectId).stream().map(MemberResponse::from).toList();
+		return projectMembers.projectMembers(p.userId(), projectId).stream().map(MemberResponse::from).toList();
 	}
 
 	@GetMapping("/projects/{projectId}/invitations")
@@ -197,14 +199,14 @@ public class ProjectController {
 	@PatchMapping("/projects/{projectId}/members/{memberId}")
 	public ResponseEntity<Void> changeRole(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId,
 			@PathVariable Long memberId, @Valid @RequestBody ChangeRoleRequest request) {
-		projects.changeMemberRole(p.userId(), projectId, memberId, request.role());
+		projectMembers.changeMemberRole(p.userId(), projectId, memberId, request.role());
 		return ResponseEntity.noContent().build();
 	}
 
 	@DeleteMapping("/projects/{projectId}/members/{memberId}")
 	public ResponseEntity<Void> remove(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId,
 			@PathVariable Long memberId) {
-		projects.removeMember(p.userId(), projectId, memberId);
+		projectMembers.removeMember(p.userId(), projectId, memberId);
 		return ResponseEntity.noContent().build();
 	}
 

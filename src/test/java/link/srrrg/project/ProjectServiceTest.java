@@ -56,21 +56,6 @@ class ProjectServiceTest {
 	}
 
 	@Test
-	void blocksDemotionOfLastOwner() {
-		ProjectMember owner = mock(ProjectMember.class);
-		Project project = mock(Project.class);
-		when(owner.getRole()).thenReturn(ProjectRole.OWNER);
-		when(owner.getProject()).thenReturn(project);
-		when(members.findActiveByProjectAndUser(1L, 2L)).thenReturn(Optional.of(owner));
-		when(members.lockByProjectAndUser(1L, 3L)).thenReturn(Optional.of(owner));
-		when(members.countByIdProjectIdAndRole(1L, ProjectRole.OWNER)).thenReturn(1L);
-
-		assertThatThrownBy(() -> service.changeMemberRole(2L, 1L, 3L, ProjectRole.EDITOR))
-				.isInstanceOf(IllegalStateException.class);
-		verify(owner, never()).changeRole(any());
-	}
-
-	@Test
 	void blocksViewerFromImportingAnonymousLink() {
 		ProjectMember viewer = mock(ProjectMember.class);
 		Project project = mock(Project.class);

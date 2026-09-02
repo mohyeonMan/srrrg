@@ -35,7 +35,7 @@
 ```
 ProjectController.members(principal, projectId)
 
-    ProjectService.projectMembers(userId, projectId)
+    ProjectMemberService.projectMembers(userId, projectId)
         @Transactional(readOnly = true)
         ProjectAccessService.requireRole(userId, projectId, VIEWER)
 
@@ -54,13 +54,12 @@ ProjectController.changeRole(principal, projectId, memberId, request)
     (Bean Validation) role: @NotNull
     → 204 No Content
 
-    ProjectService.changeMemberRole(actorId, projectId, memberId, role)
+    ProjectMemberService.changeMemberRole(actorId, projectId, memberId, role)
         @Transactional
         ProjectAccessService.requireRole(actorId, projectId, OWNER)
 
         ProjectMemberRepository.lockByProjectAndUser(projectId, memberId)
-            비관적 잠금으로 대상 멤버십을 잡는다. 아래 "마지막 OWNER" 검사와
-            실제 변경 사이에 다른 파드가 끼어들지 못하게 하기 위함.
+            비관적 잠금으로 대상 멤버십을 잡아 같은 멤버에 대한 변경을 직렬화한다.
             → 없으면 IllegalArgumentException (400)
 
         (마지막 OWNER 보호)
@@ -71,9 +70,9 @@ ProjectController.changeRole(principal, projectId, memberId, request)
         ProjectMember.changeRole(role)
 ```
 
-**핵심 1가지**
+**현재 한계**
 
-- **행 잠금이 "마지막 OWNER" 불변식을 지킨다.** 잠금이 없으면 두 파드가 동시에 서로 다른 OWNER를 강등해 프로젝트에 OWNER가 하나도 남지 않을 수 있다. 애플리케이션 카운트 검사만으로는 막을 수 없는 종류의 경합이다.
+- 대상 멤버 행만 잠그므로 두 파드가 서로 다른 OWNER를 동시에 강등하면 둘 다 OWNER 수를 2로 읽고 통과할 수 있다. "마지막 OWNER" 불변식을 완전히 지키려면 프로젝트 단위 잠금이 별도로 필요하다.
 
 ---
 
@@ -85,7 +84,7 @@ ProjectController.changeRole(principal, projectId, memberId, request)
 ProjectController.remove(principal, projectId, memberId)
     → 204 No Content
 
-    ProjectService.removeMember(actorId, projectId, memberId)
+    ProjectMemberService.removeMember(actorId, projectId, memberId)
         @Transactional
         ProjectAccessService.requireRole(actorId, projectId, OWNER)
 

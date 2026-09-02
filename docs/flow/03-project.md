@@ -55,7 +55,7 @@ ProjectAccessService.requireRole(userId, projectId, minimum)
 ```
 ProjectController.myProjects(principal)
 
-    ProjectService.myMemberships(userId)
+    ProjectMemberService.myMemberships(userId)
         @Transactional(readOnly = true)
 
         ProjectMemberRepository.findActiveByUserId(userId)

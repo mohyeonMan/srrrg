@@ -24,7 +24,7 @@ import link.srrrg.link.management.dto.LinkManagementResponse;
 import link.srrrg.link.management.dto.UpdateLinkRequest;
 
 /**
- * 프로젝트와 그 구성원, 프로젝트 소속 링크의 유스케이스를 조율한다.
+ * 프로젝트와 프로젝트 소속 링크의 유스케이스를 조율한다.
  *
  * <p>거의 모든 공개 메서드가 {@link ProjectAccessService#requireRole}로 시작한다. 프로젝트 자원은 멤버십이 있어야 접근할 수
  * 있고 역할에 따라 허용 범위가 다르므로, 조회 전에 권한을 확인하는 이 순서를 지켜야 한다.
@@ -110,11 +110,6 @@ public class ProjectService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<ProjectMember> myMemberships(Long userId) {
-		return members.findActiveByUserId(userId);
-	}
-
-	@Transactional(readOnly = true)
 	public ProjectMember detail(Long userId, Long projectId) {
 		return projectAccess.requireRole(userId, projectId, ProjectRole.VIEWER);
 	}
@@ -123,12 +118,6 @@ public class ProjectService {
 	public List<Link> projectLinks(Long userId, Long projectId) {
 		projectAccess.requireRole(userId, projectId, ProjectRole.VIEWER);
 		return links.findByProjectIdAndCampaignIsNullOrderByIdDesc(projectId);
-	}
-
-	@Transactional(readOnly = true)
-	public List<ProjectMember> projectMembers(Long userId, Long projectId) {
-		projectAccess.requireRole(userId, projectId, ProjectRole.VIEWER);
-		return members.findByIdProjectId(projectId);
 	}
 
 	@Transactional(readOnly = true)
@@ -193,38 +182,6 @@ public class ProjectService {
 		projectAccess.requireRole(userId, projectId, ProjectRole.OWNER);
 		// @SoftDelete가 걸려 있어 bulk delete는 deleted_at을 찍는 UPDATE로 번역된다.
 		projects.softDeleteById(projectId);
-	}
-
-	/**
-	 * 멤버 역할을 바꾼다. 마지막 OWNER의 강등을 막는 것이 핵심이다. 아무도 OWNER가 아닌 프로젝트는
-	 * 멤버 관리와 삭제가 불가능해져 되돌릴 방법이 없다.
-	 *
-	 * <p>대상 멤버를 행 잠금으로 읽는 이유는 이 검사 때문이다. 두 OWNER가 서로를 동시에 강등하면
-	 * 각자 다른 하나가 남아 있다고 보고 둘 다 통과해 OWNER가 사라진다.</p>
-	 */
-	@Transactional
-	public void changeMemberRole(Long actorId, Long projectId, Long memberId, ProjectRole role) {
-		projectAccess.requireRole(actorId, projectId, ProjectRole.OWNER);
-		ProjectMember member = members.lockByProjectAndUser(projectId, memberId)
-				.orElseThrow(() -> new IllegalArgumentException("멤버를 찾을 수 없습니다."));
-		if (member.getRole() == ProjectRole.OWNER && role != ProjectRole.OWNER
-				&& members.countByIdProjectIdAndRole(projectId, ProjectRole.OWNER) == 1)
-			throw new IllegalStateException("마지막 OWNER는 강등할 수 없습니다.");
-		member.changeRole(role);
-	}
-
-	/**
-	 * 멤버를 제거한다. 역할 변경과 같은 이유로 마지막 OWNER는 제거할 수 없고, 같은 경쟁 조건을 행 잠금으로 막는다.
-	 */
-	@Transactional
-	public void removeMember(Long actorId, Long projectId, Long memberId) {
-		projectAccess.requireRole(actorId, projectId, ProjectRole.OWNER);
-		ProjectMember member = members.lockByProjectAndUser(projectId, memberId)
-				.orElseThrow(() -> new IllegalArgumentException("멤버를 찾을 수 없습니다."));
-		if (member.getRole() == ProjectRole.OWNER
-				&& members.countByIdProjectIdAndRole(projectId, ProjectRole.OWNER) == 1)
-			throw new IllegalStateException("마지막 OWNER는 제거할 수 없습니다.");
-		members.delete(member);
 	}
 
 	/**

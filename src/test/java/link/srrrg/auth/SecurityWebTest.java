@@ -38,6 +38,7 @@ import link.srrrg.project.Project;
 import link.srrrg.project.InvitationPageController;
 import link.srrrg.project.ProjectInvitationService;
 import link.srrrg.project.ProjectController;
+import link.srrrg.project.ProjectMemberService;
 import link.srrrg.project.ProjectRole;
 import link.srrrg.project.ProjectService;
 import link.srrrg.link.LinkRepository;
@@ -88,6 +89,9 @@ class SecurityWebTest {
 
 	@MockitoBean
 	ProjectService projectService;
+
+	@MockitoBean
+	ProjectMemberService projectMemberService;
 
 	@MockitoBean
 	ProjectInvitationService projectInvitationService;
@@ -169,7 +173,7 @@ class SecurityWebTest {
 	@Test
 	void doesNotRotateCsrfTokenForEveryJwtAuthenticatedRequest() throws Exception {
 		when(jwtService.verify("access-token")).thenReturn(1L);
-		when(projectService.myMemberships(1L)).thenReturn(java.util.List.of());
+		when(projectMemberService.myMemberships(1L)).thenReturn(java.util.List.of());
 
 		MvcResult result = mockMvc.perform(get("/api/web/projects")
 					.cookie(new jakarta.servlet.http.Cookie("srrrg_access", "access-token"))
