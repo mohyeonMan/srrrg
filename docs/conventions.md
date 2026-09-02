@@ -1,171 +1,191 @@
 # srrrg 프로젝트 컨벤션
 
-## 1. 커밋 메시지
+코드를 작성하거나 변경할 때 이 문서와 다음 문서를 함께 따른다.
 
-### 형식
+- 작업 절차: docs/development/workflow.md
+- 주석: docs/development/commenting.md
+- 검증: docs/development/verification.md
+- 구조 설계: docs/development/architecture-criteria.md
 
-```text
+## 1. 커밋
+
+### 메시지 형식
+
+~~~text
 타입 : 한글 요약
 
 - 한글 상세 내용 1
 - 한글 상세 내용 2
-```
+~~~
 
 상세 설명이 필요 없는 단순 변경은 제목만 작성할 수 있다.
 
-```text
-docs : 프로젝트 컨벤션 문서 추가
-```
-
-### 타입
-
 | 타입 | 용도 |
 |---|---|
-| `feat` | 기능 추가 |
-| `fix` | 버그 수정 |
-| `refactor` | 기능 변경 없는 코드 구조 개선 |
-| `test` | 테스트 추가 및 수정 |
-| `docs` | 문서 추가 및 수정 |
-| `chore` | 일반 설정 및 기타 작업 |
-| `build` | Gradle, Docker 등 빌드 변경 |
-| `ci` | CI/CD 변경 |
-| `perf` | 성능 개선 |
+| feat | 기능 추가 |
+| fix | 버그 수정 |
+| refactor | 외부 동작 변경 없는 구조 개선 |
+| test | 테스트 추가·수정 |
+| docs | 문서 추가·수정 |
+| chore | 일반 설정과 기타 작업 |
+| build | Gradle, Docker 등 빌드 변경 |
+| ci | CI 변경 |
+| perf | 성능 개선 |
 
-### 작성 규칙
-
-- 타입과 요약 사이에는 ` : `를 사용한다.
-- 요약은 한글로 간결하게 작성하고 끝에 마침표를 붙이지 않는다.
-- 상세 내용 앞에는 빈 줄을 추가한다.
-- 상세 내용은 `- `로 시작한다.
-- 상세 내용에는 무엇을 변경했는지 구체적으로 작성한다.
+- 타입과 요약 사이에는 “ : ”를 사용한다.
+- 요약은 한글로 간결하게 작성하고 마침표를 붙이지 않는다.
+- 본문에는 무엇을 왜 변경했는지 구체적으로 작성한다.
 - 한 커밋에는 하나의 논리적인 변경만 포함한다.
-- `수정`, `작업`처럼 변경 내용을 알 수 없는 요약은 사용하지 않는다.
+- “수정”, “작업”처럼 변경 내용을 알 수 없는 요약을 사용하지 않는다.
+- 제목, 본문, 꼬리말에는 실제 변경 내용만 기록한다.
+- AI 제품·모델·도구 이름, 생성·지원 표기, 공동 작성자, 이모지, 자동 서명과 관련 링크를 넣지 않는다.
 
-### 예시
+Git stage, commit, push와 이력 변경은 사용자가 명시적으로 요청했을 때만 수행한다.
 
-```text
-feat : 단축 URL 생성 기능 추가
+### 브랜치
 
-- 6자리 Base62 단축 코드 생성
-- 관리용 secret key 발급
-- 중복 코드 발생 시 재생성
-```
-
-```text
-fix : 만료된 링크의 리다이렉트 차단
-
-- 만료 시각을 현재 시각과 비교
-- 만료된 링크에 410 Gone 응답
-```
-
-## 2. 브랜치 이름
-
-```text
+~~~text
 <타입>/<간단한-영문-설명>
-```
+~~~
 
-예시:
+- 설명은 영문 소문자와 하이픈을 사용한다.
+- main 브랜치는 빌드와 테스트가 통과하는 상태로 유지한다.
 
-```text
-feat/create-link
-fix/expired-redirect
-docs/conventions
-chore/postgres-config
-```
+## 2. 공통 코드 원칙
 
-- `main` 브랜치는 빌드와 테스트가 통과하는 상태로 유지한다.
-- 브랜치 설명은 영문 소문자와 하이픈을 사용한다.
+- 이름으로 역할과 도메인 의미가 드러나게 한다.
+- 같은 이유로 변경되는 코드는 함께 두고, 다른 이유로 변경되는 코드는 분리한다.
+- 줄 수가 아니라 책임 경계를 기준으로 메서드와 클래스를 나눈다.
+- 기존 구현, 표준 라이브러리와 플랫폼 기능을 먼저 사용한다.
+- 실제 필요가 없는 인터페이스, factory, 설정과 확장 지점을 미리 만들지 않는다.
+- 요청 범위 밖 정리와 리팩터링을 섞지 않는다.
+- 코드 변경과 관련 주석 갱신은 하나의 완료 단위다.
 
-## 3. Java 코드
+상세 구조 기준은 docs/development/architecture-criteria.md를 따른다.
 
-- 기본 패키지는 `link.srrrg`를 사용한다.
-- 클래스 이름은 `PascalCase`를 사용한다.
-- 메서드와 변수 이름은 `camelCase`를 사용한다.
-- 상수 이름은 `UPPER_SNAKE_CASE`를 사용한다.
+## 3. Java
+
+### 형식과 이름
+
+- 기본 패키지는 link.srrrg를 사용한다.
+- 클래스는 PascalCase, 메서드와 변수는 camelCase, 상수는 UPPER_SNAKE_CASE를 사용한다.
+- 현재 파일의 탭 들여쓰기와 중괄호 배치를 유지한다.
+- wildcard import를 사용하지 않는다.
+- 파일 끝에는 개행을 유지하고 기존 인코딩과 줄바꿈을 불필요하게 바꾸지 않는다.
+- 한 최상위 타입은 한 파일에 둔다. 내부 타입은 독립적인 의미가 없는 구현 세부사항일 때만 사용한다.
+
+### 의존성과 계층
+
 - 의존성은 생성자 주입을 사용하고 필드 주입은 사용하지 않는다.
-- API 응답에 JPA 엔티티를 직접 반환하지 않는다.
-- 컨트롤러는 HTTP 요청과 응답을 처리하고 업무 규칙은 서비스에 둔다.
-- 실제 필요가 생기기 전에는 불필요한 인터페이스나 추상 계층을 만들지 않는다.
+- Controller는 HTTP 요청·응답과 인증 주체 변환을 담당하고 업무 규칙을 서비스에 둔다.
+- Service는 유스케이스, 권한과 트랜잭션 경계를 조율한다.
+- Repository는 데이터 접근을 담당하고 업무 흐름을 소유하지 않는다.
+- API 응답에 JPA entity를 직접 반환하지 않는다.
+- 다른 도메인의 책임은 해당 도메인 패키지와 소유 서비스에 둔다.
 
-### Lombok과 접근자
+Controller가 Repository를 직접 호출하거나 계층을 건너뛰어야 한다면 기존 예외를 무조건 복제하지 말고
+근거와 영향 범위를 계획에서 설명한다.
 
-- 반복되는 getter, setter, 생성자 코드는 Lombok으로 줄인다.
-- 일반 클래스의 필드 접근자는 JavaBean 형식인 `getXxx`, `isXxx`, `setXxx`를 사용한다.
-- JPA 엔티티는 클래스 단위 `@Getter`를 사용하되 클래스 단위 `@Setter`는 사용하지 않는다.
-- 엔티티 상태 변경은 `delete`, `updateOriginalUrl`처럼 변경 의도가 드러나는 메서드로 제한한다.
-- 요청 DTO가 단순 값 전달만 담당하면 record를 우선 사용한다.
-- JSON 필드의 생략과 명시적인 `null`을 구분해야 하는 요청 DTO는 일반 클래스로 작성하고 Lombok `@Getter`를 사용한다.
-- 필드 전달 여부 추적처럼 setter에 추가 동작이 필요할 때만 해당 setter를 직접 작성하고 `@JsonSetter`를 사용한다.
-- 응답 DTO는 불변 record를 우선 사용한다.
+### Lombok, DTO와 entity
 
-```java
-@Getter
-public class UpdateLinkRequest {
+- 반복되는 접근자와 생성자는 Lombok으로 줄인다.
+- 일반 클래스의 접근자는 JavaBean 형식 getXxx, isXxx, setXxx를 사용한다.
+- JPA entity는 클래스 단위 @Getter를 사용할 수 있지만 클래스 단위 @Setter는 사용하지 않는다.
+- entity 상태는 delete, updateOriginalUrl처럼 의도가 드러나는 메서드로 변경한다.
+- 단순 요청·응답 DTO는 불변 record를 우선한다.
+- JSON 필드 생략과 명시적 null을 구분해야 하면 일반 클래스와 @JsonSetter로 전달 여부를 기록한다.
+- entity와 DTO 사이의 변환 책임이 여러 계층에 중복되지 않게 한다.
 
-	private String originalUrl;
-	private boolean originalUrlPresent;
+### null과 시간
 
-	@JsonSetter("originalUrl")
-	public void setOriginalUrl(String originalUrl) {
-		this.originalUrl = originalUrl;
-		this.originalUrlPresent = true;
-	}
-}
-```
+- 값이 없다는 의미를 null, 빈 문자열, 빈 컬렉션과 sentinel 사이에서 임의로 혼용하지 않는다.
+- Optional은 주로 조회 결과의 부재를 표현하며 entity 필드와 요청 DTO 필드에 관성적으로 사용하지 않는다.
+- 저장·비교할 절대 시각은 Instant를 우선하고 API에는 ISO 8601로 표현한다.
+- 한 요청에서 같은 기준 시각이 필요하면 Clock 또는 한 번 읽은 값을 전달하여 판정이 흔들리지 않게 한다.
 
-## 4. API
+## 4. 트랜잭션과 동시성
 
-- API 리소스 경로는 복수형을 사용한다. 예: `/api/links`
-- JSON 필드 이름은 `camelCase`를 사용한다.
-- 날짜와 시간은 ISO 8601 형식을 사용한다.
-- 관리용 secret key는 `X-Srrrg-Secret-Key` 헤더로 전달한다.
-- 오류 응답은 일관된 형식을 사용한다.
+- 외부 HTTP 호출을 열린 DB 트랜잭션 안에서 기다리지 않는다.
+- 트랜잭션 경계는 서비스의 유스케이스와 데이터 일관성 범위에 맞춘다.
+- @Transactional 메서드의 self-invocation에 의존하지 않는다.
+- 예외 발생 시 어떤 저장과 이벤트가 롤백되는지 확인한다.
+- 실패 기록을 보존하기 위한 별도 트랜잭션이나 특수 반환값에는 그 이유를 주석으로 남긴다.
+- 조회 후 저장 사이의 경쟁 조건을 unique constraint, lock 또는 원자적 연산으로 막는다.
+- 여러 파드를 조율할 때 JVM lock이나 인메모리 상태에 의존하지 않는다.
+- 재시도와 scheduled 작업은 멱등성과 중복 실행을 고려한다.
 
-```json
-{
-  "code": "LINK_NOT_FOUND",
-  "message": "링크를 찾을 수 없습니다."
-}
-```
+## 5. API
 
-## 5. 데이터베이스
+- 리소스 경로는 복수형, JSON 필드는 camelCase, 날짜·시간은 ISO 8601을 사용한다.
+- API 응답과 오류 응답에는 entity를 직접 노출하지 않는다.
+- API 경로, 상태 코드, 필드, 오류 코드, nullable 의미와 인증 정책은 외부 계약으로 취급한다.
+- 같은 유스케이스가 여러 API 표면에 존재하면 핵심 업무 규칙은 공유하고 인증·응답 변환만 경계에서 분리한다.
+- 사용자 입력과 경로·헤더 값은 신뢰 경계에서 검증한다.
+- 멱등성 키가 있는 쓰기는 같은 키의 재시도와 다른 요청 내용의 충돌을 구분한다.
+- cursor pagination은 정렬 기준과 next cursor 의미를 명시한다.
 
-- 테이블과 컬럼 이름은 `snake_case`를 사용한다.
-- 스키마 변경은 Flyway migration으로 관리한다.
-- 이미 적용된 migration 파일은 수정하지 않고 새 파일을 추가한다.
-- 운영 환경에서 JPA의 `ddl-auto=create` 또는 `update`를 사용하지 않는다.
-- 시간은 PostgreSQL `TIMESTAMPTZ`로 저장한다.
-- secret key 원문은 저장하지 않는다.
+API 표면별 계약은 AGENTS.md의 표와 관련 docs/flow/*.md를 따른다.
 
-Migration 파일 예시:
+## 6. 데이터베이스
 
-```text
-V1__create_links_table.sql
-V2__add_links_index.sql
-```
+- 테이블과 컬럼은 snake_case를 사용한다.
+- 스키마는 Flyway만 변경한다.
+- 이미 적용된 migration을 수정하지 않고 새 버전을 추가한다.
+- 운영 환경에서 ddl-auto=create 또는 update를 사용하지 않는다.
+- 시간은 PostgreSQL TIMESTAMPTZ로 저장한다.
+- secret과 token 원문을 저장하지 않는다.
+- 애플리케이션 검증만으로 부족한 무결성은 DB 제약조건으로 보호한다.
+- migration은 기존 데이터 backfill, lock 범위, 배포 중 구버전과의 호환성을 검토한다.
+- 인덱스는 실제 조회 조건과 정렬 순서를 근거로 추가한다.
 
-## 6. 테스트
+## 7. 예외, 로그와 메트릭
 
-- 테스트 이름에는 검증할 행위와 기대 결과를 드러낸다.
-- 정책 로직은 단위 테스트로 검증한다.
-- HTTP 및 PostgreSQL 연동은 통합 테스트로 검증한다.
-- private 메서드를 직접 테스트하지 않는다.
-- 버그 수정 시 해당 문제를 재현하는 테스트를 추가한다.
-- 커밋 전에 `gradlew test`가 통과하는지 확인한다.
+- 빈 catch로 예외를 삼키거나 로그만 남기고 성공으로 처리하지 않는다.
+- 예상 가능한 업무 실패와 시스템 장애를 구분한다.
+- fail-open과 fail-closed 정책을 임의로 변경하지 않는다.
+- 예외 변환 시 원인과 API 오류 계약을 보존한다.
+- secret, token, cookie, 전체 요청 헤더와 민감한 URL query를 로그에 남기지 않는다.
+- 동일 예외를 여러 계층에서 중복 기록하지 않는다.
+- userId, URL, 단축 코드 등 값 종류가 무한한 데이터를 metric tag로 사용하지 않는다.
+- 메트릭 결과는 제한된 enum 또는 고정 문자열을 사용한다.
 
-```java
-@Test
-void expiredLinkReturnsGone() {
-}
-```
+## 8. 프론트엔드
 
-## 7. 설정 및 보안
+- 새로운 프레임워크, 번들러와 의존성을 추가하지 않는다.
+- 공통 HTTP, CSRF와 401 재시도는 srrrg-common.js의 기존 기능을 우선 사용한다.
+- 사용자 입력이나 API 값을 innerHTML로 삽입하지 않고 textContent 또는 안전한 DOM API를 사용한다.
+- 상태 변경 요청에는 해당 API 표면의 CSRF 정책을 적용한다.
+- 비동기 제출 중 버튼과 상태를 잠가 중복 실행을 막는다.
+- modal과 dialog는 포커스 진입·복귀와 Escape 동작을 고려한다.
+- 동적 메시지는 필요한 경우 aria-live를 사용하고 키보드만으로도 조작 가능하게 한다.
+- 화면별 스크립트가 암묵적인 전역 상태로 서로 결합하지 않게 한다.
+- CSS는 base.css의 토큰을 사용하고 색·크기·굵기를 직접 반복하지 않는다.
+- 굵기는 400 본문, 500 데이터 값, 600 라벨·버튼, 700 제목만 사용한다.
+- 브랜드 블루는 주 행동, 링크, 포커스와 선택 상태에만 사용한다.
 
-- 비밀번호, secret key, 운영 DB 접속 정보를 Git에 커밋하지 않는다.
-- 환경 변수 이름은 `UPPER_SNAKE_CASE`를 사용한다.
-- 로그에 secret key와 전체 요청 헤더를 출력하지 않는다.
+## 9. 테스트
+
+- 테스트 이름에는 검증하는 행위와 기대 결과를 드러낸다.
+- 정책 로직은 단위 테스트, HTTP와 PostgreSQL 연동은 통합 테스트로 검증한다.
+- private 메서드를 직접 테스트하지 않고 외부에서 관찰 가능한 동작을 검증한다.
+- 버그 수정에는 재현 테스트를 포함한다.
+- 시간·동시성 테스트는 임의 sleep보다 제어 가능한 시계와 동기화 지점을 우선한다.
+- 테스트를 통과시키기 위해 assertion을 약화하거나 테스트를 삭제하지 않는다.
+- 전체 검증 기준과 결과 보고는 docs/development/verification.md를 따른다.
+
+## 10. 설정과 보안
+
+- 비밀번호, secret key, 운영 DB 접속 정보와 인증서를 Git에 커밋하지 않는다.
+- 환경 변수는 UPPER_SNAKE_CASE를 사용한다.
 - 예제 설정에는 실제 값 대신 명확한 placeholder를 사용한다.
+- users.email에는 OAuth 공급자가 검증한 주소만 저장한다.
+- 인증·권한·CSRF·SSRF와 token 비교 로직을 단순화할 때 보안 경계를 약화하지 않는다.
+- forwarded header는 신뢰 설정이 활성화된 환경에서만 사용한다.
 
-```text
-SPRING_DATASOURCE_PASSWORD=change-me
-```
+## 11. 문서
+
+- 엔드포인트 흐름을 바꾸면 관련 docs/flow/*.md를 갱신한다.
+- UI 결정을 바꾸면 docs/ui-ux-decisions.md에 근거를 남긴다.
+- 구조와 도메인 계약이 바뀌면 권위 있는 docs/architecture/*.md를 갱신한다.
+- 폐기된 설계 문서를 현재 규칙의 근거로 사용하지 않는다.
+- 코드와 문서가 다르면 추측하지 않고 실제 호출 흐름과 테스트를 확인한다.
