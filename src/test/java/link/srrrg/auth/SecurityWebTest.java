@@ -36,6 +36,7 @@ import link.srrrg.project.ApiKeyScope;
 import link.srrrg.project.PublicProjectLinkController;
 import link.srrrg.project.Project;
 import link.srrrg.project.InvitationPageController;
+import link.srrrg.project.ProjectInvitationService;
 import link.srrrg.project.ProjectController;
 import link.srrrg.project.ProjectRole;
 import link.srrrg.project.ProjectService;
@@ -87,6 +88,9 @@ class SecurityWebTest {
 
 	@MockitoBean
 	ProjectService projectService;
+
+	@MockitoBean
+	ProjectInvitationService projectInvitationService;
 
 	@MockitoBean
 	LinkRepository linkRepository;
@@ -210,7 +214,7 @@ class SecurityWebTest {
 
 	@Test
 	void rendersInvitationPageWithContextPath() throws Exception {
-		when(projectService.invitationPreview("token")).thenReturn(new ProjectService.InvitationPreview(
+		when(projectInvitationService.preview("token")).thenReturn(new ProjectInvitationService.InvitationPreview(
 				true, "초대 프로젝트", ProjectRole.EDITOR, java.time.Instant.parse("2026-08-08T00:00:00Z")));
 
 		mockMvc.perform(get("/srrrg-dev/invitations/token")

@@ -17,11 +17,11 @@ import lombok.RequiredArgsConstructor;
 @Controller
 @RequiredArgsConstructor
 public class InvitationPageController {
-	private final ProjectService projects;
+	private final ProjectInvitationService invitations;
 
 	@GetMapping("/invitations/{token}")
 	public String invitation(@PathVariable String token, @AuthenticationPrincipal SrrrgPrincipal principal, Model model) {
-		ProjectService.InvitationPreview invitation = projects.invitationPreview(token);
+		ProjectInvitationService.InvitationPreview invitation = invitations.preview(token);
 		model.addAttribute("token", token);
 		model.addAttribute("invitation", invitation);
 		model.addAttribute("authenticated", principal != null);

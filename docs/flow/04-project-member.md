@@ -113,7 +113,7 @@ ProjectController.remove(principal, projectId, memberId)
 ```
 ProjectController.invitations(principal, projectId)
 
-    ProjectService.projectInvitations(userId, projectId)
+    ProjectInvitationService.list(userId, projectId)
         @Transactional(readOnly = true)
         ProjectAccessService.requireRole(userId, projectId, OWNER)
 
@@ -132,7 +132,7 @@ ProjectController.invite(principal, projectId, request)
     (Bean Validation) email: @Email @NotBlank, role: @NotNull
     → 201 Created
 
-    ProjectService.invite(userId, projectId, email, role)
+    ProjectInvitationService.invite(userId, projectId, email, role)
         @Transactional
         ProjectAccessService.requireRole(userId, projectId, OWNER)
 
@@ -186,7 +186,7 @@ ProjectController.invite(principal, projectId, request)
 ```
 ProjectController.resend(principal, invitationId)
 
-    ProjectService.resend(userId, invitationId)
+    ProjectInvitationService.resend(userId, invitationId)
         @Transactional
 
         invitation(invitationId)
@@ -203,7 +203,7 @@ ProjectController.resend(principal, invitationId)
         ProjectInvitation.cancel()
             기존 초대를 먼저 취소한다. 부분 unique 제약 때문에 필수.
 
-        ProjectService.invite(userId, projectId, old.getEmail(), old.getRole())
+        ProjectInvitationService.invite(userId, projectId, old.getEmail(), old.getRole())
             같은 이메일·역할로 새 초대를 만든다. 위 invite 흐름 전체를 다시 탄다.
             → 토큰이 새로 발급되므로 기존 메일의 링크는 죽는다.
 ```
@@ -222,7 +222,7 @@ ProjectController.resend(principal, invitationId)
 ProjectController.cancel(principal, invitationId)
     → 204 No Content
 
-    ProjectService.cancel(userId, invitationId)
+    ProjectInvitationService.cancel(userId, invitationId)
         @Transactional
         invitation(invitationId)
         ProjectAccessService.requireRole(userId, invitation.getProject().getId(), OWNER)
@@ -239,7 +239,7 @@ ProjectController.cancel(principal, invitationId)
 ```
 ProjectController.accept(principal, token)
 
-    ProjectService.accept(userId, rawToken)
+    ProjectInvitationService.accept(userId, rawToken)
         @Transactional
 
         ProjectInvitationRepository.findByTokenHash(sha256(rawToken))
@@ -280,7 +280,7 @@ ProjectController.accept(principal, token)
 InvitationPageController.invitation(token, principal, model)
     보안 설정에서 /invitations/** 는 permitAll이라 미로그인 상태로도 열린다.
 
-    ProjectService.invitationPreview(rawToken)
+    ProjectInvitationService.preview(rawToken)
         @Transactional(readOnly = true)
 
         ProjectInvitationRepository.findByTokenHash(sha256(rawToken))

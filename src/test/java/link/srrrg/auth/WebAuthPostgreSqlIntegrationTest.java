@@ -39,6 +39,7 @@ import link.srrrg.project.ApiKeyService;
 import link.srrrg.project.InvitationEmailSender;
 import link.srrrg.project.ProjectInvitation;
 import link.srrrg.project.ProjectInvitationRepository;
+import link.srrrg.project.ProjectInvitationService;
 import link.srrrg.project.ProjectApiKeyRepository;
 import link.srrrg.project.ProjectMemberRepository;
 import link.srrrg.project.ProjectRole;
@@ -108,6 +109,9 @@ class WebAuthPostgreSqlIntegrationTest {
 
 	@Autowired
 	ProjectService projectService;
+
+	@Autowired
+	ProjectInvitationService projectInvitationService;
 
 	@Autowired
 	ProjectApiKeyRepository projectApiKeyRepository;
@@ -360,16 +364,16 @@ class WebAuthPostgreSqlIntegrationTest {
 				OAuthProvider.GITHUB, "invitation-target", "invitation-target@example.com"));
 		Long projectId = projectMemberRepository.findByIdUserId(owner.user().getId()).getFirst().getProject().getId();
 
-		ProjectInvitation first = projectService.invite(
+		ProjectInvitation first = projectInvitationService.invite(
 				owner.user().getId(), projectId, "resend@example.com", ProjectRole.VIEWER);
-		assertThatThrownBy(() -> projectService.invite(
+		assertThatThrownBy(() -> projectInvitationService.invite(
 				owner.user().getId(), projectId, "RESEND@example.com", ProjectRole.EDITOR))
 				.isInstanceOf(IllegalArgumentException.class)
 				.hasMessage("이미 활성 상태인 초대가 있습니다.");
-		ProjectInvitation resent = projectService.resend(owner.user().getId(), first.getId());
-		ProjectInvitation cancelled = projectService.invite(
+		ProjectInvitation resent = projectInvitationService.resend(owner.user().getId(), first.getId());
+		ProjectInvitation cancelled = projectInvitationService.invite(
 				owner.user().getId(), projectId, "cancel@example.com", ProjectRole.VIEWER);
-		projectService.cancel(owner.user().getId(), cancelled.getId());
+		projectInvitationService.cancel(owner.user().getId(), cancelled.getId());
 
 		org.mockito.ArgumentCaptor<String> urls = org.mockito.ArgumentCaptor.forClass(String.class);
 		verify(invitationEmailSender, times(3)).send(anyString(), anyString(), urls.capture());
@@ -377,11 +381,11 @@ class WebAuthPostgreSqlIntegrationTest {
 		String resentToken = tokenFrom(urls.getAllValues().get(1));
 		String cancelledToken = tokenFrom(urls.getAllValues().get(2));
 		assertThat(firstToken).isNotEqualTo(resentToken);
-		assertThatThrownBy(() -> projectService.accept(invitee.user().getId(), firstToken))
+		assertThatThrownBy(() -> projectInvitationService.accept(invitee.user().getId(), firstToken))
 				.isInstanceOf(IllegalStateException.class);
-		assertThatThrownBy(() -> projectService.accept(invitee.user().getId(), cancelledToken))
+		assertThatThrownBy(() -> projectInvitationService.accept(invitee.user().getId(), cancelledToken))
 				.isInstanceOf(IllegalStateException.class);
-		assertThat(projectService.accept(invitee.user().getId(), resentToken).projectId()).isEqualTo(projectId);
+		assertThat(projectInvitationService.accept(invitee.user().getId(), resentToken).projectId()).isEqualTo(projectId);
 		assertThat(projectInvitationRepository.findById(resent.getId()).orElseThrow().getAcceptedAt()).isNotNull();
 	}
 

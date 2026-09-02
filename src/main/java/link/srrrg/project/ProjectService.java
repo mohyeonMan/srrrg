@@ -1,18 +1,14 @@
 package link.srrrg.project;
 
-import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import link.srrrg.campaign.UtmTemplateService;
 import link.srrrg.common.ratelimit.RateLimitService;
-import link.srrrg.common.util.SecureRandomStringGenerator;
 import link.srrrg.domain.ProjectDomainService;
 import link.srrrg.identity.User;
 import link.srrrg.identity.UserRepository;
@@ -28,7 +24,7 @@ import link.srrrg.link.management.dto.LinkManagementResponse;
 import link.srrrg.link.management.dto.UpdateLinkRequest;
 
 /**
- * 프로젝트와 그 구성원, 초대, 프로젝트 소속 링크의 유스케이스를 조율한다.
+ * 프로젝트와 그 구성원, 프로젝트 소속 링크의 유스케이스를 조율한다.
  *
  * <p>거의 모든 공개 메서드가 {@link ProjectAccessService#requireRole}로 시작한다. 프로젝트 자원은 멤버십이 있어야 접근할 수
  * 있고 역할에 따라 허용 범위가 다르므로, 조회 전에 권한을 확인하는 이 순서를 지켜야 한다.
@@ -43,42 +39,31 @@ import link.srrrg.link.management.dto.UpdateLinkRequest;
  */
 @Service
 public class ProjectService {
-	private static final String TOKEN_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 	private final ProjectRepository projects;
 	private final ProjectMemberRepository members;
 	private final ProjectAccessService projectAccess;
-	private final ProjectInvitationRepository invitations;
 	private final UserRepository users;
 	private final LinkRepository links;
-	private final SecureRandomStringGenerator random;
-	private final InvitationEmailSender emailSender;
 	private final SecretKeyManager secretKeys;
 	private final LinkManagementService linkManagement;
 	private final ProjectDomainService domains;
 	private final RateLimitService rateLimitService;
 	private final UtmTemplateService utmTemplates;
-	private final String baseUrl;
 
 	public ProjectService(ProjectRepository projects, ProjectMemberRepository members, ProjectAccessService projectAccess,
-			ProjectInvitationRepository invitations,
-			UserRepository users, LinkRepository links, SecureRandomStringGenerator random,
-			InvitationEmailSender emailSender, SecretKeyManager secretKeys,
+			UserRepository users, LinkRepository links, SecretKeyManager secretKeys,
 			LinkManagementService linkManagement, ProjectDomainService domains, RateLimitService rateLimitService,
-			UtmTemplateService utmTemplates, @Value("${srrrg.base-url}") String baseUrl) {
+			UtmTemplateService utmTemplates) {
 		this.projects = projects;
 		this.members = members;
 		this.projectAccess = projectAccess;
-		this.invitations = invitations;
 		this.users = users;
 		this.links = links;
-		this.random = random;
-		this.emailSender = emailSender;
 		this.secretKeys = secretKeys;
 		this.linkManagement = linkManagement;
 		this.domains = domains;
 		this.rateLimitService = rateLimitService;
 		this.utmTemplates = utmTemplates;
-		this.baseUrl = baseUrl;
 	}
 
 	/**
@@ -146,15 +131,6 @@ public class ProjectService {
 		return members.findByIdProjectId(projectId);
 	}
 
-	/**
-	 * 대기 중인 초대 목록. 초대받은 이메일 주소가 드러나므로 조회 권한을 OWNER로 제한한다.
-	 */
-	@Transactional(readOnly = true)
-	public List<ProjectInvitation> projectInvitations(Long userId, Long projectId) {
-		projectAccess.requireRole(userId, projectId, ProjectRole.OWNER);
-		return invitations.findByProjectIdAndCancelledAtIsNullAndAcceptedAtIsNull(projectId);
-	}
-
 	@Transactional(readOnly = true)
 	public Project projectDomain(Long userId, Long projectId) {
 		return projectAccess.requireRole(userId, projectId, ProjectRole.VIEWER).getProject();
@@ -217,106 +193,6 @@ public class ProjectService {
 		projectAccess.requireRole(userId, projectId, ProjectRole.OWNER);
 		// @SoftDelete가 걸려 있어 bulk delete는 deleted_at을 찍는 UPDATE로 번역된다.
 		projects.softDeleteById(projectId);
-	}
-
-	/**
-	 * 이메일로 프로젝트 초대를 보낸다.
-	 *
-	 * <p>OWNER 역할로는 초대할 수 없다. 소유권 부여는 초대가 아니라 기존 멤버의 역할 변경으로만 가능해야
-	 * 통제 지점이 하나로 유지된다.</p>
-	 *
-	 * <p>토큰 원문은 메일 링크에만 담기고 DB에는 해시만 남는다. 같은 이메일로 살아 있는 초대가 있으면 거부하고,
-	 * 만료된 초대가 남아 있으면 취소 처리한 뒤 새로 만든다. 유일 제약이 있어 정리하지 않으면 저장이 실패한다.</p>
-	 *
-	 * <p>메일 발송이 트랜잭션 안에서 일어난다. 발송이 실패하면 초대 행도 롤백되어 흔적이 남지 않지만,
-	 * 반대로 발송에 성공한 뒤 커밋이 실패하면 열 수 없는 링크가 담긴 메일이 나간다.</p>
-	 */
-	@Transactional
-	public ProjectInvitation invite(Long userId, Long projectId, String email, ProjectRole role) {
-		projectAccess.requireRole(userId, projectId, ProjectRole.OWNER);
-		if (role == ProjectRole.OWNER)
-			throw new IllegalArgumentException("초대 역할은 EDITOR 또는 VIEWER여야 합니다.");
-		String normalizedEmail = validEmail(email);
-		Project project = project(projectId);
-		users.findByEmail(normalizedEmail)
-				.filter(user -> members.findActiveByProjectAndUser(projectId, user.getId()).isPresent())
-				.ifPresent(user -> {
-					throw new IllegalArgumentException("이미 프로젝트 멤버인 이메일입니다.");
-				});
-		invitations.findByProjectIdAndEmailAndCancelledAtIsNullAndAcceptedAtIsNull(projectId, normalizedEmail)
-				.ifPresent(existing -> {
-					if (existing.isUsable(Instant.now()))
-						throw new IllegalArgumentException("이미 활성 상태인 초대가 있습니다.");
-					existing.cancel();
-				});
-		String rawToken = random.generate(TOKEN_CHARS, 43);
-		ProjectInvitation invitation;
-		try {
-			invitation = invitations.saveAndFlush(ProjectInvitation.create(project, normalizedEmail, role,
-					InvitationTokenHash.sha256(rawToken), Instant.now().plus(Duration.ofDays(7))));
-		} catch (DataIntegrityViolationException exception) {
-			throw new IllegalArgumentException("이미 활성 상태인 초대가 있습니다.", exception);
-		}
-		emailSender.send(normalizedEmail, project.getName(), baseUrl + "/invitations/" + rawToken);
-		return invitation;
-	}
-
-	/**
-	 * 기존 초대를 취소하고 같은 조건으로 새로 보낸다. 토큰이 새로 발급되므로 이전 메일의 링크는 무효가 된다.
-	 * 이미 수락된 초대는 다시 보낼 수 없다.
-	 */
-	@Transactional
-	public ProjectInvitation resend(Long userId, Long invitationId) {
-		ProjectInvitation old = invitation(invitationId);
-		projectAccess.requireRole(userId, old.getProject().getId(), ProjectRole.OWNER);
-		if (old.getAcceptedAt() != null)
-			throw new IllegalArgumentException("이미 수락된 초대입니다.");
-		old.cancel();
-		return invite(userId, old.getProject().getId(), old.getEmail(), old.getRole());
-	}
-
-	@Transactional
-	public void cancel(Long userId, Long invitationId) {
-		ProjectInvitation invitation = invitation(invitationId);
-		projectAccess.requireRole(userId, invitation.getProject().getId(), ProjectRole.OWNER);
-		invitation.cancel();
-	}
-
-	/**
-	 * 초대를 수락해 멤버로 등록한다. 토큰 해시로 초대를 찾으므로 원문을 가진 사람만 수락할 수 있다.
-	 *
-	 * <p>초대에 적힌 이메일과 로그인한 계정이 같은지는 확인하지 않는다. 토큰 자체를 자격으로 보는 설계이며,
-	 * 그래서 메일 링크가 유출되면 다른 계정으로도 수락된다. 유효기간을 짧게 두는 것이 이 위험에 대한 완화책이다.</p>
-	 *
-	 * @return 편입된 프로젝트 id와, 이미 멤버였는지 여부. 이미 멤버면 역할을 덮어쓰지 않고 초대만 소비한다
-	 */
-	@Transactional
-	public AcceptedInvitation accept(Long userId, String rawToken) {
-		ProjectInvitation invitation = invitations.findActiveByTokenHash(InvitationTokenHash.sha256(rawToken))
-				.orElseThrow(() -> new IllegalArgumentException("초대를 찾을 수 없습니다."));
-		Long projectId = invitation.getProject().getId();
-		if (!invitation.isUsable(Instant.now()))
-			throw new IllegalStateException("사용할 수 없는 초대입니다.");
-		if (members.findActiveByProjectAndUser(projectId, userId).isPresent()) {
-			invitation.accept();
-			return new AcceptedInvitation(projectId, true);
-		}
-		members.save(new ProjectMember(invitation.getProject(), user(userId), invitation.getRole()));
-		invitation.accept();
-		return new AcceptedInvitation(projectId, false);
-	}
-
-	/**
-	 * 로그인 전에 초대 화면에 보여줄 정보를 만든다. 쓸 수 없는 토큰은 예외 대신 비어 있는 결과를 돌려주어
-	 * 유효한 토큰인지 여부만 알리고 프로젝트 정보는 노출하지 않는다.
-	 */
-	@Transactional(readOnly = true)
-	public InvitationPreview invitationPreview(String rawToken) {
-		return invitations.findActiveByTokenHash(InvitationTokenHash.sha256(rawToken))
-				.filter(invitation -> invitation.isUsable(Instant.now()))
-				.map(invitation -> new InvitationPreview(
-						true, invitation.getProject().getName(), invitation.getRole(), invitation.getExpiresAt()))
-				.orElseGet(() -> new InvitationPreview(false, null, null, null));
 	}
 
 	/**
@@ -483,26 +359,4 @@ public class ProjectService {
 		return normalized;
 	}
 
-	/**
-	 * 초대 이메일을 검증하고 소문자로 맞춘다. 정규화하지 않으면 대소문자만 다른 같은 주소로
-	 * 중복 초대가 만들어지고, 수락 시 기존 사용자와도 이어지지 않는다.
-	 */
-	private String validEmail(String value) {
-		if (value == null || !value.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$") || value.length() > 320)
-			throw new IllegalArgumentException("올바른 이메일을 입력하세요.");
-		return value.trim().toLowerCase(java.util.Locale.ROOT);
-	}
-
-	private ProjectInvitation invitation(Long id) {
-		return invitations.findById(id).orElseThrow(() -> new IllegalArgumentException("초대를 찾을 수 없습니다."));
-	}
-
-	/**
-	 * 초대 수락 결과. {@code alreadyMember}는 화면이 새로 합류했다는 안내를 띄울지 정하는 데 쓴다.
-	 */
-	public record AcceptedInvitation(Long projectId, boolean alreadyMember) {
-	}
-
-	public record InvitationPreview(boolean available, String projectName, ProjectRole role, Instant expiresAt) {
-	}
 }

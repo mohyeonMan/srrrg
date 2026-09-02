@@ -35,7 +35,7 @@ import lombok.RequiredArgsConstructor;
  * 화면이 호출하는 프로젝트 관리 API. 프로젝트, 서브도메인, 링크, 멤버, 초대, API 키가 모두 여기 모여 있다.
  *
  * <p>이 클래스는 요청을 서비스로 넘기고 응답 형태만 만든다. 권한 확인은 하지 않고 전부
- * {@code ProjectService}와 {@code ApiKeyService}가 수행하므로, 새 엔드포인트를 추가할 때
+ * {@code ProjectService}, {@code ProjectInvitationService}, {@code ApiKeyService}가 수행하므로, 새 엔드포인트를 추가할 때
  * 여기에 검사를 넣는 것이 아니라 서비스 메서드가 역할을 요구하는지 확인해야 한다.</p>
  *
  * <p>주체는 항상 {@code @AuthenticationPrincipal}에서 온다. 요청 본문이나 경로로 사용자 id를 받지 않으므로
@@ -50,6 +50,7 @@ import lombok.RequiredArgsConstructor;
 public class ProjectController {
 	private static final String SECRET_KEY_HEADER = "X-Srrrg-Secret-Key";
 	private final ProjectService projects;
+	private final ProjectInvitationService projectInvitations;
 	private final ApiKeyService apiKeys;
 	private final CampaignService campaigns;
 
@@ -162,14 +163,14 @@ public class ProjectController {
 	@GetMapping("/projects/{projectId}/invitations")
 	public List<InvitationResponse> invitations(@AuthenticationPrincipal SrrrgPrincipal p,
 			@PathVariable Long projectId) {
-		return projects.projectInvitations(p.userId(), projectId).stream().map(InvitationResponse::from).toList();
+		return projectInvitations.list(p.userId(), projectId).stream().map(InvitationResponse::from).toList();
 	}
 
 	@PostMapping("/projects/{projectId}/invitations")
 	public ResponseEntity<InvitationResponse> invite(@AuthenticationPrincipal SrrrgPrincipal p,
 			@PathVariable Long projectId, @Valid @RequestBody InviteRequest request) {
 		return ResponseEntity.status(HttpStatus.CREATED)
-				.body(InvitationResponse.from(projects.invite(p.userId(), projectId, request.email(), request.role())));
+				.body(InvitationResponse.from(projectInvitations.invite(p.userId(), projectId, request.email(), request.role())));
 	}
 
 	/**
@@ -178,19 +179,19 @@ public class ProjectController {
 	 */
 	@PostMapping("/invitations/{token}/accept")
 	public AcceptInvitationResponse accept(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable String token) {
-		ProjectService.AcceptedInvitation result = projects.accept(p.userId(), token);
+		ProjectInvitationService.AcceptedInvitation result = projectInvitations.accept(p.userId(), token);
 		return new AcceptInvitationResponse(result.projectId(), result.alreadyMember());
 	}
 
 	@DeleteMapping("/invitations/{invitationId}")
 	public ResponseEntity<Void> cancel(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long invitationId) {
-		projects.cancel(p.userId(), invitationId);
+		projectInvitations.cancel(p.userId(), invitationId);
 		return ResponseEntity.noContent().build();
 	}
 
 	@PostMapping("/invitations/{invitationId}/resend")
 	public InvitationResponse resend(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long invitationId) {
-		return InvitationResponse.from(projects.resend(p.userId(), invitationId));
+		return InvitationResponse.from(projectInvitations.resend(p.userId(), invitationId));
 	}
 
 	@PatchMapping("/projects/{projectId}/members/{memberId}")
