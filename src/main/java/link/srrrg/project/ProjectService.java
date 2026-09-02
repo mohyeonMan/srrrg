@@ -44,18 +44,31 @@ public class ProjectService {
 	private final UtmTemplateService utmTemplates;
 	private final String baseUrl;
 
-	public ProjectService(ProjectRepository projects, ProjectMemberRepository members, ProjectInvitationRepository invitations,
-			UserRepository users, LinkRepository links, SecureRandomStringGenerator random, InvitationEmailSender emailSender, SecretKeyManager secretKeys,
+	public ProjectService(ProjectRepository projects, ProjectMemberRepository members,
+			ProjectInvitationRepository invitations,
+			UserRepository users, LinkRepository links, SecureRandomStringGenerator random,
+			InvitationEmailSender emailSender, SecretKeyManager secretKeys,
 			LinkManagementService linkManagement, ProjectDomainService domains, RateLimitService rateLimitService,
 			UtmTemplateService utmTemplates, @Value("${srrrg.base-url}") String baseUrl) {
-		this.projects = projects; this.members = members; this.invitations = invitations; this.users = users; this.links = links;
-		this.random = random; this.emailSender = emailSender; this.secretKeys = secretKeys; this.linkManagement = linkManagement; this.domains = domains;
-		this.rateLimitService = rateLimitService; this.utmTemplates = utmTemplates; this.baseUrl = baseUrl;
+		this.projects = projects;
+		this.members = members;
+		this.invitations = invitations;
+		this.users = users;
+		this.links = links;
+		this.random = random;
+		this.emailSender = emailSender;
+		this.secretKeys = secretKeys;
+		this.linkManagement = linkManagement;
+		this.domains = domains;
+		this.rateLimitService = rateLimitService;
+		this.utmTemplates = utmTemplates;
+		this.baseUrl = baseUrl;
 	}
 
 	@Transactional
 	public void ensurePersonalProject(Long userId) {
-		if (members.findActiveByUserId(userId).isEmpty()) create(userId, "내 프로젝트", null);
+		if (members.findActiveByUserId(userId).isEmpty())
+			create(userId, "내 프로젝트", null);
 	}
 
 	@Transactional
@@ -65,7 +78,8 @@ public class ProjectService {
 
 	@Transactional
 	public Project create(Long userId, String name, String requestedSlug) {
-		if (members.countActiveByUserIdAndRole(userId, ProjectRole.OWNER) >= 5) throw new IllegalStateException("소유 프로젝트는 최대 5개까지 만들 수 있습니다.");
+		if (members.countActiveByUserIdAndRole(userId, ProjectRole.OWNER) >= 5)
+			throw new IllegalStateException("소유 프로젝트는 최대 5개까지 만들 수 있습니다.");
 		User user = user(userId);
 		Project project;
 		try {
@@ -79,17 +93,37 @@ public class ProjectService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<ProjectMember> myMemberships(Long userId) { return members.findActiveByUserId(userId); }
+	public List<ProjectMember> myMemberships(Long userId) {
+		return members.findActiveByUserId(userId);
+	}
+
 	@Transactional(readOnly = true)
-	public ProjectMember detail(Long userId, Long projectId) { return requireRole(userId, projectId, ProjectRole.VIEWER); }
+	public ProjectMember detail(Long userId, Long projectId) {
+		return requireRole(userId, projectId, ProjectRole.VIEWER);
+	}
+
 	@Transactional(readOnly = true)
-	public List<Link> projectLinks(Long userId, Long projectId) { requireRole(userId, projectId, ProjectRole.VIEWER); return links.findByProjectIdAndCampaignIsNullOrderByIdDesc(projectId); }
+	public List<Link> projectLinks(Long userId, Long projectId) {
+		requireRole(userId, projectId, ProjectRole.VIEWER);
+		return links.findByProjectIdAndCampaignIsNullOrderByIdDesc(projectId);
+	}
+
 	@Transactional(readOnly = true)
-	public List<ProjectMember> projectMembers(Long userId, Long projectId) { requireRole(userId, projectId, ProjectRole.VIEWER); return members.findByIdProjectId(projectId); }
+	public List<ProjectMember> projectMembers(Long userId, Long projectId) {
+		requireRole(userId, projectId, ProjectRole.VIEWER);
+		return members.findByIdProjectId(projectId);
+	}
+
 	@Transactional(readOnly = true)
-	public List<ProjectInvitation> projectInvitations(Long userId, Long projectId) { requireRole(userId, projectId, ProjectRole.OWNER); return invitations.findByProjectIdAndCancelledAtIsNullAndAcceptedAtIsNull(projectId); }
+	public List<ProjectInvitation> projectInvitations(Long userId, Long projectId) {
+		requireRole(userId, projectId, ProjectRole.OWNER);
+		return invitations.findByProjectIdAndCancelledAtIsNullAndAcceptedAtIsNull(projectId);
+	}
+
 	@Transactional(readOnly = true)
-	public Project projectDomain(Long userId, Long projectId) { return requireRole(userId, projectId, ProjectRole.VIEWER).getProject(); }
+	public Project projectDomain(Long userId, Long projectId) {
+		return requireRole(userId, projectId, ProjectRole.VIEWER).getProject();
+	}
 
 	@Transactional
 	public Project rename(Long userId, Long projectId, String name) {
@@ -137,15 +171,19 @@ public class ProjectService {
 	@Transactional
 	public ProjectInvitation invite(Long userId, Long projectId, String email, ProjectRole role) {
 		requireRole(userId, projectId, ProjectRole.OWNER);
-		if (role == ProjectRole.OWNER) throw new IllegalArgumentException("초대 역할은 EDITOR 또는 VIEWER여야 합니다.");
+		if (role == ProjectRole.OWNER)
+			throw new IllegalArgumentException("초대 역할은 EDITOR 또는 VIEWER여야 합니다.");
 		String normalizedEmail = validEmail(email);
 		Project project = project(projectId);
 		users.findByEmail(normalizedEmail)
 				.filter(user -> members.findActiveByProjectAndUser(projectId, user.getId()).isPresent())
-				.ifPresent(user -> { throw new IllegalArgumentException("이미 프로젝트 멤버인 이메일입니다."); });
+				.ifPresent(user -> {
+					throw new IllegalArgumentException("이미 프로젝트 멤버인 이메일입니다.");
+				});
 		invitations.findByProjectIdAndEmailAndCancelledAtIsNullAndAcceptedAtIsNull(projectId, normalizedEmail)
 				.ifPresent(existing -> {
-					if (existing.isUsable(Instant.now())) throw new IllegalArgumentException("이미 활성 상태인 초대가 있습니다.");
+					if (existing.isUsable(Instant.now()))
+						throw new IllegalArgumentException("이미 활성 상태인 초대가 있습니다.");
 					existing.cancel();
 				});
 		String rawToken = random.generate(TOKEN_CHARS, 43);
@@ -164,7 +202,8 @@ public class ProjectService {
 	public ProjectInvitation resend(Long userId, Long invitationId) {
 		ProjectInvitation old = invitation(invitationId);
 		requireRole(userId, old.getProject().getId(), ProjectRole.OWNER);
-		if (old.getAcceptedAt() != null) throw new IllegalArgumentException("이미 수락된 초대입니다.");
+		if (old.getAcceptedAt() != null)
+			throw new IllegalArgumentException("이미 수락된 초대입니다.");
 		old.cancel();
 		return invite(userId, old.getProject().getId(), old.getEmail(), old.getRole());
 	}
@@ -181,7 +220,8 @@ public class ProjectService {
 		ProjectInvitation invitation = invitations.findActiveByTokenHash(InvitationTokenHash.sha256(rawToken))
 				.orElseThrow(() -> new IllegalArgumentException("초대를 찾을 수 없습니다."));
 		Long projectId = invitation.getProject().getId();
-		if (!invitation.isUsable(Instant.now())) throw new IllegalStateException("사용할 수 없는 초대입니다.");
+		if (!invitation.isUsable(Instant.now()))
+			throw new IllegalStateException("사용할 수 없는 초대입니다.");
 		if (members.findActiveByProjectAndUser(projectId, userId).isPresent()) {
 			invitation.accept();
 			return new AcceptedInvitation(projectId, true);
@@ -203,16 +243,22 @@ public class ProjectService {
 	@Transactional
 	public void changeMemberRole(Long actorId, Long projectId, Long memberId, ProjectRole role) {
 		requireRole(actorId, projectId, ProjectRole.OWNER);
-		ProjectMember member = members.lockByProjectAndUser(projectId, memberId).orElseThrow(() -> new IllegalArgumentException("멤버를 찾을 수 없습니다."));
-		if (member.getRole() == ProjectRole.OWNER && role != ProjectRole.OWNER && members.countByIdProjectIdAndRole(projectId, ProjectRole.OWNER) == 1) throw new IllegalStateException("마지막 OWNER는 강등할 수 없습니다.");
+		ProjectMember member = members.lockByProjectAndUser(projectId, memberId)
+				.orElseThrow(() -> new IllegalArgumentException("멤버를 찾을 수 없습니다."));
+		if (member.getRole() == ProjectRole.OWNER && role != ProjectRole.OWNER
+				&& members.countByIdProjectIdAndRole(projectId, ProjectRole.OWNER) == 1)
+			throw new IllegalStateException("마지막 OWNER는 강등할 수 없습니다.");
 		member.changeRole(role);
 	}
 
 	@Transactional
 	public void removeMember(Long actorId, Long projectId, Long memberId) {
 		requireRole(actorId, projectId, ProjectRole.OWNER);
-		ProjectMember member = members.lockByProjectAndUser(projectId, memberId).orElseThrow(() -> new IllegalArgumentException("멤버를 찾을 수 없습니다."));
-		if (member.getRole() == ProjectRole.OWNER && members.countByIdProjectIdAndRole(projectId, ProjectRole.OWNER) == 1) throw new IllegalStateException("마지막 OWNER는 제거할 수 없습니다.");
+		ProjectMember member = members.lockByProjectAndUser(projectId, memberId)
+				.orElseThrow(() -> new IllegalArgumentException("멤버를 찾을 수 없습니다."));
+		if (member.getRole() == ProjectRole.OWNER
+				&& members.countByIdProjectIdAndRole(projectId, ProjectRole.OWNER) == 1)
+			throw new IllegalStateException("마지막 OWNER는 제거할 수 없습니다.");
 		members.delete(member);
 	}
 
@@ -220,7 +266,9 @@ public class ProjectService {
 	public void importAnonymousLink(Long userId, Long projectId, String code, String secret) {
 		requireRole(userId, projectId, ProjectRole.EDITOR);
 		Link link = links.lockAnonymousByCode(code).orElseThrow(() -> new IllegalArgumentException("링크를 찾을 수 없습니다."));
-		if (link.getProject() != null || link.getSecretKeyHash() == null || !secretKeys.matches(secret, link.getSecretKeyHash())) throw new IllegalArgumentException("링크를 찾을 수 없습니다.");
+		if (link.getProject() != null || link.getSecretKeyHash() == null
+				|| !secretKeys.matches(secret, link.getSecretKeyHash()))
+			throw new IllegalArgumentException("링크를 찾을 수 없습니다.");
 		link.assignToProject(project(projectId), user(userId));
 		try {
 			links.flush();
@@ -237,8 +285,10 @@ public class ProjectService {
 	public Link createProjectLink(Long apiKeyId, Long projectId, String idempotencyKey, CreateLinkRequest request) {
 		rateLimitService.checkApiKeyWrite(apiKeyId);
 		String normalizedKey = validIdempotencyKey(idempotencyKey);
-		String requestHash = normalizedKey == null ? null : InvitationTokenHash.sha256(
-				String.valueOf(request.originalUrl()) + "\n" + String.valueOf(request.expiresAt()) + "\n" + request.normalizedName());
+		String requestHash = normalizedKey == null ? null
+				: InvitationTokenHash.sha256(
+						String.valueOf(request.originalUrl()) + "\n" + String.valueOf(request.expiresAt()) + "\n"
+								+ request.normalizedName());
 		return linkManagement.createForProject(request, project(projectId), null,
 				normalizedKey == null ? null : apiKeyId, normalizedKey, requestHash);
 	}
@@ -252,11 +302,13 @@ public class ProjectService {
 	@Transactional(readOnly = true)
 	public LinkManagementResponse projectLink(Long userId, Long projectId, String code) {
 		ProjectMember member = requireRole(userId, projectId, ProjectRole.VIEWER);
-		return linkManagement.projectManagementResponse(projectLink(projectId, code), member.getRole() != ProjectRole.VIEWER);
+		return linkManagement.projectManagementResponse(projectLink(projectId, code),
+				member.getRole() != ProjectRole.VIEWER);
 	}
 
 	@Transactional
-	public LinkManagementResponse updateProjectLink(Long userId, Long projectId, String code, UpdateLinkRequest request) {
+	public LinkManagementResponse updateProjectLink(Long userId, Long projectId, String code,
+			UpdateLinkRequest request) {
 		requireRole(userId, projectId, ProjectRole.EDITOR);
 		return linkManagement.updateProjectLink(projectLink(projectId, code), request);
 	}
@@ -268,30 +320,67 @@ public class ProjectService {
 
 	// findActiveByProjectAndUser가 프로젝트를 조인하므로 삭제된 프로젝트의 멤버십은 애초에 조회되지 않는다.
 	private ProjectMember requireRole(Long userId, Long projectId, ProjectRole minimum) {
-		ProjectMember membership = members.findActiveByProjectAndUser(projectId, userId).orElseThrow(() -> new SecurityException("프로젝트 접근 권한이 없습니다."));
-		if (membership.getRole().ordinal() > minimum.ordinal()) throw new SecurityException("프로젝트 접근 권한이 없습니다.");
+		ProjectMember membership = members.findActiveByProjectAndUser(projectId, userId)
+				.orElseThrow(() -> new SecurityException("프로젝트 접근 권한이 없습니다."));
+		if (membership.getRole().ordinal() > minimum.ordinal())
+			throw new SecurityException("프로젝트 접근 권한이 없습니다.");
 		return membership;
 	}
-	private Project project(Long id) { return projects.findById(id).orElseThrow(() -> new IllegalArgumentException("프로젝트를 찾을 수 없습니다.")); }
-	private User user(Long id) { return users.findById(id).orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다.")); }
-	private String validName(String value) { if (value == null || value.trim().isEmpty() || value.trim().length() > 100) throw new IllegalArgumentException("프로젝트 이름은 1~100자로 입력하세요."); return value.trim(); }
-	private String validIdempotencyKey(String value) { if (value == null) return null; if (!value.matches("[A-Za-z0-9._:-]{1,100}")) throw new IllegalArgumentException("Idempotency-Key가 올바르지 않습니다."); return value; }
+
+	private Project project(Long id) {
+		return projects.findById(id).orElseThrow(() -> new IllegalArgumentException("프로젝트를 찾을 수 없습니다."));
+	}
+
+	private User user(Long id) {
+		return users.findById(id).orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+	}
+
+	private String validName(String value) {
+		if (value == null || value.trim().isEmpty() || value.trim().length() > 100)
+			throw new IllegalArgumentException("프로젝트 이름은 1~100자로 입력하세요.");
+		return value.trim();
+	}
+
+	private String validIdempotencyKey(String value) {
+		if (value == null)
+			return null;
+		if (!value.matches("[A-Za-z0-9._:-]{1,100}"))
+			throw new IllegalArgumentException("Idempotency-Key가 올바르지 않습니다.");
+		return value;
+	}
+
 	private String optionalSubdomain(String requested) {
-		if (requested == null || requested.isBlank()) return null;
+		if (requested == null || requested.isBlank())
+			return null;
 		String normalized = normalizedSubdomain(requested);
-		if (projects.existsBySubdomain(normalized)) throw new IllegalArgumentException("이미 사용 중인 서브도메인입니다.");
+		if (projects.existsBySubdomain(normalized))
+			throw new IllegalArgumentException("이미 사용 중인 서브도메인입니다.");
 		return normalized;
 	}
+
 	private String normalizedSubdomain(String requested) {
-		if (requested == null) throw new IllegalArgumentException("서브도메인이 올바르지 않습니다.");
+		if (requested == null)
+			throw new IllegalArgumentException("서브도메인이 올바르지 않습니다.");
 		String normalized = requested.trim().toLowerCase(Locale.ROOT);
 		if (normalized.length() < 3 || normalized.length() > 63 || !normalized.matches("[a-z0-9](?:[a-z0-9-]*[a-z0-9])")
-				|| domains.isReservedSubdomain(normalized)) throw new IllegalArgumentException("서브도메인이 올바르지 않습니다.");
+				|| domains.isReservedSubdomain(normalized))
+			throw new IllegalArgumentException("서브도메인이 올바르지 않습니다.");
 		return normalized;
 	}
-	private String validEmail(String value) { if (value == null || !value.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$") || value.length() > 320) throw new IllegalArgumentException("올바른 이메일을 입력하세요."); return value.trim().toLowerCase(java.util.Locale.ROOT); }
-	private ProjectInvitation invitation(Long id) { return invitations.findById(id).orElseThrow(() -> new IllegalArgumentException("초대를 찾을 수 없습니다.")); }
 
-	public record AcceptedInvitation(Long projectId, boolean alreadyMember) { }
-	public record InvitationPreview(boolean available, String projectName, ProjectRole role, Instant expiresAt) { }
+	private String validEmail(String value) {
+		if (value == null || !value.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$") || value.length() > 320)
+			throw new IllegalArgumentException("올바른 이메일을 입력하세요.");
+		return value.trim().toLowerCase(java.util.Locale.ROOT);
+	}
+
+	private ProjectInvitation invitation(Long id) {
+		return invitations.findById(id).orElseThrow(() -> new IllegalArgumentException("초대를 찾을 수 없습니다."));
+	}
+
+	public record AcceptedInvitation(Long projectId, boolean alreadyMember) {
+	}
+
+	public record InvitationPreview(boolean available, String projectName, ProjectRole role, Instant expiresAt) {
+	}
 }

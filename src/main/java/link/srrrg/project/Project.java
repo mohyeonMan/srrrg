@@ -26,7 +26,8 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Project {
-	@Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
 	@Column(nullable = false, length = 100)
@@ -53,17 +54,41 @@ public class Project {
 		this.subdomainEnabled = false;
 		this.createdBy = createdBy;
 	}
-	public static Project create(String name, String subdomain, User createdBy) { return new Project(name, subdomain, createdBy); }
 
-	public void rename(String name) { this.name = name; }
-	public void claimSubdomain(String subdomain) { this.subdomain = subdomain; }
-	public void releaseSubdomain() { this.subdomain = null; this.subdomainEnabled = false; }
+	public static Project create(String name, String subdomain, User createdBy) {
+		return new Project(name, subdomain, createdBy);
+	}
+
+	public void rename(String name) {
+		this.name = name;
+	}
+
+	public void claimSubdomain(String subdomain) {
+		this.subdomain = subdomain;
+	}
+
+	public void releaseSubdomain() {
+		this.subdomain = null;
+		this.subdomainEnabled = false;
+	}
+
 	public void setSubdomainEnabled(boolean enabled) {
-		if (enabled && subdomain == null) throw new IllegalStateException("선점한 서브도메인이 없습니다.");
+		if (enabled && subdomain == null)
+			throw new IllegalStateException("선점한 서브도메인이 없습니다.");
 		this.subdomainEnabled = enabled;
 	}
-	public String activeSubdomain() { return subdomainEnabled ? subdomain : null; }
 
-	@PrePersist void onCreate() { createdAt = updatedAt = Instant.now(); }
-	@PreUpdate void onUpdate() { updatedAt = Instant.now(); }
+	public String activeSubdomain() {
+		return subdomainEnabled ? subdomain : null;
+	}
+
+	@PrePersist
+	void onCreate() {
+		createdAt = updatedAt = Instant.now();
+	}
+
+	@PreUpdate
+	void onUpdate() {
+		updatedAt = Instant.now();
+	}
 }

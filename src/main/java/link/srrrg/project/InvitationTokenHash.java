@@ -6,9 +6,15 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 
 final class InvitationTokenHash {
-	private InvitationTokenHash() { }
+	private InvitationTokenHash() {
+	}
+
 	static String sha256(String token) {
-		try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8))); }
-		catch (NoSuchAlgorithmException exception) { throw new IllegalStateException(exception); }
+		try {
+			return HexFormat.of()
+					.formatHex(MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8)));
+		} catch (NoSuchAlgorithmException exception) {
+			throw new IllegalStateException(exception);
+		}
 	}
 }

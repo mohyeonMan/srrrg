@@ -20,16 +20,25 @@ import link.srrrg.project.ApiKeyService;
 class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 	private final ApiKeyService keys;
 	private final RateLimitService rateLimitService;
+
 	ApiKeyAuthenticationFilter(ApiKeyService keys, RateLimitService rateLimitService) {
 		this.keys = keys;
 		this.rateLimitService = rateLimitService;
 	}
-	@Override protected boolean shouldNotFilter(HttpServletRequest request) { return !request.getRequestURI().startsWith(request.getContextPath() + "/api/v1/"); }
-	@Override protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+
+	@Override
+	protected boolean shouldNotFilter(HttpServletRequest request) {
+		return !request.getRequestURI().startsWith(request.getContextPath() + "/api/v1/");
+	}
+
+	@Override
+	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
 			throws ServletException, IOException {
 		String authorization = request.getHeader("Authorization");
 		if (authorization == null || !authorization.startsWith("Bearer srrrg_pk_")) {
-			ApiProblemWriter.write(response, HttpServletResponse.SC_UNAUTHORIZED, "API_KEY_INVALID", "유효한 API key가 필요합니다."); return;
+			ApiProblemWriter.write(response, HttpServletResponse.SC_UNAUTHORIZED, "API_KEY_INVALID",
+					"유효한 API key가 필요합니다.");
+			return;
 		}
 		try {
 			ApiKeyService.ApiKeyPrincipal principal = keys.authenticate(authorization.substring("Bearer ".length()));
@@ -50,7 +59,8 @@ class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 			chain.doFilter(request, response);
 		} catch (ApiKeyService.ApiKeyUnauthorizedException exception) {
 			SecurityContextHolder.clearContext();
-			ApiProblemWriter.write(response, HttpServletResponse.SC_UNAUTHORIZED, "API_KEY_INVALID", "유효한 API key가 필요합니다.");
+			ApiProblemWriter.write(response, HttpServletResponse.SC_UNAUTHORIZED, "API_KEY_INVALID",
+					"유효한 API key가 필요합니다.");
 		}
 	}
 }
