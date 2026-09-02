@@ -4,7 +4,6 @@ import java.security.SecureRandom;
 
 import org.springframework.stereotype.Component;
 
-@Component
 /**
  * 추측되면 안 되는 문자열의 유일한 생성원. 단축 코드, 링크 secret key, 프로젝트 API 키,
  * refresh token, OAuth state와 계정 연결 토큰이 모두 이 클래스를 거친다.
@@ -15,6 +14,7 @@ import org.springframework.stereotype.Component;
  *
  * <p>{@code SecureRandom}은 스레드 안전하므로 싱글턴 빈에서 인스턴스를 공유해도 된다.</p>
  */
+@Component
 public class SecureRandomStringGenerator {
 
 	private final SecureRandom secureRandom = new SecureRandom();

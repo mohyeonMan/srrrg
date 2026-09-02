@@ -9,7 +9,6 @@ import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springdoc.core.models.GroupedOpenApi;
 
-@Configuration
 /**
  * springdoc이 만드는 API 문서의 범위와 인증 스킴을 정의한다.
  *
@@ -17,6 +16,7 @@ import org.springdoc.core.models.GroupedOpenApi;
  * 쿠키 JWT로만 접근할 수 있는 {@code /api/web/**}는 외부 연동 대상이 아니라 화면 전용 내부 API이므로
  * 문서에 노출하지 않는다. 새 외부 공개 엔드포인트를 만들면 아래 경로 목록에 추가해야 문서에 나온다.</p>
  */
+@Configuration
 public class OpenApiConfig {
 
 	@Bean

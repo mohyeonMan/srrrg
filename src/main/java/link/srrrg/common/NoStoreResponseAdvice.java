@@ -9,7 +9,6 @@ import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
-@ControllerAdvice
 /**
  * 본문이 있는 모든 컨트롤러 응답에 {@code Cache-Control: no-store}를 붙인다.
  *
@@ -20,6 +19,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
  * <p>{@code ResponseBodyAdvice}는 메시지 컨버터가 본문을 쓸 때만 호출된다. 본문이 없는
  * {@code /{code}} 리다이렉트 응답은 여기를 거치지 않으므로 {@code RedirectController}가 직접 헤더를 넣는다.</p>
  */
+@ControllerAdvice
 public class NoStoreResponseAdvice implements ResponseBodyAdvice<Object> {
 
 	@Override

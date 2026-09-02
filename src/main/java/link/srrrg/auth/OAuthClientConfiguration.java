@@ -7,7 +7,6 @@ import org.springframework.security.oauth2.client.InMemoryOAuth2AuthorizedClient
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 
-@Configuration
 /**
  * OAuth 클라이언트 관련 빈을 등록한다.
  *
@@ -15,6 +14,7 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
  * 공급자 토큰을 버리고 자체 세션으로만 동작하므로 파드 사이에 공유할 필요가 없다.
  * 공급자 API를 계속 호출해야 하는 기능이 생기면 그때는 공유 저장소가 필요하다.</p>
  */
+@Configuration
 class OAuthClientConfiguration {
 
 	@Bean

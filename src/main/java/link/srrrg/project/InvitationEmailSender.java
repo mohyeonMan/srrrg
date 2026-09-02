@@ -6,7 +6,6 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 
-@Component
 /**
  * 초대 메일을 보낸다. 메일 설정이 없으면 예외를 던져 초대 생성 트랜잭션까지 롤백시킨다.
  *
@@ -16,6 +15,7 @@ import org.springframework.stereotype.Component;
  * <p>{@code ObjectProvider}로 받는 것은 메일 설정이 없는 환경에서도 애플리케이션이 뜨게 하기 위해서다.
  * 초대 기능을 쓰지 않는 배포에서 기동 자체가 막히지 않는다.</p>
  */
+@Component
 public class InvitationEmailSender {
 	private final ObjectProvider<JavaMailSender> mailSender;
 	private final String from;

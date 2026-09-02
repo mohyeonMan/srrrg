@@ -5,7 +5,6 @@ import org.springframework.stereotype.Component;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-@Component
 /**
  * 요청에서 통계와 레이트리밋에 쓸 클라이언트 정보를 뽑는다.
  *
@@ -17,6 +16,7 @@ import jakarta.servlet.http.HttpServletRequest;
  * <p>헤더 값은 길이를 잘라 담는다. 클라이언트가 보낸 문자열이라 길이 제한이 없으면
  * 저장 실패나 과도한 저장으로 이어진다.</p>
  */
+@Component
 public class ClientRequestInfoResolver {
 
 	private static final int MAX_HEADER_LENGTH = 2048;

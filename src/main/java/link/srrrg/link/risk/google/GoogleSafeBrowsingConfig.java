@@ -12,15 +12,6 @@ import org.springframework.web.client.RestClient;
 
 import lombok.extern.slf4j.Slf4j;
 
-@Configuration
-@ConditionalOnProperty(
-		prefix = "srrrg.url-risk",
-		name = "provider",
-		havingValue = "google",
-		matchIfMissing = true
-)
-@EnableConfigurationProperties(GoogleSafeBrowsingProperties.class)
-@Slf4j
 /**
  * Safe Browsing 호출용 {@code RestClient}를 구성한다.
  *
@@ -30,6 +21,15 @@ import lombok.extern.slf4j.Slf4j;
  *
  * <p>기동 로그에 API key 설정 여부만 남기고 값은 남기지 않는다.</p>
  */
+@Configuration
+@ConditionalOnProperty(
+		prefix = "srrrg.url-risk",
+		name = "provider",
+		havingValue = "google",
+		matchIfMissing = true
+)
+@EnableConfigurationProperties(GoogleSafeBrowsingProperties.class)
+@Slf4j
 class GoogleSafeBrowsingConfig {
 
 	@Bean

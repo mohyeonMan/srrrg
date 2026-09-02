@@ -7,8 +7,6 @@ import org.springframework.stereotype.Component;
 import link.srrrg.common.util.SecureRandomStringGenerator;
 import lombok.RequiredArgsConstructor;
 
-@Component
-@RequiredArgsConstructor
 /**
  * 단축 코드를 만든다. 62자 집합에서 6자를 뽑으므로 약 568억 가지이며,
  * 짧은 주소와 충돌·추측 가능성 사이의 절충으로 정한 길이다.
@@ -16,6 +14,8 @@ import lombok.RequiredArgsConstructor;
  * <p>여기서는 유일성을 보장하지 않는다. 미리 조회해 확인해도 저장 사이에 다른 파드가 같은 코드를 쓸 수 있어
  * 의미가 없기 때문이다. 실제 유일성은 DB의 유일 제약이 담당하고, 충돌하면 호출자가 다시 생성해 재시도한다.</p>
  */
+@Component
+@RequiredArgsConstructor
 public class LinkCodeGenerator {
 
 	static final String BASE62_CHARACTERS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";

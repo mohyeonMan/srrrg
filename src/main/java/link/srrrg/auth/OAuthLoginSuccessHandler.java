@@ -21,9 +21,6 @@ import link.srrrg.identity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-@Component
-@RequiredArgsConstructor
-@Slf4j
 /**
  * 공급자 인증이 끝난 직후, 그 결과를 이 서비스의 사용자와 세션으로 바꾼다.
  *
@@ -38,6 +35,9 @@ import lombok.extern.slf4j.Slf4j;
  * 로그인 이후에는 이 서비스의 세션만 쓰므로 공급자 토큰을 계속 들고 있을 이유가 없고,
  * 저장소가 파드 로컬 메모리라 파드마다 다르게 쌓인다.</p>
  */
+@Component
+@RequiredArgsConstructor
+@Slf4j
 class OAuthLoginSuccessHandler implements AuthenticationSuccessHandler {
 
 	private static final String LINK_COOKIE = "srrrg_oauth_link";

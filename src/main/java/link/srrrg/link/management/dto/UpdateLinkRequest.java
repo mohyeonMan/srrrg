@@ -5,7 +5,6 @@ import java.time.Instant;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import lombok.Getter;
 
-@Getter
 /**
  * 부분 수정 요청. record가 아니라 setter를 둔 이유는 값을 보내지 않은 것과 {@code null}로
  * 보낸 것을 구분해야 하기 때문이다.
@@ -17,6 +16,7 @@ import lombok.Getter;
  * <p>캠페인 링크에서는 목적지를 {@code null}로 보내는 것이 실제로 의미가 있다.
  * 캠페인 기본 목적지를 다시 상속하겠다는 뜻이다.</p>
  */
+@Getter
 public class UpdateLinkRequest {
 
 	private String originalUrl;

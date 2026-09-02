@@ -6,12 +6,12 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-@Component
 /**
  * GitHub 사용자 정보 응답만으로는 검증된 이메일을 알 수 없어 이메일 목록 API를 따로 호출한다.
  * 로그인 처리 도중 외부 호출이 하나 늘어나는 대가로, 검증되지 않은 주소가 계정 연결 판단에
  * 쓰이는 것을 막는다.
  */
+@Component
 class GitHubEmailClient {
 
 	private final RestClient restClient = RestClient.builder()

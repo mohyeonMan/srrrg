@@ -4,11 +4,11 @@ import java.time.Duration;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties("srrrg.url-risk")
 /**
  * URL 위험 검사 공급자 설정. 값을 주지 않으면 실제 검사를 하는 Google 공급자가 기본이다.
  * 기본값을 개발용으로 두면 설정을 빠뜨린 환경이 검사 없이 동작하게 되므로, 안전한 쪽을 기본으로 삼는다.
  */
+@ConfigurationProperties("srrrg.url-risk")
 public record UrlRiskCheckerProperties(
 		Provider provider,
 		FixedSafe fixedSafe

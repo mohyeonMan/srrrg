@@ -18,10 +18,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-@Entity
-@Table(name = "oauth_account_link_requests")
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
 /**
  * 기존 계정에 새 공급자 계정을 붙여도 되는지 사용자에게 확인받는 동안 남겨 두는 대기 요청.
  *
@@ -31,6 +27,10 @@ import lombok.NoArgsConstructor;
  * <p>{@code existingUserId}와 {@code providerEmail}은 확정 시점의 대조용이다. 대기 요청을 만든 뒤
  * 계정 상태가 바뀌었으면 연결을 거부해야 하므로 두 값을 그대로 보관한다.</p>
  */
+@Entity
+@Table(name = "oauth_account_link_requests")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class OAuthAccountLinkRequest {
 
 	@Id

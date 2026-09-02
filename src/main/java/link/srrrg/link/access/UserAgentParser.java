@@ -4,7 +4,6 @@ import java.util.Locale;
 
 import org.springframework.stereotype.Component;
 
-@Component
 /**
  * User-Agent 문자열에서 브라우저, 운영체제, 기기 종류를 뽑는다. 통계 화면의 분류 축이 여기서 정해진다.
  *
@@ -15,6 +14,7 @@ import org.springframework.stereotype.Component;
  *
  * <p>분류에 실패한 값은 예외 대신 {@code Other}로 남긴다. 통계 기록이 리다이렉트를 막으면 안 되기 때문이다.</p>
  */
+@Component
 public class UserAgentParser {
 
 	/**

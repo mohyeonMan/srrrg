@@ -6,7 +6,6 @@ import java.util.Locale;
 
 import org.springframework.stereotype.Component;
 
-@Component
 /**
  * 목적지 URL이 저장하고 리다이렉트해도 되는 형태인지 검사한다. 익명·프로젝트 링크를 가리지 않고
  * 모든 생성·수정 경로가 이 검사를 거치며, 리다이렉트 시점에도 다시 호출된다.
@@ -21,6 +20,7 @@ import org.springframework.stereotype.Component;
  * <p>차단 범위는 완전하지 않다. 공개 DNS 이름이 내부 IP로 해석되는 경우는 여기서 걸러지지 않으므로,
  * 이 검사만으로 SSRF가 모두 막힌다고 보면 안 된다.</p>
  */
+@Component
 public class UrlValidator {
 
 	private static final int MAX_URL_LENGTH = 2048;

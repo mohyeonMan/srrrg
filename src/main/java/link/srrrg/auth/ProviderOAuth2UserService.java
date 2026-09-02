@@ -13,8 +13,6 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 
-@Service
-@RequiredArgsConstructor
 /**
  * 공급자마다 다른 사용자 정보 응답을 하나의 형태로 맞춰 준다.
  *
@@ -26,6 +24,8 @@ import lombok.RequiredArgsConstructor;
  *
  * <p>OIDC를 쓰는 Google은 이 서비스가 아니라 {@code ProviderOidcUserService}를 탄다.</p>
  */
+@Service
+@RequiredArgsConstructor
 class ProviderOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
 
 	static final String PROVIDER_EMAIL = "_srrrg_provider_email";

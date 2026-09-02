@@ -16,7 +16,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
-@RequiredArgsConstructor
 /**
  * 쿠키의 access token을 읽어 웹 요청의 {@code SecurityContext}를 채운다.
  *
@@ -25,6 +24,7 @@ import lombok.RequiredArgsConstructor;
  *
  * <p>검증에 실패하면 컨텍스트를 비운다. 앞선 요청의 인증 상태가 스레드에 남아 다음 요청에 새는 것을 막는다.</p>
  */
+@RequiredArgsConstructor
 class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 	private final JwtService jwtService;

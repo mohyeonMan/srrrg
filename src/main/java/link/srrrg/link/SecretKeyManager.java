@@ -10,8 +10,6 @@ import org.springframework.stereotype.Component;
 import link.srrrg.common.util.SecureRandomStringGenerator;
 import lombok.RequiredArgsConstructor;
 
-@Component
-@RequiredArgsConstructor
 /**
  * 익명 링크의 관리 자격증명을 만들고 대조한다. 로그인 없이 만든 링크를 나중에 수정·삭제할 수 있는
  * 유일한 근거가 이 값이라, 사실상 그 링크의 비밀번호다.
@@ -22,6 +20,8 @@ import lombok.RequiredArgsConstructor;
  * <p>대조에 {@link MessageDigest#isEqual}을 쓰는 것은 앞자리부터 비교하며 일찍 빠져나가는
  * 문자열 비교가 응답 시간 차이로 정답 일부를 알려줄 수 있기 때문이다.</p>
  */
+@Component
+@RequiredArgsConstructor
 public class SecretKeyManager {
 
 	private static final String SECRET_KEY_PREFIX = "srrrg_sk_";

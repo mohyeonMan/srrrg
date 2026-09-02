@@ -6,7 +6,6 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 
-@Component
 /**
  * 애플리케이션 메트릭의 이름과 태그를 한곳에서 정의한다.
  *
@@ -15,6 +14,7 @@ import io.micrometer.core.instrument.Timer;
  * 집계가 어긋난다. 태그로 넘기는 {@code outcome}·{@code result} 값은 코드가 정해둔 고정 문자열만 쓰고,
  * 단축 코드나 사용자 식별자처럼 값의 종류가 무한한 데이터는 태그에 넣지 않는다(카디널리티 폭발).</p>
  */
+@Component
 public class SrrrgMetrics {
 
 	private static final String REDIRECT = "srrrg.redirect";
