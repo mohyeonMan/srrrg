@@ -16,6 +16,12 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * 템플릿에 속한 UTM 필드 하나. 이 이름이 그대로 리다이렉트 URL의 쿼리 파라미터 이름이 된다.
+ *
+ * <p>삭제도 {@code deletedAt}으로만 표시한다. 필드를 지우면 그 UTM은 이후 리다이렉트부터 사라지지만,
+ * 이미 저장된 링크별 값과 캠페인 기본값은 남아 있어 필드를 되살리면 다시 적용된다.</p>
+ */
 @Entity
 @Table(name = "utm_template_fields")
 @Getter

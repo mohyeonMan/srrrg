@@ -44,6 +44,17 @@ public class CampaignLinkBatchService {
 		this.rateLimitService = rateLimitService;
 	}
 
+	/**
+	 * 여러 링크를 한 트랜잭션에서 만든다. 부분 성공이 없어 한 건이라도 실패하면 전부 롤백된다.
+	 *
+	 * <p>멱등 키를 필수로 받는 이유는 이 요청이 실패했을 때 재시도가 안전해야 하기 때문이다.
+	 * 응답을 못 받은 클라이언트가 다시 보내면 기존 결과를 그대로 돌려준다.</p>
+	 *
+	 * <p>순서가 중요하다. 기존 결과를 먼저 확인해 재시도를 걸러낸 뒤에 레이트리밋과 할당량을 소비한다.
+	 * 반대로 하면 재시도마다 할당량이 깎인다.</p>
+	 *
+	 * @throws BatchIdempotencyConflictException 같은 키로 다른 내용을 보냈거나, 같은 키의 다른 요청이 먼저 커밋된 경우
+	 */
 	@Transactional
 	public List<Link> createBatch(Long apiKeyId, Long projectId, Long campaignId, String idempotencyKey,
 			List<CreateCampaignLinkRequest> items) {
@@ -90,6 +101,11 @@ public class CampaignLinkBatchService {
 		return created;
 	}
 
+	/**
+	 * 이미 처리된 batch의 링크를 원래 요청 순서대로 되돌려준다.
+	 * {@code findAllById}는 순서를 보장하지 않으므로 저장해 둔 항목 순번으로 다시 정렬한다.
+	 * 순서가 어긋나면 클라이언트가 요청 항목과 결과를 짝지을 수 없다.
+	 */
 	private List<Link> linksForBatch(Long batchId) {
 		List<Long> linkIds = batchItems.findByBatchIdOrderByIdItemIndexAsc(batchId).stream()
 				.map(CampaignLinkBatchItem::getLinkId)
@@ -106,6 +122,10 @@ public class CampaignLinkBatchService {
 		return ordered;
 	}
 
+	/**
+	 * batch 전체의 지문. 항목별 지문을 순서대로 이어 붙이므로 같은 항목이라도 순서가 다르면 다른 요청으로 본다.
+	 * 응답의 순서가 요청 순서를 따라야 해서 순서 자체가 요청의 일부이기 때문이다.
+	 */
 	private String fingerprint(List<CreateCampaignLinkRequest> items) {
 		StringBuilder combined = new StringBuilder();
 		for (CreateCampaignLinkRequest item : items) {

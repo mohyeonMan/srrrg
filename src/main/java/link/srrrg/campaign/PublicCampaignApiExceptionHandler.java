@@ -23,6 +23,16 @@ import link.srrrg.link.management.LinkManagementService;
 /**
  * campaign/utm-template 공개 API 전용 오류 형식. 기존 {@code PublicProjectLinkController}의 형식은 건드리지 않는다.
  */
+/**
+ * campaign/utm-template 공개 API 전용 오류 형식. 기존 {@code PublicProjectLinkController}의 형식은 건드리지 않는다.
+ *
+ * <p>{@code assignableTypes}로 두 컨트롤러만 대상으로 삼아, 웹 표면이 쓰는 {@code ApiErrorResponse}와
+ * 형식이 섞이지 않게 한다. 다만 우선순위를 선언하지 않아 전역 처리기와 기본 순위가 같으므로,
+ * 같은 예외 타입을 양쪽에 등록해 두면 어느 형식이 나갈지는 advice 정렬 결과에 달린다.</p>
+ *
+ * <p>여기 등록되지 않은 예외는 전역 처리기로 넘어가 웹용 형식으로 나간다.
+ * 이 표면에 새 예외를 도입하면 반드시 여기에도 등록한다.</p>
+ */
 @RestControllerAdvice(assignableTypes = {PublicCampaignController.class, PublicUtmTemplateController.class})
 class PublicCampaignApiExceptionHandler {
 

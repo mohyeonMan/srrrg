@@ -16,6 +16,11 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * JSON batch 요청 한 건의 멱등 기록. 같은 API key와 멱등 키로 다시 들어온 요청은
+ * 새로 만들지 않고 이 기록에 연결된 링크를 그대로 돌려준다.
+ * {@code requestHash}는 같은 키를 다른 내용에 재사용했는지 가리는 지문이다.
+ */
 @Entity
 @Table(name = "campaign_link_batches")
 @Getter

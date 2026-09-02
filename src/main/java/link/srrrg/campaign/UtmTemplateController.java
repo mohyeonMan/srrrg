@@ -21,6 +21,10 @@ import jakarta.validation.constraints.Size;
 import link.srrrg.auth.SrrrgPrincipal;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * 화면이 호출하는 UTM 템플릿 API. 여기서 정의한 필드가 캠페인 링크에서 받을 수 있는 UTM의 전부이므로,
+ * 필드를 지우면 그 템플릿을 쓰는 모든 캠페인의 링크에서 해당 파라미터가 사라진다.
+ */
 @RestController
 @RequestMapping("/api/web")
 @RequiredArgsConstructor

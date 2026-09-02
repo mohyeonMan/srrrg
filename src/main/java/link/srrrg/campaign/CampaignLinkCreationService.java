@@ -45,6 +45,10 @@ public class CampaignLinkCreationService {
 		this.rateLimitService = rateLimitService;
 	}
 
+	/**
+	 * 웹에서 캠페인 링크를 만든다. 캠페인의 EDITOR 권한을 확인한 뒤 생성자를 기록한다.
+	 * 링크 단위 멱등 키를 쓰지 않는 것은 화면에서 한 건씩 만드는 경로이기 때문이다.
+	 */
 	@Transactional
 	public Link createForUser(Long userId, Long campaignId, CreateCampaignLinkRequest request) {
 		Campaign campaign = campaignService.requireEditableCampaign(userId, campaignId);
@@ -54,6 +58,12 @@ public class CampaignLinkCreationService {
 		return create(campaign, campaign.getProject(), createdBy, null, null, null, request);
 	}
 
+	/**
+	 * API key로 캠페인 링크를 만든다. 위 웹 경로와 짝을 이루며 인가는 캠페인이 그 프로젝트의 것인지로 판정한다.
+	 *
+	 * <p>멱등 키가 오면 요청 내용의 지문을 함께 저장한다. 네트워크 재시도로 같은 링크가 두 번 만들어지는 것을
+	 * 막기 위한 것이며, 같은 키로 다른 내용을 보내면 충돌로 거부된다.</p>
+	 */
 	@Transactional
 	public Link createForApiKey(Long apiKeyId, Long projectId, Long campaignId, String idempotencyKey, CreateCampaignLinkRequest request) {
 		rateLimitService.checkApiKeyWrite(apiKeyId);
@@ -79,6 +89,17 @@ public class CampaignLinkCreationService {
 				apiKeyId, idempotencyKey, requestHash, campaign, template, request.normalizedExternalId(), resolved, request.normalizedName());
 	}
 
+	/**
+	 * 요청에 담긴 UTM 값을 검증해 저장할 값만 추린다. CSV 임포트도 같은 규칙을 쓰기 위해 열어 둔 메서드다.
+	 *
+	 * <p>템플릿에 없는 필드 이름은 거부한다. 조용히 버리면 사용자는 값을 넣었다고 생각하는데
+	 * 링크에는 반영되지 않는다. 반대로 값이 비어 있는 필드는 결과에서 빼는데, 저장하지 않아야
+	 * 리다이렉트 시점에 캠페인 기본값을 상속하기 때문이다. 빈 문자열로 저장하면 기본값을 덮어써 버린다.</p>
+	 *
+	 * @param template 캠페인이 선택한 템플릿. {@code null}이면 UTM 값을 하나도 받을 수 없다
+	 * @return 링크에 저장할 필드 이름과 값. 요청에 없거나 빈 값인 필드는 포함되지 않는다
+	 * @throws IllegalArgumentException 활성 필드가 아닌 이름이거나 값이 길이 제한을 넘은 경우
+	 */
 	public Map<String, String> resolveUtmValues(UtmTemplate template, Map<String, String> requestValues) {
 		if (template == null) {
 			if (!requestValues.isEmpty()) {
@@ -121,6 +142,11 @@ public class CampaignLinkCreationService {
 		return value;
 	}
 
+	/**
+	 * 멱등 판정에 쓸 요청 지문을 만든다. UTM 값을 정렬해서 넣는 것이 중요하다.
+	 * Map의 순회 순서는 보장되지 않으므로, 정렬하지 않으면 같은 내용의 재시도가 다른 지문이 되어
+	 * 멱등 충돌로 거부된다.
+	 */
 	public String requestFingerprint(CreateCampaignLinkRequest request) {
 		Map<String, String> sorted = new TreeMap<>(request.utmValuesOrEmpty());
 		String payload = request.normalizedOriginalUrl() + "\n" + request.expiresAt() + "\n" + request.normalizedExternalId()

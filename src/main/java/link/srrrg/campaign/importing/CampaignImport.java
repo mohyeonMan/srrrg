@@ -22,6 +22,16 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * CSV 임포트 작업 한 건의 상태와 진행률. 여러 파드가 이 행 하나를 두고 조율하므로,
+ * 여기 담긴 lease와 시도 횟수가 분산 처리의 유일한 조율 수단이다.
+ *
+ * <p>{@code leaseOwner}와 {@code leaseExpiresAt}은 어느 파드가 언제까지 이 작업을 잡고 있는지 나타낸다.
+ * 파드가 죽으면 lease를 반납할 주체가 없으므로, 만료 시각이 지나면 다른 파드가 회수한다.
+ * {@code attemptCount}는 그 회수가 무한히 반복되는 것을 끊는다.</p>
+ *
+ * <p>집계 컬럼은 행 처리 트랜잭션마다 하나씩 증가한다. 같은 작업을 한 파드만 처리하므로 경합이 없다.</p>
+ */
 @Entity
 @Table(name = "campaign_imports")
 @Getter
@@ -98,6 +108,17 @@ public class CampaignImport {
 				createdBy, createdByApiKeyId);
 	}
 
+	/**
+	 * 이 작업을 처리할 권리를 얻는다. 얻지 못하면 거짓을 돌려주고 호출자는 다음 기회를 기다린다.
+	 *
+	 * <p>순서대로 판단한다. 끝난 작업은 다시 잡지 않고, 아직 유효한 lease가 있으면 다른 파드가
+	 * 처리 중이므로 물러난다. lease는 만료됐는데 시도 횟수가 상한에 닿았으면 계속 실패하는 작업으로 보고
+	 * 여기서 실패로 확정한다. 이 판정이 없으면 죽는 작업을 영원히 다시 집는다.</p>
+	 *
+	 * @param owner 이 파드의 식별자. 누가 잡고 있는지 기록용이며 회수 판정에는 쓰지 않는다
+	 * @param expiresAt lease 만료 시각. 이 시각이 지나면 다른 파드가 가져갈 수 있다
+	 * @return 선점에 성공했는지 여부. 성공하면 상태가 PROCESSING으로 바뀌고 시도 횟수가 하나 늘어난다
+	 */
 	public boolean tryAcquireLease(String owner, Instant now, Instant expiresAt, int maxAttempts) {
 		if (status == ImportStatus.COMPLETED || status == ImportStatus.CANCELLED) return false;
 		if (status == ImportStatus.PROCESSING && leaseExpiresAt != null && leaseExpiresAt.isAfter(now)) return false;
@@ -119,6 +140,9 @@ public class CampaignImport {
 		else this.failedRows = failedRows + 1;
 	}
 
+	/**
+	 * 완료로 확정하면서 lease를 비운다. lease를 남겨 두면 이미 끝난 작업이 잡혀 있는 것처럼 보인다.
+	 */
 	public void complete(Instant now) {
 		this.status = ImportStatus.COMPLETED;
 		this.leaseOwner = null;
@@ -140,6 +164,9 @@ public class CampaignImport {
 		this.completedAt = now;
 	}
 
+	/**
+	 * 아직 끝나지 않은 작업인지. 프로젝트당 동시에 하나만 허용하는 제약의 판단 기준이다.
+	 */
 	public boolean isActive() {
 		return status == ImportStatus.PENDING || status == ImportStatus.PROCESSING;
 	}

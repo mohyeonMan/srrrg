@@ -18,6 +18,13 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * 캠페인 단위의 UTM 기본값. 링크가 자기 값을 갖지 않은 필드는 리다이렉트 시점에 이 값을 따라간다.
+ *
+ * <p>링크 생성 시점에 복사하지 않고 참조하는 구조라, 여기 값을 바꾸면 이미 만들어진 링크의
+ * 최종 URL이 함께 바뀐다. 필드 이름을 복합 키에 포함해 한 캠페인에 같은 필드의 기본값이
+ * 둘 존재할 수 없게 한다.</p>
+ */
 @Entity
 @Table(name = "campaign_utm_defaults")
 @Getter

@@ -40,6 +40,18 @@ import link.srrrg.link.LinkRepository;
 import link.srrrg.link.LinkUtmValue;
 import link.srrrg.link.LinkUtmValueRepository;
 
+/**
+ * CSV 업로드와 내려받기를 담당한다. 업로드는 파싱과 행 저장까지만 하고 실제 링크 생성은
+ * {@link CampaignImportWorker}가 비동기로 처리한다.
+ *
+ * <p>동기로 만들지 않은 것은 만 건까지 받을 수 있기 때문이다. 요청 안에서 전부 만들면 HTTP 타임아웃과
+ * 긴 트랜잭션이 생기고, 중간에 끊기면 어디까지 처리됐는지 알 수 없다. 대신 행을 먼저 저장해 두면
+ * 진행률을 보여줄 수 있고 파드가 죽어도 이어서 처리된다.</p>
+ *
+ * <p>파싱 단계에서 걸러낸 오류는 예외로 올리지 않고 행에 미리 실패 표시를 해 둔다. 한 행의 형식 오류로
+ * 파일 전체를 거절하지 않기 위해서다. 다만 파일 수준 오류(헤더 불일치, 인코딩, 파일 내 external_id 중복)는
+ * 전체를 거절한다. 고치지 않으면 결과 전체가 의미를 잃기 때문이다.</p>
+ */
 @Service
 public class CampaignCsvService {
 
@@ -48,6 +60,8 @@ public class CampaignCsvService {
 	private static final int MAX_EXPORT_ROWS = 10_000;
 	private static final String COL_ORIGINAL_URL = "original_url";
 	private static final String COL_EXTERNAL_ID = "external_id";
+	// Excel이 UTF-8 CSV를 제대로 열려면 BOM이 필요하다. 내려주는 파일마다 앞에 붙이고,
+	// 반대로 업로드받은 파일에서는 떼어 낸다. 붙은 채 파싱하면 첫 헤더 이름에 보이지 않는 문자가 섞인다.
 	private static final char BOM = '﻿';
 
 	private final CampaignLinkCreationService linkCreation;
@@ -90,6 +104,20 @@ public class CampaignCsvService {
 		return writer.toString();
 	}
 
+	/**
+	 * 업로드된 CSV를 검증해 임포트 작업과 행을 만든다. 링크는 여기서 만들지 않는다.
+	 *
+	 * <p>멱등 키를 필수로 받는다. 큰 파일 업로드는 타임아웃으로 응답을 놓치기 쉬운데, 그때 재시도가
+	 * 같은 파일을 두 번 임포트하면 링크가 두 배로 생긴다. 파일 내용의 해시를 함께 저장해
+	 * 같은 키로 다른 파일을 올린 경우와 구분한다.</p>
+	 *
+	 * <p>검사 순서에 의도가 있다. 기존 작업을 먼저 확인해 재시도를 걸러낸 뒤에 레이트리밋과 할당량을
+	 * 소비하므로, 재시도가 할당량을 깎지 않는다. 할당량은 실제 파싱된 행 수만큼 소비한다.</p>
+	 *
+	 * @throws CampaignImportIdempotencyConflictException 같은 키로 다른 파일을 올린 경우
+	 * @throws ActiveImportConflictException 같은 프로젝트에 진행 중인 임포트가 이미 있는 경우
+	 * @throws IllegalArgumentException 파일이 비었거나 크기·인코딩·헤더·행 수 제한을 어긴 경우
+	 */
 	@Transactional
 	public CampaignImport startImport(Campaign campaign, byte[] content, String idempotencyKey, User createdBy, Long createdByApiKeyId) {
 		if (idempotencyKey == null || idempotencyKey.isBlank()) {
@@ -123,6 +151,8 @@ public class CampaignCsvService {
 			campaignImport = imports.saveAndFlush(CampaignImport.create(campaign, campaign.getProject(), campaign.getUtmTemplate(),
 					rows.size(), idempotencyKey, requestHash, createdBy, createdByApiKeyId));
 		} catch (DataIntegrityViolationException exception) {
+			// 프로젝트당 동시 임포트 하나 제약. 사전 확인이 아니라 DB 제약으로 막는 이유는
+			// 여러 파드에서 동시에 업로드가 들어올 수 있기 때문이다.
 			if (constraintNameContains(exception, "uq_campaign_imports_active_project")) {
 				throw new ActiveImportConflictException();
 			}
@@ -135,6 +165,8 @@ public class CampaignCsvService {
 		int rowNumber = 1;
 		for (ParsedRow row : rows) {
 			CampaignImportRow savedRow = importRows.save(CampaignImportRow.create(campaignImport, rowNumber++, row.originalUrl(), row.externalId()));
+			// 파싱 단계에서 이미 실패로 판정된 행은 UTM 값을 저장하지 않고 실패로 확정한다.
+			// worker가 집어 갈 일이 없으므로 여기서 집계도 함께 반영한다.
 			if (row.preFailureCode() != null) {
 				savedRow.fail(row.preFailureCode(), row.preFailureMessage());
 				campaignImport.recordRowResult(false);
@@ -147,6 +179,10 @@ public class CampaignCsvService {
 		return campaignImport;
 	}
 
+	/**
+	 * 실패한 행만 모아 원본과 같은 형태의 CSV로 만든다. 오류 코드와 메시지를 뒤에 덧붙이므로,
+	 * 사용자가 그 파일에서 문제를 고친 뒤 두 열을 지우고 그대로 다시 올릴 수 있다.
+	 */
 	public String errorCsv(CampaignImport campaignImport) {
 		List<CampaignImportRow> failed = importRows.findByCampaignImportIdAndStatusOrderByRowNumberAsc(campaignImport.getId(), ImportRowStatus.FAILED);
 		List<String> utmFieldNames = campaignImport.getUtmTemplate() == null ? List.of()
@@ -181,6 +217,13 @@ public class CampaignCsvService {
 		return writer.toString();
 	}
 
+	/**
+	 * 캠페인의 링크를 CSV로 내보낸다. 결과 전체를 메모리에 담으므로 상한을 두고,
+	 * 넘으면 잘라 내려주는 대신 오류로 끝낸다. 일부만 담긴 파일을 전부인 것처럼 받으면
+	 * 사용자가 누락을 알아차리지 못하기 때문이다.
+	 *
+	 * <p>상한보다 하나 더 읽어 초과 여부를 판단한다. 별도 count 쿼리를 피하기 위한 방법이다.</p>
+	 */
 	public String exportLinksCsv(Campaign campaign, Instant createdFrom, Instant createdTo, String externalIdQuery) {
 		String externalIdPattern = (externalIdQuery == null || externalIdQuery.isBlank()) ? null
 				: "%" + externalIdQuery.trim() + "%";
@@ -243,6 +286,12 @@ public class CampaignCsvService {
 				.stream().map(UtmTemplateField::getName).toList();
 	}
 
+	/**
+	 * CSV 전체를 읽어 행 목록으로 바꾼다. 여기서 던지는 예외는 모두 파일 전체를 거절하는 오류다.
+	 *
+	 * <p>헤더에 활성 UTM 필드가 아닌 컬럼이 있으면 거절한다. 조용히 무시하면 사용자는 값을 넣었다고
+	 * 생각하는데 링크에는 반영되지 않는다. 헤더 중복도 거절하는데, 어느 쪽 값을 쓸지 정할 수 없기 때문이다.</p>
+	 */
 	private List<ParsedRow> parse(String text, Campaign campaign) {
 		Set<String> allowedUtmColumns = new HashSet<>(activeFieldNames(campaign));
 		CSVParser parser;
@@ -290,6 +339,15 @@ public class CampaignCsvService {
 		return rows;
 	}
 
+	/**
+	 * 한 행을 읽어 저장할 형태로 만든다. 행 단위 오류는 예외가 아니라 미리 실패 표시로 남긴다.
+	 *
+	 * <p>길이를 넘긴 값을 잘라서 저장하는 것은 실패 CSV에 원본 흔적을 남기기 위해서다.
+	 * 어차피 링크는 만들어지지 않으므로 잘린 값이 쓰이지는 않는다.</p>
+	 *
+	 * <p>파일 안의 external_id 중복만은 예외로 올려 파일 전체를 거절한다. 이 값은 외부 시스템에서
+	 * 링크를 되찾는 열쇠라, 어느 행이 살아남을지 알 수 없는 상태로 절반만 처리되면 안 된다.</p>
+	 */
 	private ParsedRow parseRow(CSVRecord record, Campaign campaign, List<String> utmHeaderNames, Set<String> seenExternalIds) {
 		String originalUrlCell = safeCell(record, COL_ORIGINAL_URL).trim();
 		String storedOriginalUrl = originalUrlCell.isEmpty() ? null : originalUrlCell;
@@ -336,6 +394,10 @@ public class CampaignCsvService {
 		return value == null ? "" : value;
 	}
 
+	/**
+	 * UTF-8만 허용하고 BOM은 떼어 낸다. 잘못된 바이트를 대체 문자로 바꾸지 않고 실패시키는 것이 중요하다.
+	 * 조용히 대체하면 깨진 URL이 그대로 링크로 만들어져 나중에 원인을 찾기 어렵다.
+	 */
 	private String decodeUtf8(byte[] content) {
 		byte[] withoutBom = content;
 		if (content.length >= 3 && (content[0] & 0xFF) == 0xEF && (content[1] & 0xFF) == 0xBB && (content[2] & 0xFF) == 0xBF) {
@@ -353,6 +415,9 @@ public class CampaignCsvService {
 		}
 	}
 
+	/**
+	 * 업로드 파일의 지문. 같은 멱등 키로 다른 파일을 올렸는지 가리는 데만 쓴다.
+	 */
 	private String sha256(byte[] content) {
 		try {
 			return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(content));
@@ -361,6 +426,10 @@ public class CampaignCsvService {
 		}
 	}
 
+	/**
+	 * 제약 이름 문자열로 위반 원인을 구분한다. JDBC 표준으로는 어떤 제약이 걸렸는지 알 수 없어 택한 방법이라,
+	 * migration에서 제약 이름을 바꾸면 이 판정이 조용히 빗나가 원인이 다른 예외로 나간다.
+	 */
 	private boolean constraintNameContains(DataIntegrityViolationException exception, String constraintName) {
 		Throwable cause = exception.getMostSpecificCause();
 		return cause != null && cause.getMessage() != null && cause.getMessage().contains(constraintName);

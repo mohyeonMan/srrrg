@@ -40,6 +40,15 @@ import link.srrrg.link.LinkUtmValueRepository.EffectiveUtmValueByLink;
 import link.srrrg.project.ProjectMemberRepository;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * 화면이 호출하는 캠페인 API. 캠페인, UTM 기본값, 캠페인 링크, CSV 업로드·내려받기가 여기 모여 있다.
+ *
+ * <p>권한 확인은 하지 않고 전부 서비스 계층에 맡긴다. 새 엔드포인트를 추가할 때는 여기가 아니라
+ * 호출하는 서비스 메서드가 역할을 요구하는지 확인해야 한다.</p>
+ *
+ * <p>같은 기능의 API key 경로가 {@code PublicCampaignController}에 따로 있다. 두 경로는 인증 방식과
+ * 오류 형식이 다르므로, 캠페인 정책을 바꿀 때는 양쪽을 함께 봐야 한다.</p>
+ */
 @RestController
 @RequestMapping("/api/web")
 @RequiredArgsConstructor

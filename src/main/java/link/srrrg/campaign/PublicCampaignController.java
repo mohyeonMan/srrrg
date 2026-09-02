@@ -41,6 +41,16 @@ import link.srrrg.link.LinkRepository;
 import link.srrrg.project.ApiKeyScope;
 import link.srrrg.project.ApiKeyService.ApiKeyPrincipal;
 
+/**
+ * API 키로 호출하는 캠페인 엔드포인트. 화면용 경로가 {@code CampaignController}에 따로 있고
+ * 둘은 인증 방식과 오류 형식이 다르다.
+ *
+ * <p>인가는 {@link #principal}이 전담한다. Spring Security의 인가 규칙은 이 경로를 통과시키므로,
+ * 키의 프로젝트와 scope를 확인하지 않으면 유효한 키만으로 남의 프로젝트 캠페인을 다룰 수 있다.</p>
+ *
+ * <p>오류는 {@code PublicCampaignApiExceptionHandler}가 RFC 7807 형식으로 바꾼다.
+ * 이 컨트롤러에서 새 예외를 던질 때는 그 처리기에도 등록해야 웹용 형식으로 새어 나가지 않는다.</p>
+ */
 @RestController
 @RequestMapping("/api/v1")
 @Tag(name = "Campaigns")

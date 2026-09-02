@@ -23,6 +23,10 @@ import link.srrrg.campaign.UtmTemplateController.UtmTemplateResponse;
 import link.srrrg.project.ApiKeyScope;
 import link.srrrg.project.ApiKeyService.ApiKeyPrincipal;
 
+/**
+ * API 키로 호출하는 UTM 템플릿 엔드포인트. 화면용 경로는 {@code UtmTemplateController}에 있다.
+ * 인가 방식과 오류 형식이 다를 뿐 동작은 같은 서비스 메서드 쌍을 통해 일치시킨다.
+ */
 @RestController
 @RequestMapping("/api/v1")
 @Tag(name = "UTM templates")

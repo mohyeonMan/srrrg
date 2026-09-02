@@ -18,6 +18,10 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * CSV 한 행의 원본 값과 처리 결과. 성공하면 만들어진 링크 id를, 실패하면 오류 코드와 메시지를 남긴다.
+ * 실패 행을 지우지 않는 것은 사용자가 실패분만 내려받아 고쳐 다시 올릴 수 있게 하기 위해서다.
+ */
 @Entity
 @Table(name = "campaign_import_rows")
 @Getter

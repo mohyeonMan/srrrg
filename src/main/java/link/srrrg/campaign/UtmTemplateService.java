@@ -14,10 +14,23 @@ import link.srrrg.project.ProjectMemberRepository;
 import link.srrrg.project.ProjectRepository;
 import link.srrrg.project.ProjectRole;
 
+/**
+ * UTM 템플릿과 그 필드를 관리한다. 템플릿은 프로젝트 단위 자원이며, 여기서 정한 필드 목록이
+ * 캠페인 링크에서 받을 수 있는 UTM의 전부다.
+ *
+ * <p>{@code CampaignService}와 마찬가지로 웹용과 API key용 메서드가 쌍을 이룬다.
+ * 웹만 {@link #requireRole}로 역할을 확인하고, API key 경로는 컨트롤러가 키의 프로젝트를 확인했다는
+ * 전제로 동작한다. 두 경로 모두 조회에 projectId를 함께 넘겨, 다른 프로젝트의 템플릿에 닿지 않게 한다.</p>
+ *
+ * <p>필드 삭제와 템플릿 삭제는 표시만 남기는 방식이다. 이미 그 템플릿으로 만들어진 링크가 있어
+ * 물리 삭제를 할 수 없기 때문이다.</p>
+ */
 @Service
 public class UtmTemplateService {
 
 	public static final int MAX_ACTIVE_FIELDS = 10;
+	// 필드 이름은 그대로 URL 쿼리 파라미터 이름이 되므로, 인코딩이 필요 없는 문자만 허용한다.
+	// 활성 필드 수를 제한하는 것은 링크마다 붙는 파라미터가 늘어 URL 길이 제한에 닿는 것을 막기 위해서다.
 	private static final Pattern FIELD_NAME_PATTERN = Pattern.compile("^[a-z][a-z0-9_]{1,49}$");
 	private static final List<String> DEFAULT_FIELD_NAMES = List.of("utm_source", "utm_medium", "utm_campaign");
 
@@ -47,6 +60,10 @@ public class UtmTemplateService {
 		return doCreate(project(projectId), name);
 	}
 
+	/**
+	 * 프로젝트를 만들 때 함께 만드는 기본 템플릿. 템플릿이 하나도 없으면 캠페인에서 UTM을 쓸 수 없어,
+	 * 빈 상태로 시작하지 않도록 표준 세 필드를 미리 넣는다. 프로젝트 생성 트랜잭션 안에서 호출된다.
+	 */
 	@Transactional
 	public UtmTemplate createDefault(Project project) {
 		UtmTemplate template = doCreate(project, "기본 템플릿");
@@ -155,6 +172,10 @@ public class UtmTemplateService {
 		return template;
 	}
 
+	/**
+	 * 템플릿을 삭제 표시한다. 사용 중인 캠페인이 하나라도 있으면 거부한다.
+	 * 그대로 지우면 그 캠페인의 링크가 UTM 필드 정의를 잃어 유효값 계산에서 모두 빠지기 때문이다.
+	 */
 	private void doDelete(Long projectId, Long templateId) {
 		UtmTemplate template = template(templateId, projectId);
 		if (campaigns.countByUtmTemplateId(templateId) > 0) {
@@ -163,6 +184,12 @@ public class UtmTemplateService {
 		template.delete();
 	}
 
+	/**
+	 * 활성 필드를 추가한다. 템플릿을 행 잠금으로 읽는 것이 핵심이다.
+	 *
+	 * <p>필드 수 상한을 세고 나서 저장하는 두 단계라, 잠금이 없으면 동시에 들어온 두 요청이 모두
+	 * 상한 미만을 보고 통과해 상한을 넘긴다. 이름 중복은 세는 것으로 막을 수 없어 유일 제약이 최종 판정이다.</p>
+	 */
 	private UtmTemplateField doAddField(Long projectId, Long templateId, String name) {
 		UtmTemplate template = templates.lockByIdAndProjectId(templateId, projectId)
 				.orElseThrow(() -> new IllegalArgumentException("템플릿을 찾을 수 없습니다."));
@@ -186,6 +213,10 @@ public class UtmTemplateService {
 		field.delete();
 	}
 
+	/**
+	 * 템플릿을 프로젝트 범위 안에서 찾는다. 이 클래스 인가의 마지막 관문이며,
+	 * 다른 프로젝트의 템플릿과 삭제된 템플릿을 모두 같은 예외로 합쳐 존재 여부를 알려주지 않는다.
+	 */
 	UtmTemplate template(Long templateId, Long projectId) {
 		UtmTemplate template = templates.findByIdAndProjectId(templateId, projectId)
 				.orElseThrow(() -> new IllegalArgumentException("템플릿을 찾을 수 없습니다."));
@@ -213,6 +244,10 @@ public class UtmTemplateService {
 		return value.trim();
 	}
 
+	/**
+	 * 필드 이름을 소문자로 맞추고 형식을 확인한다. 정규화하지 않으면 대소문자만 다른 같은 이름이
+	 * 별개 필드로 만들어지고, 리다이렉트 URL에도 두 파라미터가 함께 실린다.
+	 */
 	private String validFieldName(String value) {
 		if (value == null) throw new IllegalArgumentException("필드 이름을 입력하세요.");
 		String normalized = value.trim().toLowerCase(Locale.ROOT);

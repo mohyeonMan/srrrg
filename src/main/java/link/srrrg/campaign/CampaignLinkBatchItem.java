@@ -15,6 +15,10 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * batch에 포함된 링크 하나와 그 순번. 순번을 저장해 두는 이유는 재시도 응답에서
+ * 요청과 같은 순서로 링크를 돌려주기 위해서다.
+ */
 @Entity
 @Table(name = "campaign_link_batch_items")
 @Getter
