@@ -25,15 +25,13 @@ import jakarta.validation.constraints.Size;
 import link.srrrg.auth.SrrrgPrincipal;
 import link.srrrg.campaign.CampaignController.CampaignResponse;
 import link.srrrg.campaign.CampaignService;
-import link.srrrg.link.Link;
+import link.srrrg.link.management.ProjectLinkController;
 import link.srrrg.link.management.ProjectLinkService;
-import link.srrrg.link.management.dto.CreateLinkRequest;
-import link.srrrg.link.management.dto.LinkManagementResponse;
-import link.srrrg.link.management.dto.UpdateLinkRequest;
+import link.srrrg.link.management.dto.ProjectLinkResponse;
 import lombok.RequiredArgsConstructor;
 
 /**
- * 화면이 호출하는 프로젝트 관리 API. 프로젝트, 서브도메인, 링크, 멤버, 초대, API 키가 모두 여기 모여 있다.
+ * 화면이 호출하는 프로젝트 관리 API. 프로젝트와 서브도메인, 화면 첫 진입용 overview를 제공한다.
  *
  * <p>이 클래스는 요청을 서비스로 넘기고 응답 형태만 만든다. 권한 확인은 하지 않고 전부
  * {@code ProjectService}, {@code ProjectLinkService}, {@code ProjectMemberService},
@@ -44,13 +42,12 @@ import lombok.RequiredArgsConstructor;
  * 남의 계정을 지정할 수 없다.</p>
  *
  * <p>API 키를 쓰는 같은 기능의 경로가 {@code PublicProjectLinkController}에 따로 있다.
- * 링크 생성 정책을 바꿀 때는 두 경로를 함께 확인한다.</p>
+ * 웹 프로젝트 링크 경로는 {@link ProjectLinkController}가 맡는다.</p>
  */
 @RestController
 @RequestMapping("/api/web")
 @RequiredArgsConstructor
 public class ProjectController {
-	private static final String SECRET_KEY_HEADER = "X-Srrrg-Secret-Key";
 	private final ProjectService projectService;
 	private final ProjectLinkService projectLinkService;
 	private final ProjectMemberService projectMemberService;
@@ -133,32 +130,6 @@ public class ProjectController {
 		return SubdomainResponse.from(projectService.releaseSubdomain(p.userId(), projectId));
 	}
 
-	@PostMapping("/projects/{projectId}/links")
-	public ResponseEntity<ProjectLinkResponse> createLink(@AuthenticationPrincipal SrrrgPrincipal p,
-			@PathVariable Long projectId, @Valid @RequestBody CreateLinkRequest request) {
-		return ResponseEntity.status(HttpStatus.CREATED)
-				.body(ProjectLinkResponse.from(projectLinkService.createForWeb(p.userId(), projectId, request)));
-	}
-
-	@GetMapping("/projects/{projectId}/links/{code}")
-	public LinkManagementResponse link(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId,
-			@PathVariable String code) {
-		return projectLinkService.detailForWeb(p.userId(), projectId, code);
-	}
-
-	@PatchMapping("/projects/{projectId}/links/{code}")
-	public LinkManagementResponse updateLink(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId,
-			@PathVariable String code, @RequestBody UpdateLinkRequest request) {
-		return projectLinkService.updateForWeb(p.userId(), projectId, code, request);
-	}
-
-	@DeleteMapping("/projects/{projectId}/links/{code}")
-	public ResponseEntity<Void> deleteLink(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId,
-			@PathVariable String code) {
-		projectLinkService.deleteForWeb(p.userId(), projectId, code);
-		return ResponseEntity.noContent().build();
-	}
-
 	@GetMapping("/projects/{projectId}/members")
 	public List<MemberResponse> members(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId) {
 		return projectMemberService.projectMembers(p.userId(), projectId).stream().map(MemberResponse::from).toList();
@@ -209,18 +180,6 @@ public class ProjectController {
 	public ResponseEntity<Void> remove(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId,
 			@PathVariable Long memberId) {
 		projectMemberService.removeMember(p.userId(), projectId, memberId);
-		return ResponseEntity.noContent().build();
-	}
-
-	/**
-	 * 비회원으로 만든 링크를 이 프로젝트로 옮긴다. 로그인 세션만으로는 부족하고,
-	 * 그 링크의 secret key를 헤더로 함께 제시해야 한다. 소유권을 넘기는 처리라 두 자격을 모두 요구한다.
-	 */
-	@PostMapping("/projects/{projectId}/links/{code}/claim")
-	public ResponseEntity<Void> claimLink(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId,
-			@PathVariable String code,
-			@org.springframework.web.bind.annotation.RequestHeader(SECRET_KEY_HEADER) String secretKey) {
-		projectLinkService.claimAnonymousForWeb(p.userId(), projectId, code, secretKey);
 		return ResponseEntity.noContent().build();
 	}
 
@@ -293,14 +252,6 @@ public class ProjectController {
 	public record SubdomainResponse(String subdomain, boolean enabled) {
 		static SubdomainResponse from(Project project) {
 			return new SubdomainResponse(project.getSubdomain(), project.isSubdomainEnabled());
-		}
-	}
-
-	public record ProjectLinkResponse(String code, String subdomain, String name, String originalUrl, Instant expiresAt,
-			Instant createdAt) {
-		static ProjectLinkResponse from(Link link) {
-			return new ProjectLinkResponse(link.getCode(), link.getSubdomain(), link.getName(), link.getOriginalUrl(),
-					link.getExpiresAt(), link.getCreatedAt());
 		}
 	}
 

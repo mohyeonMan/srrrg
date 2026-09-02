@@ -16,11 +16,11 @@
 | GET | `/api/links/{code}` | `LinkController.getManagedLink` | 익명 + secret key |
 | PATCH | `/api/links/{code}` | `LinkController.updateManagedLink` | 익명 + secret key |
 | DELETE | `/api/links/{code}` | `LinkController.deleteManagedLink` | 익명 + secret key |
-| POST | `/api/web/projects/{projectId}/links` | `ProjectController.createLink` | web (EDITOR) |
-| GET | `/api/web/projects/{projectId}/links/{code}` | `ProjectController.link` | web (VIEWER) |
-| PATCH | `/api/web/projects/{projectId}/links/{code}` | `ProjectController.updateLink` | web (EDITOR) |
-| DELETE | `/api/web/projects/{projectId}/links/{code}` | `ProjectController.deleteLink` | web (EDITOR) |
-| POST | `/api/web/projects/{projectId}/links/{code}/claim` | `ProjectController.claimLink` | web (EDITOR) + secret key |
+| POST | `/api/web/projects/{projectId}/links` | `ProjectLinkController.create` | web (EDITOR) |
+| GET | `/api/web/projects/{projectId}/links/{code}` | `ProjectLinkController.detail` | web (VIEWER) |
+| PATCH | `/api/web/projects/{projectId}/links/{code}` | `ProjectLinkController.update` | web (EDITOR) |
+| DELETE | `/api/web/projects/{projectId}/links/{code}` | `ProjectLinkController.delete` | web (EDITOR) |
+| POST | `/api/web/projects/{projectId}/links/{code}/claim` | `ProjectLinkController.claim` | web (EDITOR) + secret key |
 | POST | `/api/v1/projects/{projectId}/links` | `PublicProjectLinkController.create` | v1 (`links:write`) |
 | GET | `/api/v1/projects/{projectId}/links` | `PublicProjectLinkController.list` | v1 (`links:read`) |
 
@@ -302,7 +302,7 @@ LinkController.deleteManagedLink(code, secretKey)
 프로젝트 링크 생성.
 
 ```
-ProjectController.createLink(principal, projectId, request)
+ProjectLinkController.create(principal, projectId, request)
     → 201 Created
 
     ProjectLinkService.createForWeb(userId, projectId, request)
@@ -330,7 +330,7 @@ ProjectController.createLink(principal, projectId, request)
 프로젝트 링크 단건.
 
 ```
-ProjectController.link(principal, projectId, code)
+ProjectLinkController.detail(principal, projectId, code)
 
     ProjectLinkService.detailForWeb(userId, projectId, code)
         @Transactional(readOnly = true)
@@ -355,7 +355,7 @@ ProjectController.link(principal, projectId, code)
 프로젝트 링크 수정.
 
 ```
-ProjectController.updateLink(principal, projectId, code, request)
+ProjectLinkController.update(principal, projectId, code, request)
 
     ProjectLinkService.updateForWeb(userId, projectId, code, request)
         @Transactional
@@ -385,7 +385,7 @@ ProjectController.updateLink(principal, projectId, code, request)
 ### DELETE /api/web/projects/{projectId}/links/{code}
 
 ```
-ProjectController.deleteLink(principal, projectId, code)
+ProjectLinkController.delete(principal, projectId, code)
     → 204 No Content
 
     ProjectLinkService.deleteForWeb(userId, projectId, code)
@@ -403,7 +403,7 @@ ProjectController.deleteLink(principal, projectId, code)
 익명으로 만든 링크를 프로젝트로 편입한다. **코드와 통계를 유지한 채 소유권만 옮기는** 유일한 경로다.
 
 ```
-ProjectController.claimLink(principal, projectId, code, secretKey)
+ProjectLinkController.claim(principal, projectId, code, secretKey)
     @RequestHeader("X-Srrrg-Secret-Key")
     → 204 No Content
 

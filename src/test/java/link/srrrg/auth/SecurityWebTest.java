@@ -30,6 +30,7 @@ import link.srrrg.link.access.ClientRequestInfo;
 import link.srrrg.link.access.ClientRequestInfoResolver;
 import link.srrrg.link.management.LinkController;
 import link.srrrg.link.management.LinkManagementService;
+import link.srrrg.link.management.ProjectLinkController;
 import link.srrrg.link.management.ProjectLinkService;
 import link.srrrg.link.management.dto.CreateLinkResponse;
 import link.srrrg.project.ApiKeyService;
@@ -44,7 +45,8 @@ import link.srrrg.project.ProjectRole;
 import link.srrrg.project.ProjectService;
 import link.srrrg.identity.UserRepository;
 
-@WebMvcTest(controllers = {HomeController.class, LoginController.class, LinkController.class, AuthController.class, PublicProjectLinkController.class, InvitationPageController.class, ProjectController.class})
+@WebMvcTest(controllers = {HomeController.class, LoginController.class, LinkController.class, ProjectLinkController.class,
+		AuthController.class, PublicProjectLinkController.class, InvitationPageController.class, ProjectController.class})
 @Import({SecurityConfiguration.class, CsrfCookieFilter.class})
 class SecurityWebTest {
 
