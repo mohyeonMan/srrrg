@@ -19,8 +19,9 @@ import link.srrrg.link.LinkRepository;
 import link.srrrg.link.management.LinkManagementService;
 import link.srrrg.project.ApiKeyScope;
 import link.srrrg.project.ApiKeyService.ApiKeyPrincipal;
+import link.srrrg.project.ProjectAccessService;
 import link.srrrg.project.ProjectMember;
-import link.srrrg.project.ProjectMemberRepository;
+import link.srrrg.project.ProjectRole;
 import link.srrrg.statistics.StatisticsResponse.Bucket;
 
 /**
@@ -30,7 +31,8 @@ import link.srrrg.statistics.StatisticsResponse.Bucket;
  * 집계 로직은 공유하고 인가만 경로별로 다르게 하므로, 새 경로를 추가할 때 인가 확인을 빠뜨리면
  * 그 경로만 무방비가 된다.</p>
  *
- * <p>이 클래스가 인가의 유일한 지점이다. {@code StatisticsService}는 식별자만 받고 권한을 보지 않는다.</p>
+ * <p>웹 사용자의 프로젝트 역할 판정은 {@link ProjectAccessService}에 맡긴다. API key와 익명 링크는
+ * 인증 방식이 달라 이 컨트롤러에서 각각 scope와 secret key를 확인한다.</p>
  */
 @RestController
 public class StatisticsController {
@@ -38,13 +40,13 @@ public class StatisticsController {
 	private final StatisticsService statistics;
 	private final LinkManagementService linkManagement;
 	private final LinkRepository links;
-	private final ProjectMemberRepository members;
+	private final ProjectAccessService projectAccess;
 	private final CampaignRepository campaigns;
 
 	public StatisticsController(StatisticsService statistics, LinkManagementService linkManagement, LinkRepository links,
-			ProjectMemberRepository members, CampaignRepository campaigns) {
+			ProjectAccessService projectAccess, CampaignRepository campaigns) {
 		this.statistics = statistics; this.linkManagement = linkManagement; this.links = links;
-		this.members = members; this.campaigns = campaigns;
+		this.projectAccess = projectAccess; this.campaigns = campaigns;
 	}
 
 	/**
@@ -133,8 +135,7 @@ public class StatisticsController {
 	 * 웹 경로의 인가. 멤버이기만 하면 되고 역할은 보지 않는다. 통계는 읽기 전용이라 VIEWER도 볼 수 있다.
 	 */
 	private ProjectMember member(Long userId, Long projectId) {
-		return members.findActiveByProjectAndUser(projectId, userId)
-				.orElseThrow(() -> new SecurityException("프로젝트 접근 권한이 없습니다."));
+		return projectAccess.requireRole(userId, projectId, ProjectRole.VIEWER);
 	}
 	private Link projectLink(Long projectId, String code) {
 		return links.findByProjectIdAndCode(projectId, code).orElseThrow(LinkNotFoundException::new);

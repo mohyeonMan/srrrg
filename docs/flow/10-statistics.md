@@ -26,17 +26,16 @@
 
 **시간대가 `Asia/Seoul`로 하드코딩돼 있다** (`StatisticsService.ZONE`). 날짜 경계와 `date_trunc`가 모두 이 기준이다.
 
-## 권한 검사 — 컨트롤러가 직접
+## 권한 검사
 
-이 도메인은 `ProjectService.requireRole`도 `CampaignService.requireEditableCampaign`도 쓰지 않고 컨트롤러가 자체 헬퍼를 갖는다.
+웹 사용자의 프로젝트 역할은 공통 프로젝트 접근 서비스가 판정한다. API key scope는 아직 컨트롤러가 직접 확인한다.
 
 ```
 StatisticsController.member(userId, projectId)
-    ProjectMemberRepository.findByIdProjectIdAndIdUserId(projectId, userId)
+    ProjectAccessService.requireRole(userId, projectId, VIEWER)
+        ProjectMemberRepository.findActiveByProjectAndUser(projectId, userId)
         → SecurityException (403 PROJECT_ACCESS_DENIED)
-    (프로젝트 삭제 검사)
-        → SecurityException (403)
-    역할은 보지 않는다 — 멤버이기만 하면 VIEWER도 통계를 볼 수 있다.
+    VIEWER가 최소 역할이므로 모든 활성 멤버가 통계를 볼 수 있다.
 
 StatisticsController.apiKey(request, projectId)
     request.getAttribute("srrrg.apiKeyPrincipal")

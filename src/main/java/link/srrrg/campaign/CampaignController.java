@@ -37,14 +37,15 @@ import link.srrrg.link.Link;
 import link.srrrg.link.LinkRepository;
 import link.srrrg.link.LinkUtmValueRepository;
 import link.srrrg.link.LinkUtmValueRepository.EffectiveUtmValueByLink;
-import link.srrrg.project.ProjectMemberRepository;
+import link.srrrg.project.ProjectAccessService;
+import link.srrrg.project.ProjectRole;
 import lombok.RequiredArgsConstructor;
 
 /**
  * 화면이 호출하는 캠페인 API. 캠페인, UTM 기본값, 캠페인 링크, CSV 업로드·내려받기가 여기 모여 있다.
  *
- * <p>권한 확인은 하지 않고 전부 서비스 계층에 맡긴다. 새 엔드포인트를 추가할 때는 여기가 아니라
- * 호출하는 서비스 메서드가 역할을 요구하는지 확인해야 한다.</p>
+ * <p>업무 권한은 서비스 계층에 맡긴다. CSV 업로드에서 생성자를 얻을 때도 멤버십 저장소를 직접 읽지 않고
+ * {@link ProjectAccessService}의 판정 결과를 사용한다.</p>
  *
  * <p>같은 기능의 API key 경로가 {@code PublicCampaignController}에 따로 있다. 두 경로는 인증 방식과
  * 오류 형식이 다르므로, 캠페인 정책을 바꿀 때는 양쪽을 함께 봐야 한다.</p>
@@ -60,7 +61,7 @@ public class CampaignController {
 	private final CampaignImportRepository imports;
 	private final LinkRepository links;
 	private final LinkUtmValueRepository linkUtmValues;
-	private final ProjectMemberRepository members;
+	private final ProjectAccessService projectAccess;
 
 	@PostMapping("/projects/{projectId}/campaigns")
 	public ResponseEntity<CampaignResponse> create(@AuthenticationPrincipal SrrrgPrincipal principal, @PathVariable Long projectId,
@@ -156,8 +157,7 @@ public class CampaignController {
 	public ResponseEntity<ImportResponse> uploadCsv(@AuthenticationPrincipal SrrrgPrincipal principal, @PathVariable Long campaignId,
 			@RequestHeader("Idempotency-Key") String idempotencyKey, @RequestParam("file") MultipartFile file) throws java.io.IOException {
 		Campaign campaign = campaigns.requireEditableCampaign(principal.userId(), campaignId);
-		var uploader = members.findActiveByProjectAndUser(campaign.getProject().getId(), principal.userId())
-				.orElseThrow(() -> new SecurityException("프로젝트 접근 권한이 없습니다."))
+		var uploader = projectAccess.requireRole(principal.userId(), campaign.getProject().getId(), ProjectRole.EDITOR)
 				.getUser();
 		CampaignImport created = csv.startImport(campaign, file.getBytes(), idempotencyKey, uploader, null);
 		return ResponseEntity.status(HttpStatus.ACCEPTED).body(ImportResponse.from(created));

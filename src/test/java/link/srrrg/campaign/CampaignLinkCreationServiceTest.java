@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import link.srrrg.link.management.LinkManagementService;
+import link.srrrg.project.ProjectAccessService;
 import link.srrrg.project.ProjectMemberRepository;
 
 class CampaignLinkCreationServiceTest {
@@ -20,6 +21,7 @@ class CampaignLinkCreationServiceTest {
 	private final UtmTemplateFieldRepository fields = mock(UtmTemplateFieldRepository.class);
 	private final LinkManagementService linkManagement = mock(LinkManagementService.class);
 	private final ProjectMemberRepository members = mock(ProjectMemberRepository.class);
+	private final ProjectAccessService projectAccess = new ProjectAccessService(members);
 	private final link.srrrg.common.ratelimit.RateLimitService rateLimitService = mock(link.srrrg.common.ratelimit.RateLimitService.class);
 	private CampaignLinkCreationService service;
 	private UtmTemplate template;
@@ -28,7 +30,7 @@ class CampaignLinkCreationServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		service = new CampaignLinkCreationService(campaignService, fields, linkManagement, members, rateLimitService);
+		service = new CampaignLinkCreationService(campaignService, fields, linkManagement, projectAccess, rateLimitService);
 		template = mock(UtmTemplate.class);
 		when(template.getId()).thenReturn(11L);
 		sourceField = mock(UtmTemplateField.class);

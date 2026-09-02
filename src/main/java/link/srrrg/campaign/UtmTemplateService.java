@@ -9,8 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import link.srrrg.project.Project;
-import link.srrrg.project.ProjectMember;
-import link.srrrg.project.ProjectMemberRepository;
+import link.srrrg.project.ProjectAccessService;
 import link.srrrg.project.ProjectRepository;
 import link.srrrg.project.ProjectRole;
 
@@ -19,7 +18,7 @@ import link.srrrg.project.ProjectRole;
  * 캠페인 링크에서 받을 수 있는 UTM의 전부다.
  *
  * <p>{@code CampaignService}와 마찬가지로 웹용과 API key용 메서드가 쌍을 이룬다.
- * 웹만 {@link #requireRole}로 역할을 확인하고, API key 경로는 컨트롤러가 키의 프로젝트를 확인했다는
+ * 웹만 {@link ProjectAccessService#requireRole}로 역할을 확인하고, API key 경로는 컨트롤러가 키의 프로젝트를 확인했다는
  * 전제로 동작한다. 두 경로 모두 조회에 projectId를 함께 넘겨, 다른 프로젝트의 템플릿에 닿지 않게 한다.</p>
  *
  * <p>필드 삭제와 템플릿 삭제는 표시만 남기는 방식이다. 이미 그 템플릿으로 만들어진 링크가 있어
@@ -37,21 +36,21 @@ public class UtmTemplateService {
 	private final UtmTemplateRepository templates;
 	private final UtmTemplateFieldRepository fields;
 	private final CampaignRepository campaigns;
-	private final ProjectMemberRepository members;
+	private final ProjectAccessService projectAccess;
 	private final ProjectRepository projects;
 
 	public UtmTemplateService(UtmTemplateRepository templates, UtmTemplateFieldRepository fields,
-			CampaignRepository campaigns, ProjectMemberRepository members, ProjectRepository projects) {
+			CampaignRepository campaigns, ProjectAccessService projectAccess, ProjectRepository projects) {
 		this.templates = templates;
 		this.fields = fields;
 		this.campaigns = campaigns;
-		this.members = members;
+		this.projectAccess = projectAccess;
 		this.projects = projects;
 	}
 
 	@Transactional
 	public UtmTemplate create(Long userId, Long projectId, String name) {
-		Project project = requireRole(userId, projectId, ProjectRole.EDITOR).getProject();
+		Project project = projectAccess.requireRole(userId, projectId, ProjectRole.EDITOR).getProject();
 		return doCreate(project, name);
 	}
 
@@ -73,7 +72,7 @@ public class UtmTemplateService {
 
 	@Transactional(readOnly = true)
 	public List<UtmTemplate> list(Long userId, Long projectId) {
-		requireRole(userId, projectId, ProjectRole.VIEWER);
+		projectAccess.requireRole(userId, projectId, ProjectRole.VIEWER);
 		return templates.findByProjectIdAndDeletedAtIsNullOrderByIdDesc(projectId);
 	}
 
@@ -84,7 +83,7 @@ public class UtmTemplateService {
 
 	@Transactional(readOnly = true)
 	public UtmTemplate get(Long userId, Long projectId, Long templateId) {
-		requireRole(userId, projectId, ProjectRole.VIEWER);
+		projectAccess.requireRole(userId, projectId, ProjectRole.VIEWER);
 		return template(templateId, projectId);
 	}
 
@@ -95,7 +94,7 @@ public class UtmTemplateService {
 
 	@Transactional(readOnly = true)
 	public List<UtmTemplateField> activeFields(Long userId, Long projectId, Long templateId) {
-		requireRole(userId, projectId, ProjectRole.VIEWER);
+		projectAccess.requireRole(userId, projectId, ProjectRole.VIEWER);
 		return doActiveFields(projectId, templateId);
 	}
 
@@ -106,7 +105,7 @@ public class UtmTemplateService {
 
 	@Transactional
 	public UtmTemplate rename(Long userId, Long projectId, Long templateId, String name) {
-		requireRole(userId, projectId, ProjectRole.EDITOR);
+		projectAccess.requireRole(userId, projectId, ProjectRole.EDITOR);
 		return doRename(projectId, templateId, name);
 	}
 
@@ -117,7 +116,7 @@ public class UtmTemplateService {
 
 	@Transactional
 	public void delete(Long userId, Long projectId, Long templateId) {
-		requireRole(userId, projectId, ProjectRole.EDITOR);
+		projectAccess.requireRole(userId, projectId, ProjectRole.EDITOR);
 		doDelete(projectId, templateId);
 	}
 
@@ -128,7 +127,7 @@ public class UtmTemplateService {
 
 	@Transactional
 	public UtmTemplateField addField(Long userId, Long projectId, Long templateId, String name) {
-		requireRole(userId, projectId, ProjectRole.EDITOR);
+		projectAccess.requireRole(userId, projectId, ProjectRole.EDITOR);
 		return doAddField(projectId, templateId, name);
 	}
 
@@ -139,7 +138,7 @@ public class UtmTemplateService {
 
 	@Transactional
 	public void deleteField(Long userId, Long projectId, Long templateId, Long fieldId) {
-		requireRole(userId, projectId, ProjectRole.EDITOR);
+		projectAccess.requireRole(userId, projectId, ProjectRole.EDITOR);
 		doDeleteField(projectId, templateId, fieldId);
 	}
 
@@ -228,13 +227,6 @@ public class UtmTemplateService {
 
 	private Project project(Long projectId) {
 		return projects.findById(projectId).orElseThrow(() -> new IllegalArgumentException("프로젝트를 찾을 수 없습니다."));
-	}
-
-	private ProjectMember requireRole(Long userId, Long projectId, ProjectRole minimum) {
-		ProjectMember membership = members.findActiveByProjectAndUser(projectId, userId)
-				.orElseThrow(() -> new SecurityException("프로젝트 접근 권한이 없습니다."));
-		if (membership.getRole().ordinal() > minimum.ordinal()) throw new SecurityException("프로젝트 접근 권한이 없습니다.");
-		return membership;
 	}
 
 	private String validName(String value) {

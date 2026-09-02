@@ -25,9 +25,8 @@ CSV 가져오기·내보내기 5종은 [09-campaign-import.md](09-campaign-impor
 
 ```
 [web]  @AuthenticationPrincipal SrrrgPrincipal → userId
-       CampaignService.requireRole(userId, projectId, role)
-           ProjectService의 것과 동일한 로직을 CampaignService가 private으로 다시 갖고 있다.
-           ProjectService에 의존하지 않기 위한 중복이다.
+       ProjectAccessService.requireRole(userId, projectId, role)
+           프로젝트 기능이 멤버십과 역할을 판정하고, 캠페인 서비스는 그 결과를 사용한다.
 
 [v1]   PublicCampaignController.projectIdFrom(request)
            request 속성 srrrg.apiKeyPrincipal에서 projectId를 꺼낸다.
@@ -59,7 +58,7 @@ CampaignController.create(principal, projectId, request)
 
     CampaignService.create(userId, projectId, name, description, defaultOriginalUrl)
         @Transactional
-        requireRole(userId, projectId, EDITOR)
+        ProjectAccessService.requireRole(userId, projectId, EDITOR)
 
         validName / validDescription / validDefaultOriginalUrl
             → IllegalArgumentException (400)
@@ -73,7 +72,7 @@ PublicCampaignController.create(request, projectId, body)
         @Transactional
 
         ProjectRepository.findById(projectId)
-            requireRole과 달리 프로젝트 삭제 여부를 확인하지 않는다.
+            ProjectAccessService.requireRole과 달리 프로젝트 삭제 여부를 확인하지 않는다.
             → 없으면 IllegalArgumentException (400)
 
         CampaignRepository.save(Campaign.create(project, ..., createdBy = null))
@@ -100,7 +99,7 @@ CampaignController.list(principal, projectId, cursor, limit)
 
     CampaignService.list(userId, projectId, cursor, boundedLimit + 1)
         @Transactional(readOnly = true)
-        requireRole(userId, projectId, VIEWER)
+        ProjectAccessService.requireRole(userId, projectId, VIEWER)
 
         listPage(projectId, cursor, limit)
             CampaignRepository.findByProjectIdOrderByIdDesc(projectId, page)                 [cursor 없음]
@@ -113,7 +112,7 @@ CampaignController.list(principal, projectId, cursor, limit)
 PublicCampaignController.list(request, projectId, cursor, limit)
     principal(request, projectId, CAMPAIGNS_READ)
     CampaignService.listForApiKey(projectId, cursor, limit)
-        requireRole만 빠지고 listPage는 동일하다.
+        ProjectAccessService.requireRole만 빠지고 listPage는 동일하다.
 ```
 
 ---
@@ -132,7 +131,7 @@ CampaignController.get(principal, campaignId)
             먼저 캠페인을 찾고 그 프로젝트로 권한을 검사한다. 경로에 projectId가 없기 때문.
             → CampaignNotFoundException (404)
 
-        requireRole(userId, campaign.getProject().getId(), VIEWER)
+        ProjectAccessService.requireRole(userId, campaign.getProject().getId(), VIEWER)
             → SecurityException (403)
 
 PublicCampaignController.get(request, campaignId)
@@ -166,7 +165,7 @@ CampaignController.update(principal, campaignId, request)
 
         CampaignService.requireEditableCampaign(userId, campaignId)
             campaignOrNotFound(campaignId) → CampaignNotFoundException (404)
-            requireRole(userId, projectId, EDITOR) → SecurityException (403)
+            ProjectAccessService.requireRole(userId, projectId, EDITOR) → SecurityException (403)
 
         Campaign.rename / changeDescription / changeDefaultOriginalUrl
             dirty checking으로 UPDATE.

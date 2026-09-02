@@ -19,6 +19,7 @@ import link.srrrg.identity.UserRepository;
 import link.srrrg.link.LinkRepository;
 import link.srrrg.link.UrlValidator;
 import link.srrrg.project.Project;
+import link.srrrg.project.ProjectAccessService;
 import link.srrrg.project.ProjectMember;
 import link.srrrg.project.ProjectMemberRepository;
 import link.srrrg.project.ProjectRepository;
@@ -31,6 +32,7 @@ class CampaignServiceTest {
 	private final UtmTemplateFieldRepository fields = mock(UtmTemplateFieldRepository.class);
 	private final CampaignUtmDefaultRepository defaults = mock(CampaignUtmDefaultRepository.class);
 	private final ProjectMemberRepository members = mock(ProjectMemberRepository.class);
+	private final ProjectAccessService projectAccess = new ProjectAccessService(members);
 	private final ProjectRepository projects = mock(ProjectRepository.class);
 	private final UserRepository users = mock(UserRepository.class);
 	private final LinkRepository links = mock(LinkRepository.class);
@@ -40,7 +42,7 @@ class CampaignServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		service = new CampaignService(campaigns, templates, fields, defaults, members, projects, users, links, imports, urlValidator);
+		service = new CampaignService(campaigns, templates, fields, defaults, projectAccess, projects, users, links, imports, urlValidator);
 	}
 
 	@Test

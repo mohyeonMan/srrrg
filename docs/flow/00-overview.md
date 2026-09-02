@@ -65,7 +65,7 @@ ClassName.methodName(args)
 | `/api/v1/**` | `Authorization: Bearer srrrg_pk_...` | `request.getAttribute("srrrg.apiKeyPrincipal")` | RFC 7807 `ProblemDetail` | 면제 |
 | `/api/links/**`, `/{code}` | 없음 (+ `X-Srrrg-Secret-Key`) | 없음 | `ApiErrorResponse` | 면제 |
 
-서비스 계층도 이 이중 구조를 그대로 반영한다 — `CampaignService.rename()` / `renameForApiKey()` 처럼 대부분의 연산이 쌍으로 존재한다. 앞의 것은 `ProjectService.requireRole`로 사용자 권한을 확인하고, 뒤의 것은 API 키의 `projectId`로 소유 여부만 확인한다.
+서비스 계층도 이 이중 구조를 그대로 반영한다 — `CampaignService.rename()` / `renameForApiKey()` 처럼 대부분의 연산이 쌍으로 존재한다. 앞의 것은 `ProjectAccessService.requireRole`로 사용자 권한을 확인하고, 뒤의 것은 API 키의 `projectId`로 소유 여부만 확인한다.
 
 ## 공통 필터 체인
 
@@ -176,7 +176,7 @@ RedirectExceptionHandler (@ControllerAdvice, RedirectController 한정, HIGHEST_
 컨트롤러에는 `@PreAuthorize` 같은 어노테이션이 없다. **권한은 전부 서비스 안에 있다.**
 
 ```
-ProjectService.requireRole(userId, projectId, minimumRole)
+ProjectAccessService.requireRole(userId, projectId, minimumRole)
     프로젝트 멤버십을 조회하고 역할이 기준 이상인지 확인한다.
     거의 모든 프로젝트 범위 연산이 이 메소드를 먼저 부른다.
     → SecurityException (403 PROJECT_ACCESS_DENIED)

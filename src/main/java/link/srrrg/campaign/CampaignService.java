@@ -15,8 +15,7 @@ import link.srrrg.identity.UserRepository;
 import link.srrrg.link.LinkRepository;
 import link.srrrg.link.UrlValidator;
 import link.srrrg.project.Project;
-import link.srrrg.project.ProjectMember;
-import link.srrrg.project.ProjectMemberRepository;
+import link.srrrg.project.ProjectAccessService;
 import link.srrrg.project.ProjectRepository;
 import link.srrrg.project.ProjectRole;
 
@@ -24,7 +23,7 @@ import link.srrrg.project.ProjectRole;
  * 캠페인과 그 UTM 기본값을 다룬다. 캠페인은 링크 묶음이자 UTM 값의 상속 원천이라,
  * 여기서 바꾼 기본 목적지와 기본 UTM은 이미 만들어진 링크의 리다이렉트 결과까지 바꾼다.
  *
- * <p>거의 모든 공개 메서드가 웹용과 API key용으로 쌍을 이룬다. 웹은 {@link #requireRole}로 멤버십과 역할을
+ * <p>거의 모든 공개 메서드가 웹용과 API key용으로 쌍을 이룬다. 웹은 {@link ProjectAccessService#requireRole}로 멤버십과 역할을
  * 확인하고, API key용({@code ...ForApiKey})은 키가 이미 프로젝트에 묶여 있어 대신
  * {@link #findForApiKey}가 캠페인이 그 프로젝트의 것인지 확인한다. 인가 방식만 다르고 이후 동작은
  * 같은 private 메서드를 공유하므로, 정책을 바꿀 때는 두 진입점을 함께 봐야 한다.</p>
@@ -40,7 +39,7 @@ public class CampaignService {
 	private final UtmTemplateRepository templates;
 	private final UtmTemplateFieldRepository fields;
 	private final CampaignUtmDefaultRepository defaults;
-	private final ProjectMemberRepository members;
+	private final ProjectAccessService projectAccess;
 	private final ProjectRepository projects;
 	private final UserRepository users;
 	private final LinkRepository links;
@@ -48,13 +47,13 @@ public class CampaignService {
 	private final UrlValidator urlValidator;
 
 	public CampaignService(CampaignRepository campaigns, UtmTemplateRepository templates, UtmTemplateFieldRepository fields,
-			CampaignUtmDefaultRepository defaults, ProjectMemberRepository members, ProjectRepository projects,
+			CampaignUtmDefaultRepository defaults, ProjectAccessService projectAccess, ProjectRepository projects,
 			UserRepository users, LinkRepository links, CampaignImportRepository imports, UrlValidator urlValidator) {
 		this.campaigns = campaigns;
 		this.templates = templates;
 		this.fields = fields;
 		this.defaults = defaults;
-		this.members = members;
+		this.projectAccess = projectAccess;
 		this.projects = projects;
 		this.users = users;
 		this.links = links;
@@ -64,7 +63,7 @@ public class CampaignService {
 
 	@Transactional
 	public Campaign create(Long userId, Long projectId, String name, String description, String defaultOriginalUrl) {
-		Project project = requireRole(userId, projectId, ProjectRole.EDITOR).getProject();
+		Project project = projectAccess.requireRole(userId, projectId, ProjectRole.EDITOR).getProject();
 		return campaigns.save(Campaign.create(project, validName(name), validDescription(description),
 				validDefaultOriginalUrl(defaultOriginalUrl), user(userId)));
 	}
@@ -82,7 +81,7 @@ public class CampaignService {
 
 	@Transactional(readOnly = true)
 	public List<Campaign> list(Long userId, Long projectId, Long cursor, int limit) {
-		requireRole(userId, projectId, ProjectRole.VIEWER);
+		projectAccess.requireRole(userId, projectId, ProjectRole.VIEWER);
 		return listPage(projectId, cursor, limit);
 	}
 
@@ -111,7 +110,7 @@ public class CampaignService {
 	@Transactional(readOnly = true)
 	public Campaign get(Long userId, Long campaignId) {
 		Campaign campaign = campaignOrNotFound(campaignId);
-		requireRole(userId, campaign.getProject().getId(), ProjectRole.VIEWER);
+		projectAccess.requireRole(userId, campaign.getProject().getId(), ProjectRole.VIEWER);
 		return campaign;
 	}
 
@@ -314,7 +313,7 @@ public class CampaignService {
 	@Transactional(readOnly = true)
 	public Campaign requireEditableCampaign(Long userId, Long campaignId) {
 		Campaign campaign = campaignOrNotFound(campaignId);
-		requireRole(userId, campaign.getProject().getId(), ProjectRole.EDITOR);
+		projectAccess.requireRole(userId, campaign.getProject().getId(), ProjectRole.EDITOR);
 		return campaign;
 	}
 
@@ -328,13 +327,6 @@ public class CampaignService {
 		Campaign campaign = campaigns.findByIdAndProjectId(campaignId, projectId)
 				.orElseThrow(CampaignNotFoundException::new);
 		return campaign;
-	}
-
-	private ProjectMember requireRole(Long userId, Long projectId, ProjectRole minimum) {
-		ProjectMember membership = members.findActiveByProjectAndUser(projectId, userId)
-				.orElseThrow(() -> new SecurityException("프로젝트 접근 권한이 없습니다."));
-		if (membership.getRole().ordinal() > minimum.ordinal()) throw new SecurityException("프로젝트 접근 권한이 없습니다.");
-		return membership;
 	}
 
 	private User user(Long id) {

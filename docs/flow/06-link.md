@@ -306,9 +306,9 @@ ProjectController.createLink(principal, projectId, request)
     → 201 Created
 
     ProjectService.createProjectLink(userId, projectId, request)
-        @Transactional이 없다 — requireRole과 링크 저장이 별도 트랜잭션에서 돈다.
+        @Transactional이 없다 — ProjectAccessService.requireRole과 링크 저장이 별도 트랜잭션에서 돈다.
 
-        requireRole(userId, projectId, EDITOR)
+        ProjectAccessService.requireRole(userId, projectId, EDITOR)
             통과한 ProjectMember에서 project와 user를 함께 얻는다.
 
         LinkManagementService.createForProject(request, project, createdBy)
@@ -334,7 +334,7 @@ ProjectController.link(principal, projectId, code)
 
     ProjectService.projectLink(userId, projectId, code)
         @Transactional(readOnly = true)
-        requireRole(userId, projectId, VIEWER)
+        ProjectAccessService.requireRole(userId, projectId, VIEWER)
 
         projectLink(projectId, code)                 [private 헬퍼]
             LinkRepository.findByProjectIdAndCode(projectId, code)
@@ -359,7 +359,7 @@ ProjectController.updateLink(principal, projectId, code, request)
 
     ProjectService.updateProjectLink(userId, projectId, code, request)
         @Transactional
-        requireRole(userId, projectId, EDITOR)
+        ProjectAccessService.requireRole(userId, projectId, EDITOR)
         projectLink(projectId, code)
 
         LinkManagementService.updateProjectLink(link, request)
@@ -390,7 +390,7 @@ ProjectController.deleteLink(principal, projectId, code)
 
     ProjectService.deleteProjectLink(userId, projectId, code)
         @Transactional
-        requireRole(userId, projectId, EDITOR)
+        ProjectAccessService.requireRole(userId, projectId, EDITOR)
         LinkRepository.delete(projectLink(projectId, code))
             Hibernate가 DELETE를 deleted_at UPDATE로 번역한다.
             이미 삭제된 링크는 조회되지 않으므로 다시 삭제하면 404가 된다.
@@ -409,7 +409,7 @@ ProjectController.claimLink(principal, projectId, code, secretKey)
 
     ProjectService.importAnonymousLink(userId, projectId, code, secret)
         @Transactional
-        requireRole(userId, projectId, EDITOR)
+        ProjectAccessService.requireRole(userId, projectId, EDITOR)
 
         LinkRepository.lockAnonymousByCode(code)
             @Lock(PESSIMISTIC_WRITE) — 두 프로젝트가 동시에 같은 링크를 편입하지 못하게
@@ -459,7 +459,7 @@ PublicProjectLinkController.create(servletRequest, projectId, idempotencyKey, re
 
     ProjectService.createProjectLink(apiKeyId, projectId, idempotencyKey, request)
         위의 web용 오버로드와 이름은 같지만 시그니처가 다르다.
-        requireRole 대신 API 키의 projectId를 신뢰한다.
+        ProjectAccessService.requireRole 대신 API 키의 projectId를 신뢰한다.
 
         RateLimitService.checkApiKeyWrite(apiKeyId)
             분당 60회. GET에 걸리는 read 한도는 필터가 처리하므로 여기서는 write만.

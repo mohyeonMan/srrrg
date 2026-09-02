@@ -29,15 +29,15 @@ import link.srrrg.identity.UserRepository;
 public class ApiKeyService {
 	private static final String CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 	private final ProjectApiKeyRepository keys;
-	private final ProjectMemberRepository members;
+	private final ProjectAccessService projectAccess;
 	private final ProjectRepository projects;
 	private final UserRepository users;
 	private final SecureRandomStringGenerator random;
 
-	public ApiKeyService(ProjectApiKeyRepository keys, ProjectMemberRepository members, ProjectRepository projects,
+	public ApiKeyService(ProjectApiKeyRepository keys, ProjectAccessService projectAccess, ProjectRepository projects,
 			UserRepository users, SecureRandomStringGenerator random) {
 		this.keys = keys;
-		this.members = members;
+		this.projectAccess = projectAccess;
 		this.projects = projects;
 		this.users = users;
 		this.random = random;
@@ -45,7 +45,7 @@ public class ApiKeyService {
 
 	@Transactional(readOnly = true)
 	public List<ProjectApiKey> list(Long userId, Long projectId) {
-		requireOwner(userId, projectId);
+		projectAccess.requireRole(userId, projectId, ProjectRole.OWNER);
 		return keys.findByProjectIdOrderByCreatedAtDesc(projectId);
 	}
 
@@ -59,7 +59,7 @@ public class ApiKeyService {
 	 */
 	@Transactional
 	public CreatedKey create(Long userId, Long projectId, String name, Set<ApiKeyScope> scopes, Instant expiresAt) {
-		requireOwner(userId, projectId);
+		projectAccess.requireRole(userId, projectId, ProjectRole.OWNER);
 		if (name == null || name.isBlank() || name.trim().length() > 100)
 			throw new IllegalArgumentException("API key 이름은 1~100자로 입력하세요.");
 		if (scopes == null || scopes.isEmpty())
@@ -80,7 +80,7 @@ public class ApiKeyService {
 	 */
 	@Transactional
 	public void revoke(Long userId, Long projectId, Long keyId) {
-		requireOwner(userId, projectId);
+		projectAccess.requireRole(userId, projectId, ProjectRole.OWNER);
 		ProjectApiKey key = keys.findById(keyId).orElseThrow(() -> new IllegalArgumentException("API key를 찾을 수 없습니다."));
 		if (!key.getProject().getId().equals(projectId))
 			throw new IllegalArgumentException("API key를 찾을 수 없습니다.");
@@ -104,14 +104,6 @@ public class ApiKeyService {
 			throw new ApiKeyUnauthorizedException();
 		key.recordUse();
 		return new ApiKeyPrincipal(key.getId(), key.getProject().getId(), Set.copyOf(key.getScopes()));
-	}
-
-	// findActiveByProjectAndUser가 프로젝트를 조인하므로 삭제된 프로젝트에서는 키를 발급·조회·폐기할 수 없다.
-	private void requireOwner(Long userId, Long projectId) {
-		ProjectMember member = members.findActiveByProjectAndUser(projectId, userId)
-				.orElseThrow(() -> new SecurityException("프로젝트 접근 권한이 없습니다."));
-		if (member.getRole() != ProjectRole.OWNER)
-			throw new SecurityException("프로젝트 접근 권한이 없습니다.");
 	}
 
 	private Project project(Long id) {

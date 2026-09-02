@@ -14,7 +14,7 @@ UTM 템플릿은 **프로젝트가 쓸 UTM 파라미터 이름의 집합**이다
 | 필드 추가 | `POST {base}/projects/{projectId}/utm-templates/{templateId}/fields` | EDITOR / `campaigns:write` |
 | 필드 삭제 | `DELETE {base}/.../fields/{fieldId}` | EDITOR / `campaigns:write` |
 
-컨트롤러는 `UtmTemplateController`(web)와 `PublicUtmTemplateController`(v1) 둘 다 `UtmTemplateService`의 `xxx` / `xxxForApiKey` 쌍을 호출한다. **쌍의 유일한 차이는 `requireRole` 유무**이며, 실제 로직은 `doCreate` / `doRename` / `doDelete` / `doAddField` / `doDeleteField` / `doActiveFields` private 메소드로 공유된다.
+컨트롤러는 `UtmTemplateController`(web)와 `PublicUtmTemplateController`(v1) 둘 다 `UtmTemplateService`의 `xxx` / `xxxForApiKey` 쌍을 호출한다. **쌍의 유일한 차이는 `ProjectAccessService.requireRole` 유무**이며, 실제 로직은 `doCreate` / `doRename` / `doDelete` / `doAddField` / `doDeleteField` / `doActiveFields` private 메소드로 공유된다.
 
 ## 제약
 
@@ -55,7 +55,7 @@ UtmTemplateController.create(principal, projectId, request)
 
     UtmTemplateService.create(userId, projectId, name)
         @Transactional
-        requireRole(userId, projectId, EDITOR)
+        ProjectAccessService.requireRole(userId, projectId, EDITOR)
         doCreate(project, name)
 
 PublicUtmTemplateController.create(request, projectId, body)
@@ -99,7 +99,7 @@ UtmTemplateController.list(principal, projectId)
 
     UtmTemplateService.list(userId, projectId)
         @Transactional(readOnly = true)
-        requireRole(userId, projectId, VIEWER)
+        ProjectAccessService.requireRole(userId, projectId, VIEWER)
 
         UtmTemplateRepository.findByProjectIdAndDeletedAtIsNullOrderByIdDesc(projectId)
             소프트 삭제된 템플릿은 제외. 페이징이 없다 — 템플릿 수가 많지 않다고 본 것.
@@ -107,7 +107,7 @@ UtmTemplateController.list(principal, projectId)
     [템플릿마다] UtmTemplateService.activeFields(userId, projectId, template.getId())
         각 템플릿의 활성 필드를 개별 조회한다.
 
-        requireRole(userId, projectId, VIEWER)
+        ProjectAccessService.requireRole(userId, projectId, VIEWER)
             템플릿 개수만큼 권한 검사가 반복된다.
 
         doActiveFields(projectId, templateId)
@@ -135,7 +135,7 @@ UtmTemplateController.get(principal, projectId, templateId)
 
     UtmTemplateService.get(userId, projectId, templateId)
         @Transactional(readOnly = true)
-        requireRole(userId, projectId, VIEWER)
+        ProjectAccessService.requireRole(userId, projectId, VIEWER)
         template(templateId, projectId)
 
     UtmTemplateService.activeFields(userId, projectId, templateId)
@@ -160,7 +160,7 @@ UtmTemplateController.rename(principal, projectId, templateId, request)
 
     UtmTemplateService.rename(userId, projectId, templateId, name)
         @Transactional
-        requireRole(userId, projectId, EDITOR)
+        ProjectAccessService.requireRole(userId, projectId, EDITOR)
         doRename(projectId, templateId, name)
 
 PublicUtmTemplateController.rename(request, projectId, templateId, body)
@@ -196,7 +196,7 @@ UtmTemplateController.delete(principal, projectId, templateId)
 
     UtmTemplateService.delete(userId, projectId, templateId)
         @Transactional
-        requireRole(userId, projectId, EDITOR)
+        ProjectAccessService.requireRole(userId, projectId, EDITOR)
         doDelete(projectId, templateId)
 
 PublicUtmTemplateController.delete(request, projectId, templateId)
@@ -236,7 +236,7 @@ UtmTemplateController.addField(principal, projectId, templateId, request)
 
     UtmTemplateService.addField(userId, projectId, templateId, name)
         @Transactional
-        requireRole(userId, projectId, EDITOR)
+        ProjectAccessService.requireRole(userId, projectId, EDITOR)
         doAddField(projectId, templateId, name)
 
 PublicUtmTemplateController.addField(request, projectId, templateId, body)
@@ -285,7 +285,7 @@ UtmTemplateController.deleteField(principal, projectId, templateId, fieldId)
 
     UtmTemplateService.deleteField(userId, projectId, templateId, fieldId)
         @Transactional
-        requireRole(userId, projectId, EDITOR)
+        ProjectAccessService.requireRole(userId, projectId, EDITOR)
         doDeleteField(projectId, templateId, fieldId)
 
 PublicUtmTemplateController.deleteField(request, projectId, templateId, fieldId)

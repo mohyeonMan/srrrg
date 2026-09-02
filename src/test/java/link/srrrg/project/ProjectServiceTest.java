@@ -38,7 +38,7 @@ class ProjectServiceTest {
 	private final ProjectDomainService domains = mock(ProjectDomainService.class);
 	private final RateLimitService rateLimitService = mock(RateLimitService.class);
 	private final UtmTemplateService utmTemplates = mock(UtmTemplateService.class);
-	private final ProjectService service = new ProjectService(projects, members, invitations, users, links,
+	private final ProjectService service = new ProjectService(projects, members, new ProjectAccessService(members), invitations, users, links,
 			mock(SecureRandomStringGenerator.class), mock(InvitationEmailSender.class), secretKeys, linkManagement, domains,
 			rateLimitService, utmTemplates, "https://srrrg.link");
 

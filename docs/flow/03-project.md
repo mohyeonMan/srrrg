@@ -20,7 +20,7 @@
 ## 권한의 단일 관문
 
 ```
-ProjectService.requireRole(userId, projectId, minimum)
+ProjectAccessService.requireRole(userId, projectId, minimum)
     프로젝트 범위 연산의 첫 줄에 거의 항상 등장한다. 통과하면 ProjectMember를 돌려주므로
     호출부가 project·user를 다시 조회하지 않아도 된다.
 
@@ -127,7 +127,7 @@ ProjectController.detail(principal, projectId)
 
     ProjectService.detail(userId, projectId)
         @Transactional(readOnly = true)
-        requireRole(userId, projectId, VIEWER) 를 그대로 반환한다.
+        ProjectAccessService.requireRole(userId, projectId, VIEWER) 를 그대로 반환한다.
         조회 자체가 권한 검사이고, 권한 검사의 부산물이 곧 응답 데이터다.
 ```
 
@@ -143,7 +143,7 @@ ProjectController.rename(principal, projectId, request)
 
     ProjectService.rename(userId, projectId, name)
         @Transactional
-        requireRole(userId, projectId, OWNER)
+        ProjectAccessService.requireRole(userId, projectId, OWNER)
         validName(name)
         Project.rename(name)
             dirty checking으로 UPDATE. save() 호출 없음.
@@ -161,7 +161,7 @@ ProjectController.deleteProject(principal, projectId)
 
     ProjectService.delete(userId, projectId)
         @Transactional
-        requireRole(userId, projectId, OWNER)
+        ProjectAccessService.requireRole(userId, projectId, OWNER)
         ProjectRepository.softDeleteById(projectId)
             Hibernate가 DELETE를 deleted_at UPDATE로 번역한다.
 ```
@@ -183,11 +183,11 @@ ProjectController.overview(principal, projectId)
 
     CampaignService.list(userId, projectId, null, 100)
         캠페인 최대 100개. 커서 없이 첫 페이지만.
-        내부적으로 requireRole(VIEWER)를 수행한다.
+        내부적으로 ProjectAccessService.requireRole(VIEWER)를 수행한다.
 
     ProjectService.projectLinks(userId, projectId)
         @Transactional(readOnly = true)
-        requireRole(userId, projectId, VIEWER)
+        ProjectAccessService.requireRole(userId, projectId, VIEWER)
 
         LinkRepository.findByProjectIdAndCampaignIsNullOrderByIdDesc(projectId)
             캠페인에 속하지 않은 링크만. 캠페인 링크는 캠페인 화면에서 따로 본다.
@@ -198,7 +198,7 @@ ProjectController.overview(principal, projectId)
 
 **핵심 1가지**
 
-- `requireRole`이 이 요청에서 두 번 실행된다(캠페인 조회 1회, 링크 조회 1회). 두 서비스가 서로를 모르는 대가다.
+- `ProjectAccessService.requireRole`이 이 요청에서 두 번 실행된다(캠페인 조회 1회, 링크 조회 1회). 두 서비스가 서로를 모르는 대가다.
 
 ---
 
@@ -211,7 +211,7 @@ ProjectController.subdomain(principal, projectId)
 
     ProjectService.projectDomain(userId, projectId)
         @Transactional(readOnly = true)
-        requireRole(userId, projectId, VIEWER).getProject()
+        ProjectAccessService.requireRole(userId, projectId, VIEWER).getProject()
 
     → SubdomainResponse.from(project)
        선점한 슬러그와 활성 여부를 함께 내려준다.
@@ -228,7 +228,7 @@ ProjectController.claimSubdomain(principal, projectId, request)
 
     ProjectService.claimSubdomain(userId, projectId, requestedSubdomain)
         @Transactional
-        requireRole(userId, projectId, OWNER)
+        ProjectAccessService.requireRole(userId, projectId, OWNER)
 
         normalizedSubdomain(requested)
             형식·길이·예약어 검사. 위 create와 같은 규칙.
@@ -258,7 +258,7 @@ ProjectController.activateSubdomain(principal, projectId, request)
 
     ProjectService.setSubdomainEnabled(userId, projectId, enabled)
         @Transactional
-        requireRole(userId, projectId, OWNER)
+        ProjectAccessService.requireRole(userId, projectId, OWNER)
 
         Project.setSubdomainEnabled(enabled)
             켜려는데 선점한 슬러그가 없으면 거부한다.
@@ -281,7 +281,7 @@ ProjectController.releaseSubdomain(principal, projectId)
 
     ProjectService.releaseSubdomain(userId, projectId)
         @Transactional
-        requireRole(userId, projectId, OWNER)
+        ProjectAccessService.requireRole(userId, projectId, OWNER)
 
         Project.releaseSubdomain()
             subdomain을 null로, subdomainEnabled를 false로 함께 되돌린다.

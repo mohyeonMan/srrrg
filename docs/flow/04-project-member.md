@@ -37,7 +37,7 @@ ProjectController.members(principal, projectId)
 
     ProjectService.projectMembers(userId, projectId)
         @Transactional(readOnly = true)
-        requireRole(userId, projectId, VIEWER)
+        ProjectAccessService.requireRole(userId, projectId, VIEWER)
 
         ProjectMemberRepository.findByIdProjectId(projectId)
             멤버 전원. 뷰어도 누가 있는지는 볼 수 있다.
@@ -56,7 +56,7 @@ ProjectController.changeRole(principal, projectId, memberId, request)
 
     ProjectService.changeMemberRole(actorId, projectId, memberId, role)
         @Transactional
-        requireRole(actorId, projectId, OWNER)
+        ProjectAccessService.requireRole(actorId, projectId, OWNER)
 
         ProjectMemberRepository.lockByProjectAndUser(projectId, memberId)
             비관적 잠금으로 대상 멤버십을 잡는다. 아래 "마지막 OWNER" 검사와
@@ -87,7 +87,7 @@ ProjectController.remove(principal, projectId, memberId)
 
     ProjectService.removeMember(actorId, projectId, memberId)
         @Transactional
-        requireRole(actorId, projectId, OWNER)
+        ProjectAccessService.requireRole(actorId, projectId, OWNER)
 
         ProjectMemberRepository.lockByProjectAndUser(projectId, memberId)
             → 없으면 IllegalArgumentException (400)
@@ -115,7 +115,7 @@ ProjectController.invitations(principal, projectId)
 
     ProjectService.projectInvitations(userId, projectId)
         @Transactional(readOnly = true)
-        requireRole(userId, projectId, OWNER)
+        ProjectAccessService.requireRole(userId, projectId, OWNER)
 
         ProjectInvitationRepository.findByProjectIdAndCancelledAtIsNullAndAcceptedAtIsNull(projectId)
             취소·수락된 것은 제외. 만료된 것은 걸러지지 않아 목록에 남는다.
@@ -134,7 +134,7 @@ ProjectController.invite(principal, projectId, request)
 
     ProjectService.invite(userId, projectId, email, role)
         @Transactional
-        requireRole(userId, projectId, OWNER)
+        ProjectAccessService.requireRole(userId, projectId, OWNER)
 
         (역할 검사)
             OWNER로는 초대할 수 없다. 소유권 이전은 초대가 아니라 역할 변경으로 한다.
@@ -192,7 +192,7 @@ ProjectController.resend(principal, invitationId)
         invitation(invitationId)
             ProjectInvitationRepository.findById → 없으면 IllegalArgumentException (400)
 
-        requireRole(userId, old.getProject().getId(), OWNER)
+        ProjectAccessService.requireRole(userId, old.getProject().getId(), OWNER)
             projectId를 경로가 아니라 초대에서 얻는다. 남의 프로젝트 초대 ID를 넣어도
             그 프로젝트의 OWNER가 아니면 여기서 막힌다.
 
@@ -225,7 +225,7 @@ ProjectController.cancel(principal, invitationId)
     ProjectService.cancel(userId, invitationId)
         @Transactional
         invitation(invitationId)
-        requireRole(userId, invitation.getProject().getId(), OWNER)
+        ProjectAccessService.requireRole(userId, invitation.getProject().getId(), OWNER)
         ProjectInvitation.cancel()
             cancelledAt만 찍는다. 행은 남는다.
 ```

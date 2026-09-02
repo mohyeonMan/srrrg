@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import link.srrrg.identity.User;
 import link.srrrg.project.Project;
+import link.srrrg.project.ProjectAccessService;
 import link.srrrg.project.ProjectMember;
 import link.srrrg.project.ProjectMemberRepository;
 import link.srrrg.project.ProjectRepository;
@@ -24,12 +25,13 @@ class UtmTemplateServiceTest {
 	private final UtmTemplateFieldRepository fields = mock(UtmTemplateFieldRepository.class);
 	private final CampaignRepository campaigns = mock(CampaignRepository.class);
 	private final ProjectMemberRepository members = mock(ProjectMemberRepository.class);
+	private final ProjectAccessService projectAccess = new ProjectAccessService(members);
 	private final ProjectRepository projects = mock(ProjectRepository.class);
 	private UtmTemplateService service;
 
 	@BeforeEach
 	void setUp() {
-		service = new UtmTemplateService(templates, fields, campaigns, members, projects);
+		service = new UtmTemplateService(templates, fields, campaigns, projectAccess, projects);
 	}
 
 	@Test

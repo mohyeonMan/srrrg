@@ -28,9 +28,9 @@ import link.srrrg.link.management.dto.LinkManagementResponse;
 import link.srrrg.link.management.dto.UpdateLinkRequest;
 
 /**
- * 프로젝트와 그 구성원, 초대, 프로젝트 소속 링크를 다룬다. 이 서비스의 실질적인 책임은 인가다.
+ * 프로젝트와 그 구성원, 초대, 프로젝트 소속 링크의 유스케이스를 조율한다.
  *
- * <p>거의 모든 공개 메서드가 {@link #requireRole}로 시작한다. 프로젝트 자원은 멤버십이 있어야 접근할 수
+ * <p>거의 모든 공개 메서드가 {@link ProjectAccessService#requireRole}로 시작한다. 프로젝트 자원은 멤버십이 있어야 접근할 수
  * 있고 역할에 따라 허용 범위가 다르므로, 조회 전에 권한을 확인하는 이 순서를 지켜야 한다.
  * 먼저 조회한 뒤 권한을 보면 존재 여부가 응답 차이로 새어 나간다.</p>
  *
@@ -46,6 +46,7 @@ public class ProjectService {
 	private static final String TOKEN_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 	private final ProjectRepository projects;
 	private final ProjectMemberRepository members;
+	private final ProjectAccessService projectAccess;
 	private final ProjectInvitationRepository invitations;
 	private final UserRepository users;
 	private final LinkRepository links;
@@ -58,7 +59,7 @@ public class ProjectService {
 	private final UtmTemplateService utmTemplates;
 	private final String baseUrl;
 
-	public ProjectService(ProjectRepository projects, ProjectMemberRepository members,
+	public ProjectService(ProjectRepository projects, ProjectMemberRepository members, ProjectAccessService projectAccess,
 			ProjectInvitationRepository invitations,
 			UserRepository users, LinkRepository links, SecureRandomStringGenerator random,
 			InvitationEmailSender emailSender, SecretKeyManager secretKeys,
@@ -66,6 +67,7 @@ public class ProjectService {
 			UtmTemplateService utmTemplates, @Value("${srrrg.base-url}") String baseUrl) {
 		this.projects = projects;
 		this.members = members;
+		this.projectAccess = projectAccess;
 		this.invitations = invitations;
 		this.users = users;
 		this.links = links;
@@ -129,18 +131,18 @@ public class ProjectService {
 
 	@Transactional(readOnly = true)
 	public ProjectMember detail(Long userId, Long projectId) {
-		return requireRole(userId, projectId, ProjectRole.VIEWER);
+		return projectAccess.requireRole(userId, projectId, ProjectRole.VIEWER);
 	}
 
 	@Transactional(readOnly = true)
 	public List<Link> projectLinks(Long userId, Long projectId) {
-		requireRole(userId, projectId, ProjectRole.VIEWER);
+		projectAccess.requireRole(userId, projectId, ProjectRole.VIEWER);
 		return links.findByProjectIdAndCampaignIsNullOrderByIdDesc(projectId);
 	}
 
 	@Transactional(readOnly = true)
 	public List<ProjectMember> projectMembers(Long userId, Long projectId) {
-		requireRole(userId, projectId, ProjectRole.VIEWER);
+		projectAccess.requireRole(userId, projectId, ProjectRole.VIEWER);
 		return members.findByIdProjectId(projectId);
 	}
 
@@ -149,18 +151,18 @@ public class ProjectService {
 	 */
 	@Transactional(readOnly = true)
 	public List<ProjectInvitation> projectInvitations(Long userId, Long projectId) {
-		requireRole(userId, projectId, ProjectRole.OWNER);
+		projectAccess.requireRole(userId, projectId, ProjectRole.OWNER);
 		return invitations.findByProjectIdAndCancelledAtIsNullAndAcceptedAtIsNull(projectId);
 	}
 
 	@Transactional(readOnly = true)
 	public Project projectDomain(Long userId, Long projectId) {
-		return requireRole(userId, projectId, ProjectRole.VIEWER).getProject();
+		return projectAccess.requireRole(userId, projectId, ProjectRole.VIEWER).getProject();
 	}
 
 	@Transactional
 	public Project rename(Long userId, Long projectId, String name) {
-		Project project = requireRole(userId, projectId, ProjectRole.OWNER).getProject();
+		Project project = projectAccess.requireRole(userId, projectId, ProjectRole.OWNER).getProject();
 		project.rename(validName(name));
 		return project;
 	}
@@ -174,7 +176,7 @@ public class ProjectService {
 	 */
 	@Transactional
 	public Project claimSubdomain(Long userId, Long projectId, String requestedSubdomain) {
-		Project project = requireRole(userId, projectId, ProjectRole.OWNER).getProject();
+		Project project = projectAccess.requireRole(userId, projectId, ProjectRole.OWNER).getProject();
 		String subdomain = normalizedSubdomain(requestedSubdomain);
 		if (!subdomain.equals(project.getSubdomain()) && projects.existsBySubdomain(subdomain)) {
 			throw new IllegalArgumentException("이미 사용 중인 서브도메인입니다.");
@@ -189,7 +191,7 @@ public class ProjectService {
 
 	@Transactional
 	public Project setSubdomainEnabled(Long userId, Long projectId, boolean enabled) {
-		Project project = requireRole(userId, projectId, ProjectRole.OWNER).getProject();
+		Project project = projectAccess.requireRole(userId, projectId, ProjectRole.OWNER).getProject();
 		project.setSubdomainEnabled(enabled);
 		return project;
 	}
@@ -200,7 +202,7 @@ public class ProjectService {
 	 */
 	@Transactional
 	public Project releaseSubdomain(Long userId, Long projectId) {
-		Project project = requireRole(userId, projectId, ProjectRole.OWNER).getProject();
+		Project project = projectAccess.requireRole(userId, projectId, ProjectRole.OWNER).getProject();
 		project.releaseSubdomain();
 		return project;
 	}
@@ -212,7 +214,7 @@ public class ProjectService {
 	 */
 	@Transactional
 	public void delete(Long userId, Long projectId) {
-		requireRole(userId, projectId, ProjectRole.OWNER);
+		projectAccess.requireRole(userId, projectId, ProjectRole.OWNER);
 		// @SoftDelete가 걸려 있어 bulk delete는 deleted_at을 찍는 UPDATE로 번역된다.
 		projects.softDeleteById(projectId);
 	}
@@ -231,7 +233,7 @@ public class ProjectService {
 	 */
 	@Transactional
 	public ProjectInvitation invite(Long userId, Long projectId, String email, ProjectRole role) {
-		requireRole(userId, projectId, ProjectRole.OWNER);
+		projectAccess.requireRole(userId, projectId, ProjectRole.OWNER);
 		if (role == ProjectRole.OWNER)
 			throw new IllegalArgumentException("초대 역할은 EDITOR 또는 VIEWER여야 합니다.");
 		String normalizedEmail = validEmail(email);
@@ -266,7 +268,7 @@ public class ProjectService {
 	@Transactional
 	public ProjectInvitation resend(Long userId, Long invitationId) {
 		ProjectInvitation old = invitation(invitationId);
-		requireRole(userId, old.getProject().getId(), ProjectRole.OWNER);
+		projectAccess.requireRole(userId, old.getProject().getId(), ProjectRole.OWNER);
 		if (old.getAcceptedAt() != null)
 			throw new IllegalArgumentException("이미 수락된 초대입니다.");
 		old.cancel();
@@ -276,7 +278,7 @@ public class ProjectService {
 	@Transactional
 	public void cancel(Long userId, Long invitationId) {
 		ProjectInvitation invitation = invitation(invitationId);
-		requireRole(userId, invitation.getProject().getId(), ProjectRole.OWNER);
+		projectAccess.requireRole(userId, invitation.getProject().getId(), ProjectRole.OWNER);
 		invitation.cancel();
 	}
 
@@ -326,7 +328,7 @@ public class ProjectService {
 	 */
 	@Transactional
 	public void changeMemberRole(Long actorId, Long projectId, Long memberId, ProjectRole role) {
-		requireRole(actorId, projectId, ProjectRole.OWNER);
+		projectAccess.requireRole(actorId, projectId, ProjectRole.OWNER);
 		ProjectMember member = members.lockByProjectAndUser(projectId, memberId)
 				.orElseThrow(() -> new IllegalArgumentException("멤버를 찾을 수 없습니다."));
 		if (member.getRole() == ProjectRole.OWNER && role != ProjectRole.OWNER
@@ -340,7 +342,7 @@ public class ProjectService {
 	 */
 	@Transactional
 	public void removeMember(Long actorId, Long projectId, Long memberId) {
-		requireRole(actorId, projectId, ProjectRole.OWNER);
+		projectAccess.requireRole(actorId, projectId, ProjectRole.OWNER);
 		ProjectMember member = members.lockByProjectAndUser(projectId, memberId)
 				.orElseThrow(() -> new IllegalArgumentException("멤버를 찾을 수 없습니다."));
 		if (member.getRole() == ProjectRole.OWNER
@@ -360,7 +362,7 @@ public class ProjectService {
 	 */
 	@Transactional
 	public void importAnonymousLink(Long userId, Long projectId, String code, String secret) {
-		requireRole(userId, projectId, ProjectRole.EDITOR);
+		projectAccess.requireRole(userId, projectId, ProjectRole.EDITOR);
 		Link link = links.lockAnonymousByCode(code).orElseThrow(() -> new IllegalArgumentException("링크를 찾을 수 없습니다."));
 		if (link.getProject() != null || link.getSecretKeyHash() == null
 				|| !secretKeys.matches(secret, link.getSecretKeyHash()))
@@ -377,7 +379,7 @@ public class ProjectService {
 	 * 웹에서 프로젝트 링크를 만든다. EDITOR 이상이어야 하며, 생성자는 확인된 멤버십의 사용자로 기록된다.
 	 */
 	public Link createProjectLink(Long userId, Long projectId, CreateLinkRequest request) {
-		ProjectMember membership = requireRole(userId, projectId, ProjectRole.EDITOR);
+		ProjectMember membership = projectAccess.requireRole(userId, projectId, ProjectRole.EDITOR);
 		return linkManagement.createForProject(request, membership.getProject(), membership.getUser());
 	}
 
@@ -403,7 +405,7 @@ public class ProjectService {
 
 	@Transactional
 	public void deleteProjectLink(Long userId, Long projectId, String code) {
-		requireRole(userId, projectId, ProjectRole.EDITOR);
+		projectAccess.requireRole(userId, projectId, ProjectRole.EDITOR);
 		links.delete(projectLink(projectId, code));
 	}
 
@@ -414,7 +416,7 @@ public class ProjectService {
 	 */
 	@Transactional(readOnly = true)
 	public LinkManagementResponse projectLink(Long userId, Long projectId, String code) {
-		ProjectMember member = requireRole(userId, projectId, ProjectRole.VIEWER);
+		ProjectMember member = projectAccess.requireRole(userId, projectId, ProjectRole.VIEWER);
 		return linkManagement.projectManagementResponse(projectLink(projectId, code),
 				member.getRole() != ProjectRole.VIEWER);
 	}
@@ -422,34 +424,13 @@ public class ProjectService {
 	@Transactional
 	public LinkManagementResponse updateProjectLink(Long userId, Long projectId, String code,
 			UpdateLinkRequest request) {
-		requireRole(userId, projectId, ProjectRole.EDITOR);
+		projectAccess.requireRole(userId, projectId, ProjectRole.EDITOR);
 		return linkManagement.updateProjectLink(projectLink(projectId, code), request);
 	}
 
 	// 삭제된 링크는 @SoftDelete가 조회에서 걸러내므로 여기서는 존재 여부만 본다.
 	private Link projectLink(Long projectId, String code) {
 		return links.findByProjectIdAndCode(projectId, code).orElseThrow(LinkNotFoundException::new);
-	}
-
-	// findActiveByProjectAndUser가 프로젝트를 조인하므로 삭제된 프로젝트의 멤버십은 애초에 조회되지 않는다.
-	/**
-	 * 프로젝트 접근 권한을 확인하고 멤버십을 돌려준다. 이 클래스 인가의 단일 통로다.
-	 *
-	 * <p>역할 비교에 {@code ordinal()}을 쓰므로 {@link ProjectRole}의 선언 순서가 곧 권한 서열이다.
-	 * 상수를 재배열하거나 중간에 끼워 넣으면 이 비교가 조용히 달라진다.</p>
-	 *
-	 * <p>멤버십이 없는 경우와 역할이 모자란 경우를 같은 예외와 같은 문구로 합친다.
-	 * 구분하면 프로젝트가 실재하는지가 응답으로 드러난다.</p>
-	 *
-	 * @param minimum 필요한 최소 역할
-	 * @throws SecurityException 멤버가 아니거나 역할이 모자란 경우. 전역 처리기가 403으로 바꾼다
-	 */
-	private ProjectMember requireRole(Long userId, Long projectId, ProjectRole minimum) {
-		ProjectMember membership = members.findActiveByProjectAndUser(projectId, userId)
-				.orElseThrow(() -> new SecurityException("프로젝트 접근 권한이 없습니다."));
-		if (membership.getRole().ordinal() > minimum.ordinal())
-			throw new SecurityException("프로젝트 접근 권한이 없습니다.");
-		return membership;
 	}
 
 	private Project project(Long id) {

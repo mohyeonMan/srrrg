@@ -8,17 +8,15 @@
 | POST | `/api/web/projects/{projectId}/api-keys` | `ProjectController.createApiKey` | OWNER |
 | DELETE | `/api/web/projects/{projectId}/api-keys/{keyId}` | `ProjectController.revokeApiKey` | OWNER |
 
-## 다른 도메인과 다른 점
+## 프로젝트 역할 확인
 
-`ApiKeyService`는 `ProjectService.requireRole`을 쓰지 않고 **자체 `requireOwner`를 가진다.**
+API 키 조회·발급·폐기도 다른 프로젝트 기능과 같은 권한 관문을 사용한다.
 
 ```
-ApiKeyService.requireOwner(userId, projectId)
+ProjectAccessService.requireRole(userId, projectId, OWNER)
     ProjectMemberRepository.findActiveByProjectAndUser(projectId, userId)
         → 없으면 SecurityException (403)
-    (역할이 정확히 OWNER인지)
-        requireRole과 달리 ordinal 비교가 아니라 동등 비교다. 결과는 같지만
-        ProjectService에 의존하지 않으려고 별도로 구현돼 있다.
+    (역할이 OWNER 이상인지)
         → SecurityException (403)
 ```
 

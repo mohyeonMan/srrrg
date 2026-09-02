@@ -18,7 +18,8 @@ import link.srrrg.identity.User;
 import link.srrrg.link.Link;
 import link.srrrg.link.management.LinkManagementService;
 import link.srrrg.project.Project;
-import link.srrrg.project.ProjectMemberRepository;
+import link.srrrg.project.ProjectAccessService;
+import link.srrrg.project.ProjectRole;
 
 /**
  * campaign 링크 생성의 단일 진입점. web(JWT), 공개 API, JSON batch, CSV worker가 모두 이 서비스를 호출한다.
@@ -32,16 +33,16 @@ public class CampaignLinkCreationService {
 	private final CampaignService campaignService;
 	private final UtmTemplateFieldRepository fields;
 	private final LinkManagementService linkManagement;
-	private final ProjectMemberRepository members;
+	private final ProjectAccessService projectAccess;
 	private final RateLimitService rateLimitService;
 
 	public CampaignLinkCreationService(CampaignService campaignService, UtmTemplateFieldRepository fields,
 			LinkManagementService linkManagement,
-			ProjectMemberRepository members, RateLimitService rateLimitService) {
+			ProjectAccessService projectAccess, RateLimitService rateLimitService) {
 		this.campaignService = campaignService;
 		this.fields = fields;
 		this.linkManagement = linkManagement;
-		this.members = members;
+		this.projectAccess = projectAccess;
 		this.rateLimitService = rateLimitService;
 	}
 
@@ -52,9 +53,7 @@ public class CampaignLinkCreationService {
 	@Transactional
 	public Link createForUser(Long userId, Long campaignId, CreateCampaignLinkRequest request) {
 		Campaign campaign = campaignService.requireEditableCampaign(userId, campaignId);
-		User createdBy = members.findActiveByProjectAndUser(campaign.getProject().getId(), userId)
-				.orElseThrow(() -> new SecurityException("프로젝트 접근 권한이 없습니다."))
-				.getUser();
+		User createdBy = projectAccess.requireRole(userId, campaign.getProject().getId(), ProjectRole.EDITOR).getUser();
 		return create(campaign, campaign.getProject(), createdBy, null, null, null, request);
 	}
 
