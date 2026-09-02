@@ -14,6 +14,13 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * 이 서비스의 사용자 계정. 비밀번호가 없고 공급자 로그인으로만 만들어지므로,
+ * 이 엔티티에는 자격증명이 전혀 담기지 않는다.
+ *
+ * <p>이메일은 계정 연결 판단에 쓰이기 때문에 공급자가 검증한 주소만 저장한다.
+ * 검증되지 않은 값이 여기 들어오면 그것만으로 기존 계정과 이어질 수 있다.</p>
+ */
 @Entity
 @Table(name = "users")
 @Getter
@@ -58,6 +65,10 @@ public class User {
 		this.onboardingCompletedAt = Instant.now();
 	}
 
+	/**
+	 * 온보딩 완료 시각이 비어 있으면 아직 마치지 않은 것으로 본다.
+	 * 로그인 성공 처리기가 이 값으로 첫 목적지를 정한다.
+	 */
 	public boolean needsOnboarding() {
 		return onboardingCompletedAt == null;
 	}

@@ -17,6 +17,14 @@ import lombok.NoArgsConstructor;
 @Table(name = "oauth_authorization_requests")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+/**
+ * 진행 중인 OAuth 인가 요청을 파드 사이에서 공유하기 위한 저장 형태.
+ * 세션을 쓰지 않으므로 콜백이 다른 파드에 도착해도 이 행으로 원래 요청을 복원한다.
+ *
+ * <p>{@code tokenHash}는 브라우저 쿠키 값의 해시이며 조회 키다. {@code codeVerifier}만 원문으로 남는데,
+ * 토큰 교환 때 공급자에게 그대로 보내야 하는 값이기 때문이다. 그래서 수명을 10분으로 짧게 두고
+ * 사용 즉시 행을 지운다.</p>
+ */
 public class OAuthAuthorizationRequest {
 
 	@Id

@@ -12,6 +12,12 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import jakarta.servlet.http.HttpServletRequest;
 import link.srrrg.identity.UserRepository;
 
+/**
+ * 모든 화면 템플릿에 현재 로그인 사용자 정보를 넣어 준다. 헤더의 계정 영역이 이 값으로 그려진다.
+ *
+ * <p>여기서 채우는 값은 표시 전용이다. 권한 판단에 쓰이지 않으므로 만료된 access token에서 읽은
+ * 사용자 식별자도 허용한다. 그 근거는 아래 {@link #sessionUserId}에 적어 두었다.</p>
+ */
 @ControllerAdvice
 public class WebAccountModel {
 	private final UserRepository users;
@@ -38,6 +44,10 @@ public class WebAccountModel {
 		populate(principal instanceof SrrrgPrincipal sessionPrincipal ? sessionPrincipal : null, request, model);
 	}
 
+	/**
+	 * 사용자를 찾지 못하면 모델에 계정 속성을 넣지 않는다. 템플릿은 속성이 없는 상태를 로그아웃으로 그린다.
+	 * 현재 경로는 로그인 후 돌아올 위치로 쓰이므로 로그인 여부와 관계없이 항상 넣는다.
+	 */
 	private void populate(SrrrgPrincipal principal, HttpServletRequest request, Model model) {
 		sessionUserId(principal, request)
 				.flatMap(users::findById)

@@ -13,6 +13,11 @@ import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Service;
 
 @Service
+/**
+ * OIDC 로그인(Google)의 사용자 정보를 {@code ProviderOAuth2UserService}와 같은 속성 키로 맞춘다.
+ * Spring Security가 OIDC와 일반 OAuth2를 다른 서비스로 처리하기 때문에 두 경로가 나뉘지만,
+ * 뒤쪽 로직이 같은 키만 보면 되도록 결과 형태는 일치시킨다.
+ */
 class ProviderOidcUserService implements OAuth2UserService<OidcUserRequest, OidcUser> {
 
 	private final OidcUserService delegate = new OidcUserService();

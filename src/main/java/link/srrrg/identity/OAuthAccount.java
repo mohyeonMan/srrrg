@@ -19,6 +19,13 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+/**
+ * 사용자 한 명과 공급자 계정 하나의 연결. 한 사용자가 여러 공급자를 붙일 수 있고,
+ * 이 표의 존재 여부가 곧 그 공급자로 로그인할 수 있는지를 결정한다.
+ *
+ * <p>(provider, provider_user_id) 유일 제약이 하나의 공급자 계정이 두 사용자에게 연결되는 것을 막는다.
+ * 서비스 계층에서도 같은 검사를 하지만, 동시 요청에서는 애플리케이션 검사만으로 막을 수 없어 DB 제약이 최종 방어선이다.</p>
+ */
 @Entity
 @Table(name = "oauth_accounts", uniqueConstraints =
 		@UniqueConstraint(name = "uq_oauth_accounts_provider_user", columnNames = {"provider", "provider_user_id"}))
@@ -71,6 +78,10 @@ public class OAuthAccount {
 		lastLoginAt = createdAt;
 	}
 
+	/**
+	 * 로그인할 때마다 공급자 쪽 이메일과 검증 여부를 최신값으로 덮어쓴다.
+	 * 이 값은 공급자에서의 상태를 비추는 기록일 뿐이며, 사용자 계정의 이메일과는 별개다.
+	 */
 	public void recordLogin(String email, boolean emailVerified) {
 		providerEmail = email;
 		providerEmailVerified = emailVerified;
