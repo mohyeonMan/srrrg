@@ -45,6 +45,7 @@ import link.srrrg.project.ProjectMemberRepository;
 import link.srrrg.project.ProjectRole;
 import link.srrrg.project.ProjectService;
 import link.srrrg.link.management.LinkManagementService;
+import link.srrrg.link.management.ProjectLinkService;
 import link.srrrg.link.management.dto.CreateLinkRequest;
 
 @SpringBootTest
@@ -109,6 +110,9 @@ class WebAuthPostgreSqlIntegrationTest {
 
 	@Autowired
 	ProjectService projectService;
+
+	@Autowired
+	ProjectLinkService projectLinkService;
 
 	@Autowired
 	ProjectInvitationService projectInvitationService;
@@ -475,7 +479,7 @@ class WebAuthPostgreSqlIntegrationTest {
 		projectService.releaseSubdomain(owner.user().getId(), projectId);
 		projectService.claimSubdomain(otherOwner.user().getId(), otherProjectId, "renamed-project");
 		projectService.setSubdomainEnabled(otherOwner.user().getId(), otherProjectId, true);
-		var otherLink = projectService.createProjectLink(otherOwner.user().getId(), otherProjectId,
+		var otherLink = projectLinkService.createForWeb(otherOwner.user().getId(), otherProjectId,
 				new CreateLinkRequest("https://example.com/other-project", null));
 		mockMvc.perform(get("/{code}", otherLink.getCode()).header("Host", projectHost))
 				.andExpect(status().isFound())
@@ -588,7 +592,7 @@ class WebAuthPostgreSqlIntegrationTest {
 		ready.countDown();
 		start.await();
 		try {
-			projectService.importAnonymousLink(userId, projectId, code, secret);
+			projectLinkService.claimAnonymousForWeb(userId, projectId, code, secret);
 			return true;
 		} catch (IllegalArgumentException exception) {
 			return false;

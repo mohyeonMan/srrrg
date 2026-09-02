@@ -30,6 +30,7 @@ import link.srrrg.link.access.ClientRequestInfo;
 import link.srrrg.link.access.ClientRequestInfoResolver;
 import link.srrrg.link.management.LinkController;
 import link.srrrg.link.management.LinkManagementService;
+import link.srrrg.link.management.ProjectLinkService;
 import link.srrrg.link.management.dto.CreateLinkResponse;
 import link.srrrg.project.ApiKeyService;
 import link.srrrg.project.ApiKeyScope;
@@ -41,7 +42,6 @@ import link.srrrg.project.ProjectController;
 import link.srrrg.project.ProjectMemberService;
 import link.srrrg.project.ProjectRole;
 import link.srrrg.project.ProjectService;
-import link.srrrg.link.LinkRepository;
 import link.srrrg.identity.UserRepository;
 
 @WebMvcTest(controllers = {HomeController.class, LoginController.class, LinkController.class, AuthController.class, PublicProjectLinkController.class, InvitationPageController.class, ProjectController.class})
@@ -91,13 +91,13 @@ class SecurityWebTest {
 	ProjectService projectService;
 
 	@MockitoBean
+	ProjectLinkService projectLinkService;
+
+	@MockitoBean
 	ProjectMemberService projectMemberService;
 
 	@MockitoBean
 	ProjectInvitationService projectInvitationService;
-
-	@MockitoBean
-	LinkRepository linkRepository;
 
 	@MockitoBean
 	RateLimitService rateLimitService;
@@ -196,7 +196,7 @@ class SecurityWebTest {
 	void allowsProjectLinksOnlyForMatchingKeyProjectAndScope() throws Exception {
 		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
 				.thenReturn(new ApiKeyService.ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_READ)));
-		when(linkRepository.findByProjectIdAndCampaignIsNullOrderByIdDesc(eq(7L), any())).thenReturn(java.util.List.of());
+		when(projectLinkService.listForApiKey(eq(7L), any(), eq(50))).thenReturn(java.util.List.of());
 
 		mockMvc.perform(get("/api/v1/projects/7/links").header("Authorization", "Bearer srrrg_pk_prefix_secret"))
 				.andExpect(status().isOk()).andExpect(jsonPath("$.items").isArray())
@@ -207,7 +207,7 @@ class SecurityWebTest {
 	void appliesApiKeyFilterBehindContextPath() throws Exception {
 		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
 				.thenReturn(new ApiKeyService.ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_READ)));
-		when(linkRepository.findByProjectIdAndCampaignIsNullOrderByIdDesc(eq(7L), any())).thenReturn(java.util.List.of());
+		when(projectLinkService.listForApiKey(eq(7L), any(), eq(50))).thenReturn(java.util.List.of());
 
 		mockMvc.perform(get("/srrrg-dev/api/v1/projects/7/links")
 					.contextPath("/srrrg-dev")
@@ -249,7 +249,7 @@ class SecurityWebTest {
 		when(second.getId()).thenReturn(9L);
 		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
 				.thenReturn(new ApiKeyService.ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_READ)));
-		when(linkRepository.findByProjectIdAndCampaignIsNullOrderByIdDesc(eq(7L), any())).thenReturn(java.util.List.of(first, second));
+		when(projectLinkService.listForApiKey(eq(7L), any(), eq(1))).thenReturn(java.util.List.of(first, second));
 
 		mockMvc.perform(get("/api/v1/projects/7/links").param("limit", "1").header("Authorization", "Bearer srrrg_pk_prefix_secret"))
 				.andExpect(status().isOk()).andExpect(jsonPath("$.items.length()").value(1)).andExpect(jsonPath("$.nextCursor").value(10));
@@ -267,7 +267,7 @@ class SecurityWebTest {
 					.cookie(jwt, csrf).header("X-XSRF-TOKEN", csrf.getValue())
 					.header("X-Srrrg-Secret-Key", "srrrg_sk_secret"))
 				.andExpect(status().isNoContent());
-		verify(projectService).importAnonymousLink(1L, 7L, "aB3x9Q", "srrrg_sk_secret");
+		verify(projectLinkService).claimAnonymousForWeb(1L, 7L, "aB3x9Q", "srrrg_sk_secret");
 	}
 
 	@Test
@@ -281,7 +281,7 @@ class SecurityWebTest {
 		mockMvc.perform(delete("/api/web/projects/7/links/aB3x9Q")
 					.cookie(jwt, csrf).header("X-XSRF-TOKEN", csrf.getValue()))
 				.andExpect(status().isNoContent());
-		verify(projectService).deleteProjectLink(1L, 7L, "aB3x9Q");
+		verify(projectLinkService).deleteForWeb(1L, 7L, "aB3x9Q");
 	}
 
 	@Test
@@ -291,7 +291,7 @@ class SecurityWebTest {
 
 		mockMvc.perform(get("/api/web/projects/7/links/aB3x9Q").cookie(jwt))
 				.andExpect(status().isOk());
-		verify(projectService).projectLink(1L, 7L, "aB3x9Q");
+		verify(projectLinkService).detailForWeb(1L, 7L, "aB3x9Q");
 
 		MvcResult page = mockMvc.perform(get("/login")).andExpect(status().isOk()).andReturn();
 		jakarta.servlet.http.Cookie csrf = page.getResponse().getCookie("XSRF-TOKEN");
@@ -300,7 +300,7 @@ class SecurityWebTest {
 					.cookie(jwt, csrf).header("X-XSRF-TOKEN", csrf.getValue())
 					.contentType(MediaType.APPLICATION_JSON).content("{\"originalUrl\":\"https://new.example\"}"))
 				.andExpect(status().isOk());
-		verify(projectService).updateProjectLink(eq(1L), eq(7L), eq("aB3x9Q"), any());
+		verify(projectLinkService).updateForWeb(eq(1L), eq(7L), eq("aB3x9Q"), any());
 	}
 
 	@Test
@@ -342,7 +342,7 @@ class SecurityWebTest {
 		link.srrrg.link.Link link = org.mockito.Mockito.mock(link.srrrg.link.Link.class);
 		when(link.getCode()).thenReturn("aB3x9Q");
 		when(link.getOriginalUrl()).thenReturn("https://example.com");
-		when(projectService.createProjectLink(eq(1L), eq(7L), eq("retry-1"), any())).thenReturn(link);
+		when(projectLinkService.createForApiKey(eq(1L), eq(7L), eq("retry-1"), any())).thenReturn(link);
 
 		mockMvc.perform(post("/api/v1/projects/7/links")
 					.header("Authorization", "Bearer srrrg_pk_prefix_secret")
@@ -351,7 +351,7 @@ class SecurityWebTest {
 					.content("{\"originalUrl\":\"https://example.com\"}"))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.code").value("aB3x9Q"));
-		verify(projectService).createProjectLink(eq(1L), eq(7L), eq("retry-1"), any());
+		verify(projectLinkService).createForApiKey(eq(1L), eq(7L), eq("retry-1"), any());
 	}
 
 	@Test

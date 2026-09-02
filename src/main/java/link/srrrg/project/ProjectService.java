@@ -1,6 +1,5 @@
 package link.srrrg.project;
 
-import java.util.List;
 import java.util.Locale;
 
 import org.springframework.dao.DataIntegrityViolationException;
@@ -8,31 +7,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import link.srrrg.campaign.UtmTemplateService;
-import link.srrrg.common.ratelimit.RateLimitService;
 import link.srrrg.domain.ProjectDomainService;
 import link.srrrg.identity.User;
 import link.srrrg.identity.UserRepository;
-import link.srrrg.link.Link;
-import link.srrrg.link.LinkCodeConflictException;
-import link.srrrg.link.LinkGoneException;
-import link.srrrg.link.LinkNotFoundException;
-import link.srrrg.link.LinkRepository;
-import link.srrrg.link.SecretKeyManager;
-import link.srrrg.link.management.LinkManagementService;
-import link.srrrg.link.management.dto.CreateLinkRequest;
-import link.srrrg.link.management.dto.LinkManagementResponse;
-import link.srrrg.link.management.dto.UpdateLinkRequest;
 
 /**
- * 프로젝트와 프로젝트 소속 링크의 유스케이스를 조율한다.
+ * 프로젝트 생성·조회·이름·서브도메인·삭제 유스케이스를 조율한다.
  *
  * <p>거의 모든 공개 메서드가 {@link ProjectAccessService#requireRole}로 시작한다. 프로젝트 자원은 멤버십이 있어야 접근할 수
  * 있고 역할에 따라 허용 범위가 다르므로, 조회 전에 권한을 확인하는 이 순서를 지켜야 한다.
  * 먼저 조회한 뒤 권한을 보면 존재 여부가 응답 차이로 새어 나간다.</p>
- *
- * <p>웹 경로와 API key 경로가 짝을 이룬다. 웹은 사용자 id로 멤버십을 확인하지만, API key는 키 자체가
- * 프로젝트에 묶여 있어 멤버십이 없다. 그래서 API key용 메서드는 역할 검사 대신 호출자
- * (컨트롤러)가 키의 프로젝트와 scope를 확인한 뒤 부른다. 한쪽만 고치면 두 경로의 정책이 어긋난다.</p>
  *
  * <p>삭제된 프로젝트는 {@code @SoftDelete}와 조회 시 fetch join으로 걸러진다. 멤버십을 찾을 때
  * 프로젝트를 함께 조인하므로, 프로젝트가 삭제되면 멤버십 자체가 조회되지 않아 모든 접근이 권한 없음이 된다.</p>
@@ -41,29 +25,20 @@ import link.srrrg.link.management.dto.UpdateLinkRequest;
 public class ProjectService {
 	private final ProjectRepository projects;
 	private final ProjectMemberRepository members;
-	private final ProjectAccessService projectAccess;
+	private final ProjectAccessService projectAccessService;
 	private final UserRepository users;
-	private final LinkRepository links;
-	private final SecretKeyManager secretKeys;
-	private final LinkManagementService linkManagement;
-	private final ProjectDomainService domains;
-	private final RateLimitService rateLimitService;
-	private final UtmTemplateService utmTemplates;
+	private final ProjectDomainService projectDomainService;
+	private final UtmTemplateService utmTemplateService;
 
-	public ProjectService(ProjectRepository projects, ProjectMemberRepository members, ProjectAccessService projectAccess,
-			UserRepository users, LinkRepository links, SecretKeyManager secretKeys,
-			LinkManagementService linkManagement, ProjectDomainService domains, RateLimitService rateLimitService,
-			UtmTemplateService utmTemplates) {
+	public ProjectService(ProjectRepository projects, ProjectMemberRepository members,
+			ProjectAccessService projectAccessService, UserRepository users,
+			ProjectDomainService projectDomainService, UtmTemplateService utmTemplateService) {
 		this.projects = projects;
 		this.members = members;
-		this.projectAccess = projectAccess;
+		this.projectAccessService = projectAccessService;
 		this.users = users;
-		this.links = links;
-		this.secretKeys = secretKeys;
-		this.linkManagement = linkManagement;
-		this.domains = domains;
-		this.rateLimitService = rateLimitService;
-		this.utmTemplates = utmTemplates;
+		this.projectDomainService = projectDomainService;
+		this.utmTemplateService = utmTemplateService;
 	}
 
 	/**
@@ -105,29 +80,23 @@ public class ProjectService {
 			throw new IllegalArgumentException("이미 사용 중인 서브도메인입니다.", exception);
 		}
 		members.save(new ProjectMember(project, user, ProjectRole.OWNER));
-		utmTemplates.createDefault(project);
+		utmTemplateService.createDefault(project);
 		return project;
 	}
 
 	@Transactional(readOnly = true)
 	public ProjectMember detail(Long userId, Long projectId) {
-		return projectAccess.requireRole(userId, projectId, ProjectRole.VIEWER);
-	}
-
-	@Transactional(readOnly = true)
-	public List<Link> projectLinks(Long userId, Long projectId) {
-		projectAccess.requireRole(userId, projectId, ProjectRole.VIEWER);
-		return links.findByProjectIdAndCampaignIsNullOrderByIdDesc(projectId);
+		return projectAccessService.requireRole(userId, projectId, ProjectRole.VIEWER);
 	}
 
 	@Transactional(readOnly = true)
 	public Project projectDomain(Long userId, Long projectId) {
-		return projectAccess.requireRole(userId, projectId, ProjectRole.VIEWER).getProject();
+		return projectAccessService.requireRole(userId, projectId, ProjectRole.VIEWER).getProject();
 	}
 
 	@Transactional
 	public Project rename(Long userId, Long projectId, String name) {
-		Project project = projectAccess.requireRole(userId, projectId, ProjectRole.OWNER).getProject();
+		Project project = projectAccessService.requireRole(userId, projectId, ProjectRole.OWNER).getProject();
 		project.rename(validName(name));
 		return project;
 	}
@@ -141,7 +110,7 @@ public class ProjectService {
 	 */
 	@Transactional
 	public Project claimSubdomain(Long userId, Long projectId, String requestedSubdomain) {
-		Project project = projectAccess.requireRole(userId, projectId, ProjectRole.OWNER).getProject();
+		Project project = projectAccessService.requireRole(userId, projectId, ProjectRole.OWNER).getProject();
 		String subdomain = normalizedSubdomain(requestedSubdomain);
 		if (!subdomain.equals(project.getSubdomain()) && projects.existsBySubdomain(subdomain)) {
 			throw new IllegalArgumentException("이미 사용 중인 서브도메인입니다.");
@@ -156,7 +125,7 @@ public class ProjectService {
 
 	@Transactional
 	public Project setSubdomainEnabled(Long userId, Long projectId, boolean enabled) {
-		Project project = projectAccess.requireRole(userId, projectId, ProjectRole.OWNER).getProject();
+		Project project = projectAccessService.requireRole(userId, projectId, ProjectRole.OWNER).getProject();
 		project.setSubdomainEnabled(enabled);
 		return project;
 	}
@@ -167,7 +136,7 @@ public class ProjectService {
 	 */
 	@Transactional
 	public Project releaseSubdomain(Long userId, Long projectId) {
-		Project project = projectAccess.requireRole(userId, projectId, ProjectRole.OWNER).getProject();
+		Project project = projectAccessService.requireRole(userId, projectId, ProjectRole.OWNER).getProject();
 		project.releaseSubdomain();
 		return project;
 	}
@@ -179,95 +148,9 @@ public class ProjectService {
 	 */
 	@Transactional
 	public void delete(Long userId, Long projectId) {
-		projectAccess.requireRole(userId, projectId, ProjectRole.OWNER);
+		projectAccessService.requireRole(userId, projectId, ProjectRole.OWNER);
 		// @SoftDelete가 걸려 있어 bulk delete는 deleted_at을 찍는 UPDATE로 번역된다.
 		projects.softDeleteById(projectId);
-	}
-
-	/**
-	 * 비회원으로 만든 링크를 프로젝트로 옮긴다. 소유권을 넘기는 처리라 두 자격을 함께 요구한다.
-	 * 프로젝트에 대한 EDITOR 권한과, 그 링크의 secret key다.
-	 *
-	 * <p>링크를 행 잠금으로 읽어 두 요청이 같은 링크를 동시에 가져가지 못하게 한다. 이미 프로젝트에 속했거나
-	 * secret key가 맞지 않으면 링크 없음과 같은 문구로 거부해, 어떤 코드가 실재하는지 알려주지 않는다.</p>
-	 *
-	 * <p>편입 후 코드가 프로젝트 서브도메인 공간에서 충돌할 수 있어 flush 실패를 별도 예외로 바꾼다.</p>
-	 */
-	@Transactional
-	public void importAnonymousLink(Long userId, Long projectId, String code, String secret) {
-		projectAccess.requireRole(userId, projectId, ProjectRole.EDITOR);
-		Link link = links.lockAnonymousByCode(code).orElseThrow(() -> new IllegalArgumentException("링크를 찾을 수 없습니다."));
-		if (link.getProject() != null || link.getSecretKeyHash() == null
-				|| !secretKeys.matches(secret, link.getSecretKeyHash()))
-			throw new IllegalArgumentException("링크를 찾을 수 없습니다.");
-		link.assignToProject(project(projectId), user(userId));
-		try {
-			links.flush();
-		} catch (DataIntegrityViolationException exception) {
-			throw new LinkCodeConflictException();
-		}
-	}
-
-	/**
-	 * 웹에서 프로젝트 링크를 만든다. EDITOR 이상이어야 하며, 생성자는 확인된 멤버십의 사용자로 기록된다.
-	 */
-	public Link createProjectLink(Long userId, Long projectId, CreateLinkRequest request) {
-		ProjectMember membership = projectAccess.requireRole(userId, projectId, ProjectRole.EDITOR);
-		return linkManagement.createForProject(request, membership.getProject(), membership.getUser());
-	}
-
-	/**
-	 * API key로 프로젝트 링크를 만든다. 위 웹 경로와 짝을 이루지만 인가 방식이 다르다.
-	 * 키가 이 프로젝트의 것인지와 scope 확인은 컨트롤러가 이미 끝냈다고 보고 여기서는 다시 검사하지 않으므로,
-	 * 확인 없이 이 메서드를 부르면 다른 프로젝트에 링크가 생긴다.
-	 *
-	 * <p>쓰기 레이트리밋을 여기서 거는 것은 이 경로가 자동화된 대량 호출의 대상이기 때문이다.</p>
-	 *
-	 * <p>멱등 키가 있으면 요청 내용의 해시를 함께 저장한다. 같은 키로 다른 내용을 보내면 충돌로 거부하기 위한 지문이다.</p>
-	 */
-	public Link createProjectLink(Long apiKeyId, Long projectId, String idempotencyKey, CreateLinkRequest request) {
-		rateLimitService.checkApiKeyWrite(apiKeyId);
-		String normalizedKey = validIdempotencyKey(idempotencyKey);
-		String requestHash = normalizedKey == null ? null
-				: InvitationTokenHash.sha256(
-						String.valueOf(request.originalUrl()) + "\n" + String.valueOf(request.expiresAt()) + "\n"
-								+ request.normalizedName());
-		return linkManagement.createForProject(request, project(projectId), null,
-				normalizedKey == null ? null : apiKeyId, normalizedKey, requestHash);
-	}
-
-	@Transactional
-	public void deleteProjectLink(Long userId, Long projectId, String code) {
-		projectAccess.requireRole(userId, projectId, ProjectRole.EDITOR);
-		links.delete(projectLink(projectId, code));
-	}
-
-	/**
-	 * 프로젝트 링크 상세를 돌려준다. VIEWER도 볼 수 있지만 수정은 못 하므로,
-	 * 역할에 따라 편집 가능 여부를 응답에 담아 화면이 버튼 표시를 결정하게 한다.
-	 * 이 값은 표시용일 뿐이며 실제 차단은 수정 경로의 권한 검사가 담당한다.
-	 */
-	@Transactional(readOnly = true)
-	public LinkManagementResponse projectLink(Long userId, Long projectId, String code) {
-		ProjectMember member = projectAccess.requireRole(userId, projectId, ProjectRole.VIEWER);
-		return linkManagement.projectManagementResponse(projectLink(projectId, code),
-				member.getRole() != ProjectRole.VIEWER);
-	}
-
-	@Transactional
-	public LinkManagementResponse updateProjectLink(Long userId, Long projectId, String code,
-			UpdateLinkRequest request) {
-		projectAccess.requireRole(userId, projectId, ProjectRole.EDITOR);
-		return linkManagement.updateProjectLink(projectLink(projectId, code), request);
-	}
-
-	// 삭제된 링크는 @SoftDelete가 조회에서 걸러내므로 여기서는 존재 여부만 본다.
-	private Link projectLink(Long projectId, String code) {
-		return links.findByProjectIdAndCode(projectId, code).orElseThrow(LinkNotFoundException::new);
-	}
-
-	private Project project(Long id) {
-		return projects.findById(id).orElseThrow(() -> new IllegalArgumentException("프로젝트를 찾을 수 없습니다."));
 	}
 
 	private User user(Long id) {
@@ -278,18 +161,6 @@ public class ProjectService {
 		if (value == null || value.trim().isEmpty() || value.trim().length() > 100)
 			throw new IllegalArgumentException("프로젝트 이름은 1~100자로 입력하세요.");
 		return value.trim();
-	}
-
-	/**
-	 * 멱등 키의 문자와 길이를 제한한다. 이 값이 조회 키로 쓰이므로 임의 문자열을 그대로 받지 않는다.
-	 * 값을 보내지 않은 경우는 멱등 처리를 하지 않겠다는 뜻이라 그대로 통과시킨다.
-	 */
-	private String validIdempotencyKey(String value) {
-		if (value == null)
-			return null;
-		if (!value.matches("[A-Za-z0-9._:-]{1,100}"))
-			throw new IllegalArgumentException("Idempotency-Key가 올바르지 않습니다.");
-		return value;
 	}
 
 	private String optionalSubdomain(String requested) {
@@ -311,7 +182,7 @@ public class ProjectService {
 			throw new IllegalArgumentException("서브도메인이 올바르지 않습니다.");
 		String normalized = requested.trim().toLowerCase(Locale.ROOT);
 		if (normalized.length() < 3 || normalized.length() > 63 || !normalized.matches("[a-z0-9](?:[a-z0-9-]*[a-z0-9])")
-				|| domains.isReservedSubdomain(normalized))
+				|| projectDomainService.isReservedSubdomain(normalized))
 			throw new IllegalArgumentException("서브도메인이 올바르지 않습니다.");
 		return normalized;
 	}

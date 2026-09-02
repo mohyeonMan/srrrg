@@ -185,7 +185,7 @@ ProjectController.overview(principal, projectId)
         캠페인 최대 100개. 커서 없이 첫 페이지만.
         내부적으로 ProjectAccessService.requireRole(VIEWER)를 수행한다.
 
-    ProjectService.projectLinks(userId, projectId)
+    ProjectLinkService.listForWeb(userId, projectId)
         @Transactional(readOnly = true)
         ProjectAccessService.requireRole(userId, projectId, VIEWER)
 

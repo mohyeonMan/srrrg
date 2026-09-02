@@ -22,11 +22,11 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import link.srrrg.project.ApiKeyService.ApiKeyPrincipal;
 import link.srrrg.link.Link;
-import link.srrrg.link.LinkRepository;
 import link.srrrg.link.UnsafeUrlException;
 import link.srrrg.link.UrlRiskCheckFailedException;
-import link.srrrg.link.management.dto.CreateLinkRequest;
 import link.srrrg.link.management.LinkManagementService;
+import link.srrrg.link.management.ProjectLinkService;
+import link.srrrg.link.management.dto.CreateLinkRequest;
 
 /**
  * API 키로 호출하는 프로젝트 링크 엔드포인트. 같은 기능의 웹 경로가 {@code ProjectController}에 따로 있고,
@@ -42,12 +42,10 @@ import link.srrrg.link.management.LinkManagementService;
 @RequestMapping("/api/v1/projects/{projectId}/links")
 @Tag(name = "Project links")
 public class PublicProjectLinkController {
-	private final LinkRepository links;
-	private final ProjectService projects;
+	private final ProjectLinkService projectLinkService;
 
-	PublicProjectLinkController(LinkRepository links, ProjectService projects) {
-		this.links = links;
-		this.projects = projects;
+	PublicProjectLinkController(ProjectLinkService projectLinkService) {
+		this.projectLinkService = projectLinkService;
 	}
 
 	@PostMapping
@@ -58,7 +56,7 @@ public class PublicProjectLinkController {
 			@RequestBody CreateLinkRequest request) {
 		ApiKeyPrincipal principal = principal(servletRequest, projectId, ApiKeyScope.LINKS_WRITE);
 		try {
-			return ResponseEntity.status(201).body(LinkResponse.from(projects.createProjectLink(
+			return ResponseEntity.status(201).body(LinkResponse.from(projectLinkService.createForApiKey(
 					principal.keyId(), projectId, idempotencyKey, request)));
 		} catch (LinkManagementService.IdempotencyConflictException exception) {
 			throw new PublicApiException(409, "IDEMPOTENCY_CONFLICT", exception.getMessage());
@@ -82,11 +80,7 @@ public class PublicProjectLinkController {
 		principal(request, projectId, ApiKeyScope.LINKS_READ);
 		if (limit < 1 || limit > 100)
 			throw new PublicApiException(400, "INVALID_REQUEST", "limit은 1~100 사이여야 합니다.");
-		List<Link> results = cursor == null
-				? links.findByProjectIdAndCampaignIsNullOrderByIdDesc(projectId,
-						org.springframework.data.domain.PageRequest.of(0, limit + 1))
-				: links.findByProjectIdAndCampaignIsNullAndIdLessThanOrderByIdDesc(projectId, cursor,
-						org.springframework.data.domain.PageRequest.of(0, limit + 1));
+		List<Link> results = projectLinkService.listForApiKey(projectId, cursor, limit);
 		List<Link> page = results.size() > limit ? results.subList(0, limit) : results;
 		Long nextCursor = results.size() > limit ? page.getLast().getId() : null;
 		return new LinkPageResponse(page.stream().map(LinkResponse::from).toList(), nextCursor);

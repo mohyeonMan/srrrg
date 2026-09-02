@@ -305,7 +305,7 @@ LinkController.deleteManagedLink(code, secretKey)
 ProjectController.createLink(principal, projectId, request)
     → 201 Created
 
-    ProjectService.createProjectLink(userId, projectId, request)
+    ProjectLinkService.createForWeb(userId, projectId, request)
         @Transactional이 없다 — ProjectAccessService.requireRole과 링크 저장이 별도 트랜잭션에서 돈다.
 
         ProjectAccessService.requireRole(userId, projectId, EDITOR)
@@ -332,7 +332,7 @@ ProjectController.createLink(principal, projectId, request)
 ```
 ProjectController.link(principal, projectId, code)
 
-    ProjectService.projectLink(userId, projectId, code)
+    ProjectLinkService.detailForWeb(userId, projectId, code)
         @Transactional(readOnly = true)
         ProjectAccessService.requireRole(userId, projectId, VIEWER)
 
@@ -357,7 +357,7 @@ ProjectController.link(principal, projectId, code)
 ```
 ProjectController.updateLink(principal, projectId, code, request)
 
-    ProjectService.updateProjectLink(userId, projectId, code, request)
+    ProjectLinkService.updateForWeb(userId, projectId, code, request)
         @Transactional
         ProjectAccessService.requireRole(userId, projectId, EDITOR)
         projectLink(projectId, code)
@@ -388,7 +388,7 @@ ProjectController.updateLink(principal, projectId, code, request)
 ProjectController.deleteLink(principal, projectId, code)
     → 204 No Content
 
-    ProjectService.deleteProjectLink(userId, projectId, code)
+    ProjectLinkService.deleteForWeb(userId, projectId, code)
         @Transactional
         ProjectAccessService.requireRole(userId, projectId, EDITOR)
         LinkRepository.delete(projectLink(projectId, code))
@@ -407,7 +407,7 @@ ProjectController.claimLink(principal, projectId, code, secretKey)
     @RequestHeader("X-Srrrg-Secret-Key")
     → 204 No Content
 
-    ProjectService.importAnonymousLink(userId, projectId, code, secret)
+    ProjectLinkService.claimAnonymousForWeb(userId, projectId, code, secret)
         @Transactional
         ProjectAccessService.requireRole(userId, projectId, EDITOR)
 
@@ -457,8 +457,8 @@ PublicProjectLinkController.create(servletRequest, projectId, idempotencyKey, re
         (스코프 확인)
             → PublicApiException 403 SCOPE_REQUIRED
 
-    ProjectService.createProjectLink(apiKeyId, projectId, idempotencyKey, request)
-        위의 web용 오버로드와 이름은 같지만 시그니처가 다르다.
+    ProjectLinkService.createForApiKey(apiKeyId, projectId, idempotencyKey, request)
+        web 경로와 핵심 생성 정책은 공유하지만 인증 주체가 다르다.
         ProjectAccessService.requireRole 대신 API 키의 projectId를 신뢰한다.
 
         RateLimitService.checkApiKeyWrite(apiKeyId)
@@ -512,7 +512,7 @@ PublicProjectLinkController.handle(exception)          [@ExceptionHandler]
 
 ### GET /api/v1/projects/{projectId}/links
 
-커서 기반 목록. **서비스 계층을 거치지 않고 컨트롤러가 리포지토리를 직접 호출한다.**
+커서 기반 목록.
 
 ```
 PublicProjectLinkController.list(request, projectId, cursor, limit)
@@ -524,10 +524,11 @@ PublicProjectLinkController.list(request, projectId, cursor, limit)
         1~100.
         → PublicApiException 400 INVALID_REQUEST
 
-    LinkRepository.findByProjectIdAndCampaignIsNullOrderByIdDesc(projectId, PageRequest.of(0, limit + 1))
-        [cursor 없음] 첫 페이지.
-    LinkRepository.findByProjectIdAndCampaignIsNullAndIdLessThanOrderByIdDesc(projectId, cursor, PageRequest.of(0, limit + 1))
-        [cursor 있음] id 내림차순이므로 "cursor보다 작은 id"가 다음 페이지.
+    ProjectLinkService.listForApiKey(projectId, cursor, limit)
+        LinkRepository.findByProjectIdAndCampaignIsNullOrderByIdDesc(projectId, PageRequest.of(0, limit + 1))
+            [cursor 없음] 첫 페이지.
+        LinkRepository.findByProjectIdAndCampaignIsNullAndIdLessThanOrderByIdDesc(projectId, cursor, PageRequest.of(0, limit + 1))
+            [cursor 있음] id 내림차순이므로 "cursor보다 작은 id"가 다음 페이지.
 
         limit + 1 개를 읽는 이유: 다음 페이지 존재 여부를 별도 count 쿼리 없이 판정하기 위해.
 

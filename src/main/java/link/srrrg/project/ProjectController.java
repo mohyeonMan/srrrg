@@ -26,6 +26,7 @@ import link.srrrg.auth.SrrrgPrincipal;
 import link.srrrg.campaign.CampaignController.CampaignResponse;
 import link.srrrg.campaign.CampaignService;
 import link.srrrg.link.Link;
+import link.srrrg.link.management.ProjectLinkService;
 import link.srrrg.link.management.dto.CreateLinkRequest;
 import link.srrrg.link.management.dto.LinkManagementResponse;
 import link.srrrg.link.management.dto.UpdateLinkRequest;
@@ -35,8 +36,8 @@ import lombok.RequiredArgsConstructor;
  * 화면이 호출하는 프로젝트 관리 API. 프로젝트, 서브도메인, 링크, 멤버, 초대, API 키가 모두 여기 모여 있다.
  *
  * <p>이 클래스는 요청을 서비스로 넘기고 응답 형태만 만든다. 권한 확인은 하지 않고 전부
- * {@code ProjectService}, {@code ProjectMemberService}, {@code ProjectInvitationService}, {@code ApiKeyService}가
- * 수행하므로, 새 엔드포인트를 추가할 때
+ * {@code ProjectService}, {@code ProjectLinkService}, {@code ProjectMemberService},
+ * {@code ProjectInvitationService}, {@code ApiKeyService}가 수행하므로, 새 엔드포인트를 추가할 때
  * 여기에 검사를 넣는 것이 아니라 서비스 메서드가 역할을 요구하는지 확인해야 한다.</p>
  *
  * <p>주체는 항상 {@code @AuthenticationPrincipal}에서 온다. 요청 본문이나 경로로 사용자 id를 받지 않으므로
@@ -50,15 +51,16 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ProjectController {
 	private static final String SECRET_KEY_HEADER = "X-Srrrg-Secret-Key";
-	private final ProjectService projects;
-	private final ProjectMemberService projectMembers;
-	private final ProjectInvitationService projectInvitations;
-	private final ApiKeyService apiKeys;
-	private final CampaignService campaigns;
+	private final ProjectService projectService;
+	private final ProjectLinkService projectLinkService;
+	private final ProjectMemberService projectMemberService;
+	private final ProjectInvitationService projectInvitationService;
+	private final ApiKeyService apiKeyService;
+	private final CampaignService campaignService;
 
 	@GetMapping("/projects")
 	public List<ProjectResponse> myProjects(@AuthenticationPrincipal SrrrgPrincipal p) {
-		return projectMembers.myMemberships(p.userId()).stream().map(ProjectResponse::from).toList();
+		return projectMemberService.myMemberships(p.userId()).stream().map(ProjectResponse::from).toList();
 	}
 
 	/**
@@ -67,24 +69,24 @@ public class ProjectController {
 	@PostMapping("/projects")
 	public ResponseEntity<ProjectResponse> create(@AuthenticationPrincipal SrrrgPrincipal p,
 			@Valid @RequestBody CreateProjectRequest request) {
-		Project project = projects.create(p.userId(), request.name(), request.subdomain());
+		Project project = projectService.create(p.userId(), request.name(), request.subdomain());
 		return ResponseEntity.status(HttpStatus.CREATED).body(ProjectResponse.from(project, ProjectRole.OWNER));
 	}
 
 	@GetMapping("/projects/{projectId}")
 	public ProjectResponse detail(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId) {
-		return ProjectResponse.from(projects.detail(p.userId(), projectId));
+		return ProjectResponse.from(projectService.detail(p.userId(), projectId));
 	}
 
 	@PatchMapping("/projects/{projectId}")
 	public ProjectResponse rename(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId,
 			@Valid @RequestBody RenameProjectRequest request) {
-		return ProjectResponse.from(projects.rename(p.userId(), projectId, request.name()), ProjectRole.OWNER);
+		return ProjectResponse.from(projectService.rename(p.userId(), projectId, request.name()), ProjectRole.OWNER);
 	}
 
 	@DeleteMapping("/projects/{projectId}")
 	public ResponseEntity<Void> deleteProject(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId) {
-		projects.delete(p.userId(), projectId);
+		projectService.delete(p.userId(), projectId);
 		return ResponseEntity.noContent().build();
 	}
 
@@ -95,16 +97,16 @@ public class ProjectController {
 	 */
 	@GetMapping("/projects/{projectId}/overview")
 	public ProjectOverviewResponse overview(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId) {
-		List<CampaignResponse> campaignSummaries = campaigns.list(p.userId(), projectId, null, 100).stream()
+		List<CampaignResponse> campaignSummaries = campaignService.list(p.userId(), projectId, null, 100).stream()
 				.map(CampaignResponse::from).toList();
 		return new ProjectOverviewResponse(
-				projects.projectLinks(p.userId(), projectId).stream().map(ProjectLinkResponse::from).toList(),
+				projectLinkService.listForWeb(p.userId(), projectId).stream().map(ProjectLinkResponse::from).toList(),
 				campaignSummaries);
 	}
 
 	@GetMapping("/projects/{projectId}/subdomain")
 	public SubdomainResponse subdomain(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId) {
-		return SubdomainResponse.from(projects.projectDomain(p.userId(), projectId));
+		return SubdomainResponse.from(projectService.projectDomain(p.userId(), projectId));
 	}
 
 	/**
@@ -114,13 +116,13 @@ public class ProjectController {
 	@PutMapping("/projects/{projectId}/subdomain")
 	public SubdomainResponse claimSubdomain(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId,
 			@Valid @RequestBody ChangeSubdomainRequest request) {
-		return SubdomainResponse.from(projects.claimSubdomain(p.userId(), projectId, request.subdomain()));
+		return SubdomainResponse.from(projectService.claimSubdomain(p.userId(), projectId, request.subdomain()));
 	}
 
 	@PatchMapping("/projects/{projectId}/subdomain/activation")
 	public SubdomainResponse activateSubdomain(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId,
 			@Valid @RequestBody SubdomainActivationRequest request) {
-		return SubdomainResponse.from(projects.setSubdomainEnabled(p.userId(), projectId, request.enabled()));
+		return SubdomainResponse.from(projectService.setSubdomainEnabled(p.userId(), projectId, request.enabled()));
 	}
 
 	/**
@@ -128,51 +130,51 @@ public class ProjectController {
 	 */
 	@DeleteMapping("/projects/{projectId}/subdomain")
 	public SubdomainResponse releaseSubdomain(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId) {
-		return SubdomainResponse.from(projects.releaseSubdomain(p.userId(), projectId));
+		return SubdomainResponse.from(projectService.releaseSubdomain(p.userId(), projectId));
 	}
 
 	@PostMapping("/projects/{projectId}/links")
 	public ResponseEntity<ProjectLinkResponse> createLink(@AuthenticationPrincipal SrrrgPrincipal p,
 			@PathVariable Long projectId, @Valid @RequestBody CreateLinkRequest request) {
 		return ResponseEntity.status(HttpStatus.CREATED)
-				.body(ProjectLinkResponse.from(projects.createProjectLink(p.userId(), projectId, request)));
+				.body(ProjectLinkResponse.from(projectLinkService.createForWeb(p.userId(), projectId, request)));
 	}
 
 	@GetMapping("/projects/{projectId}/links/{code}")
 	public LinkManagementResponse link(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId,
 			@PathVariable String code) {
-		return projects.projectLink(p.userId(), projectId, code);
+		return projectLinkService.detailForWeb(p.userId(), projectId, code);
 	}
 
 	@PatchMapping("/projects/{projectId}/links/{code}")
 	public LinkManagementResponse updateLink(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId,
 			@PathVariable String code, @RequestBody UpdateLinkRequest request) {
-		return projects.updateProjectLink(p.userId(), projectId, code, request);
+		return projectLinkService.updateForWeb(p.userId(), projectId, code, request);
 	}
 
 	@DeleteMapping("/projects/{projectId}/links/{code}")
 	public ResponseEntity<Void> deleteLink(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId,
 			@PathVariable String code) {
-		projects.deleteProjectLink(p.userId(), projectId, code);
+		projectLinkService.deleteForWeb(p.userId(), projectId, code);
 		return ResponseEntity.noContent().build();
 	}
 
 	@GetMapping("/projects/{projectId}/members")
 	public List<MemberResponse> members(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId) {
-		return projectMembers.projectMembers(p.userId(), projectId).stream().map(MemberResponse::from).toList();
+		return projectMemberService.projectMembers(p.userId(), projectId).stream().map(MemberResponse::from).toList();
 	}
 
 	@GetMapping("/projects/{projectId}/invitations")
 	public List<InvitationResponse> invitations(@AuthenticationPrincipal SrrrgPrincipal p,
 			@PathVariable Long projectId) {
-		return projectInvitations.list(p.userId(), projectId).stream().map(InvitationResponse::from).toList();
+		return projectInvitationService.list(p.userId(), projectId).stream().map(InvitationResponse::from).toList();
 	}
 
 	@PostMapping("/projects/{projectId}/invitations")
 	public ResponseEntity<InvitationResponse> invite(@AuthenticationPrincipal SrrrgPrincipal p,
 			@PathVariable Long projectId, @Valid @RequestBody InviteRequest request) {
 		return ResponseEntity.status(HttpStatus.CREATED)
-				.body(InvitationResponse.from(projectInvitations.invite(p.userId(), projectId, request.email(), request.role())));
+				.body(InvitationResponse.from(projectInvitationService.invite(p.userId(), projectId, request.email(), request.role())));
 	}
 
 	/**
@@ -181,32 +183,32 @@ public class ProjectController {
 	 */
 	@PostMapping("/invitations/{token}/accept")
 	public AcceptInvitationResponse accept(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable String token) {
-		ProjectInvitationService.AcceptedInvitation result = projectInvitations.accept(p.userId(), token);
+		ProjectInvitationService.AcceptedInvitation result = projectInvitationService.accept(p.userId(), token);
 		return new AcceptInvitationResponse(result.projectId(), result.alreadyMember());
 	}
 
 	@DeleteMapping("/invitations/{invitationId}")
 	public ResponseEntity<Void> cancel(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long invitationId) {
-		projectInvitations.cancel(p.userId(), invitationId);
+		projectInvitationService.cancel(p.userId(), invitationId);
 		return ResponseEntity.noContent().build();
 	}
 
 	@PostMapping("/invitations/{invitationId}/resend")
 	public InvitationResponse resend(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long invitationId) {
-		return InvitationResponse.from(projectInvitations.resend(p.userId(), invitationId));
+		return InvitationResponse.from(projectInvitationService.resend(p.userId(), invitationId));
 	}
 
 	@PatchMapping("/projects/{projectId}/members/{memberId}")
 	public ResponseEntity<Void> changeRole(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId,
 			@PathVariable Long memberId, @Valid @RequestBody ChangeRoleRequest request) {
-		projectMembers.changeMemberRole(p.userId(), projectId, memberId, request.role());
+		projectMemberService.changeMemberRole(p.userId(), projectId, memberId, request.role());
 		return ResponseEntity.noContent().build();
 	}
 
 	@DeleteMapping("/projects/{projectId}/members/{memberId}")
 	public ResponseEntity<Void> remove(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId,
 			@PathVariable Long memberId) {
-		projectMembers.removeMember(p.userId(), projectId, memberId);
+		projectMemberService.removeMember(p.userId(), projectId, memberId);
 		return ResponseEntity.noContent().build();
 	}
 
@@ -218,13 +220,13 @@ public class ProjectController {
 	public ResponseEntity<Void> claimLink(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId,
 			@PathVariable String code,
 			@org.springframework.web.bind.annotation.RequestHeader(SECRET_KEY_HEADER) String secretKey) {
-		projects.importAnonymousLink(p.userId(), projectId, code, secretKey);
+		projectLinkService.claimAnonymousForWeb(p.userId(), projectId, code, secretKey);
 		return ResponseEntity.noContent().build();
 	}
 
 	@GetMapping("/projects/{projectId}/api-keys")
 	public List<ApiKeyResponse> apiKeys(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId) {
-		return apiKeys.list(p.userId(), projectId).stream().map(ApiKeyResponse::from).toList();
+		return apiKeyService.list(p.userId(), projectId).stream().map(ApiKeyResponse::from).toList();
 	}
 
 	/**
@@ -235,7 +237,7 @@ public class ProjectController {
 	@PostMapping("/projects/{projectId}/api-keys")
 	public ResponseEntity<CreatedApiKeyResponse> createApiKey(@AuthenticationPrincipal SrrrgPrincipal p,
 			@PathVariable Long projectId, @Valid @RequestBody CreateApiKeyRequest request) {
-		ApiKeyService.CreatedKey created = apiKeys.create(p.userId(), projectId, request.name(),
+		ApiKeyService.CreatedKey created = apiKeyService.create(p.userId(), projectId, request.name(),
 				request.scopes().stream().map(ApiKeyScope::fromValue).collect(java.util.stream.Collectors.toSet()),
 				request.expiresAt());
 		return ResponseEntity.status(HttpStatus.CREATED).body(CreatedApiKeyResponse.from(created));
@@ -244,7 +246,7 @@ public class ProjectController {
 	@DeleteMapping("/projects/{projectId}/api-keys/{keyId}")
 	public ResponseEntity<Void> revokeApiKey(@AuthenticationPrincipal SrrrgPrincipal p, @PathVariable Long projectId,
 			@PathVariable Long keyId) {
-		apiKeys.revoke(p.userId(), projectId, keyId);
+		apiKeyService.revoke(p.userId(), projectId, keyId);
 		return ResponseEntity.noContent().build();
 	}
 

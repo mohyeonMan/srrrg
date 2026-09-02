@@ -69,6 +69,7 @@ Git stage, commit, push와 이력 변경은 사용자가 명시적으로 요청�
 
 - 기본 패키지는 link.srrrg를 사용한다.
 - 클래스는 PascalCase, 메서드와 변수는 camelCase, 상수는 UPPER_SNAKE_CASE를 사용한다.
+- Service 타입 필드는 `projectService`, `projectMemberService`처럼 구체적인 camelCase 이름 뒤에 `Service`를 붙인다.
 - 현재 파일의 탭 들여쓰기와 중괄호 배치를 유지한다.
 - wildcard import를 사용하지 않는다.
 - 파일 끝에는 개행을 유지하고 기존 인코딩과 줄바꿈을 불필요하게 바꾸지 않는다.
