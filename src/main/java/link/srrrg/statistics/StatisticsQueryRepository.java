@@ -24,6 +24,24 @@ import link.srrrg.statistics.StatisticsResponse.RecentActivity;
 import link.srrrg.statistics.StatisticsResponse.TrendPoint;
 import link.srrrg.statistics.StatisticsResponse.UtmRow;
 
+/**
+ * 접근 이벤트를 집계하는 네이티브 SQL 모음. 통계 조회는 전부 여기를 거친다.
+ *
+ * <p>JPA가 아니라 {@code JdbcTemplate}을 쓰는 이유는 집계 방식 때문이다. 한 번 훑으면서 여러 조건의
+ * 개수를 동시에 세는 {@code FILTER (WHERE ...)}와 시간대 변환·구간 절단({@code date_trunc})은
+ * PostgreSQL 고유 기능이라 JPQL로 표현할 수 없다. 이벤트를 엔티티로 읽어 애플리케이션에서 세면
+ * 수백만 행을 옮겨야 한다.</p>
+ *
+ * <p>{@code deleted_at IS NULL}을 조건에 직접 적는다. {@code @SoftDelete}는 Hibernate가 붙여 주는
+ * 것이라 네이티브 SQL에는 적용되지 않는다. 이 조건을 빠뜨리면 삭제된 링크의 통계가 함께 잡힌다.</p>
+ *
+ * <p>범위 조건은 {@link StatisticsQueryScope#predicate()}가 만든 문자열을 SQL에 끼워 넣는다.
+ * 그 값은 코드에 고정된 세 가지뿐이고 식별자는 항상 바인딩 파라미터로 넘어가므로 사용자 입력이
+ * SQL 문자열에 들어가지 않는다. 이 전제가 깨지면 곧바로 주입 취약점이 된다.</p>
+ *
+ * <p>사람과 봇을 나눠 세는 것은 봇 트래픽이 실제 성과를 부풀리기 때문이다. 판정 근거는 기록 시점에
+ * 저장된 {@code is_bot}이며, 스스로 밝히지 않는 크롤러는 걸러지지 않는다.</p>
+ */
 @Repository
 class StatisticsQueryRepository {
 	private final JdbcTemplate jdbc;

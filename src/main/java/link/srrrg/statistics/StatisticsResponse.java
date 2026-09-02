@@ -6,6 +6,14 @@ import java.util.List;
 
 import link.srrrg.link.access.LinkAccessEvent.Outcome;
 
+/**
+ * 통계 리포트 응답 전체. 화면이 추가 계산 없이 그대로 그릴 수 있는 형태로 맞춘 값이다.
+ *
+ * <p>모든 수치가 전체·사람·봇으로 나뉘고, 접근 수와 실제 이동 수가 따로 있다. 봇 트래픽이 성과를
+ * 부풀리는 것과, 유입은 있었지만 만료·차단으로 이동하지 못한 경우를 구분해 보기 위해서다.</p>
+ *
+ * <p>범위에 따라 채워지는 목록이 다르다. 해당 없는 목록은 비어 있는 페이지로 나간다.</p>
+ */
 public record StatisticsResponse(
 		Scope scope, String name, LocalDate from, LocalDate to, Bucket bucket,
 		Summary summary, List<TrendPoint> trend, List<OutcomeBreakdown> outcomes,
