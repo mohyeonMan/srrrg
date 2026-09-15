@@ -11,40 +11,51 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
-import link.srrrg.auth.SrrrgPrincipal;
-
-class AccountControllerTest {
+class AccountServiceTest {
+	private final UserRepository users = mock(UserRepository.class);
+	private final OAuthAccountRepository accounts = mock(OAuthAccountRepository.class);
+	private final AccountService service = new AccountService(users, accounts);
 
 	@Test
 	void trimsAndUpdatesDisplayName() {
-		UserRepository users = mock(UserRepository.class);
-		OAuthAccountRepository accounts = mock(OAuthAccountRepository.class);
 		User user = mock(User.class);
 		when(users.findById(1L)).thenReturn(Optional.of(user));
 		when(user.getId()).thenReturn(1L);
 		when(accounts.findByUserIdOrderByCreatedAtAsc(1L)).thenReturn(List.of());
 		when(user.getDisplayName()).thenReturn("새 이름");
 
-		AccountController.AccountResponse response = new AccountController(users, accounts).update(
-				new SrrrgPrincipal(1L), new AccountController.UpdateAccountRequest("  새 이름  "));
+		AccountProfile profile = service.updateDisplayName(1L, "  새 이름  ");
 
 		verify(user).updateDisplayName("새 이름");
-		assertEquals("새 이름", response.displayName());
+		assertEquals("새 이름", profile.displayName());
 	}
 
 	@Test
 	void completesFirstLoginProfileWithoutTouchingEmail() {
-		UserRepository users = mock(UserRepository.class);
-		OAuthAccountRepository accounts = mock(OAuthAccountRepository.class);
 		User user = User.create(null, "srrrg 사용자");
 		when(users.findById(1L)).thenReturn(Optional.of(user));
 		when(accounts.findByUserIdOrderByCreatedAtAsc(null)).thenReturn(List.of());
 
-		new AccountController(users, accounts).completeOnboarding(new SrrrgPrincipal(1L),
-				new AccountController.CompleteOnboardingRequest("  첫 사용자  "));
+		service.completeOnboarding(1L, "  첫 사용자  ");
 
 		assertEquals("첫 사용자", user.getDisplayName());
 		assertNull(user.getEmail());
 		assertEquals(false, user.needsOnboarding());
+	}
+
+	@Test
+	void accountProfileExposesOnlyConnectedProviderNamesInCreationOrder() {
+		User user = mock(User.class);
+		when(users.findById(1L)).thenReturn(Optional.of(user));
+		when(user.getId()).thenReturn(1L);
+		OAuthAccount google = mock(OAuthAccount.class);
+		OAuthAccount github = mock(OAuthAccount.class);
+		when(google.getProvider()).thenReturn(OAuthProvider.GOOGLE);
+		when(github.getProvider()).thenReturn(OAuthProvider.GITHUB);
+		when(accounts.findByUserIdOrderByCreatedAtAsc(1L)).thenReturn(List.of(google, github));
+
+		AccountProfile profile = service.get(1L);
+
+		assertEquals(List.of("GOOGLE", "GITHUB"), profile.providers());
 	}
 }

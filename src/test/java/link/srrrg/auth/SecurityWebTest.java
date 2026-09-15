@@ -26,6 +26,10 @@ import org.springframework.test.web.servlet.MvcResult;
 import link.srrrg.HomeController;
 import link.srrrg.campaign.CampaignService;
 import link.srrrg.common.ratelimit.RateLimitService;
+import link.srrrg.identity.AccountController;
+import link.srrrg.identity.AccountProfile;
+import link.srrrg.identity.AccountService;
+import link.srrrg.link.LinkCodeConflictException;
 import link.srrrg.link.access.ClientRequestInfo;
 import link.srrrg.link.access.ClientRequestInfoResolver;
 import link.srrrg.link.management.LinkController;
@@ -34,6 +38,7 @@ import link.srrrg.link.management.ProjectLinkController;
 import link.srrrg.link.management.ProjectLinkService;
 import link.srrrg.link.management.dto.CreateLinkResponse;
 import link.srrrg.project.ApiKeyService;
+import link.srrrg.project.ApiKeyPrincipal;
 import link.srrrg.project.ApiKeyScope;
 import link.srrrg.project.PublicProjectLinkController;
 import link.srrrg.project.Project;
@@ -44,10 +49,13 @@ import link.srrrg.project.ProjectMemberService;
 import link.srrrg.project.ProjectRole;
 import link.srrrg.project.ProjectService;
 import link.srrrg.identity.UserRepository;
+import link.srrrg.statistics.PublicStatisticsController;
+import link.srrrg.statistics.StatisticsService;
 
 @WebMvcTest(controllers = {HomeController.class, LoginController.class, LinkController.class, ProjectLinkController.class,
-		AuthController.class, PublicProjectLinkController.class, InvitationPageController.class, ProjectController.class})
-@Import({SecurityConfiguration.class, CsrfCookieFilter.class})
+		AuthController.class, PublicProjectLinkController.class, PublicStatisticsController.class,
+		InvitationPageController.class, ProjectController.class, AccountController.class})
+@Import({SecurityConfiguration.class, CsrfCookieFilter.class, ApiKeyRequestAuthorizer.class})
 class SecurityWebTest {
 
 	@Autowired
@@ -73,6 +81,12 @@ class SecurityWebTest {
 
 	@MockitoBean
 	JwtService jwtService;
+
+	@MockitoBean
+	StatisticsService statisticsService;
+
+	@MockitoBean
+	AccountService accountService;
 
 	@MockitoBean
 	WebSessionService sessionService;
@@ -197,7 +211,7 @@ class SecurityWebTest {
 	@Test
 	void allowsProjectLinksOnlyForMatchingKeyProjectAndScope() throws Exception {
 		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
-				.thenReturn(new ApiKeyService.ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_READ)));
+				.thenReturn(new ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_READ)));
 		when(projectLinkService.listForApiKey(eq(7L), any(), eq(50))).thenReturn(java.util.List.of());
 
 		mockMvc.perform(get("/api/v1/projects/7/links").header("Authorization", "Bearer srrrg_pk_prefix_secret"))
@@ -208,7 +222,7 @@ class SecurityWebTest {
 	@Test
 	void appliesApiKeyFilterBehindContextPath() throws Exception {
 		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
-				.thenReturn(new ApiKeyService.ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_READ)));
+				.thenReturn(new ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_READ)));
 		when(projectLinkService.listForApiKey(eq(7L), any(), eq(50))).thenReturn(java.util.List.of());
 
 		mockMvc.perform(get("/srrrg-dev/api/v1/projects/7/links")
@@ -235,7 +249,7 @@ class SecurityWebTest {
 	@Test
 	void rejectsAnotherProjectAndMissingScope() throws Exception {
 		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
-				.thenReturn(new ApiKeyService.ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.CAMPAIGNS_READ)));
+				.thenReturn(new ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.CAMPAIGNS_READ)));
 
 		mockMvc.perform(get("/api/v1/projects/8/links").header("Authorization", "Bearer srrrg_pk_prefix_secret"))
 				.andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("PROJECT_ACCESS_DENIED"));
@@ -250,7 +264,7 @@ class SecurityWebTest {
 		when(first.getId()).thenReturn(10L);
 		when(second.getId()).thenReturn(9L);
 		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
-				.thenReturn(new ApiKeyService.ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_READ)));
+				.thenReturn(new ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_READ)));
 		when(projectLinkService.listForApiKey(eq(7L), any(), eq(1))).thenReturn(java.util.List.of(first, second));
 
 		mockMvc.perform(get("/api/v1/projects/7/links").param("limit", "1").header("Authorization", "Bearer srrrg_pk_prefix_secret"))
@@ -340,7 +354,7 @@ class SecurityWebTest {
 	@Test
 	void createsProjectLinkWithApiKeyWithoutJwtFilter() throws Exception {
 		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
-				.thenReturn(new ApiKeyService.ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_WRITE)));
+				.thenReturn(new ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_WRITE)));
 		link.srrrg.link.Link link = org.mockito.Mockito.mock(link.srrrg.link.Link.class);
 		when(link.getCode()).thenReturn("aB3x9Q");
 		when(link.getOriginalUrl()).thenReturn("https://example.com");
@@ -359,7 +373,7 @@ class SecurityWebTest {
 	@Test
 	void requiresLinksWriteScopeForProjectLinkCreation() throws Exception {
 		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
-				.thenReturn(new ApiKeyService.ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_READ)));
+				.thenReturn(new ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_READ)));
 
 		mockMvc.perform(post("/api/v1/projects/7/links")
 					.header("Authorization", "Bearer srrrg_pk_prefix_secret")
@@ -367,5 +381,47 @@ class SecurityWebTest {
 					.content("{\"originalUrl\":\"https://example.com\"}"))
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.code").value("SCOPE_REQUIRED"));
+	}
+
+	@Test
+	void returnsAccountProfileFromApplicationService() throws Exception {
+		when(jwtService.verify("access-token")).thenReturn(1L);
+		when(accountService.get(1L)).thenReturn(new AccountProfile(
+				1L, "user@example.com", "사용자", java.util.List.of("GOOGLE"), java.time.Instant.EPOCH));
+		jakarta.servlet.http.Cookie jwt = new jakarta.servlet.http.Cookie("srrrg_access", "access-token");
+
+		mockMvc.perform(get("/api/web/account").cookie(jwt))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.displayName").value("사용자"))
+				.andExpect(jsonPath("$.providers[0]").value("GOOGLE"));
+	}
+
+	@Test
+	void returnsProblemDetailForPublicLinkCodeConflict() throws Exception {
+		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
+				.thenReturn(new ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_WRITE)));
+		when(projectLinkService.createForApiKey(eq(1L), eq(7L), eq(null), any()))
+				.thenThrow(new LinkCodeConflictException());
+
+		mockMvc.perform(post("/api/v1/projects/7/links")
+					.header("Authorization", "Bearer srrrg_pk_prefix_secret")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com\"}"))
+				.andExpect(status().isConflict())
+				.andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+				.andExpect(jsonPath("$.code").value("LINK_CODE_CONFLICT"));
+	}
+
+	@Test
+	void returnsProblemDetailWhenPublicStatisticsScopeIsMissing() throws Exception {
+		when(apiKeyService.authenticate("srrrg_pk_prefix_secret"))
+				.thenReturn(new ApiKeyPrincipal(1L, 7L, java.util.Set.of(ApiKeyScope.LINKS_READ)));
+
+		mockMvc.perform(get("/api/v1/projects/7/statistics")
+					.header("Authorization", "Bearer srrrg_pk_prefix_secret"))
+				.andExpect(status().isForbidden())
+				.andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+				.andExpect(jsonPath("$.code").value("SCOPE_REQUIRED"))
+				.andExpect(jsonPath("$.requestId").isNotEmpty());
 	}
 }

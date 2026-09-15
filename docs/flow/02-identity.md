@@ -1,6 +1,7 @@
 # identity — 계정
 
-로그인한 사용자 본인의 계정 정보. 이 도메인은 서비스 계층이 없고 **컨트롤러가 리포지토리와 엔티티를 직접 다룬다** — 권한 검사가 "본인 것만"으로 끝나고 분기가 없어서다.
+로그인한 사용자 본인의 계정 정보. `AccountController`는 HTTP 계약을 담당하고, `AccountService`가
+사용자·연결 공급자 조회와 프로필 변경의 트랜잭션 경계를 소유한다.
 
 | Method | Path | 핸들러 | 표면 |
 |---|---|---|---|
@@ -26,19 +27,20 @@
 
 ```
 AccountController.get(principal)
-    @Transactional(readOnly = true)
 
-    user(principal.userId())
+    AccountService.get(principal.userId())
+        @Transactional(readOnly = true)
+
         UserRepository.findById(userId)
             → 없으면 IllegalArgumentException (400)
             토큰은 유효한데 사용자가 지워진 상태. 실질적으로 도달하지 않는다.
 
-    response(user)
         OAuthAccountRepository.findByUserIdOrderByCreatedAtAsc(userId)
-            연결된 공급자를 가입 순서대로 나열한다. GOOGLE·KAKAO·GITHUB 이름만 노출하고
-            공급자 측 식별자나 이메일은 응답에 담지 않는다.
+            연결된 공급자를 가입 순서대로 나열한다. GOOGLE·KAKAO·GITHUB 이름만 AccountProfile에 담고
+            공급자 측 식별자나 이메일은 포함하지 않는다.
 
-    → AccountResponse(id, email, displayName, providers, createdAt)
+    AccountResponse.from(profile)
+        → AccountResponse(id, email, displayName, providers, createdAt)
 ```
 
 ---
@@ -49,19 +51,21 @@ AccountController.get(principal)
 
 ```
 AccountController.update(principal, request)
-    @Transactional
-
     (Bean Validation)
         displayName: @NotBlank @Size(max = 100)
         → MethodArgumentNotValidException (400 INVALID_REQUEST)
 
-    user(principal.userId())
+    AccountService.updateDisplayName(userId, displayName)
+        @Transactional
+        UserRepository.findById(userId)
 
-    User.updateDisplayName(displayName.trim())
-        엔티티 필드만 바꾼다. 트랜잭션 커밋 시 dirty checking으로 UPDATE가 나가고
-        @PreUpdate가 updatedAt을 갱신한다. save() 호출이 없는 이유.
+        User.updateDisplayName(displayName.trim())
+            엔티티 필드만 바꾼다. 트랜잭션 커밋 시 dirty checking으로 UPDATE가 나가고
+            @PreUpdate가 updatedAt을 갱신한다. save() 호출이 없는 이유.
 
-    response(user)
+        (연결 공급자를 포함한 AccountProfile 반환)
+
+    AccountResponse.from(profile)
 ```
 
 **핵심 1가지**
@@ -76,17 +80,19 @@ AccountController.update(principal, request)
 
 ```
 AccountController.completeOnboarding(principal, request)
-    @Transactional
-
     (Bean Validation)
         displayName: @NotBlank @Size(max = 100)
 
-    user(principal.userId())
+    AccountService.completeOnboarding(userId, displayName)
+        @Transactional
+        UserRepository.findById(userId)
 
-    User.completeOnboarding(displayName.trim())
-        displayName을 덮어쓰고 onboardingCompletedAt에 현재 시각을 찍는다.
+        User.completeOnboarding(displayName.trim())
+            displayName을 덮어쓰고 onboardingCompletedAt에 현재 시각을 찍는다.
 
-    response(user)
+        (연결 공급자를 포함한 AccountProfile 반환)
+
+    AccountResponse.from(profile)
 ```
 
 **핵심 2가지**
