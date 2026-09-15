@@ -45,7 +45,7 @@ CampaignController.templateCsv(principal, campaignId)
     CampaignService.get(principal.userId(), campaignId)          ← VIEWER 권한 확인
 
 PublicCampaignController.templateCsv(request, campaignId)
-    principal(request, projectId, CAMPAIGNS_READ)
+    ApiKeyRequestAuthorizer.require(request, projectId, CAMPAIGNS_READ)
     CampaignService.findForApiKey(projectId, campaignId)
 
 ── 공통 ──
@@ -85,7 +85,7 @@ CampaignController.uploadCsv(principal, campaignId, idempotencyKey, file)
     CampaignCsvService.startImport(campaign, bytes, key, uploader, createdByApiKeyId = null)
 
 PublicCampaignController.uploadCsv(request, campaignId, idempotencyKey, file)
-    principal(request, projectId, LINKS_WRITE)
+    ApiKeyRequestAuthorizer.require(request, projectId, LINKS_WRITE)
     CampaignService.findForApiKey(projectId, campaignId)
     CampaignCsvService.startImport(campaign, bytes, key, createdBy = null, principal.keyId())
 
@@ -274,23 +274,23 @@ CampaignImportWorker.tick()
 CampaignController.importStatus(principal, campaignId, importId)
     CampaignService.get(principal.userId(), campaignId)          ← VIEWER
 
-    importOrNotFound(campaignId, importId)
+    CampaignCsvService.requireImport(campaign, importId)
         CampaignImportRepository.findByIdAndCampaignId(importId, campaignId)
             campaignId를 함께 걸어 다른 캠페인의 import를 볼 수 없게 한다.
-            → web:  IllegalArgumentException (400)
-            → v1:   PublicApiException 404 IMPORT_NOT_FOUND
+            → CampaignImportNotFoundException
 
 PublicCampaignController.importStatus(request, campaignId, importId)
-    principal(request, projectId, CAMPAIGNS_READ)
+    ApiKeyRequestAuthorizer.require(request, projectId, CAMPAIGNS_READ)
     CampaignService.findForApiKey(projectId, campaignId)
-    importOrNotFound(campaignId, importId)
+    CampaignCsvService.requireImport(campaign, importId)
 
     → ImportResponse(id, status, totalRows, processedRows, succeededRows, failedRows, createdAt, completedAt)
 ```
 
 **핵심 1가지**
 
-- **같은 상황에 두 표면의 상태 코드가 다르다.** web은 400, v1은 404다. 두 컨트롤러가 각자 헬퍼를 갖고 있어 생긴 차이다.
+- **같은 도메인 예외라도 두 표면의 기존 상태 코드가 다르다.** web은 `GlobalExceptionHandler`가
+  400 `INVALID_REQUEST`, v1은 `PublicApiExceptionHandler`가 404 `IMPORT_NOT_FOUND`로 변환한다.
 
 ---
 
@@ -300,7 +300,8 @@ PublicCampaignController.importStatus(request, campaignId, importId)
 
 ```
 CampaignController.importErrorsCsv(principal, campaignId, importId)
-    CampaignService.get(...)  /  importOrNotFound(campaignId, importId)
+    CampaignService.get(...)
+    CampaignCsvService.requireImport(campaign, importId)
 
     CampaignCsvService.errorCsv(campaignImport)
 
@@ -336,7 +337,7 @@ CampaignController.exportLinksCsv(principal, campaignId, createdFrom, createdTo,
     CampaignService.get(principal.userId(), campaignId)          ← VIEWER
 
 PublicCampaignController.exportLinksCsv(request, campaignId, ...)
-    principal(request, projectId, LINKS_READ)                    ← campaigns:read가 아니라 links:read
+    ApiKeyRequestAuthorizer.require(request, projectId, LINKS_READ) ← campaigns:read가 아니라 links:read
     CampaignService.findForApiKey(projectId, campaignId)
 
 ── 공통 ──

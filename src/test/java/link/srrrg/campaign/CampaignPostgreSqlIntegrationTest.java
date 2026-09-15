@@ -577,6 +577,48 @@ class CampaignPostgreSqlIntegrationTest {
 	}
 
 	@Test
+	void campaignLinkListsKeepWebAndPublicResponseContracts() throws Exception {
+		Owner owner = newOwner();
+		Long templateId = createTemplate(owner, "utm_source");
+		Long campaignId = createCampaign(owner, "목록 경계 캠페인", templateId);
+		updateUtmDefault(owner, campaignId, "newsletter");
+		mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/list\"}"))
+				.andExpect(status().isCreated());
+
+		ApiKeyService.CreatedKey key = apiKeyService.create(owner.userId, owner.projectId, "list-reader",
+				java.util.Set.of(ApiKeyScope.LINKS_READ), null);
+		String auth = "Bearer " + key.rawKey();
+
+		mockMvc.perform(get("/api/web/campaigns/{id}/links", campaignId).cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.items[0].effectiveUtmValues[0].value").value("newsletter"));
+		mockMvc.perform(get("/api/v1/campaigns/{id}/links", campaignId)
+					.header("Authorization", auth))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.items[0].originalUrl").value("https://example.com/list"))
+				.andExpect(jsonPath("$.items[0].effectiveUtmValues").doesNotExist());
+	}
+
+	@Test
+	void missingCampaignImportKeepsSurfaceSpecificErrorContracts() throws Exception {
+		Owner owner = newOwner();
+		Long campaignId = createCampaign(owner, "임포트 조회 캠페인", null);
+		ApiKeyService.CreatedKey key = apiKeyService.create(owner.userId, owner.projectId, "import-reader",
+				java.util.Set.of(ApiKeyScope.CAMPAIGNS_READ), null);
+
+		mockMvc.perform(get("/api/web/campaigns/{id}/imports/{importId}", campaignId, Long.MAX_VALUE)
+					.cookie(owner.cookie))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+		mockMvc.perform(get("/api/v1/campaigns/{id}/imports/{importId}", campaignId, Long.MAX_VALUE)
+					.header("Authorization", "Bearer " + key.rawKey()))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.code").value("IMPORT_NOT_FOUND"));
+	}
+
+	@Test
 	void jsonBatchCreatesAllLinksAtomicallyAndReplaysIdempotently() throws Exception {
 		Owner owner = newOwner();
 		Long campaignId = createCampaign(owner, "배치 캠페인", null);

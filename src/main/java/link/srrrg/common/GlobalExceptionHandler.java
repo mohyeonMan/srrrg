@@ -13,6 +13,7 @@ import link.srrrg.campaign.BatchIdempotencyConflictException;
 import link.srrrg.campaign.CampaignNotFoundException;
 import link.srrrg.campaign.importing.ActiveImportConflictException;
 import link.srrrg.campaign.importing.CampaignImportIdempotencyConflictException;
+import link.srrrg.campaign.importing.CampaignImportNotFoundException;
 import link.srrrg.common.ratelimit.RateLimitExceededException;
 import link.srrrg.link.ExternalIdConflictException;
 import link.srrrg.link.LinkGoneException;
@@ -27,12 +28,11 @@ import lombok.extern.slf4j.Slf4j;
  *
  * <p>범위를 제한하지 않은 {@code @RestControllerAdvice}라 모든 컨트롤러에 걸리지만, 세 API 표면 중
  * 실제로 이 형식을 쓰는 것은 웹 API({@code /api/web/**})와 비인증 링크 API({@code /api/links/**})다.
- * {@code /api/v1/**}의 캠페인·UTM 템플릿 컨트롤러는 {@code PublicCampaignApiExceptionHandler}가,
+ * {@code /api/v1/**}의 공개 API 컨트롤러는 {@code PublicApiExceptionHandler}가,
  * 사용자에게 HTML 오류 화면을 보여야 하는 {@code /{code}} 리다이렉트는 {@code RedirectExceptionHandler}가
  * {@code assignableTypes}로 대상 컨트롤러를 지정해 따로 처리한다.
- * 이 중 우선순위를 명시한 것은 {@code @Order(HIGHEST_PRECEDENCE)}를 붙인 {@code RedirectExceptionHandler}뿐이고,
- * 나머지 둘은 순위 선언이 없어 기본 순위가 같다. 따라서 같은 예외 타입을 여러 곳에 등록해 두면
- * 어느 응답 형식이 나갈지는 advice 정렬 결과에 달린다. 새 예외를 만들면 표면별 처리기에 각각 등록한다.</p>
+ * 두 표면별 처리기 모두 {@code @Order(HIGHEST_PRECEDENCE)}로 전역 처리기보다 먼저 동작한다.
+ * 새 예외를 만들면 그 예외가 노출될 수 있는 API 표면을 확인하고 해당 처리기에 등록한다.</p>
  *
  * <p>응답 메시지는 사용자에게 그대로 보이므로 예외의 원문 메시지를 넘길 때는 그 메시지에 내부 구조가
  * 드러나지 않는지 확인한다. 예상하지 못한 예외는 메시지를 감추고 스택트레이스만 로그로 남긴다.</p>
@@ -77,6 +77,15 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<ApiErrorResponse> handleCampaignNotFound(CampaignNotFoundException exception) {
 		return ResponseEntity.status(HttpStatus.NOT_FOUND)
 				.body(new ApiErrorResponse("CAMPAIGN_NOT_FOUND", exception.getMessage()));
+	}
+
+	/**
+	 * 웹 API가 기존에 없는 import를 잘못된 요청으로 처리하던 계약을 유지한다.
+	 * 공개 API는 같은 도메인 예외를 별도 처리기에서 404로 변환한다.
+	 */
+	@ExceptionHandler(CampaignImportNotFoundException.class)
+	public ResponseEntity<ApiErrorResponse> handleCampaignImportNotFound(CampaignImportNotFoundException exception) {
+		return badRequest(exception.getMessage());
 	}
 
 	/**

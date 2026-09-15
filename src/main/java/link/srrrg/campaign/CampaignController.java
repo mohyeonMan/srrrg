@@ -32,11 +32,7 @@ import link.srrrg.campaign.dto.CreateCampaignLinkRequest;
 import link.srrrg.campaign.dto.UpdateCampaignRequest;
 import link.srrrg.campaign.importing.CampaignCsvService;
 import link.srrrg.campaign.importing.CampaignImport;
-import link.srrrg.campaign.importing.CampaignImportRepository;
 import link.srrrg.link.Link;
-import link.srrrg.link.LinkRepository;
-import link.srrrg.link.LinkUtmValueRepository;
-import link.srrrg.link.LinkUtmValueRepository.EffectiveUtmValueByLink;
 import link.srrrg.project.ProjectAccessService;
 import link.srrrg.project.ProjectRole;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +42,9 @@ import lombok.RequiredArgsConstructor;
  *
  * <p>업무 권한은 서비스 계층에 맡긴다. CSV 업로드에서 생성자를 얻을 때도 멤버십 저장소를 직접 읽지 않고
  * {@link ProjectAccessService}의 판정 결과를 사용한다.</p>
+ *
+ * <p>캠페인 링크 목록은 {@link CampaignLinkQueryService}가 권한, 커서 페이지와 유효 UTM 조회를 묶어
+ * 수행한다. 이 컨트롤러는 결과를 웹 전용 응답 필드로 변환할 뿐 Repository 조회 순서를 소유하지 않는다.</p>
  *
  * <p>같은 기능의 API key 경로가 {@code PublicCampaignController}에 따로 있다. 두 경로는 인증 방식과
  * 오류 형식이 다르므로, 캠페인 정책을 바꿀 때는 양쪽을 함께 봐야 한다.</p>
@@ -57,10 +56,8 @@ public class CampaignController {
 
 	private final CampaignService campaigns;
 	private final CampaignLinkCreationService linkCreation;
+	private final CampaignLinkQueryService linkQueries;
 	private final CampaignCsvService csv;
-	private final CampaignImportRepository imports;
-	private final LinkRepository links;
-	private final LinkUtmValueRepository linkUtmValues;
 	private final ProjectAccessService projectAccess;
 
 	@PostMapping("/projects/{projectId}/campaigns")
@@ -130,15 +127,9 @@ public class CampaignController {
 	@GetMapping("/campaigns/{campaignId}/links")
 	public WebCampaignLinkPageResponse links(@AuthenticationPrincipal SrrrgPrincipal principal, @PathVariable Long campaignId,
 			@RequestParam(required = false) Long cursor, @RequestParam(defaultValue = "50") int limit) {
-		campaigns.get(principal.userId(), campaignId);
 		int boundedLimit = boundedLimit(limit);
-		List<Link> page = cursor == null
-				? links.findByCampaignIdOrderByIdDesc(campaignId, org.springframework.data.domain.PageRequest.of(0, boundedLimit + 1))
-				: links.findByCampaignIdAndIdLessThanOrderByIdDesc(campaignId, cursor, org.springframework.data.domain.PageRequest.of(0, boundedLimit + 1));
-		List<Link> visibleLinks = page.size() > boundedLimit ? page.subList(0, boundedLimit) : page;
-		List<EffectiveUtmValueByLink> effectiveUtm = visibleLinks.isEmpty() ? List.of()
-				: linkUtmValues.findEffectiveByLinkIds(visibleLinks.stream().map(Link::getId).toList());
-		return WebCampaignLinkPageResponse.of(page, boundedLimit, effectiveUtm);
+		return WebCampaignLinkPageResponse.of(
+				linkQueries.listForUser(principal.userId(), campaignId, cursor, boundedLimit));
 	}
 
 	@DeleteMapping("/campaigns/{campaignId}/links")
@@ -165,14 +156,14 @@ public class CampaignController {
 
 	@GetMapping("/campaigns/{campaignId}/imports/{importId}")
 	public ImportResponse importStatus(@AuthenticationPrincipal SrrrgPrincipal principal, @PathVariable Long campaignId, @PathVariable Long importId) {
-		campaigns.get(principal.userId(), campaignId);
-		return ImportResponse.from(importOrNotFound(campaignId, importId));
+		Campaign campaign = campaigns.get(principal.userId(), campaignId);
+		return ImportResponse.from(csv.requireImport(campaign, importId));
 	}
 
 	@GetMapping(value = "/campaigns/{campaignId}/imports/{importId}/errors.csv", produces = "text/csv")
 	public ResponseEntity<byte[]> importErrorsCsv(@AuthenticationPrincipal SrrrgPrincipal principal, @PathVariable Long campaignId, @PathVariable Long importId) {
-		campaigns.get(principal.userId(), campaignId);
-		CampaignImport campaignImport = importOrNotFound(campaignId, importId);
+		Campaign campaign = campaigns.get(principal.userId(), campaignId);
+		CampaignImport campaignImport = csv.requireImport(campaign, importId);
 		return csvAttachment(csv.errorCsv(campaignImport), "import-" + importId + "-errors.csv");
 	}
 
@@ -182,11 +173,6 @@ public class CampaignController {
 			@RequestParam(required = false) String externalId) {
 		Campaign campaign = campaigns.get(principal.userId(), campaignId);
 		return csvAttachment(csv.exportLinksCsv(campaign, createdFrom, createdTo, externalId), "campaign-" + campaignId + "-links.csv");
-	}
-
-	private CampaignImport importOrNotFound(Long campaignId, Long importId) {
-		return imports.findByIdAndCampaignId(importId, campaignId)
-				.orElseThrow(() -> new IllegalArgumentException("import를 찾을 수 없습니다."));
 	}
 
 	private ResponseEntity<byte[]> csvAttachment(String content, String filename) {
@@ -239,15 +225,14 @@ public class CampaignController {
 		}
 	}
 	public record CampaignLinkPageResponse(List<CampaignLinkResponse> items, Long nextCursor) {
-		static CampaignLinkPageResponse of(List<Link> page, int limit) {
-			List<Link> trimmed = page.size() > limit ? page.subList(0, limit) : page;
-			Long nextCursor = page.size() > limit ? trimmed.get(trimmed.size() - 1).getId() : null;
-			return new CampaignLinkPageResponse(trimmed.stream().map(CampaignLinkResponse::from).toList(), nextCursor);
+		static CampaignLinkPageResponse of(CampaignLinkQueryResult result) {
+			return new CampaignLinkPageResponse(
+					result.items().stream().map(CampaignLinkResponse::from).toList(), result.nextCursor());
 		}
 	}
 	public record EffectiveUtmResponse(String name, String value, String source) {
-		static EffectiveUtmResponse from(EffectiveUtmValueByLink value) {
-			return new EffectiveUtmResponse(value.getFieldName(), value.getValue(), value.getSource());
+		static EffectiveUtmResponse from(CampaignEffectiveUtmValue value) {
+			return new EffectiveUtmResponse(value.fieldName(), value.value(), value.source());
 		}
 	}
 	public record WebCampaignLinkResponse(String code, String name, String originalUrl, String externalId, Instant createdAt,
@@ -258,16 +243,14 @@ public class CampaignController {
 		}
 	}
 	public record WebCampaignLinkPageResponse(List<WebCampaignLinkResponse> items, Long nextCursor) {
-		static WebCampaignLinkPageResponse of(List<Link> page, int limit, List<EffectiveUtmValueByLink> effectiveUtm) {
-			List<Link> trimmed = page.size() > limit ? page.subList(0, limit) : page;
-			Long nextCursor = page.size() > limit ? trimmed.get(trimmed.size() - 1).getId() : null;
+		static WebCampaignLinkPageResponse of(CampaignLinkQueryResult result) {
 			Map<Long, List<EffectiveUtmResponse>> byLinkId = new LinkedHashMap<>();
-			for (EffectiveUtmValueByLink value : effectiveUtm) {
-				byLinkId.computeIfAbsent(value.getLinkId(), ignored -> new ArrayList<>()).add(EffectiveUtmResponse.from(value));
+			for (CampaignEffectiveUtmValue value : result.effectiveUtmValues()) {
+				byLinkId.computeIfAbsent(value.linkId(), ignored -> new ArrayList<>()).add(EffectiveUtmResponse.from(value));
 			}
-			return new WebCampaignLinkPageResponse(trimmed.stream()
+			return new WebCampaignLinkPageResponse(result.items().stream()
 					.map(link -> WebCampaignLinkResponse.from(link, byLinkId.getOrDefault(link.getId(), List.of())))
-					.toList(), nextCursor);
+					.toList(), result.nextCursor());
 		}
 	}
 	public record ImportResponse(Long id, String status, int totalRows, int processedRows, int succeededRows, int failedRows,

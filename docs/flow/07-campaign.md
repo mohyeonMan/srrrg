@@ -28,11 +28,11 @@ CSV 가져오기·내보내기 5종은 [09-campaign-import.md](09-campaign-impor
        ProjectAccessService.requireRole(userId, projectId, role)
            프로젝트 기능이 멤버십과 역할을 판정하고, 캠페인 서비스는 그 결과를 사용한다.
 
-[v1]   PublicCampaignController.projectIdFrom(request)
-           request 속성 srrrg.apiKeyPrincipal에서 projectId를 꺼낸다.
+[v1]   ApiKeyRequestAuthorizer.requireAuthenticated(request)
+           request 속성 srrrg.apiKeyPrincipal을 확인하고 projectId를 꺼낸다.
            → 없으면 PublicApiException 401 API_KEY_INVALID
 
-       PublicCampaignController.principal(request, projectId, scope)
+       ApiKeyRequestAuthorizer.require(request, projectId, scope)
            키의 projectId 일치 + 스코프 보유를 확인한다.
            → 403 PROJECT_ACCESS_DENIED / 403 SCOPE_REQUIRED
 
@@ -66,7 +66,7 @@ CampaignController.create(principal, projectId, request)
         CampaignRepository.save(Campaign.create(project, ..., user(userId)))
 
 PublicCampaignController.create(request, projectId, body)
-    principal(request, projectId, CAMPAIGNS_WRITE)
+    ApiKeyRequestAuthorizer.require(request, projectId, CAMPAIGNS_WRITE)
 
     CampaignService.createForApiKey(projectId, name, description, defaultOriginalUrl)
         @Transactional
@@ -110,7 +110,7 @@ CampaignController.list(principal, projectId, cursor, limit)
         limit개로 자르고 마지막 id를 nextCursor로 준다.
 
 PublicCampaignController.list(request, projectId, cursor, limit)
-    principal(request, projectId, CAMPAIGNS_READ)
+    ApiKeyRequestAuthorizer.require(request, projectId, CAMPAIGNS_READ)
     CampaignService.listForApiKey(projectId, cursor, limit)
         ProjectAccessService.requireRole만 빠지고 listPage는 동일하다.
 ```
@@ -137,7 +137,7 @@ CampaignController.get(principal, campaignId)
 PublicCampaignController.get(request, campaignId)
     projectIdFrom(request)
     CampaignService.findForApiKey(projectId, campaignId)     ← 스코프 검사보다 먼저 실행된다
-    principal(request, campaign.getProject().getId(), CAMPAIGNS_READ)
+    ApiKeyRequestAuthorizer.require(request, campaign.getProject().getId(), CAMPAIGNS_READ)
         조회가 이미 키의 projectId로 좁혀져 있어 교차 접근은 불가능하지만,
         스코프가 없는 키도 조회 쿼리 한 번은 유발한다.
 ```
@@ -232,7 +232,7 @@ CampaignController.selectTemplate(principal, campaignId, request)
             Campaign.selectTemplate(template)
 
 PublicCampaignController.selectTemplate(request, campaignId, body)
-    principal(request, projectId, CAMPAIGNS_WRITE)
+    ApiKeyRequestAuthorizer.require(request, projectId, CAMPAIGNS_WRITE)
     CampaignService.selectTemplateForApiKey(projectId, campaignId, templateId)
         findForApiKey로 캠페인을 찾은 뒤 같은 applyTemplateSelection을 탄다.
 ```
@@ -342,7 +342,7 @@ CampaignController.createLink(principal, campaignId, request)
         create(campaign, project, createdBy, null, null, null, request)
 
 PublicCampaignController.createLink(request, campaignId, idempotencyKey, body)
-    principal(request, projectId, LINKS_WRITE)
+    ApiKeyRequestAuthorizer.require(request, projectId, LINKS_WRITE)
 
     CampaignLinkCreationService.createForApiKey(keyId, projectId, campaignId, idempotencyKey, request)
         @Transactional
@@ -423,7 +423,7 @@ PublicCampaignController.createLink(request, campaignId, idempotencyKey, body)
 ```
 PublicCampaignController.createBatch(request, campaignId, idempotencyKey, items)
     @RequestHeader("Idempotency-Key") — 필수다. 없으면 Spring이 먼저 막는다.
-    principal(request, projectId, LINKS_WRITE)
+    ApiKeyRequestAuthorizer.require(request, projectId, LINKS_WRITE)
     → 201 Created
 
     CampaignLinkBatchService.createBatch(apiKeyId, projectId, campaignId, idempotencyKey, items)
@@ -481,29 +481,29 @@ PublicCampaignController.createBatch(request, campaignId, idempotencyKey, items)
 
 ```
 CampaignController.links(principal, campaignId, cursor, limit)
-
-    CampaignService.get(principal.userId(), campaignId)
-        권한 검사만을 위한 호출. 반환값은 버린다.
-
     boundedLimit(limit)                          1~100
 
-    LinkRepository.findByCampaignIdOrderByIdDesc(campaignId, PageRequest.of(0, limit+1))
-    LinkRepository.findByCampaignIdAndIdLessThanOrderByIdDesc(campaignId, cursor, ...)
-        커서 페이징.
+    CampaignLinkQueryService.listForUser(userId, campaignId, cursor, limit)
+        CampaignService.get(userId, campaignId)  ← VIEWER 권한
 
-    LinkUtmValueRepository.findEffectiveByLinkIds(linkIds)
-        보이는 링크들의 유효 UTM을 IN 절로 한 번에 조회한다. 링크마다 조회하면 N+1이 된다.
-        source 컬럼으로 값의 출처를 함께 준다 — 'LINK'(링크에 직접 지정) 또는 'CAMPAIGN_DEFAULT'.
+        LinkRepository.findByCampaignIdOrderByIdDesc(campaignId, PageRequest.of(0, limit+1))
+        LinkRepository.findByCampaignIdAndIdLessThanOrderByIdDesc(campaignId, cursor, ...)
+            커서 페이징. limit+1번째 행은 nextCursor 판정에만 쓰고 응답에서 제거한다.
 
-    WebCampaignLinkPageResponse.of(page, limit, effectiveUtm)
+        LinkUtmValueRepository.findEffectiveByLinkIds(보이는 linkIds)
+            여분 행을 제외한 링크들의 유효 UTM을 IN 절로 한 번에 조회한다. 링크마다 조회하면 N+1이 된다.
+            source 컬럼으로 값의 출처를 함께 준다 — 'LINK' 또는 'CAMPAIGN_DEFAULT'.
+
+    WebCampaignLinkPageResponse.of(queryResult)
         linkId로 그룹핑해 각 링크에 UTM 목록을 붙인다.
 
 PublicCampaignController.links(request, campaignId, cursor, limit)
-    principal(request, projectId, LINKS_READ)
-    CampaignService.findForApiKey(projectId, campaignId)
-    (같은 커서 페이징)
+    ApiKeyRequestAuthorizer.require(request, projectId, LINKS_READ)
+    CampaignLinkQueryService.listForApiKey(projectId, campaignId, cursor, limit)
+        CampaignService.findForApiKey(projectId, campaignId)
+        (같은 커서 페이징, UTM 조회는 생략)
 
-    CampaignLinkPageResponse.of(page, boundedLimit)
+    CampaignLinkPageResponse.of(queryResult)
         UTM 조회를 하지 않는다. code·name·originalUrl·externalId·createdAt만.
 ```
 
