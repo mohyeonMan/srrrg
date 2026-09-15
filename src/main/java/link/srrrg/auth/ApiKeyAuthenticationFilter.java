@@ -15,6 +15,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import link.srrrg.common.ratelimit.RateLimitExceededException;
 import link.srrrg.common.ratelimit.RateLimitService;
+import link.srrrg.project.ApiKeyPrincipal;
 import link.srrrg.project.ApiKeyService;
 
 /**
@@ -56,7 +57,7 @@ class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 			return;
 		}
 		try {
-			ApiKeyService.ApiKeyPrincipal principal = keys.authenticate(authorization.substring("Bearer ".length()));
+			ApiKeyPrincipal principal = keys.authenticate(authorization.substring("Bearer ".length()));
 			// 읽기만 여기서 제한한다. 쓰기 한도는 요청 본문을 해석한 뒤 프로젝트 단위로 걸어야 해서
 			// 서비스 계층이 담당하며, 여기서 중복으로 세면 한 요청이 두 번 차감된다.
 			if ("GET".equalsIgnoreCase(request.getMethod())) {

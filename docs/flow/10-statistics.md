@@ -1,18 +1,21 @@
 # statistics — 통계
 
-`link_access_events` 테이블 하나를 스코프만 바꿔가며 집계한다. 7개 엔드포인트가 전부 같은 서비스 메소드(`report`)로 수렴한다.
+`link_access_events` 테이블 하나를 스코프만 바꿔가며 집계한다. 7개 엔드포인트는 API 표면별
+컨트롤러에서 `StatisticsService`의 유스케이스를 거쳐 `StatisticsReportService.report`로 수렴한다.
 
 | Method | Path | 핸들러 | 스코프 | 인증 |
 |---|---|---|---|---|
-| GET | `/api/links/{code}/statistics` | `StatisticsController.anonymous` | LINK | secret key |
-| GET | `/api/web/projects/{projectId}/statistics` | `project` | PROJECT | JWT (멤버) |
-| GET | `/api/web/campaigns/{campaignId}/statistics` | `campaign` | CAMPAIGN | JWT (멤버) |
-| GET | `/api/web/projects/{projectId}/links/{code}/statistics` | `projectLink` | LINK | JWT (멤버) |
-| GET | `/api/v1/projects/{projectId}/statistics` | `publicProject` | PROJECT | `stats:read` |
-| GET | `/api/v1/campaigns/{campaignId}/statistics` | `publicCampaign` | CAMPAIGN | `stats:read` |
-| GET | `/api/v1/projects/{projectId}/links/{code}/statistics` | `publicLink` | LINK | `stats:read` |
+| GET | `/api/links/{code}/statistics` | `AnonymousStatisticsController.link` | LINK | secret key |
+| GET | `/api/web/projects/{projectId}/statistics` | `WebStatisticsController.project` | PROJECT | JWT (멤버) |
+| GET | `/api/web/campaigns/{campaignId}/statistics` | `WebStatisticsController.campaign` | CAMPAIGN | JWT (멤버) |
+| GET | `/api/web/projects/{projectId}/links/{code}/statistics` | `WebStatisticsController.projectLink` | LINK | JWT (멤버) |
+| GET | `/api/v1/projects/{projectId}/statistics` | `PublicStatisticsController.project` | PROJECT | `stats:read` |
+| GET | `/api/v1/campaigns/{campaignId}/statistics` | `PublicStatisticsController.campaign` | CAMPAIGN | `stats:read` |
+| GET | `/api/v1/projects/{projectId}/links/{code}/statistics` | `PublicStatisticsController.projectLink` | LINK | `stats:read` |
 
-**세 표면이 한 컨트롤러 안에 있다.** 다른 도메인은 web/v1을 별도 컨트롤러로 나눴는데 여기만 합쳐져 있다.
+세 API 표면은 컨트롤러를 분리해 각 HTTP 계약과 인증 주체 변환만 맡긴다. Repository 조회,
+프로젝트 멤버십과 대상 소유 범위 판정은 application 경계인 `StatisticsService`가 소유한다.
+기간 계산과 집계 응답 조립은 `StatisticsReportService`로 분리돼 접근 정책과 집계 로직이 섞이지 않는다.
 
 ## 공통 쿼리 파라미터
 
@@ -24,100 +27,108 @@
 | `offset` | 0 | 0~100,000 |
 | `limit` | 50 | 1~100 |
 
-**시간대가 `Asia/Seoul`로 하드코딩돼 있다** (`StatisticsService.ZONE`). 날짜 경계와 `date_trunc`가 모두 이 기준이다.
+**시간대가 `Asia/Seoul`로 하드코딩돼 있다** (`StatisticsReportService.ZONE`). 날짜 경계와 `date_trunc`가 모두 이 기준이다.
 
 ## 권한 검사
 
-웹 사용자의 프로젝트 역할은 공통 프로젝트 접근 서비스가 판정한다. API key scope는 아직 컨트롤러가 직접 확인한다.
+웹 사용자의 프로젝트 역할과 조회 대상은 `StatisticsService`가 판정한다. 공개 API의 principal·프로젝트·scope
+검사는 모든 공개 컨트롤러가 함께 쓰는 `ApiKeyRequestAuthorizer`가 담당한다.
 
 ```
-StatisticsController.member(userId, projectId)
+StatisticsService.requireMember(userId, projectId)
     ProjectAccessService.requireRole(userId, projectId, VIEWER)
         ProjectMemberRepository.findActiveByProjectAndUser(projectId, userId)
         → SecurityException (403 PROJECT_ACCESS_DENIED)
     VIEWER가 최소 역할이므로 모든 활성 멤버가 통계를 볼 수 있다.
 
-StatisticsController.apiKey(request, projectId)
+ApiKeyRequestAuthorizer.require(request, projectId, STATS_READ)
     request.getAttribute("srrrg.apiKeyPrincipal")
-        → SecurityException (403) — 401이 아니다
-    (projectId가 주어졌으면 일치 확인)
-        → SecurityException (403)
+        → PublicApiException (401 API_KEY_INVALID)
+    (키의 projectId와 경로의 projectId 일치 확인)
+        → PublicApiException (403 PROJECT_ACCESS_DENIED)
     (STATS_READ 스코프 확인)
-        → SecurityException (403)
+        → PublicApiException (403 SCOPE_REQUIRED)
+
+ApiKeyRequestAuthorizer.requireScope(request, STATS_READ)
+    캠페인처럼 경로에 projectId가 없을 때 인증과 scope만 먼저 확인한다.
+    StatisticsService가 조회한 대상의 프로젝트와 principal.projectId를 반드시 대조한다.
 ```
 
-`apiKey`가 `PublicApiException` 대신 `SecurityException`을 던지므로 **v1 통계 응답만 `ProblemDetail`이 아니라 `ApiErrorResponse` 형식**이다. `PublicCampaignApiExceptionHandler`의 적용 대상(`assignableTypes`)에 `StatisticsController`가 없어 `GlobalExceptionHandler`로 떨어지기 때문이다.
+공개 통계에서 발생한 예외는 `PublicApiExceptionHandler`가 처리하므로 다른 `/api/v1/**` 경로와 동일하게
+RFC 7807 `ProblemDetail`과 `X-Request-Id`를 반환한다.
 
 ---
 
 ### 스코프별 진입 흐름
 
 ```
-StatisticsController.anonymous(code, secret, from, to, bucket, offset, limit)
+AnonymousStatisticsController.link(code, secret, from, to, bucket, offset, limit)
     익명 링크 통계. secret key가 인증 수단.
 
-    LinkManagementService.getManagedLink(code, secret)
-        인증만을 위한 호출. 반환값은 버린다.
+    StatisticsService.anonymousLink(code, secret, ...)
+        LinkManagementService.requireManagedLink(code, secret)
+        인증 성공 시 검증된 Link 엔티티를 그대로 사용한다.
         → LinkNotFoundException (404) / LinkGoneException (410)
 
-    LinkRepository.findByCodeAndProjectIsNull(code)
-        같은 링크를 다시 조회한다 — getManagedLink가 엔티티가 아닌 DTO를 반환하기 때문.
-        → LinkNotFoundException (404)
-
-    StatisticsService.link(linkId, code, ...)
+        StatisticsReportService.link(linkId, code, ...)
 
 
-StatisticsController.project(principal, projectId, ...)
-    member(userId, projectId)
-    StatisticsService.project(projectId, member.getProject().getName(), ...)
+WebStatisticsController.project(principal, projectId, ...)
+    StatisticsService.webProject(userId, projectId, ...)
+        requireMember(userId, projectId)
+        StatisticsReportService.project(projectId, member.getProject().getName(), ...)
 
 
-StatisticsController.campaign(principal, campaignId, ...)
-    campaign(campaignId)
+WebStatisticsController.campaign(principal, campaignId, ...)
+    StatisticsService.webCampaign(userId, campaignId, ...)
         CampaignRepository.findById → CampaignNotFoundException (404)
-    member(userId, campaign.getProject().getId())
+        requireMember(userId, campaign.getProject().getId())
         캠페인을 먼저 찾고 그 프로젝트로 권한을 확인한다.
-    StatisticsService.campaign(campaignId, campaign.getName(), ...)
+        StatisticsReportService.campaign(campaignId, campaign.getName(), ...)
 
 
-StatisticsController.projectLink(principal, projectId, code, ...)
-    member(userId, projectId)
-    projectLink(projectId, code)
+WebStatisticsController.projectLink(principal, projectId, code, ...)
+    StatisticsService.webProjectLink(userId, projectId, code, ...)
+        requireMember(userId, projectId)
         LinkRepository.findByProjectIdAndCode(projectId, code)
         삭제된 링크는 410이 아니라 404로 처리한다 — 통계에서는 존재하지 않는 것과 같다.
         → LinkNotFoundException (404)
-    StatisticsService.link(link.getId(), code, ...)
+        StatisticsReportService.link(link.getId(), code, ...)
 
 
-StatisticsController.publicProject(request, projectId, ...)
-    apiKey(request, projectId)
-    StatisticsService.project(projectId, "project-" + key.projectId(), ...)
-        프로젝트 이름 대신 "project-{id}" 를 쓴다. 이름 조회를 생략한 것.
+PublicStatisticsController.project(request, projectId, ...)
+    ApiKeyRequestAuthorizer.require(request, projectId, STATS_READ)
+    StatisticsService.publicProject(principal, projectId, ...)
+        StatisticsReportService.project(projectId, "project-" + principal.projectId(), ...)
+        프로젝트 이름 대신 "project-{id}"를 쓴다. 기존 계약대로 별도 프로젝트 조회는 하지 않는다.
 
 
-StatisticsController.publicCampaign(request, campaignId, ...)
-    apiKey(request, null)
-        projectId를 경로에서 받지 않으므로 여기서는 일치 검사를 건너뛴다.
-    campaign(campaignId)
-    (캠페인의 프로젝트와 키의 프로젝트 일치 확인)
+PublicStatisticsController.campaign(request, campaignId, ...)
+    ApiKeyRequestAuthorizer.requireScope(request, STATS_READ)
+        projectId를 경로에서 받지 않으므로 인증과 scope를 먼저 확인한다.
+    StatisticsService.publicCampaign(principal, campaignId, ...)
+        CampaignRepository.findById → CampaignNotFoundException (404)
+        캠페인의 프로젝트와 키의 프로젝트 일치 확인
         조회 후에 비교한다. 조회 자체는 막지 않으므로 캠페인 존재 여부는 404/403으로 구분된다.
         → SecurityException (403)
+        StatisticsReportService.campaign(campaignId, campaign.getName(), ...)
 
 
-StatisticsController.publicLink(request, projectId, code, ...)
-    apiKey(request, projectId)
-    projectLink(projectId, code)
-    StatisticsService.link(link.getId(), code, ...)
+PublicStatisticsController.projectLink(request, projectId, code, ...)
+    ApiKeyRequestAuthorizer.require(request, projectId, STATS_READ)
+    StatisticsService.publicProjectLink(projectId, code, ...)
+        LinkRepository.findByProjectIdAndCode(projectId, code)
+        StatisticsReportService.link(link.getId(), code, ...)
 ```
 
 ---
 
-### 공통 집계 — StatisticsService.report
+### 공통 집계 — StatisticsReportService.report
 
 일곱 경로가 전부 여기로 모인다.
 
 ```
-StatisticsService.report(scope, name, requestedFrom, requestedTo, bucket, offset, limit)
+StatisticsReportService.report(scope, name, requestedFrom, requestedTo, bucket, offset, limit)
     @Transactional 없음 — 전부 읽기 쿼리다.
 
     validatePage(offset, limit)

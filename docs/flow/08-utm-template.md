@@ -59,7 +59,7 @@ UtmTemplateController.create(principal, projectId, request)
         doCreate(project, name)
 
 PublicUtmTemplateController.create(request, projectId, body)
-    principal(request, projectId, CAMPAIGNS_WRITE)
+    ApiKeyRequestAuthorizer.require(request, projectId, CAMPAIGNS_WRITE)
         → 401 API_KEY_INVALID / 403 PROJECT_ACCESS_DENIED / 403 SCOPE_REQUIRED
 
     UtmTemplateService.createForApiKey(projectId, name)
@@ -115,7 +115,7 @@ UtmTemplateController.list(principal, projectId)
             UtmTemplateFieldRepository.findByUtmTemplateIdAndDeletedAtIsNullOrderByNameAsc(templateId)
 
 PublicUtmTemplateController.list(request, projectId)
-    principal(request, projectId, CAMPAIGNS_READ)
+    ApiKeyRequestAuthorizer.require(request, projectId, CAMPAIGNS_READ)
     UtmTemplateService.listForApiKey(projectId)
     [템플릿마다] UtmTemplateService.activeFieldsForApiKey(projectId, template.getId())
 ```
@@ -142,7 +142,7 @@ UtmTemplateController.get(principal, projectId, templateId)
         권한 검사와 템플릿 조회를 다시 한다.
 
 PublicUtmTemplateController.get(request, projectId, templateId)
-    principal(request, projectId, CAMPAIGNS_READ)
+    ApiKeyRequestAuthorizer.require(request, projectId, CAMPAIGNS_READ)
     UtmTemplateService.getForApiKey(projectId, templateId)
     UtmTemplateService.activeFieldsForApiKey(projectId, templateId)
 ```
@@ -164,7 +164,7 @@ UtmTemplateController.rename(principal, projectId, templateId, request)
         doRename(projectId, templateId, name)
 
 PublicUtmTemplateController.rename(request, projectId, templateId, body)
-    principal(request, projectId, CAMPAIGNS_WRITE)
+    ApiKeyRequestAuthorizer.require(request, projectId, CAMPAIGNS_WRITE)
     UtmTemplateService.renameForApiKey(projectId, templateId, name)
 
 ── 공통 ──
@@ -200,7 +200,7 @@ UtmTemplateController.delete(principal, projectId, templateId)
         doDelete(projectId, templateId)
 
 PublicUtmTemplateController.delete(request, projectId, templateId)
-    principal(request, projectId, CAMPAIGNS_WRITE)
+    ApiKeyRequestAuthorizer.require(request, projectId, CAMPAIGNS_WRITE)
     UtmTemplateService.deleteForApiKey(projectId, templateId)
 
 ── 공통 ──
@@ -240,7 +240,7 @@ UtmTemplateController.addField(principal, projectId, templateId, request)
         doAddField(projectId, templateId, name)
 
 PublicUtmTemplateController.addField(request, projectId, templateId, body)
-    principal(request, projectId, CAMPAIGNS_WRITE)
+    ApiKeyRequestAuthorizer.require(request, projectId, CAMPAIGNS_WRITE)
     UtmTemplateService.addFieldForApiKey(projectId, templateId, name)
 
 ── 공통 ──
@@ -289,7 +289,7 @@ UtmTemplateController.deleteField(principal, projectId, templateId, fieldId)
         doDeleteField(projectId, templateId, fieldId)
 
 PublicUtmTemplateController.deleteField(request, projectId, templateId, fieldId)
-    principal(request, projectId, CAMPAIGNS_WRITE)
+    ApiKeyRequestAuthorizer.require(request, projectId, CAMPAIGNS_WRITE)
     UtmTemplateService.deleteFieldForApiKey(projectId, templateId, fieldId)
 
 ── 공통 ──

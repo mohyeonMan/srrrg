@@ -449,7 +449,7 @@ ApiKeyAuthenticationFilter (선행)
 PublicProjectLinkController.create(servletRequest, projectId, idempotencyKey, request)
     → 201 Created
 
-    principal(request, projectId, LINKS_WRITE)
+    ApiKeyRequestAuthorizer.require(request, projectId, LINKS_WRITE)
         request.getAttribute("srrrg.apiKeyPrincipal")
             → 없으면 PublicApiException 401 API_KEY_INVALID
         (키의 projectId와 경로의 projectId 일치 확인)
@@ -498,9 +498,9 @@ PublicProjectLinkController.create(servletRequest, projectId, idempotencyKey, re
         UrlRiskCheckFailedException  → 503 URL_CHECK_FAILED
         UnsafeUrlException / IllegalArgumentException → 400 INVALID_REQUEST
 
-PublicProjectLinkController.handle(exception)          [@ExceptionHandler]
-    이 컨트롤러 전용. RFC 7807 ProblemDetail + X-Request-Id.
-    PublicCampaignApiExceptionHandler와 형식은 같지만 별도 구현이다.
+PublicApiExceptionHandler                              [@RestControllerAdvice]
+    공개 API 컨트롤러 공통. RFC 7807 ProblemDetail + X-Request-Id.
+    예외 변환을 한곳에서 소유해 공개 API 엔드포인트마다 구현하지 않는다.
 ```
 
 **핵심 2가지**
@@ -517,7 +517,7 @@ PublicProjectLinkController.handle(exception)          [@ExceptionHandler]
 ```
 PublicProjectLinkController.list(request, projectId, cursor, limit)
 
-    principal(request, projectId, LINKS_READ)
+    ApiKeyRequestAuthorizer.require(request, projectId, LINKS_READ)
         (필터가 이미 read 레이트리밋을 처리했다)
 
     (limit 검사)

@@ -129,7 +129,7 @@ public class LinkManagementService {
 
 	@Transactional(readOnly = true)
 	public LinkManagementResponse getManagedLink(String code, String secretKey) {
-		return toManagementResponse(findManagedLink(code, secretKey), true, null);
+		return toManagementResponse(requireManagedLink(code, secretKey), true, null);
 	}
 
 	/**
@@ -144,7 +144,7 @@ public class LinkManagementService {
 	public LinkManagementResponse updateManagedLink(String code, String secretKey, UpdateLinkRequest request) {
 		// 외부 검사 시간 동안 DB 트랜잭션을 유지하지 않고 검사가 끝난 뒤 저장함.
 		log.debug("Managed link update started: code={}", code);
-		Link link = findManagedLink(code, secretKey);
+		Link link = requireManagedLink(code, secretKey);
 		validateUpdateRequest(request);
 		boolean urlChanged = request.isOriginalUrlPresent()
 		// 같은 URL을 다시 보낸 경우까지 외부 검사를 부르지 않도록 실제 변경 여부를 먼저 판단한다.
@@ -207,7 +207,7 @@ public class LinkManagementService {
 	@Transactional
 	public DeleteLinkResponse deleteManagedLink(String code, String secretKey) {
 		// @SoftDelete가 걸려 있어 delete()는 deleted_at을 찍는 UPDATE로 번역된다.
-		linkRepository.delete(findManagedLink(code, secretKey));
+		linkRepository.delete(requireManagedLink(code, secretKey));
 		log.info("Managed link deleted: code={}", code);
 		return new DeleteLinkResponse(true);
 	}
@@ -239,7 +239,7 @@ public class LinkManagementService {
 	 * <p>없는 코드와 틀린 secret key를 같은 예외로 합치는 것은 의도된 것이다. 구분해 주면
 	 * 코드를 훑어 실재하는 링크를 가려낼 수 있다.</p>
 	 */
-	private Link findManagedLink(String code, String secretKey) {
+	public Link requireManagedLink(String code, String secretKey) {
 		Link link = linkRepository.findByCodeAndProjectIsNull(code).orElseThrow(() -> {
 			log.info("Managed link lookup failed: reason=NOT_FOUND, code={}", code);
 			return new LinkNotFoundException();

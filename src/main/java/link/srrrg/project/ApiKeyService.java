@@ -130,13 +130,6 @@ public class ApiKeyService {
 	public record CreatedKey(ProjectApiKey key, String rawKey) {
 	}
 
-	/**
-	 * API key 요청의 주체. 웹의 {@code SrrrgPrincipal}과 달리 사용자가 아니라 프로젝트에 묶여 있다.
-	 * 컨트롤러는 이 값의 {@code projectId}가 요청 경로의 프로젝트와 같은지, 필요한 scope를 가졌는지 확인해야 한다.
-	 */
-	public record ApiKeyPrincipal(Long keyId, Long projectId, Set<ApiKeyScope> scopes) {
-	}
-
 	public static class ApiKeyUnauthorizedException extends RuntimeException {
 	}
 }

@@ -6,7 +6,6 @@ import java.util.Map;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +22,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
+import link.srrrg.auth.ApiKeyRequestAuthorizer;
+import link.srrrg.common.PublicApiException;
 import link.srrrg.campaign.CampaignController.CampaignLinkPageResponse;
 import link.srrrg.campaign.CampaignController.CampaignLinkResponse;
 import link.srrrg.campaign.CampaignController.CampaignPageResponse;
@@ -35,21 +36,23 @@ import link.srrrg.campaign.dto.CreateCampaignLinkRequest;
 import link.srrrg.campaign.dto.UpdateCampaignRequest;
 import link.srrrg.campaign.importing.CampaignCsvService;
 import link.srrrg.campaign.importing.CampaignImport;
-import link.srrrg.campaign.importing.CampaignImportRepository;
 import link.srrrg.link.Link;
-import link.srrrg.link.LinkRepository;
 import link.srrrg.project.ApiKeyScope;
-import link.srrrg.project.ApiKeyService.ApiKeyPrincipal;
+import link.srrrg.project.ApiKeyPrincipal;
 
 /**
  * API 키로 호출하는 캠페인 엔드포인트. 화면용 경로가 {@code CampaignController}에 따로 있고
  * 둘은 인증 방식과 오류 형식이 다르다.
  *
- * <p>인가는 {@link #principal}이 전담한다. Spring Security의 인가 규칙은 이 경로를 통과시키므로,
- * 키의 프로젝트와 scope를 확인하지 않으면 유효한 키만으로 남의 프로젝트 캠페인을 다룰 수 있다.</p>
+ * <p>인가는 {@link ApiKeyRequestAuthorizer}를 반드시 거친다. Spring Security의 인가 규칙은 이 경로를
+ * 통과시키므로, 키의 프로젝트와 scope를 확인하지 않으면 유효한 키만으로 남의 프로젝트 캠페인을
+ * 다룰 수 있다.</p>
  *
- * <p>오류는 {@code PublicCampaignApiExceptionHandler}가 RFC 7807 형식으로 바꾼다.
+ * <p>오류는 {@code PublicApiExceptionHandler}가 RFC 7807 형식으로 바꾼다.
  * 이 컨트롤러에서 새 예외를 던질 때는 그 처리기에도 등록해야 웹용 형식으로 새어 나가지 않는다.</p>
+ *
+ * <p>링크 목록과 임포트 조회는 각각 {@link CampaignLinkQueryService}와 {@link CampaignCsvService}가
+ * 캠페인 소유 범위를 확인한 뒤 수행한다. 컨트롤러는 API key 주체와 scope를 전달하고 공개 API 응답만 만든다.</p>
  */
 @RestController
 @RequestMapping("/api/v1")
@@ -59,23 +62,24 @@ public class PublicCampaignController {
 	private final CampaignService campaigns;
 	private final CampaignLinkCreationService linkCreation;
 	private final CampaignLinkBatchService batches;
+	private final CampaignLinkQueryService linkQueries;
 	private final CampaignCsvService csv;
-	private final CampaignImportRepository imports;
-	private final LinkRepository links;
+	private final ApiKeyRequestAuthorizer apiKeyRequestAuthorizer;
 
 	PublicCampaignController(CampaignService campaigns, CampaignLinkCreationService linkCreation, CampaignLinkBatchService batches,
-			CampaignCsvService csv, CampaignImportRepository imports, LinkRepository links) {
+			CampaignLinkQueryService linkQueries, CampaignCsvService csv,
+			ApiKeyRequestAuthorizer apiKeyRequestAuthorizer) {
 		this.campaigns = campaigns;
 		this.linkCreation = linkCreation;
 		this.batches = batches;
+		this.linkQueries = linkQueries;
 		this.csv = csv;
-		this.imports = imports;
-		this.links = links;
+		this.apiKeyRequestAuthorizer = apiKeyRequestAuthorizer;
 	}
 
 	@PostMapping("/projects/{projectId}/campaigns")
 	public ResponseEntity<CampaignResponse> create(HttpServletRequest request, @PathVariable Long projectId, @RequestBody CreateCampaignRequest body) {
-		principal(request, projectId, ApiKeyScope.CAMPAIGNS_WRITE);
+		apiKeyRequestAuthorizer.require(request, projectId, ApiKeyScope.CAMPAIGNS_WRITE);
 		return ResponseEntity.status(HttpStatus.CREATED)
 				.body(CampaignResponse.from(campaigns.createForApiKey(projectId, body.name(), body.description(), body.defaultOriginalUrl())));
 	}
@@ -83,7 +87,7 @@ public class PublicCampaignController {
 	@PatchMapping("/campaigns/{campaignId}")
 	public CampaignResponse update(HttpServletRequest request, @PathVariable Long campaignId, @RequestBody UpdateCampaignRequest body) {
 		Long projectId = projectIdFrom(request);
-		principal(request, projectId, ApiKeyScope.CAMPAIGNS_WRITE);
+		apiKeyRequestAuthorizer.require(request, projectId, ApiKeyScope.CAMPAIGNS_WRITE);
 		if (!body.hasChanges()) throw new PublicApiException(400, "INVALID_REQUEST", "변경할 값을 하나 이상 입력해야 합니다.");
 		Campaign campaign = campaigns.findForApiKey(projectId, campaignId);
 		if (body.isNamePresent()) campaign = campaigns.renameForApiKey(projectId, campaignId, body.getName());
@@ -97,7 +101,7 @@ public class PublicCampaignController {
 	@GetMapping("/projects/{projectId}/campaigns")
 	public CampaignPageResponse list(HttpServletRequest request, @PathVariable Long projectId,
 			@RequestParam(required = false) Long cursor, @RequestParam(defaultValue = "50") int limit) {
-		principal(request, projectId, ApiKeyScope.CAMPAIGNS_READ);
+		apiKeyRequestAuthorizer.require(request, projectId, ApiKeyScope.CAMPAIGNS_READ);
 		int boundedLimit = boundedLimit(limit);
 		List<Campaign> page = campaigns.listForApiKey(projectId, cursor, boundedLimit + 1);
 		return CampaignPageResponse.of(page, boundedLimit);
@@ -106,28 +110,28 @@ public class PublicCampaignController {
 	@GetMapping("/campaigns/{campaignId}")
 	public CampaignResponse get(HttpServletRequest request, @PathVariable Long campaignId) {
 		Campaign campaign = campaigns.findForApiKey(projectIdFrom(request), campaignId);
-		principal(request, campaign.getProject().getId(), ApiKeyScope.CAMPAIGNS_READ);
+		apiKeyRequestAuthorizer.require(request, campaign.getProject().getId(), ApiKeyScope.CAMPAIGNS_READ);
 		return CampaignResponse.from(campaign);
 	}
 
 	@PatchMapping("/campaigns/{campaignId}/utm-template")
 	public CampaignResponse selectTemplate(HttpServletRequest request, @PathVariable Long campaignId, @RequestBody SelectTemplateRequest body) {
 		Long projectId = projectIdFrom(request);
-		principal(request, projectId, ApiKeyScope.CAMPAIGNS_WRITE);
+		apiKeyRequestAuthorizer.require(request, projectId, ApiKeyScope.CAMPAIGNS_WRITE);
 		return CampaignResponse.from(campaigns.selectTemplateForApiKey(projectId, campaignId, body.utmTemplateId()));
 	}
 
 	@GetMapping("/campaigns/{campaignId}/utm-defaults")
 	public Map<String, String> defaults(HttpServletRequest request, @PathVariable Long campaignId) {
 		Long projectId = projectIdFrom(request);
-		principal(request, projectId, ApiKeyScope.CAMPAIGNS_READ);
+		apiKeyRequestAuthorizer.require(request, projectId, ApiKeyScope.CAMPAIGNS_READ);
 		return toDefaultsMap(campaigns.defaultsForApiKey(projectId, campaignId));
 	}
 
 	@PatchMapping("/campaigns/{campaignId}/utm-defaults")
 	public Map<String, String> updateDefaults(HttpServletRequest request, @PathVariable Long campaignId, @RequestBody UpdateUtmDefaultsRequest body) {
 		Long projectId = projectIdFrom(request);
-		principal(request, projectId, ApiKeyScope.CAMPAIGNS_WRITE);
+		apiKeyRequestAuthorizer.require(request, projectId, ApiKeyScope.CAMPAIGNS_WRITE);
 		campaigns.updateDefaultsForApiKey(projectId, campaignId, body.defaultsOrEmpty());
 		return toDefaultsMap(campaigns.defaultsForApiKey(projectId, campaignId));
 	}
@@ -136,7 +140,7 @@ public class PublicCampaignController {
 	public ResponseEntity<CampaignLinkResponse> createLink(HttpServletRequest request, @PathVariable Long campaignId,
 			@RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey, @RequestBody CreateCampaignLinkRequest body) {
 		Long projectId = projectIdFrom(request);
-		ApiKeyPrincipal principal = principal(request, projectId, ApiKeyScope.LINKS_WRITE);
+		ApiKeyPrincipal principal = apiKeyRequestAuthorizer.require(request, projectId, ApiKeyScope.LINKS_WRITE);
 		return ResponseEntity.status(HttpStatus.CREATED)
 				.body(CampaignLinkResponse.from(linkCreation.createForApiKey(principal.keyId(), projectId, campaignId, idempotencyKey, body)));
 	}
@@ -145,7 +149,7 @@ public class PublicCampaignController {
 	public ResponseEntity<List<CampaignLinkResponse>> createBatch(HttpServletRequest request, @PathVariable Long campaignId,
 			@RequestHeader("Idempotency-Key") String idempotencyKey, @RequestBody List<CreateCampaignLinkRequest> items) {
 		Long projectId = projectIdFrom(request);
-		ApiKeyPrincipal principal = principal(request, projectId, ApiKeyScope.LINKS_WRITE);
+		ApiKeyPrincipal principal = apiKeyRequestAuthorizer.require(request, projectId, ApiKeyScope.LINKS_WRITE);
 		List<Link> created = batches.createBatch(principal.keyId(), projectId, campaignId, idempotencyKey, items);
 		return ResponseEntity.status(HttpStatus.CREATED).body(created.stream().map(CampaignLinkResponse::from).toList());
 	}
@@ -154,19 +158,15 @@ public class PublicCampaignController {
 	public CampaignLinkPageResponse links(HttpServletRequest request, @PathVariable Long campaignId,
 			@RequestParam(required = false) Long cursor, @RequestParam(defaultValue = "50") int limit) {
 		Long projectId = projectIdFrom(request);
-		principal(request, projectId, ApiKeyScope.LINKS_READ);
-		campaigns.findForApiKey(projectId, campaignId);
+		apiKeyRequestAuthorizer.require(request, projectId, ApiKeyScope.LINKS_READ);
 		int boundedLimit = boundedLimit(limit);
-		List<Link> page = cursor == null
-				? links.findByCampaignIdOrderByIdDesc(campaignId, PageRequest.of(0, boundedLimit + 1))
-				: links.findByCampaignIdAndIdLessThanOrderByIdDesc(campaignId, cursor, PageRequest.of(0, boundedLimit + 1));
-		return CampaignLinkPageResponse.of(page, boundedLimit);
+		return CampaignLinkPageResponse.of(linkQueries.listForApiKey(projectId, campaignId, cursor, boundedLimit));
 	}
 
 	@GetMapping(value = "/campaigns/{campaignId}/links/template.csv", produces = "text/csv")
 	public ResponseEntity<byte[]> templateCsv(HttpServletRequest request, @PathVariable Long campaignId) {
 		Long projectId = projectIdFrom(request);
-		principal(request, projectId, ApiKeyScope.CAMPAIGNS_READ);
+		apiKeyRequestAuthorizer.require(request, projectId, ApiKeyScope.CAMPAIGNS_READ);
 		Campaign campaign = campaigns.findForApiKey(projectId, campaignId);
 		return csvAttachment(csv.templateCsv(campaign), "campaign-" + campaignId + "-template.csv");
 	}
@@ -175,7 +175,7 @@ public class PublicCampaignController {
 	public ResponseEntity<ImportResponse> uploadCsv(HttpServletRequest request, @PathVariable Long campaignId,
 			@RequestHeader("Idempotency-Key") String idempotencyKey, @RequestParam("file") MultipartFile file) throws java.io.IOException {
 		Long projectId = projectIdFrom(request);
-		ApiKeyPrincipal principal = principal(request, projectId, ApiKeyScope.LINKS_WRITE);
+		ApiKeyPrincipal principal = apiKeyRequestAuthorizer.require(request, projectId, ApiKeyScope.LINKS_WRITE);
 		Campaign campaign = campaigns.findForApiKey(projectId, campaignId);
 		CampaignImport created = csv.startImport(campaign, file.getBytes(), idempotencyKey, null, principal.keyId());
 		return ResponseEntity.status(HttpStatus.ACCEPTED).body(ImportResponse.from(created));
@@ -184,17 +184,17 @@ public class PublicCampaignController {
 	@GetMapping("/campaigns/{campaignId}/imports/{importId}")
 	public ImportResponse importStatus(HttpServletRequest request, @PathVariable Long campaignId, @PathVariable Long importId) {
 		Long projectId = projectIdFrom(request);
-		principal(request, projectId, ApiKeyScope.CAMPAIGNS_READ);
-		campaigns.findForApiKey(projectId, campaignId);
-		return ImportResponse.from(importOrNotFound(campaignId, importId));
+		apiKeyRequestAuthorizer.require(request, projectId, ApiKeyScope.CAMPAIGNS_READ);
+		Campaign campaign = campaigns.findForApiKey(projectId, campaignId);
+		return ImportResponse.from(csv.requireImport(campaign, importId));
 	}
 
 	@GetMapping(value = "/campaigns/{campaignId}/imports/{importId}/errors.csv", produces = "text/csv")
 	public ResponseEntity<byte[]> importErrorsCsv(HttpServletRequest request, @PathVariable Long campaignId, @PathVariable Long importId) {
 		Long projectId = projectIdFrom(request);
-		principal(request, projectId, ApiKeyScope.CAMPAIGNS_READ);
-		campaigns.findForApiKey(projectId, campaignId);
-		return csvAttachment(csv.errorCsv(importOrNotFound(campaignId, importId)), "import-" + importId + "-errors.csv");
+		apiKeyRequestAuthorizer.require(request, projectId, ApiKeyScope.CAMPAIGNS_READ);
+		Campaign campaign = campaigns.findForApiKey(projectId, campaignId);
+		return csvAttachment(csv.errorCsv(csv.requireImport(campaign, importId)), "import-" + importId + "-errors.csv");
 	}
 
 	@GetMapping(value = "/campaigns/{campaignId}/links.csv", produces = "text/csv")
@@ -202,28 +202,13 @@ public class PublicCampaignController {
 			@RequestParam(required = false) Instant createdFrom, @RequestParam(required = false) Instant createdTo,
 			@RequestParam(required = false) String externalId) {
 		Long projectId = projectIdFrom(request);
-		principal(request, projectId, ApiKeyScope.LINKS_READ);
+		apiKeyRequestAuthorizer.require(request, projectId, ApiKeyScope.LINKS_READ);
 		Campaign campaign = campaigns.findForApiKey(projectId, campaignId);
 		return csvAttachment(csv.exportLinksCsv(campaign, createdFrom, createdTo, externalId), "campaign-" + campaignId + "-links.csv");
 	}
 
-	private CampaignImport importOrNotFound(Long campaignId, Long importId) {
-		return imports.findByIdAndCampaignId(importId, campaignId)
-				.orElseThrow(() -> new PublicApiException(404, "IMPORT_NOT_FOUND", "import를 찾을 수 없습니다."));
-	}
-
 	private Long projectIdFrom(HttpServletRequest request) {
-		ApiKeyPrincipal principal = (ApiKeyPrincipal) request.getAttribute("srrrg.apiKeyPrincipal");
-		if (principal == null) throw new PublicApiException(401, "API_KEY_INVALID", "유효한 API key가 필요합니다.");
-		return principal.projectId();
-	}
-
-	private ApiKeyPrincipal principal(HttpServletRequest request, Long projectId, ApiKeyScope scope) {
-		ApiKeyPrincipal principal = (ApiKeyPrincipal) request.getAttribute("srrrg.apiKeyPrincipal");
-		if (principal == null) throw new PublicApiException(401, "API_KEY_INVALID", "유효한 API key가 필요합니다.");
-		if (!principal.projectId().equals(projectId)) throw new PublicApiException(403, "PROJECT_ACCESS_DENIED", "다른 프로젝트의 리소스에는 접근할 수 없습니다.");
-		if (!principal.scopes().contains(scope)) throw new PublicApiException(403, "SCOPE_REQUIRED", scope.value() + " scope가 필요합니다.");
-		return principal;
+		return apiKeyRequestAuthorizer.requireAuthenticated(request).projectId();
 	}
 
 	private ResponseEntity<byte[]> csvAttachment(String content, String filename) {

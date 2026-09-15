@@ -105,6 +105,18 @@ public class CampaignCsvService {
 	}
 
 	/**
+	 * 지정한 캠페인 안에서 임포트를 조회한다. 임포트 id만 조회하면 다른 캠페인의 작업 상태나 실패 CSV를
+	 * 읽을 수 있으므로, Repository 조건에 캠페인 id를 함께 넣는 것이 접근 경계의 핵심이다.
+	 *
+	 * @throws CampaignImportNotFoundException 임포트가 없거나 다른 캠페인에 속한 경우
+	 */
+	@Transactional(readOnly = true)
+	public CampaignImport requireImport(Campaign campaign, Long importId) {
+		return imports.findByIdAndCampaignId(importId, campaign.getId())
+				.orElseThrow(CampaignImportNotFoundException::new);
+	}
+
+	/**
 	 * 업로드된 CSV를 검증해 임포트 작업과 행을 만든다. 링크는 여기서 만들지 않는다.
 	 *
 	 * <p>멱등 키를 필수로 받는다. 큰 파일 업로드는 타임아웃으로 응답을 놓치기 쉬운데, 그때 재시도가

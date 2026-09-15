@@ -139,8 +139,9 @@ WebAccountModel (@ModelAttribute advice)
 GlobalExceptionHandler (@RestControllerAdvice, 전역)
     도메인 예외를 ApiErrorResponse {code, message} 로 변환한다. 마지막에 catch-all이 있다.
 
-PublicCampaignApiExceptionHandler (@RestControllerAdvice, 공개 캠페인 API 한정)
-    같은 예외를 RFC 7807 ProblemDetail로 변환한다. X-Request-Id를 함께 내려준다.
+PublicApiExceptionHandler (@RestControllerAdvice, /api/v1 공개 API 컨트롤러 한정)
+    공개 API 예외를 RFC 7807 ProblemDetail로 변환한다. X-Request-Id를 함께 내려준다.
+    적용 컨트롤러는 assignableTypes에 명시해 웹·비인증 API 응답 형식과 섞이지 않게 한다.
 
 RedirectExceptionHandler (@ControllerAdvice, RedirectController 한정, HIGHEST_PRECEDENCE)
     JSON 대신 redirect-error.html을 렌더한다. 브라우저 사용자용.
@@ -152,22 +153,23 @@ RedirectExceptionHandler (@ControllerAdvice, RedirectController 한정, HIGHEST_
 |---|---|---|
 | `MethodArgumentNotValidException`, `IllegalArgumentException` | 400 `INVALID_REQUEST` | 400 `INVALID_REQUEST` |
 | `HttpMessageNotReadableException` | 400 `INVALID_REQUEST` | 400 `INVALID_REQUEST` |
-| `MissingRequestHeaderException` | 400 (secret key 헤더 안내) | — |
+| `MissingRequestHeaderException` | 400 (secret key 헤더 안내) | 400 `INVALID_REQUEST` |
 | `SecurityException` | 403 `PROJECT_ACCESS_DENIED` | 403 `PROJECT_ACCESS_DENIED` |
-| `LinkNotFoundException` | 404 `LINK_NOT_FOUND` | — |
+| `LinkNotFoundException` | 404 `LINK_NOT_FOUND` | 404 `LINK_NOT_FOUND` |
 | `CampaignNotFoundException` | 404 `CAMPAIGN_NOT_FOUND` | 404 `CAMPAIGN_NOT_FOUND` |
 | `NoResourceFoundException` | 404 `NOT_FOUND` | — |
 | `LinkGoneException` | 410 `LINK_GONE` | 410 `LINK_GONE` |
-| `LinkCodeConflictException` | 409 `LINK_CODE_CONFLICT` | — |
+| `LinkCodeConflictException` | 409 `LINK_CODE_CONFLICT` | 409 `LINK_CODE_CONFLICT` |
 | `ExternalIdConflictException` | 409 `EXTERNAL_ID_CONFLICT` | 409 `EXTERNAL_ID_CONFLICT` |
 | `BatchIdempotencyConflictException` | 409 `IDEMPOTENCY_CONFLICT` | 409 `IDEMPOTENCY_CONFLICT` |
 | `CampaignImportIdempotencyConflictException` | 409 `IDEMPOTENCY_CONFLICT` | 409 `IDEMPOTENCY_CONFLICT` |
+| `CampaignImportNotFoundException` | 400 `INVALID_REQUEST` | 404 `IMPORT_NOT_FOUND` |
 | `LinkManagementService.IdempotencyConflictException` | — | 409 `IDEMPOTENCY_CONFLICT` |
 | `ActiveImportConflictException` | 409 `IMPORT_IN_PROGRESS` | 409 `IMPORT_IN_PROGRESS` |
 | `UnsafeUrlException` | 400 `URL_THREAT_DETECTED` | 400 `URL_THREAT_DETECTED` |
 | `RateLimitExceededException` | 429 + `Retry-After` | 429 + `Retry-After` |
 | `UrlRiskCheckFailedException` | 503 `URL_CHECK_FAILED` | 503 `URL_CHECK_FAILED` |
-| 그 외 `Exception` | 500 `INTERNAL_SERVER_ERROR` | — |
+| 그 외 `Exception` | 500 `INTERNAL_SERVER_ERROR` | 500 `INTERNAL_SERVER_ERROR` |
 
 `UnsafeUrlException`이 400인 이유: 알려진 위협 URL은 클라이언트가 고칠 수 있는 요청 오류로 본다. 반대로 `UrlRiskCheckFailedException`은 외부 검사기가 응답하지 않는 상태라 재시도 가능한 503으로 낸다.
 

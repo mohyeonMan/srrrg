@@ -1,44 +1,60 @@
-package link.srrrg.campaign;
+package link.srrrg.common;
 
 import java.net.URI;
 import java.util.UUID;
 
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import link.srrrg.campaign.BatchIdempotencyConflictException;
+import link.srrrg.campaign.CampaignNotFoundException;
+import link.srrrg.campaign.PublicCampaignController;
+import link.srrrg.campaign.PublicUtmTemplateController;
 import link.srrrg.campaign.importing.ActiveImportConflictException;
 import link.srrrg.campaign.importing.CampaignImportIdempotencyConflictException;
+import link.srrrg.campaign.importing.CampaignImportNotFoundException;
 import link.srrrg.common.ratelimit.RateLimitExceededException;
 import link.srrrg.link.ExternalIdConflictException;
 import link.srrrg.link.LinkGoneException;
+import link.srrrg.link.LinkCodeConflictException;
+import link.srrrg.link.LinkNotFoundException;
 import link.srrrg.link.UnsafeUrlException;
 import link.srrrg.link.UrlRiskCheckFailedException;
 import link.srrrg.link.management.LinkManagementService;
+import link.srrrg.project.PublicProjectLinkController;
+import link.srrrg.statistics.PublicStatisticsController;
+import lombok.extern.slf4j.Slf4j;
 
 /**
- * campaign/utm-template 공개 API 전용 오류 형식. 기존 {@code PublicProjectLinkController}의 형식은 건드리지 않는다.
- */
-/**
- * campaign/utm-template 공개 API 전용 오류 형식. 기존 {@code PublicProjectLinkController}의 형식은 건드리지 않는다.
+ * 공개 API 컨트롤러에서 발생한 예외를 RFC 7807 {@link ProblemDetail}로 변환한다.
+ * {@code /api/web/**}와 익명 링크 API는 다른 오류 계약을 사용하므로 적용 대상을 클래스 목록으로 제한한다.
  *
- * <p>{@code assignableTypes}로 두 컨트롤러만 대상으로 삼아, 웹 표면이 쓰는 {@code ApiErrorResponse}와
- * 형식이 섞이지 않게 한다. 다만 우선순위를 선언하지 않아 전역 처리기와 기본 순위가 같으므로,
- * 같은 예외 타입을 양쪽에 등록해 두면 어느 형식이 나갈지는 advice 정렬 결과에 달린다.</p>
- *
- * <p>여기 등록되지 않은 예외는 전역 처리기로 넘어가 웹용 형식으로 나간다.
- * 이 표면에 새 예외를 도입하면 반드시 여기에도 등록한다.</p>
+ * <p>Spring의 controller advice는 URL 패턴으로 대상을 고를 수 없다. 커스텀 표식 annotation을 만들지 않고
+ * 명시적인 {@code assignableTypes} 목록을 사용하며, 새 공개 API 컨트롤러를 추가할 때 이 목록과 계약 테스트를
+ * 함께 갱신해야 한다.</p>
  */
-@RestControllerAdvice(assignableTypes = {PublicCampaignController.class, PublicUtmTemplateController.class})
-class PublicCampaignApiExceptionHandler {
+@RestControllerAdvice(assignableTypes = {
+		PublicCampaignController.class,
+		PublicUtmTemplateController.class,
+		PublicProjectLinkController.class,
+		PublicStatisticsController.class
+})
+@Order(Ordered.HIGHEST_PRECEDENCE)
+@Slf4j
+public class PublicApiExceptionHandler {
 
 	@ExceptionHandler(PublicApiException.class)
 	ResponseEntity<ProblemDetail> handle(PublicApiException exception) {
-		return problem(exception.status, exception.code, exception.getMessage(), null);
+		return problem(exception.status(), exception.code(), exception.getMessage(), null);
 	}
 
 	@ExceptionHandler(IllegalArgumentException.class)
@@ -46,9 +62,35 @@ class PublicCampaignApiExceptionHandler {
 		return problem(400, "INVALID_REQUEST", exception.getMessage(), null);
 	}
 
+	@ExceptionHandler(MethodArgumentNotValidException.class)
+	ResponseEntity<ProblemDetail> handleValidation(MethodArgumentNotValidException exception) {
+		String message = exception.getBindingResult().getAllErrors().stream()
+				.findFirst()
+				.map(error -> error.getDefaultMessage())
+				.orElse("요청 값이 올바르지 않습니다.");
+		log.debug("Public API request validation failed: errorCount={}",
+				exception.getBindingResult().getErrorCount());
+		return problem(400, "INVALID_REQUEST", message, null);
+	}
+
 	@ExceptionHandler(CampaignNotFoundException.class)
 	ResponseEntity<ProblemDetail> handleCampaignNotFound(CampaignNotFoundException exception) {
 		return problem(404, "CAMPAIGN_NOT_FOUND", exception.getMessage(), null);
+	}
+
+	@ExceptionHandler(CampaignImportNotFoundException.class)
+	ResponseEntity<ProblemDetail> handleCampaignImportNotFound(CampaignImportNotFoundException exception) {
+		return problem(404, "IMPORT_NOT_FOUND", exception.getMessage(), null);
+	}
+
+	@ExceptionHandler(LinkNotFoundException.class)
+	ResponseEntity<ProblemDetail> handleLinkNotFound(LinkNotFoundException exception) {
+		return problem(404, "LINK_NOT_FOUND", exception.getMessage(), null);
+	}
+
+	@ExceptionHandler(LinkCodeConflictException.class)
+	ResponseEntity<ProblemDetail> handleLinkCodeConflict(LinkCodeConflictException exception) {
+		return problem(409, "LINK_CODE_CONFLICT", exception.getMessage(), null);
 	}
 
 	@ExceptionHandler(SecurityException.class)
@@ -106,6 +148,17 @@ class PublicCampaignApiExceptionHandler {
 		return problem(400, "INVALID_REQUEST", "요청 본문 형식이 올바르지 않습니다.", null);
 	}
 
+	@ExceptionHandler(MissingRequestHeaderException.class)
+	ResponseEntity<ProblemDetail> handleMissingHeader(MissingRequestHeaderException exception) {
+		return problem(400, "INVALID_REQUEST", exception.getHeaderName() + " 헤더가 필요합니다.", null);
+	}
+
+	@ExceptionHandler(Exception.class)
+	ResponseEntity<ProblemDetail> handleUnexpected(Exception exception) {
+		log.error("Unexpected public API error: type={}", exception.getClass().getSimpleName(), exception);
+		return problem(500, "INTERNAL_SERVER_ERROR", "서버 오류가 발생했습니다.", null);
+	}
+
 	private ResponseEntity<ProblemDetail> problem(int status, String code, String message, Long retryAfterSeconds) {
 		String requestId = UUID.randomUUID().toString();
 		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(status), message);
@@ -114,7 +167,9 @@ class PublicCampaignApiExceptionHandler {
 		problem.setProperty("code", code);
 		problem.setProperty("requestId", requestId);
 		ResponseEntity.BodyBuilder builder = ResponseEntity.status(status).header("X-Request-Id", requestId);
-		if (retryAfterSeconds != null) builder.header("Retry-After", String.valueOf(retryAfterSeconds));
+		if (retryAfterSeconds != null) {
+			builder.header("Retry-After", String.valueOf(retryAfterSeconds));
+		}
 		return builder.contentType(MediaType.APPLICATION_PROBLEM_JSON).body(problem);
 	}
 }

@@ -63,7 +63,10 @@ srrrg_pk_<prefix 8자>_<secret 43자>
 | `CAMPAIGNS_WRITE` | `campaigns:write` |
 | `STATS_READ` | `stats:read` |
 
-스코프 검사는 이 서비스가 아니라 **각 공개 API 컨트롤러가 직접** 한다. `authenticate`는 스코프 집합을 `ApiKeyPrincipal`에 실어 넘기기만 한다.
+`ApiKeyService.authenticate`는 인증된 키의 프로젝트와 스코프 집합을 `ApiKeyPrincipal`에 실어 넘긴다.
+이후 공개 API 컨트롤러는 `ApiKeyRequestAuthorizer`에 경로의 프로젝트와 필요한 스코프를 전달한다.
+이 공통 서비스가 principal 존재 여부, 프로젝트 일치와 스코프를 한 번에 검사하므로 컨트롤러마다
+보안 로직과 오류 코드를 복제하지 않는다.
 
 ---
 
