@@ -31,7 +31,6 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import link.srrrg.campaign.link.csv.repository.CampaignImportRepository;
 import link.srrrg.identity.account.repository.UserRepository;
 import link.srrrg.link.repository.LinkRepository;
 import link.srrrg.link.creation.service.UrlValidator;
@@ -53,14 +52,13 @@ class CampaignServiceTest {
 	private final ProjectRepository projects = mock(ProjectRepository.class);
 	private final UserRepository users = mock(UserRepository.class);
 	private final LinkRepository links = mock(LinkRepository.class);
-	private final CampaignImportRepository imports = mock(CampaignImportRepository.class);
 	private final UrlValidator urlValidator = mock(UrlValidator.class);
 	private CampaignService service;
 	private CampaignUtmService utmService;
 
 	@BeforeEach
 	void setUp() {
-		service = new CampaignService(campaigns, projectAccess, projects, users, links, imports, urlValidator);
+		service = new CampaignService(campaigns, projectAccess, projects, users, links, urlValidator);
 		utmService = new CampaignUtmService(service, templates, fields, defaults);
 	}
 
@@ -87,7 +85,7 @@ class CampaignServiceTest {
 	}
 
 	@Test
-	void deletingCampaignSoftDeletesItsLinksAndCancelsActiveImports() {
+	void deletingCampaignSoftDeletesItsLinks() {
 		Campaign campaign = campaignOwnedBy(1L, ProjectRole.EDITOR);
 		when(campaign.getId()).thenReturn(100L);
 		when(campaigns.findById(100L)).thenReturn(Optional.of(campaign));
@@ -96,7 +94,6 @@ class CampaignServiceTest {
 
 		verify(campaigns).delete(campaign);
 		verify(links).softDeleteByCampaignId(100L);
-		verify(imports).cancelActiveByCampaignId(100L);
 	}
 
 	@Test

@@ -193,10 +193,6 @@ CampaignController.delete(principal, campaignId)
             @Modifying 벌크 UPDATE. 캠페인의 살아 있는 링크를 전부 deleted = true로.
             링크 행은 남으므로 누적 통계도 남는다.
 
-        CampaignImportRepository.cancelActiveByCampaignId(campaignId)
-            PENDING·PROCESSING 상태의 import를 CANCELLED로 바꾸고 lease를 비운다.
-            워커가 이미 집어간 import도 다음 행 처리에서 상태를 보고 멈춘다.
-
         CampaignRepository.delete(campaign)
             캠페인만 하드 삭제한다.
 ```
@@ -468,7 +464,7 @@ PublicCampaignLinkController.createBatch(request, campaignId, idempotencyKey, it
 
 **핵심 2가지**
 
-- **전부 성공하거나 전부 실패한다.** 499번째에서 실패해도 앞의 498개가 롤백된다. CSV 가져오기가 행 단위로 성공/실패를 나누는 것과 정반대 설계다.
+- **전부 성공하거나 전부 실패한다.** 499번째에서 실패해도 앞의 498개가 롤백된다. CSV 대량 생성도 같은 요청 단위 원자성을 사용한다.
 - **batch 행을 마지막에 쓴다.** 그래서 동시 요청의 패자는 링크까지 롤백되고, 승자의 결과만 남는다. batch 행을 먼저 썼다면 링크가 중복 생성될 여지가 있다.
 
 ---

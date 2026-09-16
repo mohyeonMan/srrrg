@@ -15,7 +15,6 @@
 		utmDefaults: {},
 		selectedLinkCodes: new Set(),
 		linksCursor: null,
-		importPollHandle: null,
 		subdomain: null,
 		subdomainEnabled: false
 	};
@@ -102,7 +101,6 @@
 		await loadTemplates();
 		await refreshTemplateSelection();
 		await loadLinks(null);
-		resetImportPanel();
 	}
 
 	byId('campaign-info-form').addEventListener('submit', async (event) => {
@@ -558,74 +556,26 @@
 
 	byId('load-more-links-button').addEventListener('click', () => loadLinks(state.linksCursor));
 
-	function resetImportPanel() {
-		byId('import-status-panel').hidden = true;
-		byId('download-errors-link').hidden = true;
-		if (state.importPollHandle) clearTimeout(state.importPollHandle);
-	}
-
-	// 요청 식별자는 HTTP 프로토콜 세부사항이라 사용자가 지어낼 값이 아니다.
-	// 업로드마다 새로 발급하고, 실패 후 재시도는 같은 값으로 보내 중복 생성을 막는다.
-	function issueIdempotencyKey() {
-		byId('csv-idempotency-key').value = crypto.randomUUID();
-	}
-	issueIdempotencyKey();
-
 	byId('csv-upload-form').addEventListener('submit', async (event) => {
 		event.preventDefault();
 		const form = event.target;
 		const data = new FormData(form);
 		const file = data.get('file');
-		const idempotencyKey = data.get('idempotencyKey')?.trim();
 		if (!file || !file.size) return setMessage(byId('csv-message'), 'CSV 파일을 선택하세요.', true);
-		setMessage(byId('csv-message'), '업로드하고 있습니다...');
-		const uploadForm = new FormData();
-		uploadForm.append('file', file);
-		const response = await request(`${base}/api/web/campaigns/${state.campaignId}/imports/csv`, {
-			method: 'POST', headers: { 'Idempotency-Key': idempotencyKey }, body: uploadForm
+		await submitting(event.submitter, '생성 중...', async () => {
+			setMessage(byId('csv-message'), '검증하고 링크를 생성하고 있습니다...');
+			const uploadForm = new FormData();
+			uploadForm.append('file', file);
+			const response = await request(`${base}/api/web/campaigns/${state.campaignId}/imports/csv`, {
+				method: 'POST', body: uploadForm
+			});
+			const responseBody = await body(response);
+			if (!response.ok) return setMessage(byId('csv-message'), responseBody.message || 'CSV를 업로드할 수 없습니다.', true);
+			setMessage(byId('csv-message'), `링크 ${responseBody.createdRows}개를 생성했습니다.`);
+			form.reset();
+			loadLinks(null);
 		});
-		const responseBody = await body(response);
-		if (!response.ok) return setMessage(byId('csv-message'), responseBody.message || 'CSV를 업로드할 수 없습니다.', true);
-		setMessage(byId('csv-message'), 'CSV 업로드를 접수했습니다.');
-		form.reset();
-		issueIdempotencyKey();
-		pollImport(responseBody.id);
 	});
-
-	// 상태 enum 을 그대로 보여주지 않는다.
-	function importStatusLabel(status) {
-		if (status === 'PENDING') return '대기 중입니다';
-		if (status === 'PROCESSING') return '처리 중입니다';
-		if (status === 'COMPLETED') return '완료했습니다';
-		if (status === 'FAILED') return '실패했습니다';
-		return status;
-	}
-
-	function pollImport(importId) {
-		const panel = byId('import-status-panel');
-		const firstReveal = panel.hidden;
-		panel.hidden = false;
-		// #15 업로드 결과는 사용자가 기다리는 새 내용이라 처음 나타날 때 포커스를 옮긴다.
-		if (firstReveal) panel.focus();
-		const check = async () => {
-			const response = await request(`${base}/api/web/campaigns/${state.campaignId}/imports/${importId}`);
-			if (!response.ok) return;
-			const status = await response.json();
-			byId('import-status-text').textContent =
-				`${importStatusLabel(status.status)} · 전체 ${status.totalRows}행 · 처리 ${status.processedRows} · 성공 ${status.succeededRows} · 실패 ${status.failedRows}`;
-			if (status.failedRows > 0) {
-				const errorsLink = byId('download-errors-link');
-				errorsLink.href = `${base}/api/web/campaigns/${state.campaignId}/imports/${importId}/errors.csv`;
-				errorsLink.hidden = false;
-			}
-			if (status.status === 'PENDING' || status.status === 'PROCESSING') {
-				state.importPollHandle = setTimeout(check, 3000);
-			} else {
-				loadLinks(null);
-			}
-		};
-		check();
-	}
 
 	byId('export-links-button').addEventListener('click', () => {
 		const url = new URL(`${base}/api/web/campaigns/${state.campaignId}/links.csv`, location.origin);

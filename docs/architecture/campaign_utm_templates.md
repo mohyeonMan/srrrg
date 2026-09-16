@@ -171,41 +171,10 @@ value
 PRIMARY KEY (link_id, field_name)
 ```
 
-### 4.7 CSV import
+### 4.7 CSV 대량 생성
 
-CSV 원문을 JSONB나 배열로 저장하지 않는다.
-
-```text
-campaign_imports
-- id
-- campaign_id
-- utm_template_id
-- status
-- idempotency 정보
-- 진행 수와 lease 정보
-- 생성·완료 시각
-
-campaign_import_rows
-- id
-- import_id
-- row_number
-- original_url nullable
-- external_id
-- status
-- link_id nullable
-- error_code nullable
-- error_message nullable
-
-campaign_import_row_utm_values
-- import_row_id
-- field_name
-- value
-```
-
-- import 접수 시 헤더를 활성 템플릿 필드 이름과 대조한다.
-- 접수된 행은 당시 헤더 이름과 값을 저장한다.
-- 접수 후 캠페인 템플릿이 변경되거나 필드가 삭제돼도 저장된 이름과 값으로 작업을 계속한다.
-- 오류 CSV는 원래 헤더와 행 번호, 안정적인 오류 code와 설명을 포함한다.
+CSV 원문과 처리 상태는 저장하지 않는다. 업로드 요청에서 전체 파일을 검증하고 문제가 없을 때만
+링크를 하나의 트랜잭션으로 생성하므로 별도 import 테이블, worker, lease와 실패 행 기록이 없다.
 
 ## 5. 템플릿과 필드 변경
 
@@ -262,18 +231,17 @@ https://example.com/event,customer-001,email,naver,newsletter
 - 출력은 활성 필드 이름 오름차순을 사용하고 DB에 위치를 저장하지 않는다.
 - UTF-8과 UTF-8 BOM을 허용한다.
 - 최대 파일 크기는 10MB, 최대 데이터 행은 10,000개다.
-- 프로젝트당 동시에 처리하는 CSV import는 하나다.
 
 ## 7. 링크 생성과 리다이렉트
 
-UI 단일 생성, 공개 단일 API, JSON batch와 CSV worker는 같은 링크 생성 유스케이스를 호출한다.
+UI 단일 생성, 공개 단일 API, JSON batch와 CSV 동기 생성은 같은 링크 생성 유스케이스를 호출한다.
 
 링크 생성 시:
 
 1. 캠페인과 현재 템플릿의 프로젝트 소유권을 확인한다.
 2. 요청 UTM 이름을 활성 템플릿 필드와 매핑한다.
 3. 요청에 명시된 이름과 값만 `link_utm_values`에 저장한다.
-4. URL 형식과 내부 주소 차단 정책을 검증한 뒤 저장한다. 인증된 프로젝트 멤버와 API key가 만든 링크는 생성·리다이렉트 위험 검사를 생략한다.
+4. 원본 또는 캠페인 기본 URL의 형식과 내부 주소 차단 정책을 검증한 뒤 저장한다. UTM은 안전하게 인코딩하되 병합 결과 URL은 다시 검증하지 않는다.
 
 리다이렉트 시:
 
@@ -283,7 +251,7 @@ UI 단일 생성, 공개 단일 API, JSON batch와 CSV worker는 같은 링크 �
 4. 기존 query를 보존하되 같은 이름은 최종 UTM 값으로 덮어쓴다.
 5. 성공한 리다이렉트의 최종 UTM을 접근 이벤트에 저장하고 fragment를 보존한다.
 
-캠페인을 삭제하면 캠페인과 소속 링크를 함께 soft delete하고 기존 주소는 `410 Gone`을 반환한다. 진행 중인 import도 새 링크를 만들지 않게 중단한다.
+캠페인을 삭제하면 캠페인과 소속 링크를 함께 soft delete하고 기존 주소는 `410 Gone`을 반환한다.
 
 ## 8. 통계
 
@@ -299,7 +267,6 @@ UI 단일 생성, 공개 단일 API, JSON batch와 CSV worker는 같은 링크 �
 ```text
 JSON batch                 요청당 최대 500개
 CSV                        최대 10,000행, 10MB
-CSV 동시 실행              프로젝트당 1개
 익명 링크 생성             IP당 분당 10회, 일 200회
 API key 조회               key당 분당 300회
 API key 링크 생성          key당 분당 60회
@@ -310,8 +277,7 @@ CSV upload                 프로젝트당 시간당 5회
 
 - 초과 응답은 `429 Too Many Requests`와 `Retry-After`를 사용한다.
 - rate limit과 quota는 Redis를 사용한다.
-- CSV import 작업, 행, 오류와 idempotency는 PostgreSQL을 사용한다.
-- 별도 message broker는 추가하지 않는다.
+- CSV는 요청 트랜잭션에서 동기로 처리하며 별도 작업 저장소나 message broker를 사용하지 않는다.
 
 ## 10. 구현 전에 남은 결정
 
@@ -322,9 +288,7 @@ CSV upload                 프로젝트당 시간당 5회
 - 공개 API와 JWT 웹 API의 템플릿·캠페인·CSV endpoint 계약
 - JSON 단일·batch 요청에서 동적 UTM 값을 표현할 schema
 - 캠페인 기본값을 요청에서 명시적으로 비우는 방법
-- batch와 CSV의 `Idempotency-Key` 필수 여부와 actor별 scope
-- CSV 구조 오류와 행 오류의 전체 거절·부분 성공 경계
-- import 원본 행·오류 자료의 보관 기간과 링크 export 필터
-- worker lease 시간, 재시도 횟수와 실패 상태
+- batch의 `Idempotency-Key` 필수 여부와 actor별 scope
+- 링크 export 필터
 - 공유 Redis 장애 시 fail-open 여부, 환경별 key prefix와 IP 개인정보 처리
 - 사용 중인 UTM 템플릿 자체를 삭제할 수 있는지와 삭제 후 캠페인 동작

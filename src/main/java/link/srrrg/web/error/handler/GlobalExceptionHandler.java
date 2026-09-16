@@ -14,9 +14,6 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import link.srrrg.campaign.link.batch.model.BatchIdempotencyConflictException;
 import link.srrrg.campaign.model.CampaignNotFoundException;
-import link.srrrg.campaign.link.csv.model.ActiveImportConflictException;
-import link.srrrg.campaign.link.csv.model.CampaignImportIdempotencyConflictException;
-import link.srrrg.campaign.link.csv.model.CampaignImportNotFoundException;
 import link.srrrg.common.ratelimit.model.RateLimitExceededException;
 import link.srrrg.link.model.ExternalIdConflictException;
 import link.srrrg.link.model.LinkGoneException;
@@ -83,15 +80,6 @@ public class GlobalExceptionHandler {
 	}
 
 	/**
-	 * 웹 API가 기존에 없는 import를 잘못된 요청으로 처리하던 계약을 유지한다.
-	 * 공개 API는 같은 도메인 예외를 별도 처리기에서 404로 변환한다.
-	 */
-	@ExceptionHandler(CampaignImportNotFoundException.class)
-	public ResponseEntity<ApiErrorResponse> handleCampaignImportNotFound(CampaignImportNotFoundException exception) {
-		return badRequest(exception.getMessage());
-	}
-
-	/**
 	 * 권한 확인 실패를 403으로 바꾼다. 예외 메시지를 그대로 쓰지 않고 고정 문구로 덮으므로,
 	 * 어떤 역할이 모자랐는지는 응답에 드러나지 않는다. 원인은 던진 쪽에서 로그로 남겨야 한다.
 	 */
@@ -104,7 +92,7 @@ public class GlobalExceptionHandler {
 	/**
 	 * 필수 헤더 누락을 400으로 바꾼다. 어떤 헤더가 빠졌는지와 무관하게 secret key 안내 문구가 나간다.
 	 * 현재 필수 헤더를 요구하는 곳은 secret key를 받는 익명 링크·통계 API와
-	 * {@code Idempotency-Key}를 받는 캠페인 대량 발행·임포트 API이므로, 후자가 빠진 요청에는
+	 * {@code Idempotency-Key}를 받는 캠페인 JSON 대량 발행 API이므로, 후자가 빠진 요청에는
 	 * 원인과 맞지 않는 안내가 나간다. 헤더별로 문구를 나누려면 {@code exception.getHeaderName()}으로 분기한다.
 	 */
 	@ExceptionHandler(MissingRequestHeaderException.class)
@@ -174,18 +162,6 @@ public class GlobalExceptionHandler {
 	public ResponseEntity<ApiErrorResponse> handleBatchIdempotencyConflict(BatchIdempotencyConflictException exception) {
 		return ResponseEntity.status(HttpStatus.CONFLICT)
 				.body(new ApiErrorResponse("IDEMPOTENCY_CONFLICT", exception.getMessage()));
-	}
-
-	@ExceptionHandler(CampaignImportIdempotencyConflictException.class)
-	public ResponseEntity<ApiErrorResponse> handleImportIdempotencyConflict(CampaignImportIdempotencyConflictException exception) {
-		return ResponseEntity.status(HttpStatus.CONFLICT)
-				.body(new ApiErrorResponse("IDEMPOTENCY_CONFLICT", exception.getMessage()));
-	}
-
-	@ExceptionHandler(ActiveImportConflictException.class)
-	public ResponseEntity<ApiErrorResponse> handleActiveImportConflict(ActiveImportConflictException exception) {
-		return ResponseEntity.status(HttpStatus.CONFLICT)
-				.body(new ApiErrorResponse("IMPORT_IN_PROGRESS", exception.getMessage()));
 	}
 
 	/**

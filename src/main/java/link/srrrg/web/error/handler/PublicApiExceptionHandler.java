@@ -24,9 +24,6 @@ import link.srrrg.campaign.link.controller.PublicCampaignLinkController;
 import link.srrrg.campaign.link.csv.controller.PublicCampaignCsvController;
 import link.srrrg.campaign.utm.controller.PublicCampaignUtmController;
 import link.srrrg.utmtemplate.controller.PublicUtmTemplateController;
-import link.srrrg.campaign.link.csv.model.ActiveImportConflictException;
-import link.srrrg.campaign.link.csv.model.CampaignImportIdempotencyConflictException;
-import link.srrrg.campaign.link.csv.model.CampaignImportNotFoundException;
 import link.srrrg.common.ratelimit.model.RateLimitExceededException;
 import link.srrrg.link.model.ExternalIdConflictException;
 import link.srrrg.link.creation.model.LinkIdempotencyConflictException;
@@ -86,11 +83,6 @@ public class PublicApiExceptionHandler {
 		return problem(404, "CAMPAIGN_NOT_FOUND", exception.getMessage(), null);
 	}
 
-	@ExceptionHandler(CampaignImportNotFoundException.class)
-	ResponseEntity<ProblemDetail> handleCampaignImportNotFound(CampaignImportNotFoundException exception) {
-		return problem(404, "IMPORT_NOT_FOUND", exception.getMessage(), null);
-	}
-
 	@ExceptionHandler(LinkNotFoundException.class)
 	ResponseEntity<ProblemDetail> handleLinkNotFound(LinkNotFoundException exception) {
 		return problem(404, "LINK_NOT_FOUND", exception.getMessage(), null);
@@ -119,16 +111,6 @@ public class PublicApiExceptionHandler {
 	@ExceptionHandler(BatchIdempotencyConflictException.class)
 	ResponseEntity<ProblemDetail> handleBatchConflict(BatchIdempotencyConflictException exception) {
 		return problem(409, "IDEMPOTENCY_CONFLICT", exception.getMessage(), null);
-	}
-
-	@ExceptionHandler(CampaignImportIdempotencyConflictException.class)
-	ResponseEntity<ProblemDetail> handleImportConflict(CampaignImportIdempotencyConflictException exception) {
-		return problem(409, "IDEMPOTENCY_CONFLICT", exception.getMessage(), null);
-	}
-
-	@ExceptionHandler(ActiveImportConflictException.class)
-	ResponseEntity<ProblemDetail> handleActiveImportConflict(ActiveImportConflictException exception) {
-		return problem(409, "IMPORT_IN_PROGRESS", exception.getMessage(), null);
 	}
 
 	@ExceptionHandler(UnsafeUrlException.class)

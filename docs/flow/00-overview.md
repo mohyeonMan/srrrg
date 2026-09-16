@@ -34,7 +34,7 @@ ClassName.methodName(args)
 | [06-link.md](06-link.md) | 리다이렉트, 익명 링크, 프로젝트 링크 | 12 |
 | [07-campaign.md](07-campaign.md) | 캠페인, UTM 기본값, 캠페인 링크 | 21 |
 | [08-utm-template.md](08-utm-template.md) | UTM 템플릿·필드 | 14 |
-| [09-campaign-import.md](09-campaign-import.md) | CSV 가져오기·내보내기, 비동기 워커 | 10 |
+| [09-campaign-import.md](09-campaign-import.md) | CSV 동기 대량 생성·내보내기 | 10 |
 | [10-statistics.md](10-statistics.md) | 통계 7종 | 7 |
 | [11-pages.md](11-pages.md) | Thymeleaf 페이지, API 문서, actuator | 11 |
 
@@ -52,8 +52,7 @@ ClassName.methodName(args)
 
 - 세션이 STATELESS JWT라 sticky session이 필요 없다
 - 레이트리밋 카운터가 Redis에 있다 (인메모리면 파드 수만큼 한도가 뻥튀기된다)
-- 동시성 제어가 전부 DB 수준이다 (`FOR UPDATE`, `SKIP LOCKED`, lease) — JVM 락으로는 파드를 가로지를 수 없다
-- CSV 워커 `@Scheduled`가 모든 파드에서 돌지만 lease로 중복 처리를 막는다
+- 동시성 제어는 DB 제약과 트랜잭션을 최종 기준으로 삼는다 — JVM 락으로는 파드를 가로지를 수 없다
 
 ## 세 개의 API 표면
 
@@ -162,10 +161,7 @@ RedirectExceptionHandler (@ControllerAdvice, RedirectController 한정, HIGHEST_
 | `LinkCodeConflictException` | 409 `LINK_CODE_CONFLICT` | 409 `LINK_CODE_CONFLICT` |
 | `ExternalIdConflictException` | 409 `EXTERNAL_ID_CONFLICT` | 409 `EXTERNAL_ID_CONFLICT` |
 | `BatchIdempotencyConflictException` | 409 `IDEMPOTENCY_CONFLICT` | 409 `IDEMPOTENCY_CONFLICT` |
-| `CampaignImportIdempotencyConflictException` | 409 `IDEMPOTENCY_CONFLICT` | 409 `IDEMPOTENCY_CONFLICT` |
-| `CampaignImportNotFoundException` | 400 `INVALID_REQUEST` | 404 `IMPORT_NOT_FOUND` |
 | `LinkIdempotencyConflictException` | — | 409 `IDEMPOTENCY_CONFLICT` |
-| `ActiveImportConflictException` | 409 `IMPORT_IN_PROGRESS` | 409 `IMPORT_IN_PROGRESS` |
 | `UnsafeUrlException` | 400 `URL_THREAT_DETECTED` | 400 `URL_THREAT_DETECTED` |
 | `RateLimitExceededException` | 429 + `Retry-After` | 429 + `Retry-After` |
 | `UrlRiskCheckFailedException` | 503 `URL_CHECK_FAILED` | 503 `URL_CHECK_FAILED` |

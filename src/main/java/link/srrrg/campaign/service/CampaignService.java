@@ -16,7 +16,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import link.srrrg.campaign.link.csv.repository.CampaignImportRepository;
 import link.srrrg.identity.account.model.User;
 import link.srrrg.identity.account.repository.UserRepository;
 import link.srrrg.link.repository.LinkRepository;
@@ -47,17 +46,15 @@ public class CampaignService {
 	private final ProjectRepository projects;
 	private final UserRepository users;
 	private final LinkRepository links;
-	private final CampaignImportRepository imports;
 	private final UrlValidator urlValidator;
 
 	public CampaignService(CampaignRepository campaigns, ProjectAccessService projectAccess, ProjectRepository projects,
-			UserRepository users, LinkRepository links, CampaignImportRepository imports, UrlValidator urlValidator) {
+			UserRepository users, LinkRepository links, UrlValidator urlValidator) {
 		this.campaigns = campaigns;
 		this.projectAccess = projectAccess;
 		this.projects = projects;
 		this.users = users;
 		this.links = links;
-		this.imports = imports;
 		this.urlValidator = urlValidator;
 	}
 
@@ -157,17 +154,13 @@ public class CampaignService {
 	}
 
 	/**
-	 * 캠페인을 삭제하면서 딸린 것들을 함께 정리한다. 순서가 중요하다.
-	 * 소속 링크를 먼저 soft delete하고, 진행 중인 CSV import를 취소한 뒤 캠페인을 지운다.
-	 *
-	 * <p>import를 취소하지 않으면 다른 파드의 worker가 이미 삭제된 캠페인에 링크를 계속 만든다.
-	 * 링크를 남겨 두면 캠페인 없는 링크가 되어 목적지 상속이 끊긴다.</p>
+	 * 캠페인을 삭제하면서 소속 링크를 먼저 soft delete한다.
+	 * 링크를 남겨 두면 캠페인 없는 링크가 되어 목적지 상속이 끊긴다.
 	 */
 	@Transactional
 	public void delete(Long userId, Long campaignId) {
 		Campaign campaign = requireEditableCampaign(userId, campaignId);
 		links.softDeleteByCampaignId(campaignId);
-		imports.cancelActiveByCampaignId(campaignId);
 		campaigns.delete(campaign);
 	}
 

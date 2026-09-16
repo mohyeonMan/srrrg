@@ -36,7 +36,6 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import link.srrrg.auth.session.service.WebSessionService;
-import link.srrrg.campaign.link.csv.service.CampaignImportWorker;
 import link.srrrg.identity.connection.model.OAuthIdentity;
 import link.srrrg.identity.connection.service.OAuthIdentityService;
 import link.srrrg.identity.connection.service.OAuthIdentityService.LoginResolution;
@@ -77,9 +76,6 @@ class CampaignPostgreSqlIntegrationTest {
 		registry.add("srrrg.oauth.github.client-secret", () -> "github-secret");
 		registry.add("srrrg.url-risk.provider", () -> "fixed-safe");
 		registry.add("srrrg.rate-limit.key-prefix", () -> RATE_LIMIT_PREFIX);
-		// 실제 @Scheduled worker가 이 테스트의 수동 importWorker.tick() 호출과 동시에 같은 행을 다투지 않게 한다.
-		registry.add("srrrg.csv-worker.initial-delay-ms", () -> "3600000");
-		registry.add("srrrg.csv-worker.fixed-delay-ms", () -> "3600000");
 	}
 
 	@Autowired OAuthIdentityService identityService;
@@ -89,7 +85,6 @@ class CampaignPostgreSqlIntegrationTest {
 	@Autowired ApiKeyService apiKeyService;
 	@Autowired MockMvc mockMvc;
 	@Autowired JdbcTemplate jdbcTemplate;
-	@Autowired CampaignImportWorker importWorker;
 
 	@MockitoBean
 	InvitationEmailSender invitationEmailSender;
@@ -607,23 +602,6 @@ class CampaignPostgreSqlIntegrationTest {
 	}
 
 	@Test
-	void missingCampaignImportKeepsSurfaceSpecificErrorContracts() throws Exception {
-		Owner owner = newOwner();
-		Long campaignId = createCampaign(owner, "임포트 조회 캠페인", null);
-		ApiKeyService.CreatedKey key = apiKeyService.create(owner.userId, owner.projectId, "import-reader",
-				java.util.Set.of(ApiKeyScope.CAMPAIGNS_READ), null);
-
-		mockMvc.perform(get("/api/web/campaigns/{id}/imports/{importId}", campaignId, Long.MAX_VALUE)
-					.cookie(owner.cookie))
-				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
-		mockMvc.perform(get("/api/v1/campaigns/{id}/imports/{importId}", campaignId, Long.MAX_VALUE)
-					.header("Authorization", "Bearer " + key.rawKey()))
-				.andExpect(status().isNotFound())
-				.andExpect(jsonPath("$.code").value("IMPORT_NOT_FOUND"));
-	}
-
-	@Test
 	void jsonBatchCreatesAllLinksAtomicallyAndReplaysIdempotently() throws Exception {
 		Owner owner = newOwner();
 		Long campaignId = createCampaign(owner, "배치 캠페인", null);
@@ -653,31 +631,36 @@ class CampaignPostgreSqlIntegrationTest {
 	}
 
 	@Test
-	void csvUploadProcessesValidRowsAndRecordsRowLevelErrors() throws Exception {
+	void csvUploadValidatesAllRowsBeforeCreatingLinksSynchronously() throws Exception {
 		Owner owner = newOwner();
 		Long templateId = createTemplate(owner, "utm_source");
 		Long campaignId = createCampaign(owner, "CSV 캠페인", templateId);
-		String csv = "original_url,external_id,utm_source\n"
+		String invalidCsv = "original_url,external_id,utm_source\n"
 				+ "https://example.com/ok,csv-1,newsletter\n"
 				+ "not-a-valid-url,csv-2,newsletter\n";
-		MockMultipartFile file = new MockMultipartFile("file", "links.csv", "text/csv", csv.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+		MockMultipartFile invalidFile = new MockMultipartFile("file", "links.csv", "text/csv",
+				invalidCsv.getBytes(java.nio.charset.StandardCharsets.UTF_8));
 
-		MvcResult uploaded = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 					.multipart("/api/web/campaigns/{id}/imports/csv", campaignId)
-					.file(file).with(csrf()).cookie(owner.cookie).header("Idempotency-Key", "csv-1"))
-				.andExpect(status().isAccepted())
-				.andReturn();
-		Long importId = Long.valueOf(readJson(uploaded, "id"));
+					.file(invalidFile).with(csrf()).cookie(owner.cookie))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("CSV 데이터 2행 original_url")));
+		assertThat(linkCount(campaignId)).isZero();
 
-		for (int i = 0; i < 10 && !isImportTerminal(campaignId, importId, owner); i++) {
-			importWorker.tick();
-		}
+		String validCsv = "original_url,external_id,utm_source\n"
+				+ "https://example.com/a,csv-1,newsletter\n"
+				+ "https://example.com/b,csv-2,social\n";
+		MockMultipartFile validFile = new MockMultipartFile("file", "links.csv", "text/csv",
+				validCsv.getBytes(java.nio.charset.StandardCharsets.UTF_8));
 
-		mockMvc.perform(get("/api/web/campaigns/{id}/imports/{importId}", campaignId, importId).cookie(owner.cookie))
+		mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+					.multipart("/api/web/campaigns/{id}/imports/csv", campaignId)
+					.file(validFile).with(csrf()).cookie(owner.cookie))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.status").value("COMPLETED"))
-				.andExpect(jsonPath("$.succeededRows").value(1))
-				.andExpect(jsonPath("$.failedRows").value(1));
+				.andExpect(jsonPath("$.totalRows").value(2))
+				.andExpect(jsonPath("$.createdRows").value(2));
+		assertThat(linkCount(campaignId)).isEqualTo(2);
 	}
 
 	@Test
@@ -708,9 +691,9 @@ class CampaignPostgreSqlIntegrationTest {
 		assertThat(filteredBody).contains("match-1").doesNotContain("other-2");
 	}
 
-	private boolean isImportTerminal(Long campaignId, Long importId, Owner owner) throws Exception {
-		MvcResult result = mockMvc.perform(get("/api/web/campaigns/{id}/imports/{importId}", campaignId, importId).cookie(owner.cookie)).andReturn();
-		return !readJson(result, "status").equals("PENDING") && !readJson(result, "status").equals("PROCESSING");
+	private int linkCount(Long campaignId) {
+		return jdbcTemplate.queryForObject("SELECT count(*) FROM links WHERE campaign_id = ? AND deleted_at IS NULL",
+				Integer.class, campaignId);
 	}
 
 	private org.springframework.test.web.servlet.ResultActions addField(Owner owner, Long templateId, String name) throws Exception {

@@ -2,20 +2,17 @@ package link.srrrg.campaign.link.csv.controller;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import link.srrrg.auth.request.model.SrrrgPrincipal;
-import link.srrrg.campaign.link.csv.model.CampaignImport;
 import link.srrrg.campaign.link.csv.service.CampaignCsvService;
 import link.srrrg.campaign.model.Campaign;
 import link.srrrg.campaign.service.CampaignService;
@@ -23,7 +20,10 @@ import link.srrrg.project.membership.model.ProjectRole;
 import link.srrrg.project.membership.service.ProjectAccessService;
 import lombok.RequiredArgsConstructor;
 
-/** 현재 CSV 임포트·내보내기 HTTP 계약을 담당하며 worker와 lease 동작은 그대로 유지한다. */
+/**
+ * 쿠키 JWT 표면의 CSV 대량 생성·내보내기 HTTP 계약을 담당한다.
+ * 업로드는 요청 안에서 끝나므로 작업 접수 응답도, 진행률 조회 endpoint도 없다.
+ */
 @RestController
 @RequestMapping("/api/web")
 @RequiredArgsConstructor
@@ -39,25 +39,12 @@ public class CampaignCsvController {
 	}
 
 	@PostMapping("/campaigns/{campaignId}/imports/csv")
-	public ResponseEntity<ImportResponse> upload(@AuthenticationPrincipal SrrrgPrincipal principal, @PathVariable Long campaignId,
-			@RequestHeader("Idempotency-Key") String idempotencyKey, @RequestParam("file") MultipartFile file) throws java.io.IOException {
+	public CsvUploadResponse upload(@AuthenticationPrincipal SrrrgPrincipal principal, @PathVariable Long campaignId,
+			@RequestParam("file") MultipartFile file) throws java.io.IOException {
 		Campaign campaign = campaigns.requireEditableCampaign(principal.userId(), campaignId);
 		var uploader = projectAccess.requireRole(principal.userId(), campaign.getProject().getId(), ProjectRole.EDITOR).getUser();
-		CampaignImport created = csv.startImport(campaign, file.getBytes(), idempotencyKey, uploader, null);
-		return ResponseEntity.status(HttpStatus.ACCEPTED).body(ImportResponse.from(created));
-	}
-
-	@GetMapping("/campaigns/{campaignId}/imports/{importId}")
-	public ImportResponse status(@AuthenticationPrincipal SrrrgPrincipal principal, @PathVariable Long campaignId,
-			@PathVariable Long importId) {
-		return ImportResponse.from(csv.requireImport(campaigns.get(principal.userId(), campaignId), importId));
-	}
-
-	@GetMapping(value = "/campaigns/{campaignId}/imports/{importId}/errors.csv", produces = "text/csv")
-	public ResponseEntity<byte[]> errors(@AuthenticationPrincipal SrrrgPrincipal principal, @PathVariable Long campaignId,
-			@PathVariable Long importId) {
-		CampaignImport value = csv.requireImport(campaigns.get(principal.userId(), campaignId), importId);
-		return attachment(csv.errorCsv(value), "import-" + importId + "-errors.csv");
+		int createdRows = csv.createLinks(campaign, file.getBytes(), uploader, null);
+		return new CsvUploadResponse(createdRows, createdRows);
 	}
 
 	@GetMapping(value = "/campaigns/{campaignId}/links.csv", produces = "text/csv")
@@ -75,11 +62,5 @@ public class CampaignCsvController {
 				.body(content.getBytes(StandardCharsets.UTF_8));
 	}
 
-	public record ImportResponse(Long id, String status, int totalRows, int processedRows, int succeededRows, int failedRows,
-			Instant createdAt, Instant completedAt) {
-		public static ImportResponse from(CampaignImport value) {
-			return new ImportResponse(value.getId(), value.getStatus().name(), value.getTotalRows(), value.getProcessedRows(),
-					value.getSucceededRows(), value.getFailedRows(), value.getCreatedAt(), value.getCompletedAt());
-		}
-	}
+	public record CsvUploadResponse(int totalRows, int createdRows) { }
 }

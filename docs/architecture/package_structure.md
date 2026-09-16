@@ -54,8 +54,12 @@ common/{ratelimit,metrics,util}
 - 프로젝트 서브도메인 설정은 `project.subdomain`, 주소 생성과 요청 호스트 해석은 링크 기능이 담당한다.
 - 접속 이벤트 수집은 `link.access`, 집계와 보고는 `statistics`가 담당한다.
 
-## CSV 전환 범위
+## CSV 처리 방식
 
-현재 worker와 lease 동작은 `campaign.link.csv` 아래에 유지한다. 업로드당 10,000건 제한을 전제로 요청
-트랜잭션에서 처리하고 worker와 lease를 제거하는 변경은 별도 기능 작업으로 진행한다. 구조 변경만으로
-처리 방식이나 실패 정책을 바꾸지 않는다.
+`campaign.link.csv`는 업로드를 요청 트랜잭션 안에서 끝낸다. 업로드당 10,000행 제한을 전제로 파일 전체를
+먼저 검증하고 문제가 없을 때만 링크를 모두 생성하므로, 작업 상태 테이블도 worker도 lease도 없다.
+따라서 이 패키지에는 `controller`, `service`만 있고 `model`·`repository`는 두지 않는다.
+
+이 선택은 상한을 전제로 성립한다. 한 번에 10,000행을 훨씬 넘겨야 하면 요청 타임아웃과 트랜잭션 유지
+시간이 먼저 문제가 되므로, 그때는 다시 비동기 작업 구조가 필요하다. 흐름은
+[docs/flow/09-campaign-import.md](../flow/09-campaign-import.md)를 따른다.

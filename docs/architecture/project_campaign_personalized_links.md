@@ -531,8 +531,6 @@ GET    /api/v1/campaigns/{campaignId}/links
 
 ```text
 POST /api/v1/campaigns/{campaignId}/imports/csv
-GET  /api/v1/campaigns/{campaignId}/imports/{importId}
-GET  /api/v1/campaigns/{campaignId}/imports/{importId}/errors.csv
 GET  /api/v1/campaigns/{campaignId}/links.csv
 ```
 
@@ -543,10 +541,9 @@ original_url, external_id, utm_source, utm_medium, utm_campaign, utm_term, utm_c
 ```
 
 - 업로드 직후 형식, 필수값과 중복 `external_id`를 검증한다.
-- 처리는 import ID를 반환하는 비동기 작업으로 실행하고 진행 상태와 성공·실패 행 수를 제공한다.
-- 실패한 행은 원본 행 번호와 오류 사유가 포함된 CSV로 내려받게 한다.
-- 같은 파일 재전송에 대비해 idempotency key를 받는다.
-- 초기에는 PostgreSQL에 import 상태를 저장하고 애플리케이션 worker 하나가 처리한다. 별도 message broker는 실제 적체가 확인되기 전에는 추가하지 않는다.
+- 전체 파일을 먼저 검증하고 문제가 없을 때만 요청 트랜잭션에서 모든 링크를 생성한다.
+- 오류가 있으면 첫 문제의 행 번호·컬럼·사유를 응답하고 링크를 만들지 않는다.
+- CSV 업로드에는 idempotency key, 별도 작업 상태와 실패 CSV를 사용하지 않는다.
 - 자유로운 컬럼 매핑 UI, Excel 파일 직접 지원과 외부 저장소 import는 실제 요청이 생긴 뒤 추가한다.
 
 ### 7.6 공개 API 규칙
@@ -558,7 +555,7 @@ original_url, external_id, utm_source, utm_medium, utm_campaign, utm_term, utm_c
 - 목록은 cursor 기반 페이지네이션으로 시작하고 `limit`에 상한을 둔다.
 - 오류 응답은 하나의 Problem Details 형식과 안정적인 오류 code를 사용한다.
 - 모든 응답에 요청 추적용 request ID를 제공한다.
-- 생성·대량 생성 요청은 재시도 시 중복을 막을 수 있도록 `Idempotency-Key`를 지원한다.
+- 단일·JSON batch 생성 요청은 재시도 시 중복을 막을 수 있도록 `Idempotency-Key`를 지원한다.
 - rate limit 값과 응답 헤더는 실제 운영 한도를 정한 뒤 OpenAPI에 명시한다.
 
 초기 공개 범위는 링크, 캠페인, 통계 조회와 생성·수정에 한정한다. 멤버 초대, OAuth 계정 연결, 운영자 API는 공개 API key 범위에 넣지 않는다.
@@ -581,7 +578,7 @@ original_url, external_id, utm_source, utm_medium, utm_campaign, utm_term, utm_c
 - scope, pagination, idempotency와 rate limit 설명
 - 공통 오류 형식과 request ID
 - endpoint별 요청·응답과 실행 가능한 curl 예제
-- CSV 업로드와 비동기 import 상태 조회 방법
+- CSV 동기 대량 생성 방법
 
 endpoint 표와 schema는 OpenAPI에서 렌더링하고, 인증 안내와 예제만 직접 작성한다. 이렇게 해야 코드와 명세 페이지가 서로 달라지는 것을 막을 수 있다. 공개 OpenAPI에는 API key로 호출할 수 있는 `/api/v1` endpoint와 기존 익명 링크 API만 포함하고 로그인 callback, 웹 JWT 전용 멤버·API key 관리, 내부 화면 API, actuator와 운영자 endpoint는 제외한다.
 
@@ -727,8 +724,7 @@ SDK 자동 생성, GraphQL, 별도 API gateway와 다국어 문서 사이트는 
 - `campaigns`와 링크의 프로젝트·캠페인·UTM 컬럼 추가
 - 캠페인 기본 목적지와 누락된 UTM 기본값을 동적으로 적용하는 링크 생성
 - `external_id` 기반 개인화 링크 대량 생성
-- 고정 template 기반 CSV 업로드·오류 CSV·필터된 링크 CSV 내보내기
-- PostgreSQL 상태 테이블과 여러 pod에서 중복 실행되지 않는 DB lease 기반 worker를 이용한 비동기 import
+- 고정 template 기반 CSV 동기 대량 생성·필터된 링크 CSV 내보내기
 - 캠페인과 링크 목록 페이지네이션
 - URL query와 UTM 병합 테스트
 
@@ -779,7 +775,7 @@ SDK 자동 생성, GraphQL, 별도 API gateway와 다국어 문서 사이트는 
 - 캠페인 내 `external_id` 중복 차단
 - UTM 병합, encoding, 기존 query와 fragment 유지
 - 대량 생성의 전체 성공·롤백 및 재시도 중복 차단
-- CSV 형식·행 번호별 오류·idempotency·import 재시작 검증
+- CSV 형식·행 번호별 오류·요청 단위 전체 롤백 검증
 - 링크·캠페인·프로젝트 통계 합계 일치
 
 ## 12. 구현 전 결정할 항목

@@ -46,6 +46,9 @@ public interface LinkRepository extends JpaRepository<Link, Long>, JpaSpecificat
 
 	List<Link> findByCampaignIdOrderByIdDesc(Long campaignId, Pageable pageable);
 	List<Link> findByCampaignIdAndIdLessThanOrderByIdDesc(Long campaignId, Long id, Pageable pageable);
+	@Query("select l.externalId from Link l where l.campaign.id = :campaignId and l.externalId in :externalIds")
+	List<String> findExternalIdsByCampaignIdAndExternalIdIn(@Param("campaignId") Long campaignId,
+			@Param("externalIds") java.util.Collection<String> externalIds);
 	@EntityGraph(attributePaths = {"project", "campaign"})
 	Optional<Link> findByProjectIdAndCode(Long projectId, String code);
 
