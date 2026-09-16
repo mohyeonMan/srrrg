@@ -7,6 +7,7 @@ import link.srrrg.project.membership.service.ProjectAccessService;
 import link.srrrg.utmtemplate.model.UtmTemplate;
 import link.srrrg.utmtemplate.model.UtmTemplateField;
 import link.srrrg.utmtemplate.repository.UtmTemplateFieldRepository;
+import link.srrrg.utmtemplate.service.UtmValueValidator;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -26,12 +27,13 @@ import link.srrrg.identity.account.model.User;
 import link.srrrg.link.model.Link;
 import link.srrrg.link.creation.service.LinkCreationService;
 import link.srrrg.project.model.Project;
-import link.srrrg.project.membership.service.ProjectAccessService;
-import link.srrrg.project.membership.model.ProjectRole;
 
 /**
- * campaign 링크 생성의 단일 진입점. web(JWT), 공개 API, JSON batch, CSV worker가 모두 이 서비스를 호출한다.
- * 링크에 명시된 UTM만 저장하고, 최종 병합·검증·저장은 {@link LinkCreationService}에 위임한다.
+ * 요청 본문으로 캠페인 링크를 만드는 경로의 진입점. web(JWT), 공개 API, JSON batch가 이 서비스를 호출한다.
+ * CSV 업로드는 파일을 직접 파싱해야 해서 {@code CampaignCsvService}가 따로 처리하며, UTM 값 길이 규칙만
+ * {@link UtmValueValidator}로 공유한다.
+ *
+ * <p>링크에 명시된 UTM만 저장하고, 검증과 저장은 {@link LinkCreationService}에 위임한다.</p>
  */
 @Service
 public class CampaignLinkCreationService {
@@ -97,7 +99,7 @@ public class CampaignLinkCreationService {
 	}
 
 	/**
-	 * 요청에 담긴 UTM 값을 검증해 저장할 값만 추린다. CSV 임포트도 같은 규칙을 쓰기 위해 열어 둔 메서드다.
+	 * 요청에 담긴 UTM 값을 검증해 저장할 값만 추린다.
 	 *
 	 * <p>템플릿에 없는 필드 이름은 거부한다. 조용히 버리면 사용자는 값을 넣었다고 생각하는데
 	 * 링크에는 반영되지 않는다. 반대로 값이 비어 있는 필드는 결과에서 빼는데, 저장하지 않아야
@@ -135,9 +137,7 @@ public class CampaignLinkCreationService {
 	}
 
 	private String validUtmValue(String value) {
-		if (value.length() > 500) {
-			throw new IllegalArgumentException("UTM 값은 500자 이하여야 합니다.");
-		}
+		UtmValueValidator.validate(value);
 		return value;
 	}
 

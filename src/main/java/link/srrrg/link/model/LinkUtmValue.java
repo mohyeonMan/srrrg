@@ -36,7 +36,7 @@ public class LinkUtmValue {
 	@JoinColumn(name = "link_id")
 	private Link link;
 
-	@Column(nullable = false, length = 500)
+	@Column(nullable = false, length = 100)
 	private String value;
 
 	@Column(name = "created_at", nullable = false)

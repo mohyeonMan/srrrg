@@ -36,6 +36,7 @@ import link.srrrg.link.repository.LinkRepository;
 import link.srrrg.link.repository.LinkUtmValueRepository;
 import link.srrrg.utmtemplate.model.UtmTemplateField;
 import link.srrrg.utmtemplate.repository.UtmTemplateFieldRepository;
+import link.srrrg.utmtemplate.service.UtmValueValidator;
 
 /**
  * CSV 업로드와 내려받기를 담당한다. 업로드는 파일 전체를 먼저 검증하고,
@@ -276,8 +277,10 @@ public class CampaignCsvService {
 		Map<String, String> utmValues = new LinkedHashMap<>();
 		for (String header : utmHeaderNames) {
 			String cell = safeCell(record, header).trim();
-			if (cell.length() > 500) {
-				throw rowError(rowNumber, header, "UTM 값은 500자 이하여야 합니다.");
+			try {
+				UtmValueValidator.validate(cell);
+			} catch (IllegalArgumentException exception) {
+				throw rowError(rowNumber, header, exception.getMessage());
 			}
 			if (!cell.isEmpty()) utmValues.put(header, cell);
 		}

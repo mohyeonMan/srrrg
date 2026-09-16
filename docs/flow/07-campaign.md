@@ -305,7 +305,7 @@ CampaignUtmController.updateDefaults(principal, campaignId, request)
                                 → DataIntegrityViolationException → IllegalArgumentException (400)
 
                 validDefaultValue(value)
-                    500자 이하.
+                    UtmValueValidator로 100자 이하. 링크에 직접 넣는 값과 같은 규칙이다.
                     → IllegalArgumentException (400)
 
     CampaignUtmService.defaults(...)를 다시 호출해 갱신된 전체 맵을 응답한다.
@@ -377,7 +377,7 @@ PublicCampaignLinkController.create(request, campaignId, idempotencyKey, body)
             (값 수집)
                 빈 문자열·공백은 저장하지 않는다 — 저장하지 않아야 리다이렉트 시
                 캠페인 기본값으로 폴백되기 때문. "명시하지 않음"과 "빈 값"을 같게 취급한다.
-                각 값은 500자 이하. → IllegalArgumentException (400)
+                각 값은 UtmValueValidator로 100자 이하. → IllegalArgumentException (400)
 
         LinkCreationService.createForCampaign(url, expiresAt, project, createdBy,
                                                 apiKeyId, key, hash, campaign, template, externalId, resolved, name)
@@ -391,8 +391,11 @@ PublicCampaignLinkController.create(request, campaignId, idempotencyKey, body)
                 둘 다 없으면 검증 자체를 건너뛴다 — 목적지 없는 링크를 만들 수 있다는 뜻이고,
                 리다이렉트 시 410 NO_DESTINATION이 된다.
 
-            UrlValidator.validate(DestinationUrlMerger.merge(destination, utm))
-                UTM을 병합한 최종 URL로 검증한다. UTM 때문에 2048자를 넘기는 경우를 잡는다.
+            UrlValidator.validate(destination)
+                목적지 원본만 검증하고 UTM을 병합한 결과는 다시 검증하지 않는다.
+                병합은 query만 재조립하므로 스킴·호스트·사설망 판정이 달라지지 않고,
+                길이는 UtmValueValidator의 값별 상한이 묶는다. 병합 결과는 저장되지 않고
+                캠페인 기본값이 나중에 바뀌므로, 여기서 재 봐야 보장이 되지 않는다.
                 (위험 검사는 생략 — 신뢰 정책)
 
             saveCampaignLinkWithUniqueCode(...)

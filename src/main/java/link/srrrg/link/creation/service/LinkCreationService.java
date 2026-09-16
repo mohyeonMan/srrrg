@@ -10,7 +10,6 @@ import link.srrrg.campaign.model.Campaign;
 import link.srrrg.common.metrics.SrrrgMetrics;
 import link.srrrg.identity.account.model.User;
 import link.srrrg.link.creation.model.LinkIdempotencyConflictException;
-import link.srrrg.link.destination.service.DestinationUrlMerger;
 import link.srrrg.link.management.dto.CreateLinkRequest;
 import link.srrrg.link.model.ExternalIdConflictException;
 import link.srrrg.link.model.Link;
@@ -70,7 +69,7 @@ public class LinkCreationService {
 				requestHash, campaign, utmTemplate, externalId, resolvedUtmValues, null);
 	}
 
-	/** 캠페인의 동적 기본 목적지와 요청 UTM을 합친 실제 목적지를 기준으로 검증한다. */
+	/** 캠페인의 개별 목적지 또는 동적 기본 목적지를 검증하고 UTM 값은 인코딩해 별도로 저장한다. */
 	public Link createForCampaign(String originalUrl, Instant expiresAt, Project project, User createdBy,
 			Long apiKeyId, String idempotencyKey, String requestHash, Campaign campaign,
 			UtmTemplate utmTemplate, String externalId, Map<String, String> resolvedUtmValues, String name) {
@@ -78,7 +77,7 @@ public class LinkCreationService {
 		if (existing != null) return existing;
 		Map<String, String> utmByName = Map.copyOf(resolvedUtmValues);
 		String currentDestination = originalUrl != null ? originalUrl : campaign.getDefaultOriginalUrl();
-		if (currentDestination != null) urlValidator.validate(DestinationUrlMerger.merge(currentDestination, utmByName));
+		if (currentDestination != null) urlValidator.validate(currentDestination);
 		validateExpiration(expiresAt);
 		Link link = saveCampaignLink(originalUrl, expiresAt, project, project.activeSubdomain(), createdBy,
 				apiKeyId, idempotencyKey, requestHash, campaign, utmTemplate, externalId, name);

@@ -15,6 +15,7 @@ import link.srrrg.utmtemplate.model.UtmTemplate;
 import link.srrrg.utmtemplate.model.UtmTemplateField;
 import link.srrrg.utmtemplate.repository.UtmTemplateFieldRepository;
 import link.srrrg.utmtemplate.repository.UtmTemplateRepository;
+import link.srrrg.utmtemplate.service.UtmValueValidator;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -101,8 +102,12 @@ public class CampaignUtmService {
 				.filter(value -> active.contains(value.getFieldName())).toList();
 	}
 
+	/**
+	 * 기본값도 링크에 직접 넣은 값과 같은 길이 규칙을 쓴다. 리다이렉트 시점에는 둘이 하나로 합쳐져
+	 * 같은 URL에 실리므로, 한쪽만 느슨하면 값별 상한이 전체 길이를 묶지 못한다.
+	 */
 	private String validDefaultValue(String value) {
-		if (value.length() > 500) throw new IllegalArgumentException("UTM 기본값은 500자 이하로 입력하세요.");
+		UtmValueValidator.validate(value);
 		return value;
 	}
 }

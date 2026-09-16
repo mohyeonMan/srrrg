@@ -22,7 +22,7 @@ https://example.com/a,promo-001,google,cpc
 - 파일은 최대 10MB, 데이터는 최대 10,000행이다.
 - `external_id`는 캠페인 안과 파일 안에서 중복될 수 없다.
 - 원본 URL이 비어 있으면 캠페인 기본 목적지가 유효해야 한다.
-- UTM 값은 활성 필드와 500자 저장 제한만 검사하고, 병합 결과 URL을 다시 검증하지 않는다.
+- UTM 값은 활성 필드인지와 100자 상한만 검사하고, 병합 결과 URL을 다시 검증하지 않는다.
 - 파일 전체를 먼저 검증하므로 한 행이라도 잘못되면 링크를 만들지 않는다.
 
 ## GET {base}/campaigns/{campaignId}/links/template.csv

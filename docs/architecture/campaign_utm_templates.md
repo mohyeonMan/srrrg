@@ -273,18 +273,22 @@ API key 링크 생성          key당 분당 60회
 JSON batch                 프로젝트당 분당 2회
 CSV upload                 프로젝트당 시간당 5회
 대량 링크 생성             프로젝트당 일 50,000개
+활성 UTM 필드              템플릿당 10개
+UTM 값                     100자 (GA4의 campaign source·medium·name 상한과 같다)
 ```
 
 - 초과 응답은 `429 Too Many Requests`와 `Retry-After`를 사용한다.
 - rate limit과 quota는 Redis를 사용한다.
 - CSV는 요청 트랜잭션에서 동기로 처리하며 별도 작업 저장소나 message broker를 사용하지 않는다.
+- UTM 값 상한과 활성 필드 수 상한이 합성돼 병합 결과 URL 길이를 쓰기 시점에 묶는다. 병합 결과는
+  저장되지 않고 캠페인 기본값이 링크 생성 이후에도 바뀌므로, 생성 시점에 병합 길이를 재는 방식으로는
+  보장이 성립하지 않는다.
 
 ## 10. 구현 전에 남은 결정
 
 다음 사항은 구현 질문 게이트에서 한 번에 확정한다.
 
 - 허용할 UTM 필드 이름 형식과 최대 길이
-- UTM 값과 템플릿·캠페인 이름·설명의 최대 길이
 - 공개 API와 JWT 웹 API의 템플릿·캠페인·CSV endpoint 계약
 - JSON 단일·batch 요청에서 동적 UTM 값을 표현할 schema
 - 캠페인 기본값을 요청에서 명시적으로 비우는 방법

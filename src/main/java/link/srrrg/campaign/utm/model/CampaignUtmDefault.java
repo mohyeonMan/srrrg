@@ -40,7 +40,7 @@ public class CampaignUtmDefault {
 	@JoinColumn(name = "campaign_id")
 	private Campaign campaign;
 
-	@Column(name = "default_value", nullable = false, length = 500)
+	@Column(name = "default_value", nullable = false, length = 100)
 	private String defaultValue;
 
 	@Column(name = "created_at", nullable = false)
