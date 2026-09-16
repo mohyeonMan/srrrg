@@ -37,6 +37,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import link.srrrg.auth.session.service.WebSessionService;
 import link.srrrg.identity.connection.model.OAuthIdentity;
+import link.srrrg.auth.login.service.LoginCompletionService;
 import link.srrrg.identity.connection.service.OAuthIdentityService;
 import link.srrrg.identity.connection.service.OAuthIdentityService.LoginResolution;
 import link.srrrg.identity.connection.model.OAuthProvider;
@@ -79,6 +80,7 @@ class CampaignPostgreSqlIntegrationTest {
 	}
 
 	@Autowired OAuthIdentityService identityService;
+	@Autowired LoginCompletionService loginCompletionService;
 	@Autowired WebSessionService sessionService;
 	@Autowired ProjectMemberRepository projectMemberRepository;
 	@Autowired ProjectService projectService;
@@ -737,7 +739,7 @@ class CampaignPostgreSqlIntegrationTest {
 	}
 
 	private Owner newOwner() {
-		LoginResolution login = identityService.resolve(identity("owner-" + (++counter), "owner" + counter + "@example.com"));
+		LoginResolution login = loginCompletionService.complete(identity("owner-" + (++counter), "owner" + counter + "@example.com"));
 		ProjectMember membership = projectMemberRepository.findByIdUserId(login.user().getId()).getFirst();
 		Long projectId = membership.getProject().getId();
 		String host = "srrrg.link";
