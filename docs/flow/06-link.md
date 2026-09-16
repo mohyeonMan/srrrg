@@ -61,7 +61,7 @@ RedirectController.redirect(code, host, request)
         만료판정과 기록이 같은 시각을 쓰게 한다.
         outcome 기본값을 "error"로 두고 finally에서 기록해, 어느 경로로 빠져나가도 지표가 남는다.
 
-        ProjectDomainService.resolve(host)
+        LinkAddressService.resolve(host)
             Host 헤더를 URI로 파싱해 서브도메인을 뽑는다.
             path·query·userInfo가 섞이면 거부(헤더 인젝션 방어). IDN.toASCII + 소문자 정규화.
             → 실패 시 LinkNotFoundException (404)
@@ -311,7 +311,7 @@ ProjectLinkController.create(principal, projectId, request)
         ProjectAccessService.requireRole(userId, projectId, EDITOR)
             통과한 ProjectMember에서 project와 user를 함께 얻는다.
 
-        LinkManagementService.createForProject(request, project, createdBy)
+        LinkCreationService.createForProject(request, project, createdBy)
 
             UrlValidator.validate(originalUrl)
             validateExpiration(expiresAt)
@@ -476,7 +476,7 @@ PublicProjectLinkController.create(servletRequest, projectId, idempotencyKey, re
         project(projectId)
             삭제된 프로젝트면 → IllegalArgumentException (400)
 
-        LinkManagementService.createForProject(request, project, null, apiKeyId, key, requestHash)
+        LinkCreationService.createForProject(request, project, null, apiKeyId, key, requestHash)
 
             findIdempotentLink(apiKeyId, idempotencyKey, requestHash)
                 LinkRepository.findByIdempotencyApiKeyIdAndIdempotencyKey(apiKeyId, key)

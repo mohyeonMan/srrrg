@@ -1,0 +1,27 @@
+package link.srrrg.auth.login.adapter;
+
+import link.srrrg.auth.login.adapter.ConfiguredClientRegistrationRepository;
+import link.srrrg.auth.login.config.OAuthClientProperties;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
+
+class ConfiguredClientRegistrationRepositoryTest {
+
+	@Test
+	void configuresOnlyProvidersWithCredentialsAndRequiredScopes() {
+		OAuthClientProperties.Provider configured = new OAuthClientProperties.Provider("client", "secret");
+		OAuthClientProperties.Provider empty = new OAuthClientProperties.Provider("", "");
+		ConfiguredClientRegistrationRepository repository = new ConfiguredClientRegistrationRepository(
+				new OAuthClientProperties(configured, configured, empty), "https://srrrg.link");
+
+		ClientRegistration google = repository.findByRegistrationId("google");
+		ClientRegistration kakao = repository.findByRegistrationId("kakao");
+		assertThat(google.getScopes()).containsExactlyInAnyOrder("openid", "profile", "email");
+		assertThat(kakao.getScopes()).containsExactly("profile_nickname");
+		assertThat(google.getRedirectUri()).isEqualTo("https://srrrg.link/login/oauth2/code/{registrationId}");
+		assertThat(repository.findByRegistrationId("github")).isNull();
+	}
+}

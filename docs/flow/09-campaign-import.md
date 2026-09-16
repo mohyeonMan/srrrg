@@ -41,10 +41,10 @@ https://example.com/a,promo-001,google,cpc
 빈 템플릿 CSV. 헤더만 있고 예시 행은 없다.
 
 ```
-CampaignController.templateCsv(principal, campaignId)
+CampaignCsvController.template(principal, campaignId)
     CampaignService.get(principal.userId(), campaignId)          ← VIEWER 권한 확인
 
-PublicCampaignController.templateCsv(request, campaignId)
+PublicCampaignCsvController.template(request, campaignId)
     ApiKeyRequestAuthorizer.require(request, projectId, CAMPAIGNS_READ)
     CampaignService.findForApiKey(projectId, campaignId)
 
@@ -70,7 +70,7 @@ PublicCampaignController.templateCsv(request, campaignId)
 업로드. **동기 구간에서 파싱까지만** 하고 즉시 `202 Accepted`를 반환한다.
 
 ```
-CampaignController.uploadCsv(principal, campaignId, idempotencyKey, file)
+CampaignCsvController.upload(principal, campaignId, idempotencyKey, file)
     @RequestHeader("Idempotency-Key") — 필수. 없으면 Spring이 먼저 막는다.
     → 202 Accepted
 
@@ -84,7 +84,7 @@ CampaignController.uploadCsv(principal, campaignId, idempotencyKey, file)
 
     CampaignCsvService.startImport(campaign, bytes, key, uploader, createdByApiKeyId = null)
 
-PublicCampaignController.uploadCsv(request, campaignId, idempotencyKey, file)
+PublicCampaignCsvController.upload(request, campaignId, idempotencyKey, file)
     ApiKeyRequestAuthorizer.require(request, projectId, LINKS_WRITE)
     CampaignService.findForApiKey(projectId, campaignId)
     CampaignCsvService.startImport(campaign, bytes, key, createdBy = null, principal.keyId())
@@ -230,7 +230,7 @@ CampaignImportWorker.tick()
                 CampaignImportRowUtmValueRepository.findByImportRowId(rowId)
                     업로드 시 저장해 둔 UTM 값을 읽는다.
 
-                LinkManagementService.createForCampaign(url, null, project, null, null, null, null,
+                LinkCreationService.createForCampaign(url, null, project, null, null, null, null,
                                                         campaign, template, externalId, resolved)
                     링크 생성은 web·v1·batch와 완전히 같은 경로를 탄다.
 
@@ -271,7 +271,7 @@ CampaignImportWorker.tick()
 진행 상태 폴링용.
 
 ```
-CampaignController.importStatus(principal, campaignId, importId)
+CampaignCsvController.status(principal, campaignId, importId)
     CampaignService.get(principal.userId(), campaignId)          ← VIEWER
 
     CampaignCsvService.requireImport(campaign, importId)
@@ -279,7 +279,7 @@ CampaignController.importStatus(principal, campaignId, importId)
             campaignId를 함께 걸어 다른 캠페인의 import를 볼 수 없게 한다.
             → CampaignImportNotFoundException
 
-PublicCampaignController.importStatus(request, campaignId, importId)
+PublicCampaignCsvController.status(request, campaignId, importId)
     ApiKeyRequestAuthorizer.require(request, projectId, CAMPAIGNS_READ)
     CampaignService.findForApiKey(projectId, campaignId)
     CampaignCsvService.requireImport(campaign, importId)
@@ -299,7 +299,7 @@ PublicCampaignController.importStatus(request, campaignId, importId)
 실패한 행만 CSV로. 고쳐서 다시 업로드하는 용도다.
 
 ```
-CampaignController.importErrorsCsv(principal, campaignId, importId)
+CampaignCsvController.errors(principal, campaignId, importId)
     CampaignService.get(...)
     CampaignCsvService.requireImport(campaign, importId)
 
@@ -333,10 +333,10 @@ CampaignController.importErrorsCsv(principal, campaignId, importId)
 캠페인 링크 내보내기. 생성일 범위와 external_id 부분 일치로 거를 수 있다.
 
 ```
-CampaignController.exportLinksCsv(principal, campaignId, createdFrom, createdTo, externalId)
+CampaignCsvController.export(principal, campaignId, createdFrom, createdTo, externalId)
     CampaignService.get(principal.userId(), campaignId)          ← VIEWER
 
-PublicCampaignController.exportLinksCsv(request, campaignId, ...)
+PublicCampaignCsvController.export(request, campaignId, ...)
     ApiKeyRequestAuthorizer.require(request, projectId, LINKS_READ) ← campaigns:read가 아니라 links:read
     CampaignService.findForApiKey(projectId, campaignId)
 

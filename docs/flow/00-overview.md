@@ -164,7 +164,7 @@ RedirectExceptionHandler (@ControllerAdvice, RedirectController 한정, HIGHEST_
 | `BatchIdempotencyConflictException` | 409 `IDEMPOTENCY_CONFLICT` | 409 `IDEMPOTENCY_CONFLICT` |
 | `CampaignImportIdempotencyConflictException` | 409 `IDEMPOTENCY_CONFLICT` | 409 `IDEMPOTENCY_CONFLICT` |
 | `CampaignImportNotFoundException` | 400 `INVALID_REQUEST` | 404 `IMPORT_NOT_FOUND` |
-| `LinkManagementService.IdempotencyConflictException` | — | 409 `IDEMPOTENCY_CONFLICT` |
+| `LinkIdempotencyConflictException` | — | 409 `IDEMPOTENCY_CONFLICT` |
 | `ActiveImportConflictException` | 409 `IMPORT_IN_PROGRESS` | 409 `IMPORT_IN_PROGRESS` |
 | `UnsafeUrlException` | 400 `URL_THREAT_DETECTED` | 400 `URL_THREAT_DETECTED` |
 | `RateLimitExceededException` | 429 + `Retry-After` | 429 + `Retry-After` |

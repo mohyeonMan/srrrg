@@ -1,0 +1,776 @@
+package link.srrrg.campaign.integration;
+
+import link.srrrg.identity.account.model.User;
+import link.srrrg.project.membership.model.ProjectMember;
+import link.srrrg.project.membership.model.ProjectRole;
+import link.srrrg.project.membership.repository.ProjectMemberRepository;
+
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import jakarta.servlet.http.Cookie;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+
+import link.srrrg.auth.session.service.WebSessionService;
+import link.srrrg.campaign.link.csv.service.CampaignImportWorker;
+import link.srrrg.identity.connection.model.OAuthIdentity;
+import link.srrrg.identity.connection.service.OAuthIdentityService;
+import link.srrrg.identity.connection.service.OAuthIdentityService.LoginResolution;
+import link.srrrg.identity.connection.model.OAuthProvider;
+import link.srrrg.project.apikey.model.ApiKeyScope;
+import link.srrrg.project.apikey.service.ApiKeyService;
+import link.srrrg.project.invitation.client.InvitationEmailSender;
+import link.srrrg.project.membership.model.ProjectMember;
+import link.srrrg.project.membership.repository.ProjectMemberRepository;
+import link.srrrg.project.membership.model.ProjectRole;
+import link.srrrg.project.service.ProjectService;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+@Testcontainers(disabledWithoutDocker = true)
+class CampaignPostgreSqlIntegrationTest {
+
+	private static final String JWT_KEY = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=";
+	// 로컬 공유 Redis에 이전 테스트 실행의 rate limit 카운터가 남아 있어도 겹치지 않게 실행마다 새 네임스페이스를 쓴다.
+	private static final String RATE_LIMIT_PREFIX = "srrrg:test:" + java.util.UUID.randomUUID() + ":";
+
+	@Container
+	static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
+
+	@DynamicPropertySource
+	static void properties(DynamicPropertyRegistry registry) {
+		registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
+		registry.add("spring.datasource.username", POSTGRES::getUsername);
+		registry.add("spring.datasource.password", POSTGRES::getPassword);
+		registry.add("srrrg.base-url", () -> "https://srrrg.link");
+		registry.add("srrrg.auth.jwt.active-kid", () -> "test");
+		registry.add("srrrg.auth.jwt.active-key-base64", () -> JWT_KEY);
+		registry.add("srrrg.oauth.google.client-id", () -> "google-client");
+		registry.add("srrrg.oauth.google.client-secret", () -> "google-secret");
+		registry.add("srrrg.oauth.kakao.client-id", () -> "kakao-client");
+		registry.add("srrrg.oauth.kakao.client-secret", () -> "kakao-secret");
+		registry.add("srrrg.oauth.github.client-id", () -> "github-client");
+		registry.add("srrrg.oauth.github.client-secret", () -> "github-secret");
+		registry.add("srrrg.url-risk.provider", () -> "fixed-safe");
+		registry.add("srrrg.rate-limit.key-prefix", () -> RATE_LIMIT_PREFIX);
+		// 실제 @Scheduled worker가 이 테스트의 수동 importWorker.tick() 호출과 동시에 같은 행을 다투지 않게 한다.
+		registry.add("srrrg.csv-worker.initial-delay-ms", () -> "3600000");
+		registry.add("srrrg.csv-worker.fixed-delay-ms", () -> "3600000");
+	}
+
+	@Autowired OAuthIdentityService identityService;
+	@Autowired WebSessionService sessionService;
+	@Autowired ProjectMemberRepository projectMemberRepository;
+	@Autowired ProjectService projectService;
+	@Autowired ApiKeyService apiKeyService;
+	@Autowired MockMvc mockMvc;
+	@Autowired JdbcTemplate jdbcTemplate;
+	@Autowired CampaignImportWorker importWorker;
+
+	@MockitoBean
+	InvitationEmailSender invitationEmailSender;
+
+	private static int counter = 0;
+
+	@Test
+	void statisticsMigrationRemovesLinkCountersAndAddsScopedIndexes() {
+		List<String> columns = jdbcTemplate.queryForList("""
+				SELECT column_name FROM information_schema.columns
+				WHERE table_schema='public' AND table_name='links'
+				""", String.class);
+		List<String> indexes = jdbcTemplate.queryForList("""
+				SELECT indexname FROM pg_indexes WHERE schemaname='public'
+				""", String.class);
+
+		assertThat(columns).doesNotContain("access_count", "redirect_count");
+		assertThat(indexes).contains("ix_links_active_campaign_id", "ix_links_active_project_id",
+				"idx_link_access_events_link_time");
+	}
+
+	@Test
+	void campaignDefaultDestinationIsResolvedDynamicallyAndMissingDestinationReturnsGone() throws Exception {
+		Owner owner = newOwner();
+		MvcResult createdCampaign = mockMvc.perform(post("/api/web/projects/{projectId}/campaigns", owner.projectId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"name\":\"동적 목적지\",\"defaultOriginalUrl\":\"https://first.example/path\"}"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.defaultOriginalUrl").value("https://first.example/path"))
+				.andReturn();
+		Long campaignId = Long.valueOf(readJson(createdCampaign, "id"));
+
+		MvcResult createdLink = mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON).content("{}"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.originalUrl").doesNotExist())
+				.andReturn();
+		String code = readJson(createdLink, "code");
+
+		mockMvc.perform(get("/{code}", code).header("Host", owner.host))
+				.andExpect(status().isFound())
+				.andExpect(header().string("Location", "https://first.example/path"));
+
+		mockMvc.perform(patch("/api/web/campaigns/{id}", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"defaultOriginalUrl\":\"https://second.example/path\"}"))
+				.andExpect(status().isOk());
+		mockMvc.perform(get("/{code}", code).header("Host", owner.host))
+				.andExpect(status().isFound())
+				.andExpect(header().string("Location", "https://second.example/path"));
+
+		mockMvc.perform(patch("/api/web/campaigns/{id}", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"defaultOriginalUrl\":null}"))
+				.andExpect(status().isOk());
+		mockMvc.perform(get("/{code}", code).header("Host", owner.host))
+				.andExpect(status().isGone());
+	}
+
+	@Test
+	void campaignWithUtmTemplateCanBeReadAfterServiceTransactionEnds() throws Exception {
+		Owner owner = newOwner();
+		Long templateId = createTemplate(owner, "utm_source");
+		Long campaignId = createCampaign(owner, "템플릿 조회 캠페인", templateId);
+
+		mockMvc.perform(get("/api/web/projects/{projectId}/campaigns", owner.projectId).cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.items[0].utmTemplateId").value(templateId))
+				.andExpect(jsonPath("$.items[0].utmTemplateName").isNotEmpty());
+
+		mockMvc.perform(get("/api/web/campaigns/{campaignId}", campaignId).cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.utmTemplateId").value(templateId))
+				.andExpect(jsonPath("$.utmTemplateName").isNotEmpty());
+
+		mockMvc.perform(get("/api/web/projects/{projectId}/overview", owner.projectId).cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.campaigns[0].utmTemplateId").value(templateId))
+				.andExpect(jsonPath("$.campaigns[0].utmTemplateName").isNotEmpty());
+	}
+
+	@Test
+	void createsCampaignLinkMergingUtmAndPreservingExistingQueryOnRedirect() throws Exception {
+		Owner owner = newOwner();
+
+		Long templateId = createTemplate(owner, "utm_source");
+		Long campaignId = createCampaign(owner, "봄 캠페인", templateId);
+
+		MvcResult created = mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/path?lang=ko\",\"externalId\":\"user-1\",\"utmValues\":{\"utm_source\":\"newsletter\"}}"))
+				.andExpect(status().isCreated())
+				.andReturn();
+		String code = readJson(created, "code");
+
+		MvcResult redirect = mockMvc.perform(get("/{code}", code).header("Host", owner.host))
+				.andExpect(status().isFound())
+				.andReturn();
+		String location = redirect.getResponse().getHeader("Location");
+		assertThat(location).contains("lang=ko").contains("utm_source=newsletter");
+	}
+
+	@Test
+	void omittedUtmValueDynamicallyUsesCurrentCampaignDefaultWithoutCopyingItToLink() throws Exception {
+		Owner owner = newOwner();
+		Long templateId = createTemplate(owner, "utm_source");
+		Long campaignId = createCampaign(owner, "동적 UTM 캠페인", templateId);
+		updateUtmDefault(owner, campaignId, "first-source");
+
+		MvcResult created = mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/dynamic\"}"))
+				.andExpect(status().isCreated()).andReturn();
+		String code = readJson(created, "code");
+		Long linkId = jdbcTemplate.queryForObject("SELECT id FROM links WHERE code=?", Long.class, code);
+		assertThat(jdbcTemplate.queryForObject("SELECT COUNT(*) FROM link_utm_values WHERE link_id=?", Long.class, linkId)).isZero();
+		MvcResult explicitCreated = mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/explicit\",\"utmValues\":{\"utm_source\":\"fixed-source\"}}"))
+				.andExpect(status().isCreated()).andReturn();
+		String explicitCode = readJson(explicitCreated, "code");
+
+		mockMvc.perform(get("/{code}", code).header("Host", owner.host))
+				.andExpect(status().isFound()).andExpect(header().string("Location", org.hamcrest.Matchers.containsString("utm_source=first-source")));
+		updateUtmDefault(owner, campaignId, "second-source");
+		mockMvc.perform(get("/{code}", code).header("Host", owner.host))
+				.andExpect(status().isFound()).andExpect(header().string("Location", org.hamcrest.Matchers.containsString("utm_source=second-source")));
+		mockMvc.perform(get("/{code}", explicitCode).header("Host", owner.host))
+				.andExpect(status().isFound()).andExpect(header().string("Location", org.hamcrest.Matchers.containsString("utm_source=fixed-source")));
+
+		mockMvc.perform(get("/api/web/campaigns/{id}/links", campaignId).cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.items[?(@.code == '%s')].effectiveUtmValues[0].name".formatted(code))
+						.value(org.hamcrest.Matchers.contains("utm_source")))
+				.andExpect(jsonPath("$.items[?(@.code == '%s')].effectiveUtmValues[0].value".formatted(code))
+						.value(org.hamcrest.Matchers.contains("second-source")))
+				.andExpect(jsonPath("$.items[?(@.code == '%s')].effectiveUtmValues[0].source".formatted(code))
+						.value(org.hamcrest.Matchers.contains("CAMPAIGN_DEFAULT")))
+				.andExpect(jsonPath("$.items[?(@.code == '%s')].effectiveUtmValues[0].value".formatted(explicitCode))
+						.value(org.hamcrest.Matchers.contains("fixed-source")))
+				.andExpect(jsonPath("$.items[?(@.code == '%s')].effectiveUtmValues[0].source".formatted(explicitCode))
+						.value(org.hamcrest.Matchers.contains("LINK")));
+
+		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId).cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.utm.items[?(@.value == 'first-source')].redirectedEvents")
+						.value(org.hamcrest.Matchers.contains(1)))
+				.andExpect(jsonPath("$.utm.items[?(@.value == 'second-source')].redirectedEvents")
+						.value(org.hamcrest.Matchers.contains(1)))
+				.andExpect(jsonPath("$.utm.items[?(@.value == 'fixed-source')].redirectedEvents")
+						.value(org.hamcrest.Matchers.contains(1)));
+	}
+
+	@Test
+	void utmStatisticsFollowCurrentFieldsAndRestoreSameNameHistory() throws Exception {
+		Owner owner = newOwner();
+		Long templateId = createTemplate(owner, "utm_source");
+		Long fieldId = jdbcTemplate.queryForObject(
+				"SELECT id FROM utm_template_fields WHERE utm_template_id=? AND name='utm_source' AND deleted_at IS NULL",
+				Long.class, templateId);
+		Long campaignId = createCampaign(owner, "필드 변경 캠페인", templateId);
+		MvcResult created = mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/stats\",\"utmValues\":{\"utm_source\":\"newsletter\"}}"))
+				.andExpect(status().isCreated()).andReturn();
+		String code = readJson(created, "code");
+		mockMvc.perform(get("/{code}", code).header("Host", owner.host)).andExpect(status().isFound());
+
+		addField(owner, templateId, "utm_medium").andExpect(status().isCreated());
+		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId).cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.utm.items[?(@.field == 'utm_medium' && @.value == '(없음)')].redirectedEvents")
+						.value(org.hamcrest.Matchers.contains(1)));
+
+		mockMvc.perform(delete("/api/web/projects/{projectId}/utm-templates/{templateId}/fields/{fieldId}",
+				owner.projectId, templateId, fieldId).with(csrf()).cookie(owner.cookie)).andExpect(status().isNoContent());
+		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId).cookie(owner.cookie))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.utm.items[?(@.field == 'utm_source')]").isEmpty());
+
+		addField(owner, templateId, "utm_source").andExpect(status().isCreated());
+		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId).cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.utm.items[?(@.field == 'utm_source' && @.value == 'newsletter')].redirectedEvents")
+						.value(org.hamcrest.Matchers.contains(1)));
+	}
+
+	@Test
+	void campaignStatisticsReconcileAndEachCampaignLinkHasStandaloneDrillDown() throws Exception {
+		Owner owner = newOwner();
+		Long templateId = createTemplate(owner, "utm_source");
+		Long campaignId = createCampaign(owner, "통계 캠페인", templateId);
+		MvcResult created = mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/stats\",\"externalId\":\"person-1\",\"utmValues\":{\"utm_source\":\"newsletter\"}}"))
+				.andExpect(status().isCreated()).andReturn();
+		String code = readJson(created, "code");
+		mockMvc.perform(get("/{code}", code).header("Host", owner.host).header("User-Agent", "Mozilla/5.0 Chrome/120"))
+				.andExpect(status().isFound());
+
+		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId).cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.summary.current.entries").value(1))
+				.andExpect(jsonPath("$.summary.current.humanEntries").value(1))
+				.andExpect(jsonPath("$.summary.lifetimeLinks.humanAccessed").value(1))
+				.andExpect(jsonPath("$.links.items[0].code").value(code))
+				.andExpect(jsonPath("$.utm.items[0].field").value("utm_source"))
+				.andExpect(jsonPath("$.utm.items[0].redirectedEvents").value(1));
+		mockMvc.perform(get("/api/web/projects/{projectId}/links/{code}/statistics", owner.projectId, code).cookie(owner.cookie))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.scope").value("LINK"))
+				.andExpect(jsonPath("$.summary.current.entries").value(1));
+		mockMvc.perform(get("/api/web/projects/{projectId}/statistics", owner.projectId).cookie(owner.cookie))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.summary.current.entries").value(1))
+				.andExpect(jsonPath("$.campaigns.items[0].period.entries").value(1));
+
+		ApiKeyService.CreatedKey statsKey = apiKeyService.create(owner.userId, owner.projectId, "stats",
+				java.util.Set.of(ApiKeyScope.STATS_READ), null);
+		mockMvc.perform(get("/api/v1/projects/{projectId}/links/{code}/statistics", owner.projectId, code)
+					.header("Authorization", "Bearer " + statsKey.rawKey()))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.summary.current.entries").value(1));
+
+		mockMvc.perform(delete("/api/web/campaigns/{id}", campaignId).with(csrf()).cookie(owner.cookie))
+				.andExpect(status().isNoContent());
+		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId).cookie(owner.cookie))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.code").value("CAMPAIGN_NOT_FOUND"));
+	}
+
+	@Test
+	void statisticsSeparateHumanAndBotEventsAndPageCampaignLinks() throws Exception {
+		Owner owner = newOwner();
+		Long campaignId = createCampaign(owner, "사람 봇 분리", null);
+		MvcResult first = mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/first\"}"))
+				.andExpect(status().isCreated()).andReturn();
+		mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/second\"}"))
+				.andExpect(status().isCreated());
+		Long linkId = jdbcTemplate.queryForObject("SELECT id FROM links WHERE code=?", Long.class, readJson(first, "code"));
+		jdbcTemplate.update("""
+				INSERT INTO link_access_events(link_id,accessed_at,outcome,is_bot)
+				VALUES (?,now(),'BLOCKED',false),(?,now(),'REDIRECTED',false),(?,now(),'REDIRECTED',true)
+				""", linkId, linkId, linkId);
+
+		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId)
+					.param("limit", "1").cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.summary.current.entries").value(3))
+				.andExpect(jsonPath("$.summary.current.redirects").value(2))
+				.andExpect(jsonPath("$.summary.current.humanEntries").value(2))
+				.andExpect(jsonPath("$.summary.current.humanRedirects").value(1))
+				.andExpect(jsonPath("$.summary.current.botEntries").value(1))
+				.andExpect(jsonPath("$.summary.current.botRedirects").value(1))
+				.andExpect(jsonPath("$.summary.current.nonRedirects").value(1))
+				.andExpect(jsonPath("$.links.totalItems").value(2))
+				.andExpect(jsonPath("$.links.nextOffset").value(1))
+				.andExpect(jsonPath("$.links.items.length()").value(1))
+				.andExpect(jsonPath("$.links.items[0].lifetimeStatus").value("HUMAN_ACCESSED"))
+				.andExpect(jsonPath("$.outcomes[?(@.outcome == 'REDIRECTED')].count")
+						.value(org.hamcrest.Matchers.contains(2)));
+	}
+
+	@Test
+	void statisticsRejectTooManyDailyBuckets() throws Exception {
+		Owner owner = newOwner();
+		Long campaignId = createCampaign(owner, "기간 제한", null);
+
+		mockMvc.perform(get("/api/web/campaigns/{id}/statistics", campaignId)
+					.param("from", "2025-01-01").param("to", "2026-01-02")
+					.param("bucket", "DAY").cookie(owner.cookie))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("선택한 기간에는 더 큰 집계 단위를 사용하세요."));
+	}
+
+	@Test
+	void statisticsRangeQueryUsesTheTimeAndLinkIndexAtOneHundredThousandEvents() throws Exception {
+		Owner owner = newOwner();
+		MvcResult created = mockMvc.perform(post("/api/web/projects/{projectId}/links", owner.projectId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/performance\"}"))
+				.andExpect(status().isCreated()).andReturn();
+		Long linkId = jdbcTemplate.queryForObject("SELECT id FROM links WHERE code=?", Long.class, readJson(created, "code"));
+		jdbcTemplate.update("""
+				INSERT INTO link_access_events(link_id,accessed_at,outcome,is_bot)
+				SELECT ?,now()-(n||' minutes')::interval,'REDIRECTED',false FROM generate_series(1,100000) n
+				""", linkId);
+		String plan = String.join("\n", jdbcTemplate.queryForList("""
+				EXPLAIN (ANALYZE, BUFFERS)
+				SELECT COUNT(e.id) FROM links l JOIN link_access_events e ON e.link_id=l.id
+				WHERE e.accessed_at>=now()-interval '7 days' AND e.accessed_at<now() AND l.project_id=?
+				""", String.class, owner.projectId));
+		assertThat(plan).contains("idx_link_access_events_link_time", "Execution Time");
+		mockMvc.perform(get("/api/web/projects/{projectId}/links/{code}/statistics", owner.projectId, readJson(created, "code"))
+					.param("from", java.time.LocalDate.now().minusDays(6).toString())
+					.param("to", java.time.LocalDate.now().toString())
+					.param("bucket", "DAY").cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.summary.current.entries").isNumber())
+				.andExpect(jsonPath("$.trend.length()").value(7));
+	}
+
+	@Test
+	void rejectsDuplicateExternalIdWithinSameCampaign() throws Exception {
+		Owner owner = newOwner();
+		Long campaignId = createCampaign(owner, "중복 방지 캠페인", null);
+
+		String firstCode = readJson(mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/a\",\"externalId\":\"dup-1\"}"))
+				.andExpect(status().isCreated()).andReturn(), "code");
+
+		mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/b\",\"externalId\":\"dup-1\"}"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.code").value("EXTERNAL_ID_CONFLICT"));
+
+		mockMvc.perform(delete("/api/web/projects/{projectId}/links/{code}", owner.projectId, firstCode)
+					.with(csrf()).cookie(owner.cookie))
+				.andExpect(status().isNoContent());
+		mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/reused\",\"externalId\":\"dup-1\"}"))
+				.andExpect(status().isCreated());
+	}
+
+	@Test
+	void viewerCannotCreateCampaignOrLink() throws Exception {
+		Owner owner = newOwner();
+		LoginResolution viewerLogin = identityService.resolve(identity("viewer-" + (++counter), "viewer" + counter + "@example.com"));
+		jdbcTemplate.update("INSERT INTO project_members (project_id, user_id, role, created_at) VALUES (?, ?, 'VIEWER', now())",
+				owner.projectId, viewerLogin.user().getId());
+		Cookie viewerCookie = new Cookie("srrrg_access", sessionService.issue(viewerLogin.user()).accessToken());
+
+		mockMvc.perform(post("/api/web/projects/{projectId}/campaigns", owner.projectId)
+					.with(csrf()).cookie(viewerCookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"name\":\"뷰어 캠페인\"}"))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void deletingCampaignSoftDeletesCampaignAndLinksReturningNotFoundOnRedirect() throws Exception {
+		Owner owner = newOwner();
+		Long campaignId = createCampaign(owner, "삭제될 캠페인", null);
+		MvcResult created = mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/gone\"}"))
+				.andExpect(status().isCreated())
+				.andReturn();
+		String code = readJson(created, "code");
+
+		mockMvc.perform(delete("/api/web/campaigns/{id}", campaignId).with(csrf()).cookie(owner.cookie))
+				.andExpect(status().isNoContent());
+		assertThat(jdbcTemplate.queryForObject("SELECT deleted_at IS NOT NULL FROM campaigns WHERE id=?", Boolean.class, campaignId)).isTrue();
+		mockMvc.perform(get("/api/web/campaigns/{id}", campaignId).cookie(owner.cookie))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.code").value("CAMPAIGN_NOT_FOUND"));
+
+		mockMvc.perform(get("/{code}", code).header("Host", owner.host))
+				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void editorCanManageAndDeleteSingleCampaignLinkFromSharedDetailPage() throws Exception {
+		Owner owner = newOwner();
+		Long campaignId = createCampaign(owner, "개별 삭제 캠페인", null);
+		MvcResult created = mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/delete-me\"}"))
+				.andExpect(status().isCreated())
+				.andReturn();
+		String code = readJson(created, "code");
+
+		mockMvc.perform(get("/api/web/projects/{projectId}/links/{code}", owner.projectId, code).cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.code").value(code))
+				.andExpect(jsonPath("$.shortUrl").value("https://" + owner.host + "/" + code))
+				.andExpect(jsonPath("$.campaignId").value(campaignId))
+				.andExpect(jsonPath("$.editable").value(true));
+		mockMvc.perform(patch("/api/web/projects/{projectId}/links/{code}", owner.projectId, code)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/individual\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.originalUrl").value("https://example.com/individual"));
+		mockMvc.perform(patch("/api/web/projects/{projectId}/links/{code}", owner.projectId, code)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":null}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.originalUrl").doesNotExist());
+
+		mockMvc.perform(delete("/api/web/projects/{projectId}/links/{code}", owner.projectId, code)
+					.with(csrf()).cookie(owner.cookie))
+				.andExpect(status().isNoContent());
+
+		mockMvc.perform(get("/{code}", code).header("Host", owner.host))
+				.andExpect(status().isNotFound());
+		mockMvc.perform(get("/api/web/campaigns/{id}/links", campaignId).cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.items").isEmpty());
+	}
+
+	@Test
+	void deletesSelectedCampaignLinksAtomicallyWithinCampaign() throws Exception {
+		Owner owner = newOwner();
+		Long campaignId = createCampaign(owner, "선택 삭제 캠페인", null);
+		Long otherCampaignId = createCampaign(owner, "다른 캠페인", null);
+		String firstCode = readJson(mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+				.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"originalUrl\":\"https://example.com/first\"}"))
+				.andExpect(status().isCreated()).andReturn(), "code");
+		String secondCode = readJson(mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+				.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"originalUrl\":\"https://example.com/second\"}"))
+				.andExpect(status().isCreated()).andReturn(), "code");
+		String otherCode = readJson(mockMvc.perform(post("/api/web/campaigns/{id}/links", otherCampaignId)
+				.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"originalUrl\":\"https://example.com/other\"}"))
+				.andExpect(status().isCreated()).andReturn(), "code");
+
+		mockMvc.perform(delete("/api/web/campaigns/{id}/links", campaignId)
+				.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"codes\":[\"%s\",\"%s\"]}".formatted(firstCode, otherCode)))
+				.andExpect(status().isBadRequest());
+		mockMvc.perform(get("/{code}", firstCode).header("Host", owner.host)).andExpect(status().isFound());
+
+		mockMvc.perform(delete("/api/web/campaigns/{id}/links", campaignId)
+				.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"codes\":[\"%s\",\"%s\"]}".formatted(firstCode, secondCode)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.deletedCount").value(2));
+
+		mockMvc.perform(get("/api/web/campaigns/{id}/links", campaignId).cookie(owner.cookie))
+				.andExpect(status().isOk()).andExpect(jsonPath("$.items").isEmpty());
+		mockMvc.perform(get("/{code}", firstCode).header("Host", owner.host)).andExpect(status().isNotFound());
+		mockMvc.perform(get("/{code}", secondCode).header("Host", owner.host)).andExpect(status().isNotFound());
+		mockMvc.perform(get("/{code}", otherCode).header("Host", owner.host)).andExpect(status().isFound());
+	}
+
+	@Test
+	void blocksAddingMoreThanTenActiveFields() throws Exception {
+		Owner owner = newOwner();
+		Long templateId = createTemplate(owner, "field_01");
+		for (int i = 2; i <= 10; i++) {
+			addField(owner, templateId, "field_%02d".formatted(i)).andExpect(status().isCreated());
+		}
+		addField(owner, templateId, "field_11").andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void apiKeySingleLinkIdempotencyReplaysAndConflicts() throws Exception {
+		Owner owner = newOwner();
+		Long campaignId = createCampaign(owner, "API 캠페인", null);
+		ApiKeyService.CreatedKey key = apiKeyService.create(owner.userId, owner.projectId, "automation",
+				java.util.Set.of(ApiKeyScope.LINKS_WRITE, ApiKeyScope.CAMPAIGNS_WRITE), null);
+		String auth = "Bearer " + key.rawKey();
+
+		MvcResult first = mockMvc.perform(post("/api/v1/campaigns/{id}/links", campaignId)
+					.header("Authorization", auth).header("Idempotency-Key", "req-1")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/one\"}"))
+				.andExpect(status().isCreated())
+				.andReturn();
+		String firstCode = readJson(first, "code");
+
+		MvcResult retry = mockMvc.perform(post("/api/v1/campaigns/{id}/links", campaignId)
+					.header("Authorization", auth).header("Idempotency-Key", "req-1")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/one\"}"))
+				.andExpect(status().isCreated())
+				.andReturn();
+		assertThat(readJson(retry, "code")).isEqualTo(firstCode);
+
+		mockMvc.perform(post("/api/v1/campaigns/{id}/links", campaignId)
+					.header("Authorization", auth).header("Idempotency-Key", "req-1")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/DIFFERENT\"}"))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.code").value("IDEMPOTENCY_CONFLICT"));
+
+		mockMvc.perform(delete("/api/web/projects/{projectId}/links/{code}", owner.projectId, firstCode)
+					.with(csrf()).cookie(owner.cookie))
+				.andExpect(status().isNoContent());
+		mockMvc.perform(post("/api/v1/campaigns/{id}/links", campaignId)
+					.header("Authorization", auth).header("Idempotency-Key", "req-1")
+					.contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/one\"}"))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.code").value(org.hamcrest.Matchers.not(firstCode)));
+	}
+
+	@Test
+	void campaignLinkListsKeepWebAndPublicResponseContracts() throws Exception {
+		Owner owner = newOwner();
+		Long templateId = createTemplate(owner, "utm_source");
+		Long campaignId = createCampaign(owner, "목록 경계 캠페인", templateId);
+		updateUtmDefault(owner, campaignId, "newsletter");
+		mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/list\"}"))
+				.andExpect(status().isCreated());
+
+		ApiKeyService.CreatedKey key = apiKeyService.create(owner.userId, owner.projectId, "list-reader",
+				java.util.Set.of(ApiKeyScope.LINKS_READ), null);
+		String auth = "Bearer " + key.rawKey();
+
+		mockMvc.perform(get("/api/web/campaigns/{id}/links", campaignId).cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.items[0].effectiveUtmValues[0].value").value("newsletter"));
+		mockMvc.perform(get("/api/v1/campaigns/{id}/links", campaignId)
+					.header("Authorization", auth))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.items[0].originalUrl").value("https://example.com/list"))
+				.andExpect(jsonPath("$.items[0].effectiveUtmValues").doesNotExist());
+	}
+
+	@Test
+	void missingCampaignImportKeepsSurfaceSpecificErrorContracts() throws Exception {
+		Owner owner = newOwner();
+		Long campaignId = createCampaign(owner, "임포트 조회 캠페인", null);
+		ApiKeyService.CreatedKey key = apiKeyService.create(owner.userId, owner.projectId, "import-reader",
+				java.util.Set.of(ApiKeyScope.CAMPAIGNS_READ), null);
+
+		mockMvc.perform(get("/api/web/campaigns/{id}/imports/{importId}", campaignId, Long.MAX_VALUE)
+					.cookie(owner.cookie))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+		mockMvc.perform(get("/api/v1/campaigns/{id}/imports/{importId}", campaignId, Long.MAX_VALUE)
+					.header("Authorization", "Bearer " + key.rawKey()))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.code").value("IMPORT_NOT_FOUND"));
+	}
+
+	@Test
+	void jsonBatchCreatesAllLinksAtomicallyAndReplaysIdempotently() throws Exception {
+		Owner owner = newOwner();
+		Long campaignId = createCampaign(owner, "배치 캠페인", null);
+		ApiKeyService.CreatedKey key = apiKeyService.create(owner.userId, owner.projectId, "batch",
+				java.util.Set.of(ApiKeyScope.LINKS_WRITE), null);
+		String auth = "Bearer " + key.rawKey();
+		String batchBody = "[{\"originalUrl\":\"https://example.com/b1\",\"externalId\":\"b-1\"},"
+				+ "{\"originalUrl\":\"https://example.com/b2\",\"externalId\":\"b-2\"}]";
+
+		MvcResult first = mockMvc.perform(post("/api/v1/campaigns/{id}/links/batch", campaignId)
+					.header("Authorization", auth).header("Idempotency-Key", "batch-1")
+					.contentType(MediaType.APPLICATION_JSON).content(batchBody))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.length()").value(2))
+				.andReturn();
+
+		mockMvc.perform(post("/api/v1/campaigns/{id}/links/batch", campaignId)
+					.header("Authorization", auth).header("Idempotency-Key", "batch-1")
+					.contentType(MediaType.APPLICATION_JSON).content(batchBody))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.length()").value(2));
+
+		mockMvc.perform(post("/api/v1/campaigns/{id}/links/batch", campaignId)
+					.header("Authorization", auth)
+					.contentType(MediaType.APPLICATION_JSON).content(batchBody))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void csvUploadProcessesValidRowsAndRecordsRowLevelErrors() throws Exception {
+		Owner owner = newOwner();
+		Long templateId = createTemplate(owner, "utm_source");
+		Long campaignId = createCampaign(owner, "CSV 캠페인", templateId);
+		String csv = "original_url,external_id,utm_source\n"
+				+ "https://example.com/ok,csv-1,newsletter\n"
+				+ "not-a-valid-url,csv-2,newsletter\n";
+		MockMultipartFile file = new MockMultipartFile("file", "links.csv", "text/csv", csv.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+		MvcResult uploaded = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+					.multipart("/api/web/campaigns/{id}/imports/csv", campaignId)
+					.file(file).with(csrf()).cookie(owner.cookie).header("Idempotency-Key", "csv-1"))
+				.andExpect(status().isAccepted())
+				.andReturn();
+		Long importId = Long.valueOf(readJson(uploaded, "id"));
+
+		for (int i = 0; i < 10 && !isImportTerminal(campaignId, importId, owner); i++) {
+			importWorker.tick();
+		}
+
+		mockMvc.perform(get("/api/web/campaigns/{id}/imports/{importId}", campaignId, importId).cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("COMPLETED"))
+				.andExpect(jsonPath("$.succeededRows").value(1))
+				.andExpect(jsonPath("$.failedRows").value(1));
+	}
+
+	@Test
+	void exportsLinksCsvWithAndWithoutExternalIdFilter() throws Exception {
+		Owner owner = newOwner();
+		Long templateId = createTemplate(owner, "utm_source");
+		Long campaignId = createCampaign(owner, "내보내기 캠페인", templateId);
+		mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/a\",\"externalId\":\"match-1\",\"utmValues\":{\"utm_source\":\"newsletter\"}}"))
+				.andExpect(status().isCreated());
+		mockMvc.perform(post("/api/web/campaigns/{id}/links", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"originalUrl\":\"https://example.com/b\",\"externalId\":\"other-2\",\"utmValues\":{\"utm_source\":\"newsletter\"}}"))
+				.andExpect(status().isCreated());
+
+		MvcResult noFilter = mockMvc.perform(get("/api/web/campaigns/{id}/links.csv", campaignId).cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andReturn();
+		String noFilterBody = noFilter.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+		assertThat(noFilterBody).contains("match-1").contains("other-2");
+
+		MvcResult filtered = mockMvc.perform(get("/api/web/campaigns/{id}/links.csv", campaignId)
+					.param("externalId", "match").cookie(owner.cookie))
+				.andExpect(status().isOk())
+				.andReturn();
+		String filteredBody = filtered.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+		assertThat(filteredBody).contains("match-1").doesNotContain("other-2");
+	}
+
+	private boolean isImportTerminal(Long campaignId, Long importId, Owner owner) throws Exception {
+		MvcResult result = mockMvc.perform(get("/api/web/campaigns/{id}/imports/{importId}", campaignId, importId).cookie(owner.cookie)).andReturn();
+		return !readJson(result, "status").equals("PENDING") && !readJson(result, "status").equals("PROCESSING");
+	}
+
+	private org.springframework.test.web.servlet.ResultActions addField(Owner owner, Long templateId, String name) throws Exception {
+		return mockMvc.perform(post("/api/web/projects/{projectId}/utm-templates/{templateId}/fields", owner.projectId, templateId)
+				.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"name\":\"" + name + "\"}"));
+	}
+
+	private Long createTemplate(Owner owner, String firstFieldName) throws Exception {
+		MvcResult created = mockMvc.perform(post("/api/web/projects/{projectId}/utm-templates", owner.projectId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"name\":\"template-" + (++counter) + "\"}"))
+				.andExpect(status().isCreated())
+				.andReturn();
+		Long templateId = Long.valueOf(readJson(created, "id"));
+		addField(owner, templateId, firstFieldName).andExpect(status().isCreated());
+		return templateId;
+	}
+
+	private Long createCampaign(Owner owner, String name, Long templateId) throws Exception {
+		MvcResult created = mockMvc.perform(post("/api/web/projects/{projectId}/campaigns", owner.projectId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"name\":\"" + name + "\"}"))
+				.andExpect(status().isCreated())
+				.andReturn();
+		Long campaignId = Long.valueOf(readJson(created, "id"));
+		if (templateId != null) {
+			mockMvc.perform(patch("/api/web/campaigns/{id}/utm-template", campaignId)
+						.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+						.content("{\"utmTemplateId\":" + templateId + "}"))
+					.andExpect(status().isOk());
+		}
+		return campaignId;
+	}
+
+	private void updateUtmDefault(Owner owner, Long campaignId, String value) throws Exception {
+		mockMvc.perform(patch("/api/web/campaigns/{id}/utm-defaults", campaignId)
+					.with(csrf()).cookie(owner.cookie).contentType(MediaType.APPLICATION_JSON)
+					.content("{\"defaults\":{\"utm_source\":\"" + value + "\"}}"))
+				.andExpect(status().isOk());
+	}
+
+	private Owner newOwner() {
+		LoginResolution login = identityService.resolve(identity("owner-" + (++counter), "owner" + counter + "@example.com"));
+		ProjectMember membership = projectMemberRepository.findByIdUserId(login.user().getId()).getFirst();
+		Long projectId = membership.getProject().getId();
+		String host = "srrrg.link";
+		Cookie cookie = new Cookie("srrrg_access", sessionService.issue(login.user()).accessToken());
+		return new Owner(login.user().getId(), projectId, host, cookie);
+	}
+
+	private OAuthIdentity identity(String subject, String email) {
+		return new OAuthIdentity(OAuthProvider.GOOGLE, subject, email, true, "테스트 사용자");
+	}
+
+	private String readJson(MvcResult result, String field) throws Exception {
+		com.fasterxml.jackson.databind.JsonNode node = new com.fasterxml.jackson.databind.ObjectMapper()
+				.readTree(result.getResponse().getContentAsString());
+		return node.get(field).asText();
+	}
+
+	private record Owner(Long userId, Long projectId, String host, Cookie cookie) { }
+}

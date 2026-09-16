@@ -4,14 +4,14 @@
 
 | Method | Path | 핸들러 | 최소 역할 |
 |---|---|---|---|
-| GET | `/api/web/projects/{projectId}/members` | `ProjectController.members` | VIEWER |
-| PATCH | `/api/web/projects/{projectId}/members/{memberId}` | `ProjectController.changeRole` | OWNER |
-| DELETE | `/api/web/projects/{projectId}/members/{memberId}` | `ProjectController.remove` | OWNER |
-| GET | `/api/web/projects/{projectId}/invitations` | `ProjectController.invitations` | OWNER |
-| POST | `/api/web/projects/{projectId}/invitations` | `ProjectController.invite` | OWNER |
-| POST | `/api/web/invitations/{token}/accept` | `ProjectController.accept` | 로그인만 |
-| DELETE | `/api/web/invitations/{invitationId}` | `ProjectController.cancel` | OWNER |
-| POST | `/api/web/invitations/{invitationId}/resend` | `ProjectController.resend` | OWNER |
+| GET | `/api/web/projects/{projectId}/members` | `ProjectMemberController.members` | VIEWER |
+| PATCH | `/api/web/projects/{projectId}/members/{memberId}` | `ProjectMemberController.changeRole` | OWNER |
+| DELETE | `/api/web/projects/{projectId}/members/{memberId}` | `ProjectMemberController.remove` | OWNER |
+| GET | `/api/web/projects/{projectId}/invitations` | `ProjectInvitationController.invitations` | OWNER |
+| POST | `/api/web/projects/{projectId}/invitations` | `ProjectInvitationController.invite` | OWNER |
+| POST | `/api/web/invitations/{token}/accept` | `ProjectInvitationController.accept` | 로그인만 |
+| DELETE | `/api/web/invitations/{invitationId}` | `ProjectInvitationController.cancel` | OWNER |
+| POST | `/api/web/invitations/{invitationId}/resend` | `ProjectInvitationController.resend` | OWNER |
 | GET | `/invitations/{token}` | `InvitationPageController.invitation` | 없음 |
 
 `{memberId}`는 **멤버십 행의 ID가 아니라 대상 사용자의 userId**다. 복합키 `ProjectMember.id(projectId, userId)` 구조라서 그렇다.
@@ -33,7 +33,7 @@
 멤버 목록.
 
 ```
-ProjectController.members(principal, projectId)
+ProjectMemberController.members(principal, projectId)
 
     ProjectMemberService.projectMembers(userId, projectId)
         @Transactional(readOnly = true)
@@ -50,7 +50,7 @@ ProjectController.members(principal, projectId)
 역할 변경.
 
 ```
-ProjectController.changeRole(principal, projectId, memberId, request)
+ProjectMemberController.changeRole(principal, projectId, memberId, request)
     (Bean Validation) role: @NotNull
     → 204 No Content
 
@@ -81,7 +81,7 @@ ProjectController.changeRole(principal, projectId, memberId, request)
 멤버 제거. 이 도메인에서 유일한 하드 삭제다.
 
 ```
-ProjectController.remove(principal, projectId, memberId)
+ProjectMemberController.remove(principal, projectId, memberId)
     → 204 No Content
 
     ProjectMemberService.removeMember(actorId, projectId, memberId)
@@ -110,7 +110,7 @@ ProjectController.remove(principal, projectId, memberId)
 대기 중인 초대 목록. **OWNER만** 볼 수 있다 — 초대 대상 이메일이 담기기 때문이다.
 
 ```
-ProjectController.invitations(principal, projectId)
+ProjectInvitationController.invitations(principal, projectId)
 
     ProjectInvitationService.list(userId, projectId)
         @Transactional(readOnly = true)
@@ -127,7 +127,7 @@ ProjectController.invitations(principal, projectId)
 초대 발송.
 
 ```
-ProjectController.invite(principal, projectId, request)
+ProjectInvitationController.invite(principal, projectId, request)
     (Bean Validation) email: @Email @NotBlank, role: @NotNull
     → 201 Created
 
@@ -183,7 +183,7 @@ ProjectController.invite(principal, projectId, request)
 재발송. 기존 초대를 취소하고 새로 만든다.
 
 ```
-ProjectController.resend(principal, invitationId)
+ProjectInvitationController.resend(principal, invitationId)
 
     ProjectInvitationService.resend(userId, invitationId)
         @Transactional
@@ -218,7 +218,7 @@ ProjectController.resend(principal, invitationId)
 초대 취소.
 
 ```
-ProjectController.cancel(principal, invitationId)
+ProjectInvitationController.cancel(principal, invitationId)
     → 204 No Content
 
     ProjectInvitationService.cancel(userId, invitationId)
@@ -236,7 +236,7 @@ ProjectController.cancel(principal, invitationId)
 초대 수락. **로그인만 되어 있으면 누구나** 호출할 수 있다 — 토큰 자체가 인증이다.
 
 ```
-ProjectController.accept(principal, token)
+ProjectInvitationController.accept(principal, token)
 
     ProjectInvitationService.accept(userId, rawToken)
         @Transactional

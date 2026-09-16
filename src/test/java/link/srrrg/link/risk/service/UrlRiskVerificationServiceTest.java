@@ -1,0 +1,98 @@
+package link.srrrg.link.risk.service;
+
+import link.srrrg.link.risk.client.UrlRiskChecker;
+import link.srrrg.link.risk.model.RiskVerdict;
+import link.srrrg.link.risk.model.UrlRiskAssessment;
+import link.srrrg.link.risk.model.UrlVerification;
+import link.srrrg.link.risk.repository.UrlVerificationRepository;
+import link.srrrg.link.risk.service.UrlRiskVerificationService;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.time.Instant;
+import java.util.Optional;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import link.srrrg.common.metrics.SrrrgMetrics;
+
+class UrlRiskVerificationServiceTest {
+
+	private final UrlVerificationRepository repository = mock(UrlVerificationRepository.class);
+	private final UrlRiskChecker client = mock(UrlRiskChecker.class);
+	private SimpleMeterRegistry registry;
+	private UrlRiskVerificationService service;
+
+	@BeforeEach
+	void setUp() {
+		registry = new SimpleMeterRegistry();
+		service = new UrlRiskVerificationService(repository, client, new SrrrgMetrics(registry));
+	}
+
+	@Test
+	void returnsFreshCachedAssessmentWithoutCallingGoogle() {
+		UrlVerification cached = mock(UrlVerification.class);
+		UrlRiskAssessment assessment = assessment(RiskVerdict.SAFE, 300);
+		when(cached.matches("https://example.com")).thenReturn(true);
+		when(cached.isFreshAt(org.mockito.ArgumentMatchers.any(Instant.class))).thenReturn(true);
+		when(cached.toAssessment()).thenReturn(assessment);
+		when(repository.findById(anyString())).thenReturn(Optional.of(cached));
+
+		assertThat(service.verify("https://example.com")).isEqualTo(assessment);
+		verify(client, never()).check(anyString());
+		assertCacheCount("hit", 1);
+	}
+
+	@Test
+	void checksGoogleAndSavesResultWhenCachedVerificationHasExpired() {
+		UrlVerification expired = mock(UrlVerification.class);
+		when(expired.matches("https://example.com")).thenReturn(true);
+		when(expired.isFreshAt(org.mockito.ArgumentMatchers.any(Instant.class))).thenReturn(false);
+		when(repository.findById(anyString())).thenReturn(Optional.of(expired));
+		UrlRiskAssessment assessment = assessment(RiskVerdict.SAFE, 300);
+		when(client.check("https://example.com")).thenReturn(assessment);
+
+		assertThat(service.verify("https://example.com")).isEqualTo(assessment);
+		verify(repository).findById(anyString());
+		verify(repository).saveIfNewer(
+				anyString(),
+				org.mockito.ArgumentMatchers.eq("https://example.com"),
+				org.mockito.ArgumentMatchers.eq("SAFE"),
+				org.mockito.ArgumentMatchers.eq(assessment.verifiedAt()),
+				org.mockito.ArgumentMatchers.eq(assessment.expiresAt())
+		);
+		assertCacheCount("miss_stale", 1);
+	}
+
+	@Test
+	void doesNotCacheUnknownAssessment() {
+		when(repository.findById(anyString())).thenReturn(Optional.empty());
+		UrlRiskAssessment assessment = UrlRiskAssessment.unknown(Instant.now());
+		when(client.check("https://example.com")).thenReturn(assessment);
+
+		assertThat(service.verify("https://example.com").verdict()).isEqualTo(RiskVerdict.UNKNOWN);
+		verify(repository, never()).saveIfNewer(
+				anyString(), anyString(), anyString(),
+				org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+		assertCacheCount("miss_absent", 1);
+	}
+
+	private UrlRiskAssessment assessment(RiskVerdict verdict, long cacheSeconds) {
+		Instant verifiedAt = Instant.now();
+		return new UrlRiskAssessment(verdict, verifiedAt, verifiedAt.plusSeconds(cacheSeconds));
+	}
+
+	private void assertCacheCount(String result, double count) {
+		assertThat(registry.get("srrrg.url.risk.cache")
+				.tag("result", result)
+				.counter()
+				.count()).isEqualTo(count);
+	}
+}

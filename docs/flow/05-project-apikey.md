@@ -4,9 +4,9 @@
 
 | Method | Path | 핸들러 | 최소 역할 |
 |---|---|---|---|
-| GET | `/api/web/projects/{projectId}/api-keys` | `ProjectController.apiKeys` | OWNER |
-| POST | `/api/web/projects/{projectId}/api-keys` | `ProjectController.createApiKey` | OWNER |
-| DELETE | `/api/web/projects/{projectId}/api-keys/{keyId}` | `ProjectController.revokeApiKey` | OWNER |
+| GET | `/api/web/projects/{projectId}/api-keys` | `ProjectApiKeyController.apiKeys` | OWNER |
+| POST | `/api/web/projects/{projectId}/api-keys` | `ProjectApiKeyController.createApiKey` | OWNER |
+| DELETE | `/api/web/projects/{projectId}/api-keys/{keyId}` | `ProjectApiKeyController.revokeApiKey` | OWNER |
 
 ## 프로젝트 역할 확인
 
@@ -75,7 +75,7 @@ srrrg_pk_<prefix 8자>_<secret 43자>
 발급된 키 목록. 해시도 원문도 응답에 포함되지 않는다.
 
 ```
-ProjectController.apiKeys(principal, projectId)
+ProjectApiKeyController.apiKeys(principal, projectId)
 
     ApiKeyService.list(userId, projectId)
         @Transactional(readOnly = true)
@@ -95,7 +95,7 @@ ProjectController.apiKeys(principal, projectId)
 키 발급. **원문을 볼 수 있는 유일한 순간이다.**
 
 ```
-ProjectController.createApiKey(principal, projectId, request)
+ProjectApiKeyController.createApiKey(principal, projectId, request)
     (Bean Validation) name: @NotBlank, scopes: @NotEmpty
     → 201 Created
 
@@ -142,7 +142,7 @@ ProjectController.createApiKey(principal, projectId, request)
 폐기. 행은 남기고 `revokedAt`만 찍는다.
 
 ```
-ProjectController.revokeApiKey(principal, projectId, keyId)
+ProjectApiKeyController.revokeApiKey(principal, projectId, keyId)
     → 204 No Content
 
     ApiKeyService.revoke(userId, projectId, keyId)

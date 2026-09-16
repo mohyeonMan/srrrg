@@ -2,7 +2,7 @@ package link.srrrg.link.management.dto;
 
 import java.time.Instant;
 
-import link.srrrg.link.Link;
+import link.srrrg.link.model.Link;
 
 /**
  * 웹 프로젝트 링크 목록과 생성 응답에서 공유하는 표현이다.

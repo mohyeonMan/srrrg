@@ -212,9 +212,9 @@ CampaignController.delete(principal, campaignId)
 `PATCH /api/web/campaigns/{campaignId}/utm-template` · `PATCH /api/v1/campaigns/{campaignId}/utm-template`
 
 ```
-CampaignController.selectTemplate(principal, campaignId, request)
+CampaignUtmController.selectTemplate(principal, campaignId, request)
 
-    CampaignService.selectTemplate(userId, campaignId, templateId)
+    CampaignUtmService.selectTemplate(userId, campaignId, templateId)
         @Transactional
         requireEditableCampaign(userId, campaignId)
 
@@ -231,9 +231,9 @@ CampaignController.selectTemplate(principal, campaignId, request)
 
             Campaign.selectTemplate(template)
 
-PublicCampaignController.selectTemplate(request, campaignId, body)
+PublicCampaignUtmController.selectTemplate(request, campaignId, body)
     ApiKeyRequestAuthorizer.require(request, projectId, CAMPAIGNS_WRITE)
-    CampaignService.selectTemplateForApiKey(projectId, campaignId, templateId)
+    CampaignUtmService.selectTemplateForApiKey(projectId, campaignId, templateId)
         findForApiKey로 캠페인을 찾은 뒤 같은 applyTemplateSelection을 탄다.
 ```
 
@@ -248,9 +248,9 @@ PublicCampaignController.selectTemplate(request, campaignId, body)
 `GET /api/web/campaigns/{campaignId}/utm-defaults` · `GET /api/v1/campaigns/{campaignId}/utm-defaults`
 
 ```
-CampaignController.defaults(principal, campaignId)
+CampaignUtmController.defaults(principal, campaignId)
 
-    CampaignService.defaults(userId, campaignId)
+    CampaignUtmService.defaults(userId, campaignId)
         @Transactional(readOnly = true)
         get(userId, campaignId)                  ← VIEWER 권한으로 충분
 
@@ -283,9 +283,9 @@ CampaignController.defaults(principal, campaignId)
 | `"utm_source": "google"` | upsert |
 
 ```
-CampaignController.updateDefaults(principal, campaignId, request)
+CampaignUtmController.updateDefaults(principal, campaignId, request)
 
-    CampaignService.updateDefaults(userId, campaignId, request.defaultsOrEmpty())
+    CampaignUtmService.updateDefaults(userId, campaignId, request.defaultsOrEmpty())
         @Transactional
         requireEditableCampaign(userId, campaignId)
 
@@ -312,7 +312,7 @@ CampaignController.updateDefaults(principal, campaignId, request)
                     500자 이하.
                     → IllegalArgumentException (400)
 
-    CampaignService.defaults(...)  를 다시 호출해 갱신된 전체 맵을 응답한다.
+    CampaignUtmService.defaults(...)를 다시 호출해 갱신된 전체 맵을 응답한다.
 ```
 
 **핵심 1가지**
@@ -326,7 +326,7 @@ CampaignController.updateDefaults(principal, campaignId, request)
 `POST /api/web/campaigns/{campaignId}/links` · `POST /api/v1/campaigns/{campaignId}/links`
 
 ```
-CampaignController.createLink(principal, campaignId, request)
+CampaignLinkController.create(principal, campaignId, request)
     (Bean Validation) CreateCampaignLinkRequest 제약
     → 201 Created
 
@@ -341,7 +341,7 @@ CampaignController.createLink(principal, campaignId, request)
 
         create(campaign, project, createdBy, null, null, null, request)
 
-PublicCampaignController.createLink(request, campaignId, idempotencyKey, body)
+PublicCampaignLinkController.create(request, campaignId, idempotencyKey, body)
     ApiKeyRequestAuthorizer.require(request, projectId, LINKS_WRITE)
 
     CampaignLinkCreationService.createForApiKey(keyId, projectId, campaignId, idempotencyKey, request)
@@ -383,7 +383,7 @@ PublicCampaignController.createLink(request, campaignId, idempotencyKey, body)
                 캠페인 기본값으로 폴백되기 때문. "명시하지 않음"과 "빈 값"을 같게 취급한다.
                 각 값은 500자 이하. → IllegalArgumentException (400)
 
-        LinkManagementService.createForCampaign(url, expiresAt, project, createdBy,
+        LinkCreationService.createForCampaign(url, expiresAt, project, createdBy,
                                                 apiKeyId, key, hash, campaign, template, externalId, resolved, name)
 
             findIdempotentLink(apiKeyId, idempotencyKey, requestHash)
@@ -421,7 +421,7 @@ PublicCampaignController.createLink(request, campaignId, idempotencyKey, body)
 `POST /api/v1/campaigns/{campaignId}/links/batch` — **v1 전용**, 최대 500개
 
 ```
-PublicCampaignController.createBatch(request, campaignId, idempotencyKey, items)
+PublicCampaignLinkController.createBatch(request, campaignId, idempotencyKey, items)
     @RequestHeader("Idempotency-Key") — 필수다. 없으면 Spring이 먼저 막는다.
     ApiKeyRequestAuthorizer.require(request, projectId, LINKS_WRITE)
     → 201 Created
@@ -480,7 +480,7 @@ PublicCampaignController.createBatch(request, campaignId, idempotencyKey, items)
 **두 표면의 응답이 다르다.** web은 유효 UTM 값까지 함께 내려준다.
 
 ```
-CampaignController.links(principal, campaignId, cursor, limit)
+CampaignLinkController.list(principal, campaignId, cursor, limit)
     boundedLimit(limit)                          1~100
 
     CampaignLinkQueryService.listForUser(userId, campaignId, cursor, limit)
@@ -497,7 +497,7 @@ CampaignController.links(principal, campaignId, cursor, limit)
     WebCampaignLinkPageResponse.of(queryResult)
         linkId로 그룹핑해 각 링크에 UTM 목록을 붙인다.
 
-PublicCampaignController.links(request, campaignId, cursor, limit)
+PublicCampaignLinkController.list(request, campaignId, cursor, limit)
     ApiKeyRequestAuthorizer.require(request, projectId, LINKS_READ)
     CampaignLinkQueryService.listForApiKey(projectId, campaignId, cursor, limit)
         CampaignService.findForApiKey(projectId, campaignId)
@@ -518,12 +518,12 @@ PublicCampaignController.links(request, campaignId, cursor, limit)
 `DELETE /api/web/campaigns/{campaignId}/links` — **web 전용**
 
 ```
-CampaignController.deleteLinks(principal, campaignId, request)
+CampaignLinkController.delete(principal, campaignId, request)
     (Bean Validation) codes: @NotNull @Size(min=1, max=100),
                       각 원소 @NotBlank @Pattern("[0-9A-Za-z]{6}")
     → 200 + { deletedCount }
 
-    CampaignService.deleteLinks(userId, campaignId, codes)
+    CampaignLinkManagementService.delete(userId, campaignId, codes)
         @Transactional
         requireEditableCampaign(userId, campaignId)
 

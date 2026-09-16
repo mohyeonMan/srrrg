@@ -10,12 +10,13 @@
 | PATCH | `/api/web/projects/{projectId}` | `ProjectController.rename` | OWNER |
 | DELETE | `/api/web/projects/{projectId}` | `ProjectController.deleteProject` | OWNER |
 | GET | `/api/web/projects/{projectId}/overview` | `ProjectController.overview` | VIEWER |
-| GET | `/api/web/projects/{projectId}/subdomain` | `ProjectController.subdomain` | VIEWER |
-| PUT | `/api/web/projects/{projectId}/subdomain` | `ProjectController.claimSubdomain` | OWNER |
-| PATCH | `/api/web/projects/{projectId}/subdomain/activation` | `ProjectController.activateSubdomain` | OWNER |
-| DELETE | `/api/web/projects/{projectId}/subdomain` | `ProjectController.releaseSubdomain` | OWNER |
+| GET | `/api/web/projects/{projectId}/subdomain` | `ProjectSubdomainController.subdomain` | VIEWER |
+| PUT | `/api/web/projects/{projectId}/subdomain` | `ProjectSubdomainController.claim` | OWNER |
+| PATCH | `/api/web/projects/{projectId}/subdomain/activation` | `ProjectSubdomainController.activate` | OWNER |
+| DELETE | `/api/web/projects/{projectId}/subdomain` | `ProjectSubdomainController.release` | OWNER |
 
-같은 컨트롤러의 나머지 엔드포인트는 [04-project-member.md](04-project-member.md), [05-project-apikey.md](05-project-apikey.md), [06-link.md](06-link.md)에 있다.
+프로젝트의 멤버·초대·API 키·링크 엔드포인트는 각각의 기능 컨트롤러로 분리되어 있으며,
+[04-project-member.md](04-project-member.md), [05-project-apikey.md](05-project-apikey.md), [06-link.md](06-link.md)에 흐름을 기록한다.
 
 ## 권한의 단일 관문
 
@@ -94,7 +95,7 @@ ProjectController.create(principal, request)
 
             normalizedSubdomain(requested)
                 소문자화 후 3~63자, [a-z0-9]로 시작·끝나고 중간에 하이픈 허용.
-                ProjectDomainService.isReservedSubdomain()으로 예약어(api, www, admin 등 20개) 차단.
+                ProjectSubdomainPolicy.isReserved()로 예약어(api, www, admin 등 20개) 차단.
                 → IllegalArgumentException (400)
 
             ProjectRepository.existsBySubdomain(normalized)
@@ -207,9 +208,9 @@ ProjectController.overview(principal, projectId)
 현재 서브도메인 상태.
 
 ```
-ProjectController.subdomain(principal, projectId)
+ProjectSubdomainController.subdomain(principal, projectId)
 
-    ProjectService.projectDomain(userId, projectId)
+    ProjectSubdomainService.get(userId, projectId)
         @Transactional(readOnly = true)
         ProjectAccessService.requireRole(userId, projectId, VIEWER).getProject()
 
@@ -224,9 +225,9 @@ ProjectController.subdomain(principal, projectId)
 서브도메인 선점 또는 교체. `PUT`인 이유는 멱등한 전체 치환이기 때문이다.
 
 ```
-ProjectController.claimSubdomain(principal, projectId, request)
+ProjectSubdomainController.claim(principal, projectId, request)
 
-    ProjectService.claimSubdomain(userId, projectId, requestedSubdomain)
+    ProjectSubdomainService.claim(userId, projectId, requestedSubdomain)
         @Transactional
         ProjectAccessService.requireRole(userId, projectId, OWNER)
 
@@ -253,10 +254,10 @@ ProjectController.claimSubdomain(principal, projectId, request)
 선점한 서브도메인의 라우팅을 켜고 끈다.
 
 ```
-ProjectController.activateSubdomain(principal, projectId, request)
+ProjectSubdomainController.activate(principal, projectId, request)
     (Bean Validation) enabled: @NotNull
 
-    ProjectService.setSubdomainEnabled(userId, projectId, enabled)
+    ProjectSubdomainService.setEnabled(userId, projectId, enabled)
         @Transactional
         ProjectAccessService.requireRole(userId, projectId, OWNER)
 
@@ -267,7 +268,7 @@ ProjectController.activateSubdomain(principal, projectId, request)
 
 **핵심 2가지**
 
-- **활성 플래그는 링크 생성 시점에만 반영된다.** `LinkManagementService.createForProject`가 `project.activeSubdomain()`을 읽어 `Link.subdomain` 컬럼에 박아 넣는다. 꺼져 있으면 새 링크는 `subdomain = null`, 즉 베이스 도메인에 생긴다.
+- **활성 플래그는 링크 생성 시점에만 반영된다.** `LinkCreationService.createForProject`가 `project.activeSubdomain()`을 읽어 `Link.subdomain` 컬럼에 박아 넣는다. 꺼져 있으면 새 링크는 `subdomain = null`, 즉 베이스 도메인에 생긴다.
 - **이미 만들어진 링크는 끄더라도 계속 동작한다.** `RedirectService.findLink`는 Host 헤더에서 뽑은 슬러그와 `Link.subdomain` 컬럼만 대조하고 `Project.subdomainEnabled`를 확인하지 않는다. 비활성화는 "앞으로 이 서브도메인을 쓰지 않겠다"는 뜻이지 기존 링크를 끊는 스위치가 아니다.
 
 ---
@@ -277,9 +278,9 @@ ProjectController.activateSubdomain(principal, projectId, request)
 선점 해제.
 
 ```
-ProjectController.releaseSubdomain(principal, projectId)
+ProjectSubdomainController.release(principal, projectId)
 
-    ProjectService.releaseSubdomain(userId, projectId)
+    ProjectSubdomainService.release(userId, projectId)
         @Transactional
         ProjectAccessService.requireRole(userId, projectId, OWNER)
 

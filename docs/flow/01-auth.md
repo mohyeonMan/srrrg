@@ -95,7 +95,7 @@ OAuth2LoginAuthenticationFilter (Spring 제공)
         OAuthProfileFactory.from(oauth)
             공급자별 attribute를 OAuthIdentity(provider, providerUserId, email, emailVerified, name)로 정규화한다.
 
-        OAuthIdentityService.resolve(identity)
+        LoginCompletionService.complete(identity)
             이 OAuth 계정이 누구인지 판정한다. @Transactional.
 
             normalize(identity)

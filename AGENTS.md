@@ -47,7 +47,7 @@ Windows에서는 ./gradlew 대신 .\gradlew.bat을 사용한다.
 ## 구조
 
 ~~~text
-src/main/java/link/srrrg/     기능별 패키지 (auth · identity · project · campaign · link · statistics · common · domain)
+src/main/java/link/srrrg/     업무 기능 → 세부 기능 → 역할 패키지(controller · service · repository · model 등)
 src/main/resources/
   db/migration/               Flyway. 스키마의 유일한 소유자
   templates/                  Thymeleaf. fragments/srrrg-layout.html이 공통 header·footer
@@ -109,7 +109,7 @@ scripts/performance/          k6 시나리오
 | 시각 토큰·컴포넌트 | docs/design-system.md |
 | 화면 정보구조·탭 | docs/ia-restructure.md |
 | UI 결정 근거 | docs/ui-ux-decisions.md |
-| 도메인 구조 | docs/architecture/campaign_utm_templates.md, docs/architecture/project_campaign_personalized_links.md |
+| 도메인 구조 | docs/architecture/package_structure.md, docs/architecture/campaign_utm_templates.md, docs/architecture/project_campaign_personalized_links.md |
 
 UI를 바꿨으면 docs/ui-ux-decisions.md에 결정 근거를 덧붙인다.
 엔드포인트 흐름을 바꿨으면 해당 docs/flow/*.md를 같이 고친다.
